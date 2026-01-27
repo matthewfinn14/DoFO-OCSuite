@@ -681,7 +681,8 @@ export default function Setup() {
     }
     if (isPractice) {
       return [
-        { id: 'practice-lists', label: 'Practice Lists', icon: List }
+        { id: 'segment-types', label: 'Segment Types', icon: Layers },
+        { id: 'segment-focus', label: 'Segment Focus', icon: Target }
       ];
     }
     const tabs = [
@@ -1018,13 +1019,25 @@ export default function Setup() {
             />
           )}
 
-          {/* Practice Lists Tab */}
-          {activeTab === 'practice-lists' && isPractice && (
-            <PracticeListsTab
-              phase={phase}
+          {/* Segment Types Tab */}
+          {activeTab === 'segment-types' && isPractice && (
+            <SegmentTypesTab
               segmentTypes={localConfig.practiceSegmentTypes || {}}
-              focusItems={localConfig.practiceFocusItems || {}}
-              segmentSettings={localConfig.practiceSegmentSettings || {}}
+              onUpdate={updateLocal}
+            />
+          )}
+
+          {/* Segment Focus Tab */}
+          {activeTab === 'segment-focus' && isPractice && (
+            <SegmentFocusTab
+              segmentFocus={localConfig.practiceSegmentFocus || {}}
+              formations={localConfig.formations || []}
+              playBuckets={localConfig.playBuckets || []}
+              conceptGroups={localConfig.conceptGroups || []}
+              readTypes={localConfig.readTypes || []}
+              lookAlikeSeries={localConfig.lookAlikeSeries || []}
+              fieldZones={localConfig.fieldZones || []}
+              specialSituations={localConfig.specialSituations || []}
               onUpdate={updateLocal}
             />
           )}
@@ -3199,9 +3212,8 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
   );
 }
 
-// Practice Lists Tab Component
+// Practice Segment Types Tab Component
 // Segment Types are organized by phase (O, D, K, C)
-// Focus Items are sub-families of Segment Types
 const PRACTICE_PHASES = [
   { id: 'O', label: 'Offense', color: 'bg-blue-600' },
   { id: 'D', label: 'Defense', color: 'bg-red-600' },
@@ -3209,30 +3221,19 @@ const PRACTICE_PHASES = [
   { id: 'C', label: 'Competition/Conditioning', color: 'bg-emerald-600' }
 ];
 
-function PracticeListsTab({ phase, segmentTypes, focusItems, segmentSettings, onUpdate }) {
+function SegmentTypesTab({ segmentTypes, onUpdate }) {
   const [activePhase, setActivePhase] = useState('O');
-  const [expandedTypes, setExpandedTypes] = useState({});
   const [editingType, setEditingType] = useState(null);
-  const [editingFocus, setEditingFocus] = useState(null);
 
-  // Get segment types for current phase
-  // Data structure: { O: [{ id, name, focusItems: [] }], D: [...], K: [...], C: [...] }
   const currentSegments = segmentTypes[activePhase] || [];
 
-  // Toggle expand/collapse for segment type
-  const toggleExpand = (typeId) => {
-    setExpandedTypes(prev => ({ ...prev, [typeId]: !prev[typeId] }));
-  };
-
-  // Add new segment type
   const addSegmentType = () => {
-    const name = prompt('New segment type (e.g., Team Run, Individual):');
+    const name = prompt('New segment type (e.g., Team Run, Individual, 7-on-7):');
     if (!name || !name.trim()) return;
 
     const newType = {
       id: `type_${Date.now()}`,
-      name: name.trim(),
-      focusItems: []
+      name: name.trim()
     };
 
     const updated = {
@@ -3242,7 +3243,6 @@ function PracticeListsTab({ phase, segmentTypes, focusItems, segmentSettings, on
     onUpdate('practiceSegmentTypes', updated);
   };
 
-  // Rename segment type
   const renameSegmentType = (typeId, newName) => {
     if (!newName || !newName.trim()) return;
     const updated = {
@@ -3255,67 +3255,11 @@ function PracticeListsTab({ phase, segmentTypes, focusItems, segmentSettings, on
     setEditingType(null);
   };
 
-  // Delete segment type
   const deleteSegmentType = (typeId, typeName) => {
-    if (!confirm(`Delete "${typeName}" and all its focus items?`)) return;
+    if (!confirm(`Delete segment type "${typeName}"?`)) return;
     const updated = {
       ...segmentTypes,
       [activePhase]: currentSegments.filter(t => t.id !== typeId)
-    };
-    onUpdate('practiceSegmentTypes', updated);
-  };
-
-  // Add focus item to segment type
-  const addFocusItem = (typeId) => {
-    const name = prompt('New focus item (e.g., Run Game, Pass Pro):');
-    if (!name || !name.trim()) return;
-
-    const newFocus = {
-      id: `focus_${Date.now()}`,
-      name: name.trim()
-    };
-
-    const updated = {
-      ...segmentTypes,
-      [activePhase]: currentSegments.map(t =>
-        t.id === typeId
-          ? { ...t, focusItems: [...(t.focusItems || []), newFocus] }
-          : t
-      )
-    };
-    onUpdate('practiceSegmentTypes', updated);
-  };
-
-  // Rename focus item
-  const renameFocusItem = (typeId, focusId, newName) => {
-    if (!newName || !newName.trim()) return;
-    const updated = {
-      ...segmentTypes,
-      [activePhase]: currentSegments.map(t =>
-        t.id === typeId
-          ? {
-              ...t,
-              focusItems: (t.focusItems || []).map(f =>
-                f.id === focusId ? { ...f, name: newName.trim() } : f
-              )
-            }
-          : t
-      )
-    };
-    onUpdate('practiceSegmentTypes', updated);
-    setEditingFocus(null);
-  };
-
-  // Delete focus item
-  const deleteFocusItem = (typeId, focusId, focusName) => {
-    if (!confirm(`Delete focus item "${focusName}"?`)) return;
-    const updated = {
-      ...segmentTypes,
-      [activePhase]: currentSegments.map(t =>
-        t.id === typeId
-          ? { ...t, focusItems: (t.focusItems || []).filter(f => f.id !== focusId) }
-          : t
-      )
     };
     onUpdate('practiceSegmentTypes', updated);
   };
@@ -3325,7 +3269,7 @@ function PracticeListsTab({ phase, segmentTypes, focusItems, segmentSettings, on
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-white">Practice Segment Types</h3>
         <p className="text-slate-400 text-sm">
-          Define segment types for each phase. Focus items are sub-categories within each segment type.
+          Define segment types for each phase (e.g., Team Run, Individual, 7-on-7).
         </p>
       </div>
 
@@ -3347,121 +3291,45 @@ function PracticeListsTab({ phase, segmentTypes, focusItems, segmentSettings, on
       </div>
 
       {/* Segment Types List */}
-      <div className="space-y-3">
-        {currentSegments.map(segType => {
-          const isExpanded = expandedTypes[segType.id];
-          const focusCount = (segType.focusItems || []).length;
+      <div className="space-y-2">
+        {currentSegments.map(segType => (
+          <div
+            key={segType.id}
+            className="flex items-center gap-3 px-4 py-3 bg-slate-700/50 rounded-lg border border-slate-600 group"
+          >
+            {editingType === segType.id ? (
+              <input
+                autoFocus
+                defaultValue={segType.name}
+                onBlur={(e) => renameSegmentType(segType.id, e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') renameSegmentType(segType.id, e.target.value);
+                  if (e.key === 'Escape') setEditingType(null);
+                }}
+                className="flex-1 bg-slate-600 text-white px-2 py-1 rounded border border-slate-500 focus:outline-none focus:border-sky-500"
+              />
+            ) : (
+              <span
+                className="flex-1 text-white font-medium cursor-pointer hover:text-sky-300"
+                onClick={() => setEditingType(segType.id)}
+              >
+                {segType.name}
+              </span>
+            )}
 
-          return (
-            <div
-              key={segType.id}
-              className="bg-slate-700/50 rounded-lg border border-slate-600 overflow-hidden"
+            <button
+              onClick={() => deleteSegmentType(segType.id, segType.name)}
+              className="p-1.5 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity"
+              title="Delete Segment Type"
             >
-              {/* Segment Type Header */}
-              <div className="flex items-center gap-3 px-4 py-3 bg-slate-700/80">
-                <button
-                  onClick={() => toggleExpand(segType.id)}
-                  className="text-slate-400 hover:text-white"
-                >
-                  {isExpanded ? <ChevronDown size={18} /> : <ChevronUp size={18} className="rotate-180" />}
-                </button>
-
-                {editingType === segType.id ? (
-                  <input
-                    autoFocus
-                    defaultValue={segType.name}
-                    onBlur={(e) => renameSegmentType(segType.id, e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') renameSegmentType(segType.id, e.target.value);
-                      if (e.key === 'Escape') setEditingType(null);
-                    }}
-                    className="flex-1 bg-slate-600 text-white px-2 py-1 rounded border border-slate-500 focus:outline-none focus:border-sky-500"
-                  />
-                ) : (
-                  <span
-                    className="flex-1 text-white font-medium cursor-pointer hover:text-sky-300"
-                    onClick={() => setEditingType(segType.id)}
-                  >
-                    {segType.name}
-                  </span>
-                )}
-
-                <span className="text-xs text-slate-500">
-                  {focusCount} focus item{focusCount !== 1 ? 's' : ''}
-                </span>
-
-                <button
-                  onClick={() => addFocusItem(segType.id)}
-                  className="p-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-slate-600 rounded"
-                  title="Add Focus Item"
-                >
-                  <Plus size={16} />
-                </button>
-
-                <button
-                  onClick={() => deleteSegmentType(segType.id, segType.name)}
-                  className="p-1.5 text-red-400 hover:text-red-300 hover:bg-slate-600 rounded"
-                  title="Delete Segment Type"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-
-              {/* Focus Items */}
-              {isExpanded && (
-                <div className="border-t border-slate-600">
-                  {(segType.focusItems || []).length > 0 ? (
-                    <div className="p-2 space-y-1">
-                      {(segType.focusItems || []).map(focus => (
-                        <div
-                          key={focus.id}
-                          className="flex items-center gap-2 px-3 py-2 bg-slate-600/50 rounded"
-                        >
-                          <div className="w-2 h-2 rounded-full bg-sky-500" />
-
-                          {editingFocus === focus.id ? (
-                            <input
-                              autoFocus
-                              defaultValue={focus.name}
-                              onBlur={(e) => renameFocusItem(segType.id, focus.id, e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') renameFocusItem(segType.id, focus.id, e.target.value);
-                                if (e.key === 'Escape') setEditingFocus(null);
-                              }}
-                              className="flex-1 bg-slate-700 text-white px-2 py-0.5 rounded border border-slate-500 text-sm focus:outline-none focus:border-sky-500"
-                            />
-                          ) : (
-                            <span
-                              className="flex-1 text-slate-300 text-sm cursor-pointer hover:text-white"
-                              onClick={() => setEditingFocus(focus.id)}
-                            >
-                              {focus.name}
-                            </span>
-                          )}
-
-                          <button
-                            onClick={() => deleteFocusItem(segType.id, focus.id, focus.name)}
-                            className="p-1 text-red-400 hover:text-red-300"
-                          >
-                            <X size={14} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-4 text-center text-slate-500 text-sm italic">
-                      No focus items. Click <Plus size={12} className="inline" /> to add one.
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
+              <X size={16} />
+            </button>
+          </div>
+        ))}
 
         {currentSegments.length === 0 && (
           <div className="text-center py-12 text-slate-400 border-2 border-dashed border-slate-600 rounded-lg">
-            <List size={48} className="mx-auto mb-4 opacity-30" />
+            <Layers size={48} className="mx-auto mb-4 opacity-30" />
             <p>No segment types for {PRACTICE_PHASES.find(p => p.id === activePhase)?.label}.</p>
             <p className="text-sm mt-1">Click "Add Segment Type" to create one.</p>
           </div>
@@ -3476,6 +3344,251 @@ function PracticeListsTab({ phase, segmentTypes, focusItems, segmentSettings, on
         <Plus size={18} />
         Add Segment Type
       </button>
+    </div>
+  );
+}
+
+// Segment Focus Tab Component
+// Focus items can be imported from user-defined setup data
+const FOCUS_SOURCES = [
+  { id: 'formations', label: 'Formations', icon: LayoutGrid },
+  { id: 'playBuckets', label: 'Play Buckets', icon: Tag },
+  { id: 'conceptGroups', label: 'Concept Groups', icon: Grid },
+  { id: 'readTypes', label: 'Read Types', icon: Eye },
+  { id: 'lookAlikeSeries', label: 'Look-Alike Series', icon: Copy },
+  { id: 'situations', label: 'Situations', icon: Target },
+  { id: 'custom', label: 'Custom', icon: Plus }
+];
+
+function SegmentFocusTab({
+  segmentFocus,
+  formations,
+  playBuckets,
+  conceptGroups,
+  readTypes,
+  lookAlikeSeries,
+  fieldZones,
+  specialSituations,
+  onUpdate
+}) {
+  const [activeSource, setActiveSource] = useState('formations');
+  const [customName, setCustomName] = useState('');
+
+  // Get current focus items
+  const currentFocus = segmentFocus || [];
+
+  // Get items from source
+  const getSourceItems = (sourceId) => {
+    switch (sourceId) {
+      case 'formations':
+        return formations.map(f => ({ id: f.id || f.name, name: f.name || f.label, source: 'formations' }));
+      case 'playBuckets':
+        return playBuckets.map(b => ({ id: b.id, name: b.label, source: 'playBuckets' }));
+      case 'conceptGroups':
+        return conceptGroups.map(c => ({ id: c.id, name: c.label, source: 'conceptGroups' }));
+      case 'readTypes':
+        return readTypes.map(r => ({ id: r.id, name: r.name, source: 'readTypes' }));
+      case 'lookAlikeSeries':
+        return lookAlikeSeries.map(s => ({ id: s.id, name: s.name, source: 'lookAlikeSeries' }));
+      case 'situations':
+        const zones = fieldZones.map(z => ({ id: z.id || z.name, name: z.name, source: 'fieldZones' }));
+        const specials = specialSituations.map(s => ({ id: s.id || s.name, name: s.name, source: 'specialSituations' }));
+        return [...zones, ...specials];
+      default:
+        return [];
+    }
+  };
+
+  const sourceItems = activeSource !== 'custom' ? getSourceItems(activeSource) : [];
+
+  // Check if item is already added
+  const isAdded = (itemId, source) => {
+    return currentFocus.some(f => f.id === itemId && f.source === source);
+  };
+
+  // Add focus item
+  const addFocusItem = (item) => {
+    if (isAdded(item.id, item.source)) return;
+    const updated = [...currentFocus, item];
+    onUpdate('practiceSegmentFocus', updated);
+  };
+
+  // Add custom focus item
+  const addCustomFocus = () => {
+    if (!customName.trim()) return;
+    const newItem = {
+      id: `custom_${Date.now()}`,
+      name: customName.trim(),
+      source: 'custom'
+    };
+    const updated = [...currentFocus, newItem];
+    onUpdate('practiceSegmentFocus', updated);
+    setCustomName('');
+  };
+
+  // Remove focus item
+  const removeFocusItem = (itemId, source) => {
+    const updated = currentFocus.filter(f => !(f.id === itemId && f.source === source));
+    onUpdate('practiceSegmentFocus', updated);
+  };
+
+  // Import all from source
+  const importAllFromSource = () => {
+    const newItems = sourceItems.filter(item => !isAdded(item.id, item.source));
+    if (newItems.length === 0) {
+      alert('All items from this source are already added.');
+      return;
+    }
+    const updated = [...currentFocus, ...newItems];
+    onUpdate('practiceSegmentFocus', updated);
+  };
+
+  // Group current focus by source for display
+  const groupedFocus = currentFocus.reduce((acc, item) => {
+    const source = item.source || 'custom';
+    if (!acc[source]) acc[source] = [];
+    acc[source].push(item);
+    return acc;
+  }, {});
+
+  return (
+    <div>
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold text-white">Segment Focus Items</h3>
+        <p className="text-slate-400 text-sm">
+          Import focus items from your setup or add custom ones. These appear as options when creating practice segments.
+        </p>
+      </div>
+
+      {/* Current Focus Items */}
+      {currentFocus.length > 0 && (
+        <div className="mb-6">
+          <h4 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">
+            Current Focus Items ({currentFocus.length})
+          </h4>
+          <div className="space-y-3">
+            {Object.entries(groupedFocus).map(([source, items]) => {
+              const sourceInfo = FOCUS_SOURCES.find(s => s.id === source) ||
+                { label: source.charAt(0).toUpperCase() + source.slice(1), icon: Tag };
+              const Icon = sourceInfo.icon;
+              return (
+                <div key={source} className="bg-slate-800/50 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-2 text-slate-400">
+                    <Icon size={14} />
+                    <span className="text-xs font-semibold uppercase">{sourceInfo.label}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {items.map(item => (
+                      <div
+                        key={`${item.id}-${item.source}`}
+                        className="flex items-center gap-1 px-2 py-1 bg-slate-700 rounded text-sm text-white group"
+                      >
+                        <span>{item.name}</span>
+                        <button
+                          onClick={() => removeFocusItem(item.id, item.source)}
+                          className="p-0.5 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Source Tabs */}
+      <div className="border border-slate-700 rounded-lg overflow-hidden">
+        <div className="flex flex-wrap bg-slate-800/50">
+          {FOCUS_SOURCES.map(source => {
+            const Icon = source.icon;
+            return (
+              <button
+                key={source.id}
+                onClick={() => setActiveSource(source.id)}
+                className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${
+                  activeSource === source.id
+                    ? 'bg-sky-600 text-white'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                }`}
+              >
+                <Icon size={14} />
+                {source.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Source Content */}
+        <div className="p-4">
+          {activeSource === 'custom' ? (
+            <div>
+              <p className="text-slate-400 text-sm mb-3">Add a custom focus item:</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addCustomFocus()}
+                  placeholder="e.g., Red Zone, 2-Min Drill, Goal Line..."
+                  className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-white placeholder-slate-500"
+                />
+                <button
+                  onClick={addCustomFocus}
+                  disabled={!customName.trim()}
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+          ) : sourceItems.length > 0 ? (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-slate-400 text-sm">
+                  Click items to add them as focus options:
+                </p>
+                <button
+                  onClick={importAllFromSource}
+                  className="text-xs px-2 py-1 bg-sky-500/20 text-sky-400 rounded hover:bg-sky-500/30"
+                >
+                  Import All
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {sourceItems.map(item => {
+                  const added = isAdded(item.id, item.source);
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => !added && addFocusItem(item)}
+                      disabled={added}
+                      className={`px-3 py-1.5 rounded text-sm transition-colors ${
+                        added
+                          ? 'bg-emerald-500/20 text-emerald-400 cursor-default'
+                          : 'bg-slate-700 text-white hover:bg-slate-600'
+                      }`}
+                    >
+                      {added && <Check size={12} className="inline mr-1" />}
+                      {item.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-slate-500">
+              <p>No items defined in this category yet.</p>
+              <p className="text-sm mt-1">
+                Add them in {activeSource === 'situations' ? 'Offense Setup → Define Situations' : `Offense Setup → ${FOCUS_SOURCES.find(s => s.id === activeSource)?.label}`}.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
