@@ -669,11 +669,11 @@ export default function Setup() {
     if (isOffense) {
       tabs.push({ id: 'personnel', label: 'Personnel Groupings', icon: UserCheck });
     }
+    tabs.push({ id: 'play-call-chain', label: 'Play Call Chain', icon: List });
     tabs.push(
       { id: 'formations', label: 'Formation/Front Setup', icon: LayoutGrid },
       { id: 'play-buckets', label: isDefense || isST ? 'Categories' : 'Play Buckets', icon: Tag },
-      { id: 'concept-groups', label: isDefense || isST ? 'Variations' : 'Concept Groups', icon: Grid },
-      { id: 'play-call-chain', label: 'Play Call Chain', icon: List }
+      { id: 'concept-groups', label: isDefense || isST ? 'Variations' : 'Concept Groups', icon: Grid }
     );
     if (isOffense) {
       tabs.push(
