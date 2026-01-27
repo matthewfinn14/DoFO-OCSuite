@@ -238,7 +238,7 @@ export default function Sidebar() {
                     label="Practice Planner"
                   />
                   <WeeklyToolItem
-                    to={`/week/${currentWeekId}/practice-scripts`}
+                    to={`/week/${currentWeekId}/practice?view=script`}
                     icon={FileText}
                     label="Practice Scripts"
                   />

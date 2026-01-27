@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
 import {
   ArrowLeft,
@@ -108,6 +108,173 @@ const DEFAULT_SEGMENT_TYPES = {
     { id: 'default_warmup', name: 'Warmup', focusItems: [] }
   ]
 };
+
+// Hash patterns for script rows (alternating L to R)
+const HASH_PATTERN_A = ['L', 'LM', 'M', 'RM', 'R', 'RM', 'M', 'LM'];
+const HASH_PATTERN_B = ['R', 'RM', 'M', 'LM', 'L', 'LM', 'M', 'RM'];
+
+// Create a script row with hash based on index
+const createScriptRow = (index, pattern = HASH_PATTERN_A) => ({
+  id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+  playId: '',
+  playName: '',
+  hash: pattern[index % 8],
+  dn: '',
+  dist: '',
+  situation: '',
+  defense: '',
+  notes: ''
+});
+
+// Generate script rows based on segment duration (~1.6 plays per minute)
+const generateScriptRows = (duration, existingScript = []) => {
+  const targetCount = Math.round((parseInt(duration) || 0) * 1.6) || 8;
+
+  // Determine pattern based on first row or default
+  let pattern = HASH_PATTERN_A;
+  if (existingScript.length > 0 && existingScript[0]?.hash === 'R') {
+    pattern = HASH_PATTERN_B;
+  }
+
+  // Keep existing rows and add more if needed
+  const currentRows = [...existingScript];
+  const needed = targetCount - currentRows.length;
+
+  if (needed <= 0) return currentRows;
+
+  for (let i = 0; i < needed; i++) {
+    currentRows.push(createScriptRow(currentRows.length, pattern));
+  }
+
+  return currentRows;
+};
+
+// Play Call Autocomplete Input Component
+function PlayCallAutocomplete({ value, playId, plays, onSelectPlay, onChangeText, onClear, placeholder = "Play Call..." }) {
+  const [inputValue, setInputValue] = useState(value || '');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+  const inputRef = useRef(null);
+  const dropdownRef = useRef(null);
+
+  // Filter plays based on input
+  const filteredPlays = useMemo(() => {
+    if (!inputValue || inputValue.length < 1) return [];
+    const search = inputValue.toLowerCase();
+    return plays.filter(p =>
+      p.name?.toLowerCase().includes(search) ||
+      p.formation?.toLowerCase().includes(search)
+    ).slice(0, 8);
+  }, [inputValue, plays]);
+
+  // Handle input change
+  const handleChange = (e) => {
+    const val = e.target.value;
+    setInputValue(val);
+    setShowDropdown(val.length > 0);
+    setFocusedIndex(-1);
+    onChangeText(val);
+  };
+
+  // Handle play selection
+  const handleSelect = (play) => {
+    setInputValue(play.name);
+    setShowDropdown(false);
+    onSelectPlay(play);
+  };
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e) => {
+    if (!showDropdown || filteredPlays.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setFocusedIndex(prev => Math.min(prev + 1, filteredPlays.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setFocusedIndex(prev => Math.max(prev - 1, 0));
+    } else if (e.key === 'Enter' && focusedIndex >= 0) {
+      e.preventDefault();
+      handleSelect(filteredPlays[focusedIndex]);
+    } else if (e.key === 'Escape') {
+      setShowDropdown(false);
+    }
+  };
+
+  // Sync external value changes
+  useEffect(() => {
+    if (playId) {
+      const play = plays.find(p => p.id === playId);
+      if (play) setInputValue(play.name);
+    } else {
+      setInputValue(value || '');
+    }
+  }, [value, playId, plays]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target) &&
+          inputRef.current && !inputRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative">
+      <div className="flex items-center gap-1">
+        <input
+          ref={inputRef}
+          type="text"
+          value={inputValue}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          onFocus={() => inputValue.length > 0 && setShowDropdown(true)}
+          placeholder={placeholder}
+          className="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs placeholder-slate-500"
+        />
+        {(inputValue || playId) && (
+          <button
+            onClick={() => {
+              setInputValue('');
+              setShowDropdown(false);
+              onClear();
+            }}
+            className="p-0.5 text-slate-500 hover:text-red-400"
+          >
+            <X size={12} />
+          </button>
+        )}
+      </div>
+
+      {/* Dropdown */}
+      {showDropdown && filteredPlays.length > 0 && (
+        <div
+          ref={dropdownRef}
+          className="absolute z-50 left-0 right-0 mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto"
+        >
+          {filteredPlays.map((play, idx) => (
+            <button
+              key={play.id}
+              onClick={() => handleSelect(play)}
+              className={`w-full px-3 py-2 text-left text-xs hover:bg-slate-700 ${
+                idx === focusedIndex ? 'bg-slate-700' : ''
+              }`}
+            >
+              <div className="text-white font-medium">{play.name}</div>
+              {play.formation && (
+                <div className="text-slate-400 text-xs">{play.formation}</div>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Segment Notes Modal Component with @mention support
 function SegmentNotesModal({ segment, staff, positionGroups, onUpdateNotes, onClose }) {
@@ -1111,8 +1278,10 @@ function ImportTemplateModal({ existingTemplates, onImport, onClose }) {
 
 export default function PracticePlans() {
   const { year, phase, week: weekParam, day: dayParam, weekId: legacyWeekId } = useParams();
+  const [searchParams] = useSearchParams();
+  const viewParam = searchParams.get('view'); // 'script' or null
   const navigate = useNavigate();
-  const { weeks, updateWeek, setupConfig, updateSetupConfig, staff, settings, activeLevelId } = useSchool();
+  const { weeks, updateWeek, setupConfig, updateSetupConfig, staff, settings, activeLevelId, playsArray, plays } = useSchool();
 
   // Get program levels from setup config
   const programLevels = useMemo(() => {
@@ -1166,13 +1335,26 @@ export default function PracticePlans() {
 
   // Local state
   const [selectedSegmentId, setSelectedSegmentId] = useState(null);
-  const [mode, setMode] = useState('plan'); // 'plan' or 'script'
+  const [mode, setMode] = useState(viewParam === 'script' ? 'script' : 'plan'); // 'plan' or 'script'
+
+  // Sync mode with URL parameter when it changes
+  useEffect(() => {
+    if (viewParam === 'script') {
+      setMode('script');
+    }
+  }, [viewParam]);
+
   const [coachFilter, setCoachFilter] = useState('ALL');
   const [notesModalSegmentId, setNotesModalSegmentId] = useState(null); // 'WARMUP' or segment.id
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
   const [showImportTemplateModal, setShowImportTemplateModal] = useState(false);
   const [viewingLevelId, setViewingLevelId] = useState(null); // For Program view to see other levels
+  const [showPlaySelector, setShowPlaySelector] = useState(false);
+  const [activeScriptSegmentId, setActiveScriptSegmentId] = useState(null);
+  const [activeScriptRowId, setActiveScriptRowId] = useState(null);
+  const [playSearchTerm, setPlaySearchTerm] = useState('');
+  const [playFilterPhase, setPlayFilterPhase] = useState('OFFENSE');
 
   // Get weekId for updates
   const weekId = week?.id;
@@ -1397,6 +1579,96 @@ export default function PracticePlans() {
     }
     return null;
   }, []);
+
+  // Get play by ID
+  const getPlay = useCallback((playId) => plays[playId], [plays]);
+
+  // Update a specific script row
+  const updateScriptRow = useCallback((segmentId, rowId, field, value) => {
+    const segment = currentPlan.segments.find(s => s.id === segmentId);
+    if (!segment?.script) return;
+
+    const newScript = segment.script.map(row =>
+      row.id === rowId ? { ...row, [field]: value } : row
+    );
+    updateSegment(segmentId, 'script', newScript);
+  }, [currentPlan, updateSegment]);
+
+  // Add a script row to a segment
+  const addScriptRow = useCallback((segmentId) => {
+    const segment = currentPlan.segments.find(s => s.id === segmentId);
+    if (!segment) return;
+
+    const script = segment.script || [];
+    const newRow = createScriptRow(script.length);
+    updateSegment(segmentId, 'script', [...script, newRow]);
+  }, [currentPlan, updateSegment]);
+
+  // Delete a script row
+  const deleteScriptRow = useCallback((segmentId, rowId) => {
+    const segment = currentPlan.segments.find(s => s.id === segmentId);
+    if (!segment?.script) return;
+
+    const newScript = segment.script.filter(row => row.id !== rowId);
+    updateSegment(segmentId, 'script', newScript);
+  }, [currentPlan, updateSegment]);
+
+  // Clear play from a script row
+  const clearScriptRowPlay = useCallback((segmentId, rowId) => {
+    updateScriptRow(segmentId, rowId, 'playId', '');
+    updateScriptRow(segmentId, rowId, 'playName', '');
+  }, [updateScriptRow]);
+
+  // Ensure segment has script rows when enabled
+  const ensureScriptRows = useCallback((segmentId) => {
+    const segment = currentPlan.segments.find(s => s.id === segmentId);
+    if (!segment) return;
+
+    if (!segment.script || segment.script.length === 0) {
+      const script = generateScriptRows(segment.duration);
+      updateSegment(segmentId, 'script', script);
+    }
+  }, [currentPlan, updateSegment]);
+
+  // Filter plays for play selector
+  const filteredPlays = useMemo(() => {
+    const phasePlays = playsArray.filter(p =>
+      p.phase?.toUpperCase() === playFilterPhase ||
+      (playFilterPhase === 'OFFENSE' && p.phase === 'offense')
+    );
+    if (!playSearchTerm) return phasePlays;
+    const search = playSearchTerm.toLowerCase();
+    return phasePlays.filter(play =>
+      play.name?.toLowerCase().includes(search) ||
+      play.formation?.toLowerCase().includes(search)
+    );
+  }, [playsArray, playSearchTerm, playFilterPhase]);
+
+  // Open play selector for a script row
+  const openPlaySelector = useCallback((segmentId, rowId) => {
+    setActiveScriptSegmentId(segmentId);
+    setActiveScriptRowId(rowId);
+    setShowPlaySelector(true);
+    setPlaySearchTerm('');
+  }, []);
+
+  // Add play to script row from selector
+  const selectPlayForRow = useCallback((play) => {
+    if (!activeScriptSegmentId || !activeScriptRowId) return;
+
+    const segment = currentPlan.segments.find(s => s.id === activeScriptSegmentId);
+    if (!segment?.script) return;
+
+    const newScript = segment.script.map(row =>
+      row.id === activeScriptRowId
+        ? { ...row, playId: play.id, playName: play.name }
+        : row
+    );
+    updateSegment(activeScriptSegmentId, 'script', newScript);
+    setShowPlaySelector(false);
+    setActiveScriptSegmentId(null);
+    setActiveScriptRowId(null);
+  }, [activeScriptSegmentId, activeScriptRowId, currentPlan, updateSegment]);
 
   // Add segment
   const addSegment = useCallback((afterIndex = -1) => {
@@ -2138,27 +2410,197 @@ export default function PracticePlans() {
             </div>
           </div>
         ) : (
-          /* Script Mode */
-          <div className="max-w-6xl mx-auto">
-            <div className="bg-slate-800 rounded-lg p-6">
-              <div className="text-center py-12">
-                <FileText size={48} className="text-slate-500 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-white mb-2">Script Builder</h3>
-                <p className="text-slate-400 text-sm max-w-md mx-auto">
-                  Enable scripting for segments in the Plans tab, then return here to build out play-by-play scripts for each segment.
-                </p>
-                {currentPlan.segments.filter(s => s.hasScript).length > 0 && (
-                  <div className="mt-6 space-y-4">
-                    <p className="text-emerald-400 text-sm">
-                      {currentPlan.segments.filter(s => s.hasScript).length} segment(s) have scripting enabled
-                    </p>
-                    <p className="text-slate-500 text-xs">
-                      Full script builder coming soon - for now, use the legacy app for detailed scripting.
-                    </p>
-                  </div>
-                )}
+          /* Script Mode - Full Script Tables */
+          <div className="space-y-6">
+            {currentPlan.segments.filter(s => s.hasScript).length === 0 ? (
+              <div className="bg-slate-800 rounded-lg p-6">
+                <div className="text-center py-12">
+                  <FileText size={48} className="text-slate-500 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-white mb-2">No Scripts Enabled</h3>
+                  <p className="text-slate-400 text-sm max-w-md mx-auto">
+                    Enable scripting for segments in the Plans tab using the "Script" checkbox, then return here to build out play-by-play scripts.
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              currentPlan.segments
+                .filter(s => s.hasScript)
+                .map((seg, segIndex) => {
+                  // Calculate start time for segment
+                  let elapsed = currentPlan.warmupDuration || 0;
+                  for (let i = 0; i < currentPlan.segments.indexOf(seg); i++) {
+                    elapsed += currentPlan.segments[i].duration || 0;
+                    if (currentPlan.transitionTime) elapsed += currentPlan.transitionTime;
+                  }
+                  const [startH, startM] = (currentPlan.startTime || '15:00').split(':').map(Number);
+                  const totalMins = startH * 60 + startM + elapsed;
+                  const segHour = Math.floor(totalMins / 60) % 12 || 12;
+                  const segMin = totalMins % 60;
+                  const segTime = `${segHour}:${segMin.toString().padStart(2, '0')}`;
+
+                  // Ensure script rows exist
+                  const script = seg.script?.length > 0 ? seg.script : generateScriptRows(seg.duration);
+                  if (!seg.script || seg.script.length === 0) {
+                    // Auto-generate if missing
+                    setTimeout(() => updateSegment(seg.id, 'script', script), 0);
+                  }
+
+                  return (
+                    <div key={seg.id} className="bg-slate-800 rounded-lg overflow-hidden">
+                      {/* Segment Header */}
+                      <div className="flex items-center justify-between px-4 py-3 bg-slate-700/50 border-b border-slate-600">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sky-400 font-mono font-semibold">{segTime}</span>
+                          <span className="text-white font-semibold">{seg.type || 'NEW SEGMENT'}</span>
+                          <span className="text-slate-400 text-sm">({seg.duration || 0} min)</span>
+                        </div>
+                        <button
+                          onClick={() => addScriptRow(seg.id)}
+                          className="flex items-center gap-1 px-2 py-1 text-sm text-sky-400 hover:text-sky-300"
+                        >
+                          <Plus size={14} />
+                          Add Row
+                        </button>
+                      </div>
+
+                      {/* Script Table */}
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-slate-700 text-slate-400 text-xs uppercase">
+                              <th className="px-2 py-2 text-center w-10">#</th>
+                              <th className="px-2 py-2 text-center w-16">Hash</th>
+                              <th className="px-2 py-2 text-center w-12">Dn</th>
+                              <th className="px-2 py-2 text-center w-12">Dist</th>
+                              <th className="px-2 py-2 text-left w-24">Situation</th>
+                              <th className="px-2 py-2 text-left min-w-[200px]">Play Call</th>
+                              <th className="px-2 py-2 text-left w-28">Defense</th>
+                              <th className="px-2 py-2 text-left w-32">Notes</th>
+                              <th className="px-2 py-2 text-center w-16">Act</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(seg.script || script).map((row, idx) => {
+                              const play = row.playId ? getPlay(row.playId) : null;
+                              return (
+                                <tr key={row.id} className="border-b border-slate-700/50 hover:bg-slate-700/30">
+                                  <td className="px-2 py-2 text-center text-slate-500">{idx + 1}</td>
+                                  <td className="px-2 py-2 text-center">
+                                    <select
+                                      value={row.hash || 'M'}
+                                      onChange={(e) => updateScriptRow(seg.id, row.id, 'hash', e.target.value)}
+                                      className="w-full px-1 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs text-center"
+                                    >
+                                      <option value="L">L</option>
+                                      <option value="LM">LM</option>
+                                      <option value="M">M</option>
+                                      <option value="RM">RM</option>
+                                      <option value="R">R</option>
+                                    </select>
+                                  </td>
+                                  <td className="px-2 py-2 text-center">
+                                    <select
+                                      value={row.dn || ''}
+                                      onChange={(e) => updateScriptRow(seg.id, row.id, 'dn', e.target.value)}
+                                      className="w-full px-1 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs text-center"
+                                    >
+                                      <option value=""></option>
+                                      <option value="1">1</option>
+                                      <option value="2">2</option>
+                                      <option value="3">3</option>
+                                      <option value="4">4</option>
+                                    </select>
+                                  </td>
+                                  <td className="px-2 py-2 text-center">
+                                    <input
+                                      type="text"
+                                      value={row.dist || ''}
+                                      onChange={(e) => updateScriptRow(seg.id, row.id, 'dist', e.target.value)}
+                                      placeholder=""
+                                      className="w-full px-1 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs text-center"
+                                    />
+                                  </td>
+                                  <td className="px-2 py-2">
+                                    <input
+                                      type="text"
+                                      value={row.situation || ''}
+                                      onChange={(e) => updateScriptRow(seg.id, row.id, 'situation', e.target.value)}
+                                      placeholder="Situation"
+                                      className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs placeholder-slate-500"
+                                    />
+                                  </td>
+                                  <td className="px-2 py-2">
+                                    <PlayCallAutocomplete
+                                      value={row.playName || ''}
+                                      playId={row.playId}
+                                      plays={playsArray}
+                                      onSelectPlay={(play) => {
+                                        updateScriptRow(seg.id, row.id, 'playId', play.id);
+                                        updateScriptRow(seg.id, row.id, 'playName', play.name);
+                                      }}
+                                      onChangeText={(text) => {
+                                        updateScriptRow(seg.id, row.id, 'playName', text);
+                                        // Clear playId if typing custom text
+                                        if (row.playId) updateScriptRow(seg.id, row.id, 'playId', '');
+                                      }}
+                                      onClear={() => {
+                                        updateScriptRow(seg.id, row.id, 'playId', '');
+                                        updateScriptRow(seg.id, row.id, 'playName', '');
+                                      }}
+                                    />
+                                  </td>
+                                  <td className="px-2 py-2">
+                                    <input
+                                      type="text"
+                                      value={row.defense || ''}
+                                      onChange={(e) => updateScriptRow(seg.id, row.id, 'defense', e.target.value)}
+                                      placeholder="Defense"
+                                      className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs placeholder-slate-500"
+                                    />
+                                  </td>
+                                  <td className="px-2 py-2">
+                                    <input
+                                      type="text"
+                                      value={row.notes || ''}
+                                      onChange={(e) => updateScriptRow(seg.id, row.id, 'notes', e.target.value)}
+                                      placeholder="Add Note..."
+                                      className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs placeholder-slate-500"
+                                    />
+                                  </td>
+                                  <td className="px-2 py-2 text-center">
+                                    <div className="flex items-center justify-center gap-1">
+                                      <button
+                                        onClick={() => {
+                                          // Insert row after this one
+                                          const newScript = [...(seg.script || [])];
+                                          const newRow = createScriptRow(idx + 1);
+                                          newScript.splice(idx + 1, 0, newRow);
+                                          updateSegment(seg.id, 'script', newScript);
+                                        }}
+                                        className="p-1 text-slate-500 hover:text-sky-400"
+                                        title="Insert row"
+                                      >
+                                        <Plus size={12} />
+                                      </button>
+                                      <button
+                                        onClick={() => deleteScriptRow(seg.id, row.id)}
+                                        className="p-1 text-slate-500 hover:text-red-400"
+                                        title="Delete row"
+                                      >
+                                        <X size={12} />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })
+            )}
           </div>
         )}
       </div>
@@ -2203,6 +2645,75 @@ export default function PracticePlans() {
           onImport={importTemplate}
           onClose={() => setShowImportTemplateModal(false)}
         />
+      )}
+
+      {/* Play Selector Modal */}
+      {showPlaySelector && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 rounded-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-slate-800">
+              <h3 className="text-lg font-semibold text-white">Select Play</h3>
+              <button
+                onClick={() => {
+                  setShowPlaySelector(false);
+                  setActiveScriptSegmentId(null);
+                  setActiveScriptRowId(null);
+                }}
+                className="p-2 text-slate-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-4 border-b border-slate-800">
+              <div className="flex gap-3">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={playSearchTerm}
+                    onChange={e => setPlaySearchTerm(e.target.value)}
+                    placeholder="Search plays..."
+                    className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500"
+                    autoFocus
+                  />
+                </div>
+                <select
+                  value={playFilterPhase}
+                  onChange={e => setPlayFilterPhase(e.target.value)}
+                  className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                >
+                  <option value="OFFENSE">Offense</option>
+                  <option value="DEFENSE">Defense</option>
+                  <option value="SPECIAL_TEAMS">Special Teams</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {filteredPlays.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <p>No plays found</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {filteredPlays.map(play => (
+                    <button
+                      key={play.id}
+                      onClick={() => selectPlayForRow(play)}
+                      className="p-3 bg-slate-800 rounded-lg hover:bg-slate-700 text-left transition-colors"
+                    >
+                      <div className="font-medium text-white">{play.name}</div>
+                      <div className="text-sm text-slate-500 mt-1">
+                        {play.formation && <span>{play.formation}</span>}
+                        {play.bucket && <span> • {play.bucket}</span>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

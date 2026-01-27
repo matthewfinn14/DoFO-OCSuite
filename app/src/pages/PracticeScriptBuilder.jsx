@@ -80,7 +80,7 @@ const DEFAULT_SEGMENTS = [
 ];
 
 export default function PracticeScriptBuilder() {
-  const { plays, weeks, currentWeekId, setCurrentWeekId, updateWeeks } = useSchool();
+  const { plays, playsArray, weeks, currentWeekId, setCurrentWeekId, updateWeeks } = useSchool();
   const { openPlayDetails } = usePlayDetailsModal();
 
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -127,13 +127,13 @@ export default function PracticeScriptBuilder() {
 
   // Filter plays for selector
   const filteredPlays = useMemo(() => {
-    const phasePlays = plays.filter(p => p.phase === filterPhase);
+    const phasePlays = playsArray.filter(p => p.phase === filterPhase);
     if (!searchTerm) return phasePlays;
     return phasePlays.filter(play =>
       play.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       play.formation?.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [plays, searchTerm, filterPhase]);
+  }, [playsArray, searchTerm, filterPhase]);
 
   // Toggle segment expansion
   const toggleSegment = (segmentId) => {
@@ -290,7 +290,7 @@ export default function PracticeScriptBuilder() {
   };
 
   // Get play by ID
-  const getPlay = (playId) => plays.find(p => p.id === playId);
+  const getPlay = (playId) => plays[playId];
 
   // Get segment type config
   const getSegmentType = (typeId) =>
