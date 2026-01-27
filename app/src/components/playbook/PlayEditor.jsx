@@ -1,29 +1,15 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { X, Save, Trash2, Upload, Image as ImageIcon, ChevronDown, ChevronRight, Edit3, Library, GripVertical, ArrowRight } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { X, Save, Trash2, Upload, ChevronDown, ChevronRight, Edit3, Library, GripVertical, Handshake, Link2 } from 'lucide-react';
 import { useSchool } from '../../context/SchoolContext';
 import PlayDiagramEditor from '../diagrams/PlayDiagramEditor';
 import DiagramPreview from '../diagrams/DiagramPreview';
 
-// Tag categories
-const TAG_CATEGORIES = {
-  "Down & Distance": ["1st Down", "2nd & Long", "2nd & Medium", "2nd & Short", "3rd & Long", "3rd & Medium", "3rd & Short", "4th Down"],
-  "Field Position": ["Backed Up", "Minus Territory", "Plus Territory", "Fringe", "Red Zone", "Gold Zone", "Goal Line"],
-  "Situation": ["2-Min Offense", "4-Min Offense", "Must Score", "Clock Running", "Openers"],
-  "Motion": ["Jet", "Orbit", "Zoom", "Rocket", "Fly", "Shift"],
-  "Play Type": ["Run", "Pass", "RPO", "Play Action", "Screen", "Gadget"],
-};
-
-// Hash preferences
-const HASH_OPTIONS = ['Any', 'Left', 'Middle', 'Right'];
-
-// Play types
-const PLAY_TYPES = ['Fastball', 'Curveball', 'Change Up', 'Strikeout'];
-
-// Action types
-const ACTION_TYPES = ['Strong Run', 'Weak Run', 'Quick Game', 'Drop Back', 'Boot/Naked', 'Screen', 'RPO'];
-
-// Field zones
-const FIELD_ZONES = ['Fringe', 'Red Zone', 'Gold Zone', 'Goal Line'];
+// Complement types with labels and colors
+const COMPLEMENT_TYPES = [
+  { id: 'audible', label: 'Audible', color: '#f59e0b', description: 'Can audible to this play' },
+  { id: 'if-then', label: 'If/Then', color: '#8b5cf6', description: 'Part of if/then sequence' },
+  { id: 'look-alike', label: 'Look-Alike', color: '#06b6d4', description: 'Looks similar to defense' }
+];
 
 export default function PlayEditor({
   play = null,
@@ -34,9 +20,10 @@ export default function PlayEditor({
   formations = [],
   playBuckets = [],
   conceptGroups = [],
-  phase = 'OFFENSE'
+  phase = 'OFFENSE',
+  availablePlays = []
 }) {
-  const { setupConfig } = useSchool();
+  const { setupConfig, updateSetupConfig } = useSchool();
   const isEditing = !!play;
 
   // Get OL schemes from setup config for library selection
@@ -87,6 +74,7 @@ export default function PlayEditor({
     downDistance: [],
     concept: '',
     incomplete: false,
+    complementaryPlays: [],
   });
 
   const [loading, setSaving] = useState(false);
@@ -94,10 +82,14 @@ export default function PlayEditor({
     basic: true,
     playCall: true,
     diagrams: true,
-    tags: false,
-    callSheet: false,
+    complementary: false,
     advanced: false
   });
+
+  // Series creation prompt state
+  const [showSeriesPrompt, setShowSeriesPrompt] = useState(false);
+  const [pendingSeriesPlays, setPendingSeriesPlays] = useState([]);
+  const [seriesName, setSeriesName] = useState('');
 
   // Initialize form with play data when editing
   useEffect(() => {
@@ -123,6 +115,7 @@ export default function PlayEditor({
         downDistance: play.downDistance || [],
         concept: play.concept || '',
         incomplete: play.incomplete || false,
+        complementaryPlays: play.complementaryPlays || [],
         // Preserve diagram data
         diagramData: play.diagramData || null,
         wizSkillData: play.wizSkillData || null,
@@ -154,6 +147,7 @@ export default function PlayEditor({
         downDistance: [],
         concept: '',
         incomplete: false,
+        complementaryPlays: [],
         // Diagram fields
         wizSkillData: null,
         wizOlineData: null,
@@ -176,44 +170,83 @@ export default function PlayEditor({
     return playBuckets.filter(b => b.categoryId === formData.playCategory);
   }, [playBuckets, formData.playCategory]);
 
+  // Filter available plays for complementary selection (same phase, exclude current play)
+  const complementaryPlayOptions = useMemo(() => {
+    return availablePlays.filter(p =>
+      p.id !== play?.id && (p.phase || 'OFFENSE') === (formData.phase || phase)
+    );
+  }, [availablePlays, play?.id, formData.phase, phase]);
+
+  // Get play info by ID for display
+  const getPlayById = (id) => availablePlays.find(p => p.id === id);
+
+  // Add a complementary play
+  const handleAddComplementary = (targetPlayId, type) => {
+    if (!targetPlayId || !type) return;
+    const existing = formData.complementaryPlays || [];
+    // Check if already exists with this type
+    const exists = existing.some(c => c.playId === targetPlayId && c.type === type);
+    if (exists) return;
+
+    const newComplementaryPlays = [...existing, { playId: targetPlayId, type }];
+    setFormData(prev => ({
+      ...prev,
+      complementaryPlays: newComplementaryPlays
+    }));
+
+    // If we now have 3+ unique linked plays, prompt to create a series
+    const uniquePlayIds = new Set(newComplementaryPlays.map(c => c.playId));
+    if (play?.id) uniquePlayIds.add(play.id); // Include current play
+
+    if (uniquePlayIds.size >= 3) {
+      // Check if these plays are already in an existing series
+      const existingSeries = setupConfig?.lookAlikeSeries || [];
+      const alreadyInSeries = existingSeries.some(series => {
+        const seriesSet = new Set(series.playIds);
+        return [...uniquePlayIds].every(id => seriesSet.has(id));
+      });
+
+      if (!alreadyInSeries) {
+        setPendingSeriesPlays([...uniquePlayIds]);
+        setSeriesName('');
+        setShowSeriesPrompt(true);
+      }
+    }
+  };
+
+  // Remove a complementary play
+  const handleRemoveComplementary = (targetPlayId, type) => {
+    setFormData(prev => ({
+      ...prev,
+      complementaryPlays: (prev.complementaryPlays || []).filter(
+        c => !(c.playId === targetPlayId && c.type === type)
+      )
+    }));
+  };
+
+  // Create a new series from linked plays
+  const handleCreateSeries = async () => {
+    if (!seriesName.trim() || pendingSeriesPlays.length < 3) return;
+
+    const newSeries = {
+      id: `series-${Date.now()}`,
+      name: seriesName.trim(),
+      bucketId: formData.bucketId || null,
+      description: '',
+      commonElements: [],
+      playIds: pendingSeriesPlays
+    };
+
+    const existingSeries = setupConfig?.lookAlikeSeries || [];
+    await updateSetupConfig('lookAlikeSeries', [...existingSeries, newSeries]);
+
+    setShowSeriesPrompt(false);
+    setPendingSeriesPlays([]);
+    setSeriesName('');
+  };
+
   const toggleSection = (section) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
-  };
-
-  const toggleTag = (tag) => {
-    setFormData(prev => ({
-      ...prev,
-      tags: prev.tags.includes(tag)
-        ? prev.tags.filter(t => t !== tag)
-        : [...prev.tags, tag]
-    }));
-  };
-
-  const toggleActionType = (type) => {
-    setFormData(prev => ({
-      ...prev,
-      actionTypes: prev.actionTypes.includes(type)
-        ? prev.actionTypes.filter(t => t !== type)
-        : [...prev.actionTypes, type]
-    }));
-  };
-
-  const toggleFieldZone = (zone) => {
-    setFormData(prev => ({
-      ...prev,
-      fieldZones: prev.fieldZones.includes(zone)
-        ? prev.fieldZones.filter(z => z !== zone)
-        : [...prev.fieldZones, zone]
-    }));
-  };
-
-  const toggleDownDistance = (dd) => {
-    setFormData(prev => ({
-      ...prev,
-      downDistance: prev.downDistance.includes(dd)
-        ? prev.downDistance.filter(d => d !== dd)
-        : [...prev.downDistance, dd]
-    }));
   };
 
   const handleImageUpload = (e) => {
@@ -689,174 +722,101 @@ export default function PlayEditor({
             </Section>
           )}
 
-          {/* Tags Section */}
+          {/* Complementary Plays Section */}
           <Section
-            title="Tags & Situations"
-            isOpen={expandedSections.tags}
-            onToggle={() => toggleSection('tags')}
+            title={
+              <span className="flex items-center gap-2">
+                <Handshake size={16} className="text-emerald-400" />
+                Complementary Plays
+                {formData.complementaryPlays?.length > 0 && (
+                  <span className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs rounded">
+                    {formData.complementaryPlays.length}
+                  </span>
+                )}
+              </span>
+            }
+            isOpen={expandedSections.complementary}
+            onToggle={() => toggleSection('complementary')}
           >
             <div className="space-y-4">
-              {/* Quick tags */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-1">Tag 1</label>
-                  <input
-                    type="text"
-                    value={formData.tag1}
-                    onChange={e => setFormData(prev => ({ ...prev, tag1: e.target.value }))}
-                    placeholder="e.g., Motion"
-                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-1">Tag 2</label>
-                  <input
-                    type="text"
-                    value={formData.tag2}
-                    onChange={e => setFormData(prev => ({ ...prev, tag2: e.target.value }))}
-                    placeholder="e.g., Check"
-                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500"
-                  />
-                </div>
-              </div>
-
-              {/* Tag categories */}
-              {Object.entries(TAG_CATEGORIES).map(([category, tags]) => (
-                <div key={category}>
-                  <label className="block text-xs font-medium text-slate-500 uppercase mb-2">
-                    {category}
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {tags.map(tag => (
-                      <button
-                        key={tag}
-                        onClick={() => toggleTag(tag)}
-                        className={`px-2 py-1 text-xs rounded-md border transition-colors ${
-                          formData.tags.includes(tag)
-                            ? 'bg-sky-500/20 border-sky-500 text-sky-400'
-                            : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600'
-                        }`}
+              {/* Existing Complements */}
+              {formData.complementaryPlays?.length > 0 && (
+                <div className="space-y-2">
+                  {formData.complementaryPlays.map((comp, idx) => {
+                    const compPlay = getPlayById(comp.playId);
+                    const typeInfo = COMPLEMENT_TYPES.find(t => t.id === comp.type);
+                    if (!compPlay) return null;
+                    return (
+                      <div
+                        key={`${comp.playId}-${comp.type}-${idx}`}
+                        className="flex items-center justify-between px-3 py-2 bg-slate-800 rounded-lg border border-slate-700"
                       >
-                        {tag}
-                      </button>
-                    ))}
-                  </div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="text-[10px] px-1.5 py-0.5 rounded font-semibold"
+                            style={{ backgroundColor: typeInfo?.color || '#64748b', color: '#fff' }}
+                          >
+                            {typeInfo?.label || comp.type}
+                          </span>
+                          <span className="text-sm text-white">
+                            {compPlay.formation ? `${compPlay.formation} ` : ''}{compPlay.name}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveComplementary(comp.playId, comp.type)}
+                          className="p-1 text-slate-400 hover:text-red-400"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
-          </Section>
+              )}
 
-          {/* Call Sheet Section */}
-          <Section
-            title="Call Sheet Settings"
-            isOpen={expandedSections.callSheet}
-            onToggle={() => toggleSection('callSheet')}
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Wristband Slot */}
-              <div>
-                <label className="block text-sm font-medium text-slate-400 mb-1">
-                  Wristband Slot
-                </label>
-                <input
-                  type="text"
-                  value={formData.wristbandSlot}
-                  onChange={e => setFormData(prev => ({ ...prev, wristbandSlot: e.target.value }))}
-                  placeholder="e.g., 101"
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500"
-                />
-              </div>
-
-              {/* Staples Slot */}
-              <div>
-                <label className="block text-sm font-medium text-slate-400 mb-1">
-                  Staples Slot
-                </label>
-                <input
-                  type="text"
-                  value={formData.staplesSlot}
-                  onChange={e => setFormData(prev => ({ ...prev, staplesSlot: e.target.value }))}
-                  placeholder="e.g., 10"
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500"
-                />
-              </div>
-
-              {/* Hash Preference */}
-              <div>
-                <label className="block text-sm font-medium text-slate-400 mb-1">
-                  Hash Preference
-                </label>
+              {/* Add Complement */}
+              <div className="flex gap-2">
                 <select
-                  value={formData.hashPreference}
-                  onChange={e => setFormData(prev => ({ ...prev, hashPreference: e.target.value }))}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white"
+                  id="editor-complement-type-select"
+                  className="px-3 py-2 text-sm bg-slate-800 border border-slate-700 rounded-md text-white"
+                  defaultValue=""
                 >
-                  {HASH_OPTIONS.map(opt => (
-                    <option key={opt} value={opt}>{opt}</option>
+                  <option value="" disabled>Type...</option>
+                  {COMPLEMENT_TYPES.map(t => (
+                    <option key={t.id} value={t.id}>{t.label}</option>
+                  ))}
+                </select>
+                <select
+                  id="editor-complement-play-select"
+                  className="flex-1 px-3 py-2 text-sm bg-slate-800 border border-slate-700 rounded-md text-white"
+                  defaultValue=""
+                  onChange={(e) => {
+                    const typeSelect = document.getElementById('editor-complement-type-select');
+                    if (e.target.value && typeSelect.value) {
+                      handleAddComplementary(e.target.value, typeSelect.value);
+                      e.target.value = '';
+                    }
+                  }}
+                >
+                  <option value="">Select play to link...</option>
+                  {complementaryPlayOptions.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.formation ? `${p.formation} ` : ''}{p.name}
+                    </option>
                   ))}
                 </select>
               </div>
 
-              {/* Play Type */}
-              <div>
-                <label className="block text-sm font-medium text-slate-400 mb-1">
-                  Play Type
-                </label>
-                <select
-                  value={formData.playType}
-                  onChange={e => setFormData(prev => ({ ...prev, playType: e.target.value }))}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white"
-                >
-                  <option value="">Select Type</option>
-                  {PLAY_TYPES.map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
+              {complementaryPlayOptions.length === 0 && (
+                <p className="text-xs text-slate-500 italic">
+                  No other plays available in this phase to link.
+                </p>
+              )}
 
-              {/* Action Types */}
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-400 mb-2">
-                  Action Types
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {ACTION_TYPES.map(type => (
-                    <button
-                      key={type}
-                      onClick={() => toggleActionType(type)}
-                      className={`px-2 py-1 text-xs rounded-md border transition-colors ${
-                        formData.actionTypes.includes(type)
-                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
-                          : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600'
-                      }`}
-                    >
-                      {type}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Field Zones */}
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-400 mb-2">
-                  Field Zones
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {FIELD_ZONES.map(zone => (
-                    <button
-                      key={zone}
-                      onClick={() => toggleFieldZone(zone)}
-                      className={`px-2 py-1 text-xs rounded-md border transition-colors ${
-                        formData.fieldZones.includes(zone)
-                          ? 'bg-amber-500/20 border-amber-500 text-amber-400'
-                          : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600'
-                      }`}
-                    >
-                      {zone}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <p className="text-xs text-slate-500">
+                Link plays as audibles, if/then sequences, or look-alikes.
+              </p>
             </div>
           </Section>
 
@@ -1028,6 +988,84 @@ export default function PlayEditor({
                   </p>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Series Prompt Modal */}
+      {showSeriesPrompt && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[70] p-4">
+          <div className="bg-slate-800 rounded-xl w-full max-w-md overflow-hidden">
+            <div className="flex items-center gap-3 p-4 border-b border-slate-700">
+              <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                <Link2 size={20} className="text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Create a Series?</h3>
+                <p className="text-sm text-slate-400">
+                  You've linked {pendingSeriesPlays.length} plays together
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <p className="text-sm text-slate-300">
+                Would you like to create a Look-Alike Series from these linked plays?
+                Series make it easy to filter and view related plays together.
+              </p>
+
+              {/* Show linked plays */}
+              <div className="bg-slate-900 rounded-lg p-3 max-h-32 overflow-y-auto">
+                <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Plays in series:</p>
+                <div className="space-y-1">
+                  {pendingSeriesPlays.map(playId => {
+                    const p = getPlayById(playId);
+                    if (!p) return null;
+                    return (
+                      <div key={playId} className="text-sm text-white">
+                        {p.formation ? `${p.formation} ` : ''}{p.name}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Series name input */}
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-1">
+                  Series Name
+                </label>
+                <input
+                  type="text"
+                  value={seriesName}
+                  onChange={(e) => setSeriesName(e.target.value)}
+                  placeholder="e.g., Inside Zone Series, Mesh Series..."
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-md text-white placeholder-slate-500"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 p-4 border-t border-slate-700">
+              <button
+                onClick={() => {
+                  setShowSeriesPrompt(false);
+                  setPendingSeriesPlays([]);
+                  setSeriesName('');
+                }}
+                className="flex-1 px-4 py-2 bg-slate-700 text-slate-300 rounded-md hover:bg-slate-600"
+              >
+                No Thanks
+              </button>
+              <button
+                onClick={handleCreateSeries}
+                disabled={!seriesName.trim()}
+                className="flex-1 px-4 py-2 bg-emerald-500 text-white rounded-md hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <Link2 size={16} />
+                Create Series
+              </button>
             </div>
           </div>
         </div>

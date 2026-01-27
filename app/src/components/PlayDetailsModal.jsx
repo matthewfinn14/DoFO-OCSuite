@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext } from 'react';
-import { X, Star, Zap, FileText, Handshake } from 'lucide-react';
+import { X, Star, Zap, FileText, Handshake, Link2 } from 'lucide-react';
 
 // Context for opening PlayDetailsModal from anywhere
 const PlayDetailsModalContext = createContext({
@@ -10,7 +10,7 @@ const PlayDetailsModalContext = createContext({
 export const usePlayDetailsModal = () => useContext(PlayDetailsModalContext);
 
 // Provider component that wraps the app
-export function PlayDetailsModalProvider({ children, plays, updatePlay, playBuckets, conceptGroups, formations, currentWeek, updateWeek }) {
+export function PlayDetailsModalProvider({ children, plays, updatePlay, playBuckets, conceptGroups, formations, currentWeek, updateWeek, setupConfig, updateSetupConfig }) {
   const [modalState, setModalState] = useState({ isOpen: false, playId: null });
 
   const openPlayDetails = (playId) => {
@@ -35,6 +35,8 @@ export function PlayDetailsModalProvider({ children, plays, updatePlay, playBuck
           formations={formations}
           currentWeek={currentWeek}
           onUpdateWeek={updateWeek}
+          setupConfig={setupConfig}
+          updateSetupConfig={updateSetupConfig}
         />
       )}
     </PlayDetailsModalContext.Provider>
@@ -51,8 +53,14 @@ export default function PlayDetailsModal({
   conceptGroups = [],
   formations = [],
   currentWeek,
-  onUpdateWeek
+  onUpdateWeek,
+  setupConfig,
+  updateSetupConfig
 }) {
+  // Series creation prompt state
+  const [showSeriesPrompt, setShowSeriesPrompt] = useState(false);
+  const [pendingSeriesPlays, setPendingSeriesPlays] = useState([]);
+  const [seriesName, setSeriesName] = useState('');
   const play = Array.isArray(plays)
     ? plays.find(p => p.id === playId)
     : plays?.[playId];
@@ -137,13 +145,55 @@ export default function PlayDetailsModal({
     // Check if already exists with this type
     const exists = complementaryPlays.some(c => c.playId === targetPlayId && c.type === type);
     if (exists) return;
-    onUpdatePlay?.(playId, { complementaryPlays: [...complementaryPlays, { playId: targetPlayId, type }] });
+
+    const newComplementaryPlays = [...complementaryPlays, { playId: targetPlayId, type }];
+    onUpdatePlay?.(playId, { complementaryPlays: newComplementaryPlays });
+
+    // If we now have 3+ unique linked plays, prompt to create a series
+    const uniquePlayIds = new Set(newComplementaryPlays.map(c => c.playId));
+    uniquePlayIds.add(playId); // Include current play
+
+    if (uniquePlayIds.size >= 3 && updateSetupConfig) {
+      // Check if these plays are already in an existing series
+      const existingSeries = setupConfig?.lookAlikeSeries || [];
+      const alreadyInSeries = existingSeries.some(series => {
+        const seriesSet = new Set(series.playIds);
+        return [...uniquePlayIds].every(id => seriesSet.has(id));
+      });
+
+      if (!alreadyInSeries) {
+        setPendingSeriesPlays([...uniquePlayIds]);
+        setSeriesName('');
+        setShowSeriesPrompt(true);
+      }
+    }
   };
 
   const handleRemoveComplementary = (targetPlayId, type) => {
     onUpdatePlay?.(playId, {
       complementaryPlays: complementaryPlays.filter(c => !(c.playId === targetPlayId && c.type === type))
     });
+  };
+
+  // Create a new series from linked plays
+  const handleCreateSeries = async () => {
+    if (!seriesName.trim() || pendingSeriesPlays.length < 3 || !updateSetupConfig) return;
+
+    const newSeries = {
+      id: `series-${Date.now()}`,
+      name: seriesName.trim(),
+      bucketId: play.bucketId || null,
+      description: '',
+      commonElements: [],
+      playIds: pendingSeriesPlays
+    };
+
+    const existingSeries = setupConfig?.lookAlikeSeries || [];
+    await updateSetupConfig('lookAlikeSeries', [...existingSeries, newSeries]);
+
+    setShowSeriesPrompt(false);
+    setPendingSeriesPlays([]);
+    setSeriesName('');
   };
 
   // Get play info by ID
@@ -485,6 +535,87 @@ export default function PlayDetailsModal({
           </div>
         </div>
       </div>
+
+      {/* Create Series Prompt Modal */}
+      {showSeriesPrompt && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-[10000] p-4"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="bg-white rounded-xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div className="flex items-center gap-3 p-4 border-b border-slate-200">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                <Link2 size={20} className="text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Create a Series?</h3>
+                <p className="text-sm text-slate-500">
+                  You've linked {pendingSeriesPlays.length} plays together
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <p className="text-sm text-slate-600">
+                Would you like to create a Look-Alike Series from these linked plays?
+                Series make it easy to filter and view related plays together.
+              </p>
+
+              {/* Show linked plays */}
+              <div className="bg-slate-50 rounded-lg p-3 max-h-32 overflow-y-auto">
+                <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">Plays in series:</p>
+                <div className="space-y-1">
+                  {pendingSeriesPlays.map(pId => {
+                    const p = getPlayById(pId);
+                    if (!p) return null;
+                    return (
+                      <div key={pId} className="text-sm text-slate-700">
+                        {p.formation ? `${p.formation} ` : ''}{p.name}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Series name input */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Series Name
+                </label>
+                <input
+                  type="text"
+                  value={seriesName}
+                  onChange={(e) => setSeriesName(e.target.value)}
+                  placeholder="e.g., Inside Zone Series, Mesh Series..."
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 p-4 border-t border-slate-200">
+              <button
+                onClick={() => {
+                  setShowSeriesPrompt(false);
+                  setPendingSeriesPlays([]);
+                  setSeriesName('');
+                }}
+                className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 rounded-md hover:bg-slate-200 font-medium"
+              >
+                No Thanks
+              </button>
+              <button
+                onClick={handleCreateSeries}
+                disabled={!seriesName.trim()}
+                className="flex-1 px-4 py-2 bg-emerald-500 text-white rounded-md hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium"
+              >
+                <Link2 size={16} />
+                Create Series
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

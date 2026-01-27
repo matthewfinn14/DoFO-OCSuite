@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { PlayCard, PlayEditor } from '../components/playbook';
+import { usePlayDetailsModal } from '../components/PlayDetailsModal';
 import {
   Plus,
   Search,
@@ -23,8 +24,8 @@ const PHASE_TABS = [
   { id: 'SPECIAL_TEAMS', label: 'Special Teams', icon: Zap, color: '#f59e0b', beta: true }
 ];
 
-// Tag categories for filtering
-const TAG_CATEGORIES = {
+// Default tag categories for filtering (used when setupConfig is empty)
+const DEFAULT_TAG_CATEGORIES = {
   "Situation": ["2-Min Offense", "4-Min Offense", "Must Score", "Clock Running", "Openers"],
   "Field Position": ["Backed Up", "Minus Territory", "Plus Territory", "Fringe", "Red Zone", "Gold Zone", "Goal Line"],
   "Down & Distance": ["1st Down", "2nd & Long", "2nd & Medium", "2nd & Short", "3rd & Long", "3rd & Medium", "3rd & Short", "4th Down"]
@@ -32,6 +33,7 @@ const TAG_CATEGORIES = {
 
 export default function Playbook() {
   const { playsArray, plays, updatePlays, addPlay, updatePlay, setupConfig } = useSchool();
+  const { openPlayDetails } = usePlayDetailsModal();
 
   // UI State
   const [activePhase, setActivePhase] = useState('OFFENSE');
@@ -59,6 +61,24 @@ export default function Playbook() {
   const conceptGroups = setupConfig?.conceptGroups || [];
   const readTypes = setupConfig?.readTypes || [];
   const lookAlikeSeries = setupConfig?.lookAlikeSeries || [];
+
+  // Dynamic tag categories from setupConfig (with fallback to defaults)
+  const tagCategories = useMemo(() => {
+    const situations = setupConfig?.specialSituations?.length > 0
+      ? setupConfig.specialSituations.map(s => s.name)
+      : DEFAULT_TAG_CATEGORIES["Situation"];
+    const fieldPositions = setupConfig?.fieldZones?.length > 0
+      ? setupConfig.fieldZones.map(z => z.name)
+      : DEFAULT_TAG_CATEGORIES["Field Position"];
+    const downDistance = setupConfig?.downDistanceCategories?.length > 0
+      ? setupConfig.downDistanceCategories.map(d => d.name)
+      : DEFAULT_TAG_CATEGORIES["Down & Distance"];
+    return {
+      "Situation": situations,
+      "Field Position": fieldPositions,
+      "Down & Distance": downDistance
+    };
+  }, [setupConfig]);
 
   // Get all unique tags from plays
   const allTags = useMemo(() => {
@@ -468,7 +488,7 @@ export default function Playbook() {
               className="w-full h-[38px] px-3 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
             >
               <option value="">All Situations</option>
-              {Object.entries(TAG_CATEGORIES).map(([category, tags]) => (
+              {Object.entries(tagCategories).map(([category, tags]) => (
                 <optgroup key={category} label={category}>
                   {tags.map(tag => (
                     <option key={tag} value={tag}>{tag}</option>
@@ -546,6 +566,7 @@ export default function Playbook() {
               isSelected={selectedPlays.includes(play.id)}
               onToggleSelect={togglePlaySelection}
               onEdit={() => openEditPlayEditor(play)}
+              onOpenDetails={openPlayDetails}
             />
           ))}
         </div>
@@ -577,6 +598,7 @@ export default function Playbook() {
         playBuckets={playBuckets}
         conceptGroups={conceptGroups}
         phase={activePhase}
+        availablePlays={phasePlays}
       />
     </div>
   );

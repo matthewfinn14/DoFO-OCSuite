@@ -12,6 +12,7 @@ export default function MainLayout() {
     playsArray,
     updatePlay,
     setupConfig,
+    updateSetupConfig,
     settings,
     currentWeek,
     updateWeek
@@ -32,6 +33,8 @@ export default function MainLayout() {
       formations={formations}
       currentWeek={currentWeek}
       updateWeek={updateWeek}
+      setupConfig={setupConfig}
+      updateSetupConfig={updateSetupConfig}
     >
       <div className="flex h-screen bg-slate-950 text-white">
         {/* Sidebar */}

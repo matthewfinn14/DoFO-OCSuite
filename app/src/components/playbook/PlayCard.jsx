@@ -8,7 +8,8 @@ export default function PlayCard({
   isSelected = false,
   onToggleSelect,
   onEdit,
-  onQuickEdit
+  onQuickEdit,
+  onOpenDetails
 }) {
   const handleClick = (e) => {
     if (onQuickEdit) {
@@ -31,6 +32,11 @@ export default function PlayCard({
   const handleEditClick = (e) => {
     e.stopPropagation();
     if (onEdit) onEdit(play);
+  };
+
+  const handleOpenDetailsClick = (e) => {
+    e.stopPropagation();
+    if (onOpenDetails) onOpenDetails(play.id);
   };
 
   // Get diagram elements from any available source
@@ -104,7 +110,7 @@ export default function PlayCard({
       data-play-id={play.id}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
-      className={`bg-slate-900 rounded-lg overflow-hidden cursor-pointer transition-all hover:ring-2 hover:ring-slate-600 ${
+      className={`relative bg-slate-900 rounded-lg overflow-hidden cursor-pointer transition-all hover:ring-2 hover:ring-slate-600 ${
         isSelected ? 'ring-2 ring-sky-500' : 'border border-slate-800'
       }`}
     >
@@ -122,6 +128,23 @@ export default function PlayCard({
             className="w-4 h-4 cursor-pointer"
           />
         </button>
+
+        {/* Complementary Plays button */}
+        {onOpenDetails && (
+          <button
+            onClick={handleOpenDetailsClick}
+            className={`w-6 h-6 flex items-center justify-center rounded ${
+              play.complementaryPlays?.length > 0
+                ? 'bg-emerald-500 text-white'
+                : 'bg-white/80 text-slate-600 hover:text-emerald-600'
+            }`}
+            title={play.complementaryPlays?.length > 0
+              ? `${play.complementaryPlays.length} complementary play(s) - Click to manage`
+              : 'Link complementary plays'}
+          >
+            <Handshake size={14} />
+          </button>
+        )}
 
         {/* Edit button */}
         <button
