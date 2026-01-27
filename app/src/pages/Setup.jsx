@@ -220,15 +220,15 @@ const TAB_HELP = {
     content: (
       <div className="pt-3 space-y-3">
         <p>
-          <strong className="text-white">Purpose:</strong> Within each category, create families of related concepts
+          <strong className="text-white">Purpose:</strong> Within each bucket, create groups of related concepts
           (e.g., under "Run": Inside Zone, Outside Zone, Power, Counter).
         </p>
         <p>
-          <strong className="text-white">Connections:</strong> Concept families provide a second level of organization
+          <strong className="text-white">Connections:</strong> Concept groups provide a second level of organization
           in your Playbook. Use them to group similar plays together for install tracking.
         </p>
         <p>
-          <strong className="text-white">Why set this up?</strong> Concept families help you track what's installed,
+          <strong className="text-white">Why set this up?</strong> Concept groups help you track what's installed,
           what needs more reps, and how your scheme is organized at a conceptual level.
         </p>
       </div>
@@ -1612,7 +1612,7 @@ function ConceptGroupsTab({ phase, buckets, allBuckets, onUpdate }) {
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-white">{phaseLabel}</h3>
         <p className="text-slate-400 text-sm">
-          {phase === 'DEFENSE' ? 'Manage variations within each defensive category.' : phase === 'SPECIAL_TEAMS' ? 'Manage variations within each special teams unit.' : 'Manage your concept families within each bucket.'}
+          {phase === 'DEFENSE' ? 'Manage variations within each defensive category.' : phase === 'SPECIAL_TEAMS' ? 'Manage variations within each special teams unit.' : 'Manage your concept groups within each bucket.'}
         </p>
       </div>
 
