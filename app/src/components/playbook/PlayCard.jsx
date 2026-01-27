@@ -1,4 +1,4 @@
-import { Edit2, Check } from 'lucide-react';
+import { Edit2, Check, Handshake } from 'lucide-react';
 
 // Tag categories for formatting
 const MOTION_TAGS = ['Jet', 'Orbit', 'Zoom', 'Rocket', 'Fly', 'Shift'];
@@ -160,6 +160,9 @@ export default function PlayCard({
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <h3 className="font-semibold text-white truncate">{getDisplayName()}</h3>
+            {play.complementaryPlays?.length > 0 && (
+              <Handshake size={14} className="flex-shrink-0 text-emerald-400" title="Has complementary plays" />
+            )}
             {play.incomplete && (
               <span className="flex-shrink-0 px-2 py-0.5 bg-amber-500 text-white text-xs font-bold rounded flex items-center gap-1">
                 ⚠️ INCOMPLETE

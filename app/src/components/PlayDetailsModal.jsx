@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext } from 'react';
-import { X, Star, Zap, FileText } from 'lucide-react';
+import { X, Star, Zap, FileText, Handshake } from 'lucide-react';
 
 // Context for opening PlayDetailsModal from anywhere
 const PlayDetailsModalContext = createContext({
@@ -121,6 +121,41 @@ export default function PlayDetailsModal({
     onUpdatePlay?.(playId, { wristbandSlot: value });
   };
 
+  // Complementary plays - stored as array of {playId, type}
+  // Types: 'audible', 'if-then', 'look-alike'
+  const complementaryPlays = play.complementaryPlays || [];
+  const hasComplementary = complementaryPlays.length > 0;
+
+  // Get plays for the same phase (excluding current play)
+  const playsArray = Array.isArray(plays) ? plays : Object.values(plays || {});
+  const samePhasePlays = playsArray.filter(p =>
+    p.id !== playId && (p.phase || 'OFFENSE') === (play.phase || 'OFFENSE')
+  );
+
+  const handleAddComplementary = (targetPlayId, type) => {
+    if (!targetPlayId) return;
+    // Check if already exists with this type
+    const exists = complementaryPlays.some(c => c.playId === targetPlayId && c.type === type);
+    if (exists) return;
+    onUpdatePlay?.(playId, { complementaryPlays: [...complementaryPlays, { playId: targetPlayId, type }] });
+  };
+
+  const handleRemoveComplementary = (targetPlayId, type) => {
+    onUpdatePlay?.(playId, {
+      complementaryPlays: complementaryPlays.filter(c => !(c.playId === targetPlayId && c.type === type))
+    });
+  };
+
+  // Get play info by ID
+  const getPlayById = (id) => playsArray.find(p => p.id === id);
+
+  // Complement types with labels and colors
+  const COMPLEMENT_TYPES = [
+    { id: 'audible', label: 'Audible', color: '#f59e0b', description: 'Can audible to this play' },
+    { id: 'if-then', label: 'If/Then', color: '#8b5cf6', description: 'Part of if/then sequence' },
+    { id: 'look-alike', label: 'Look-Alike', color: '#06b6d4', description: 'Looks similar to defense' }
+  ];
+
   return (
     <div
       className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center"
@@ -133,10 +168,17 @@ export default function PlayDetailsModal({
         {/* Header */}
         <div className="p-4 border-b border-slate-200 flex justify-between items-start">
           <div>
-            <h3 className="text-xl font-bold text-slate-900">
-              {play.formation && <span className="text-slate-500">{play.formation} </span>}
-              {play.name}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-xl font-bold text-slate-900">
+                {play.formation && <span className="text-slate-500">{play.formation} </span>}
+                {play.name}
+              </h3>
+              {hasComplementary && (
+                <span className="text-emerald-500" title={`Has ${complementaryPlays.length} complementary play(s)`}>
+                  <Handshake size={20} />
+                </span>
+              )}
+            </div>
             {/* Bucket and Concept Group badges */}
             {(bucket || conceptFamily) && (
               <div className="flex gap-1 mt-1.5 flex-wrap">
@@ -348,6 +390,82 @@ export default function PlayDetailsModal({
             </div>
           </div>
         )}
+
+        {/* Complementary Plays Section */}
+        <div className="p-4 border-b border-slate-200">
+          <div className="flex items-center gap-2 mb-3">
+            <Handshake size={16} className="text-emerald-500" />
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Complementary Plays</span>
+          </div>
+
+          {/* Existing Complements */}
+          {complementaryPlays.length > 0 && (
+            <div className="space-y-2 mb-3">
+              {complementaryPlays.map((comp, idx) => {
+                const compPlay = getPlayById(comp.playId);
+                const typeInfo = COMPLEMENT_TYPES.find(t => t.id === comp.type);
+                if (!compPlay) return null;
+                return (
+                  <div
+                    key={`${comp.playId}-${comp.type}-${idx}`}
+                    className="flex items-center justify-between px-2 py-1.5 bg-slate-50 rounded border border-slate-200"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="text-[10px] px-1.5 py-0.5 rounded font-semibold"
+                        style={{ backgroundColor: typeInfo?.color || '#64748b', color: '#fff' }}
+                      >
+                        {typeInfo?.label || comp.type}
+                      </span>
+                      <span className="text-sm text-slate-700">
+                        {compPlay.formation ? `${compPlay.formation} ` : ''}{compPlay.name}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveComplementary(comp.playId, comp.type)}
+                      className="p-1 text-slate-400 hover:text-red-500"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Add Complement */}
+          <div className="flex gap-2">
+            <select
+              id="complement-type-select"
+              className="px-2 py-1.5 text-xs bg-white border border-slate-300 rounded text-slate-700"
+              defaultValue=""
+            >
+              <option value="" disabled>Type...</option>
+              {COMPLEMENT_TYPES.map(t => (
+                <option key={t.id} value={t.id}>{t.label}</option>
+              ))}
+            </select>
+            <select
+              id="complement-play-select"
+              className="flex-1 px-2 py-1.5 text-xs bg-white border border-slate-300 rounded text-slate-700"
+              defaultValue=""
+              onChange={(e) => {
+                const typeSelect = document.getElementById('complement-type-select');
+                if (e.target.value && typeSelect.value) {
+                  handleAddComplementary(e.target.value, typeSelect.value);
+                  e.target.value = '';
+                }
+              }}
+            >
+              <option value="">Select play to add...</option>
+              {samePhasePlays.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.formation ? `${p.formation} ` : ''}{p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
 
         {/* Play Info */}
         <div className="p-4 flex-1 overflow-y-auto">
