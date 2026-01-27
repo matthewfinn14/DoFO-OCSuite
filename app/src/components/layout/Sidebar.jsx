@@ -24,7 +24,12 @@ import {
   Layers,
   Clipboard,
   Watch,
-  Clock
+  Clock,
+  TrendingUp,
+  Calendar,
+  Lightbulb,
+  UserPlus,
+  BarChart3
 } from 'lucide-react';
 
 // Enhanced collapsible category component
@@ -114,9 +119,12 @@ export default function Sidebar() {
   // Persist collapse state to localStorage
   const [collapsed, setCollapsed] = useLocalStorage('dofo_sidebar_collapsed', false);
 
-  // Get current week
+  // Get current week - check if it's offseason
   const currentWeek = weeks.find(w => w.id === currentWeekId);
-  const isOffseasonWeek = currentWeek?.name === 'Offseason' || currentWeek?.phaseId?.includes('offseason');
+  const isOffseasonWeek = currentWeekId === 'offseason' ||
+    currentWeek?.isOffseason ||
+    currentWeek?.name === 'Offseason' ||
+    currentWeek?.phaseId === 'offseason';
 
   return (
     <aside
@@ -160,8 +168,47 @@ export default function Sidebar() {
       <nav className="flex-1 overflow-y-auto px-2 py-1">
         {!collapsed && (
           <>
-            {/* Weekly Tools - shown when a week is selected */}
-            {currentWeekId && (
+            {/* Offseason Tools - shown when offseason is selected */}
+            {currentWeekId && isOffseasonWeek && (
+              <>
+                <div className="mb-1">
+                  <span className="px-2 text-[0.65rem] text-slate-500 uppercase tracking-wide">
+                    Offseason Tools
+                  </span>
+                </div>
+
+                <div className="space-y-0.5">
+                  <WeeklyToolItem
+                    to={`/offseason/swot`}
+                    icon={BarChart3}
+                    label="SWOT Analysis"
+                  />
+                  <WeeklyToolItem
+                    to={`/offseason/goals`}
+                    icon={Target}
+                    label="Program Goals"
+                  />
+                  <WeeklyToolItem
+                    to={`/offseason/schemes`}
+                    icon={Lightbulb}
+                    label="Scheme Development"
+                  />
+                  <WeeklyToolItem
+                    to={`/offseason/recruiting`}
+                    icon={UserPlus}
+                    label="Recruiting Plan"
+                  />
+                  <WeeklyToolItem
+                    to={`/offseason/calendar`}
+                    icon={Calendar}
+                    label="Annual Calendar"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Weekly Tools - shown when a regular week is selected */}
+            {currentWeekId && !isOffseasonWeek && (
               <>
                 <div className="mb-1">
                   <span className="px-2 text-[0.65rem] text-slate-500 uppercase tracking-wide">
@@ -190,35 +237,31 @@ export default function Sidebar() {
                     icon={Megaphone}
                     label="Practice Planner"
                   />
-                  {!isOffseasonWeek && (
-                    <>
-                      <WeeklyToolItem
-                        to={`/week/${currentWeekId}/practice-scripts`}
-                        icon={FileText}
-                        label="Practice Scripts"
-                      />
-                      <WeeklyToolItem
-                        to={`/week/${currentWeekId}/wristband`}
-                        icon={Watch}
-                        label="Wristband Builder"
-                      />
-                      <WeeklyToolItem
-                        to={`/week/${currentWeekId}/game-plan`}
-                        icon={Clipboard}
-                        label="Game Planner"
-                      />
-                      <WeeklyToolItem
-                        to={`/week/${currentWeekId}/pregame`}
-                        icon={Clock}
-                        label="Pre-Game Timeline"
-                      />
-                      <WeeklyToolItem
-                        to={`/week/${currentWeekId}/report`}
-                        icon={FileBarChart}
-                        label="Weekly Report"
-                      />
-                    </>
-                  )}
+                  <WeeklyToolItem
+                    to={`/week/${currentWeekId}/practice-scripts`}
+                    icon={FileText}
+                    label="Practice Scripts"
+                  />
+                  <WeeklyToolItem
+                    to={`/week/${currentWeekId}/wristband`}
+                    icon={Watch}
+                    label="Wristband Builder"
+                  />
+                  <WeeklyToolItem
+                    to={`/week/${currentWeekId}/game-plan`}
+                    icon={Clipboard}
+                    label="Game Planner"
+                  />
+                  <WeeklyToolItem
+                    to={`/week/${currentWeekId}/pregame`}
+                    icon={Clock}
+                    label="Pre-Game Timeline"
+                  />
+                  <WeeklyToolItem
+                    to={`/week/${currentWeekId}/report`}
+                    icon={FileBarChart}
+                    label="Weekly Report"
+                  />
                 </div>
               </>
             )}

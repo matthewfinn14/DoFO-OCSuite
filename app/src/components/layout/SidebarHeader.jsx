@@ -19,15 +19,6 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
     { id: 'season', name: 'Regular Season', color: 'emerald', order: 3, numWeeks: 13 }
   ];
 
-  // Default offseason items (special weeks that aren't numbered)
-  const DEFAULT_OFFSEASON_ITEMS = [
-    { id: 'offseason_swot', name: 'SWOT Analysis', order: 1 },
-    { id: 'offseason_goals', name: 'Program Goals', order: 2 },
-    { id: 'offseason_schemes', name: 'Scheme Development', order: 3 },
-    { id: 'offseason_recruiting', name: 'Recruiting Plan', order: 4 },
-    { id: 'offseason_calendar', name: 'Annual Calendar', order: 5 }
-  ];
-
   const seasonPhases = setupConfig?.seasonPhases?.length > 0 ? setupConfig.seasonPhases : DEFAULT_PHASES;
 
   // Generate weeks from season phases
@@ -40,19 +31,16 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
         const isOffseason = phase.isOffseason || phase.id === 'offseason' || phase.name?.toLowerCase() === 'offseason';
 
         if (isOffseason) {
-          // Use special offseason items instead of numbered weeks
-          const offseasonItems = phase.items || DEFAULT_OFFSEASON_ITEMS;
-          offseasonItems.forEach(item => {
-            allWeeks.push({
-              id: item.id || `${phase.id}_${item.name.toLowerCase().replace(/\s+/g, '_')}`,
-              phaseId: phase.id,
-              phaseName: phase.name,
-              phaseColor: phase.color,
-              weekNum: item.order || 0,
-              name: item.name,
-              isOffseason: true,
-              date: null
-            });
+          // Offseason is a single item, not multiple weeks
+          allWeeks.push({
+            id: 'offseason',
+            phaseId: phase.id,
+            phaseName: phase.name,
+            phaseColor: phase.color,
+            weekNum: 0,
+            name: 'Offseason',
+            isOffseason: true,
+            date: null
           });
         } else {
           // Generate numbered weeks for regular phases
