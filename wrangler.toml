@@ -1,0 +1,5 @@
+name = "dofo-ocsuite"
+compatibility_date = "2026-01-18"
+
+[site]
+bucket = "./app/dist"
