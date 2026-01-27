@@ -121,6 +121,9 @@ export function SchoolProvider({ children }) {
     // Read Types (Offense)
     readTypes: [],
 
+    // Look-Alike Series (Offense)
+    lookAlikeSeries: [],
+
     // OL Schemes
     passProtections: [],
     runBlocking: []

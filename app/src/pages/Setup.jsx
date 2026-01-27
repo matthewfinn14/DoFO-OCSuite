@@ -32,7 +32,8 @@ import {
   Cloud,
   CloudOff,
   Loader2,
-  Eye
+  Eye,
+  Copy
 } from 'lucide-react';
 import PlayDiagramEditor from '../components/diagrams/PlayDiagramEditor';
 import DiagramPreview from '../components/diagrams/DiagramPreview';
@@ -441,7 +442,7 @@ const PHASES = [
 ];
 
 export default function Setup() {
-  const { school, staff, setupConfig, updateSetupConfig, weeks, activeYear, updateWeeks } = useSchool();
+  const { school, staff, setupConfig, updateSetupConfig, weeks, activeYear, updateWeeks, playsArray } = useSchool();
   const { isHeadCoach, isTeamAdmin, isSiteAdmin } = useAuth();
   const { phase: urlPhase, tab: urlTab } = useParams();
   const navigate = useNavigate();
@@ -679,6 +680,7 @@ export default function Setup() {
     if (isOffense) {
       tabs.push(
         { id: 'read-types', label: 'Read Types', icon: Eye },
+        { id: 'look-alike-series', label: 'Look-Alike Series', icon: Copy },
         { id: 'oline-schemes', label: 'WIZ Library for OL', icon: Shield },
         { id: 'glossary', label: 'Glossary', icon: BookOpen }
       );
@@ -931,6 +933,16 @@ export default function Setup() {
           {activeTab === 'read-types' && !isPractice && !isProgram && phase === 'OFFENSE' && (
             <ReadTypesTab
               readTypes={localConfig.readTypes || []}
+              onUpdate={updateLocal}
+            />
+          )}
+
+          {/* Look-Alike Series Tab (Offense only) */}
+          {activeTab === 'look-alike-series' && !isPractice && !isProgram && phase === 'OFFENSE' && (
+            <LookAlikeSeriesTab
+              series={localConfig.lookAlikeSeries || []}
+              buckets={getPlayBuckets()}
+              plays={playsArray}
               onUpdate={updateLocal}
             />
           )}
@@ -1660,6 +1672,241 @@ function ReadTypesTab({ readTypes, onUpdate }) {
         >
           <Plus size={18} />
           Add Read Type
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Look-Alike Series Tab Component (Offense only)
+function LookAlikeSeriesTab({ series, buckets, plays, onUpdate }) {
+  const [expandedSeries, setExpandedSeries] = useState({});
+
+  const addSeries = () => {
+    const name = prompt('New Look-Alike Series Name:');
+    if (!name) return;
+    const newSeries = {
+      id: `series-${Date.now()}`,
+      name: name.trim(),
+      description: '',
+      commonElements: [], // formation, motion, backfieldAction
+      playIds: []
+    };
+    onUpdate('lookAlikeSeries', [...series, newSeries]);
+  };
+
+  const deleteSeries = (id) => {
+    if (!confirm('Delete this look-alike series?')) return;
+    onUpdate('lookAlikeSeries', series.filter(s => s.id !== id));
+  };
+
+  const updateSeries = (id, updates) => {
+    onUpdate('lookAlikeSeries', series.map(s => s.id === id ? { ...s, ...updates } : s));
+  };
+
+  const toggleCommonElement = (seriesId, element) => {
+    const s = series.find(s => s.id === seriesId);
+    if (!s) return;
+    const elements = s.commonElements || [];
+    const newElements = elements.includes(element)
+      ? elements.filter(e => e !== element)
+      : [...elements, element];
+    updateSeries(seriesId, { commonElements: newElements });
+  };
+
+  const addPlayToSeries = (seriesId, playId) => {
+    const s = series.find(s => s.id === seriesId);
+    if (!s || s.playIds.includes(playId)) return;
+    updateSeries(seriesId, { playIds: [...s.playIds, playId] });
+  };
+
+  const removePlayFromSeries = (seriesId, playId) => {
+    const s = series.find(s => s.id === seriesId);
+    if (!s) return;
+    updateSeries(seriesId, { playIds: s.playIds.filter(id => id !== playId) });
+  };
+
+  const toggleExpand = (id) => {
+    setExpandedSeries(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  // Get offense plays only
+  const offensePlays = plays.filter(p => (p.phase || 'OFFENSE') === 'OFFENSE');
+
+  // Get bucket/concept group info for a play
+  const getPlayInfo = (playId) => {
+    const play = plays.find(p => p.id === playId);
+    if (!play) return null;
+    const bucket = buckets.find(b => b.id === play.bucketId);
+    return { play, bucket };
+  };
+
+  const COMMON_ELEMENTS = [
+    { id: 'formation', label: 'Formation' },
+    { id: 'motion', label: 'Motion' },
+    { id: 'backfieldAction', label: 'Backfield Action' }
+  ];
+
+  return (
+    <div>
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold text-white">Look-Alike Series</h3>
+        <p className="text-slate-400 text-sm">
+          Group plays from different buckets/concept groups that look alike based on formation, motion, and/or backfield action.
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        {series.map(s => {
+          const isExpanded = expandedSeries[s.id];
+          return (
+            <div
+              key={s.id}
+              className="bg-slate-700/50 rounded-lg border border-slate-600 overflow-hidden"
+            >
+              {/* Series Header */}
+              <div className="flex items-center gap-3 p-3 bg-slate-700/30">
+                <button
+                  onClick={() => toggleExpand(s.id)}
+                  className="p-1 text-slate-400 hover:text-white"
+                >
+                  {isExpanded ? <ChevronDown size={18} /> : <ChevronUp size={18} className="rotate-180" />}
+                </button>
+                <input
+                  type="text"
+                  value={s.name}
+                  onChange={(e) => updateSeries(s.id, { name: e.target.value })}
+                  className="flex-1 px-3 py-1.5 bg-slate-800 border border-slate-600 rounded text-white font-medium"
+                  placeholder="Series name"
+                />
+                <span className="text-sm text-slate-400">{s.playIds.length} plays</span>
+                <button
+                  onClick={() => deleteSeries(s.id)}
+                  className="p-1.5 text-slate-400 hover:text-red-400"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+
+              {/* Expanded Content */}
+              {isExpanded && (
+                <div className="p-4 border-t border-slate-600 space-y-4">
+                  {/* Description */}
+                  <div>
+                    <label className="block text-xs text-slate-400 uppercase mb-1">Description</label>
+                    <input
+                      type="text"
+                      value={s.description || ''}
+                      onChange={(e) => updateSeries(s.id, { description: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white text-sm"
+                      placeholder="What makes these plays look alike?"
+                    />
+                  </div>
+
+                  {/* Common Elements */}
+                  <div>
+                    <label className="block text-xs text-slate-400 uppercase mb-2">Looks Alike Because Of</label>
+                    <div className="flex gap-2">
+                      {COMMON_ELEMENTS.map(el => (
+                        <button
+                          key={el.id}
+                          onClick={() => toggleCommonElement(s.id, el.id)}
+                          className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                            (s.commonElements || []).includes(el.id)
+                              ? 'bg-sky-500/20 text-sky-400 border border-sky-500/50'
+                              : 'bg-slate-800 text-slate-400 border border-slate-600 hover:border-slate-500'
+                          }`}
+                        >
+                          {el.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Plays in Series */}
+                  <div>
+                    <label className="block text-xs text-slate-400 uppercase mb-2">Plays in Series</label>
+                    <div className="space-y-2">
+                      {s.playIds.map(playId => {
+                        const info = getPlayInfo(playId);
+                        if (!info) return null;
+                        return (
+                          <div
+                            key={playId}
+                            className="flex items-center justify-between px-3 py-2 bg-slate-800 rounded border border-slate-600"
+                          >
+                            <div>
+                              <span className="text-white font-medium">
+                                {info.play.formation ? `${info.play.formation} ` : ''}{info.play.name}
+                              </span>
+                              {info.bucket && (
+                                <span
+                                  className="ml-2 px-1.5 py-0.5 text-xs rounded"
+                                  style={{ backgroundColor: info.bucket.color || '#64748b', color: '#fff' }}
+                                >
+                                  {info.bucket.label}
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => removePlayFromSeries(s.id, playId)}
+                              className="p-1 text-slate-400 hover:text-red-400"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        );
+                      })}
+
+                      {s.playIds.length === 0 && (
+                        <p className="text-sm text-slate-500 italic py-2">No plays added yet</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Add Play Dropdown */}
+                  <div>
+                    <label className="block text-xs text-slate-400 uppercase mb-1">Add Play</label>
+                    <select
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          addPlayToSeries(s.id, e.target.value);
+                          e.target.value = '';
+                        }
+                      }}
+                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white text-sm"
+                      value=""
+                    >
+                      <option value="">Select a play to add...</option>
+                      {offensePlays
+                        .filter(p => !s.playIds.includes(p.id))
+                        .map(p => (
+                          <option key={p.id} value={p.id}>
+                            {p.formation ? `${p.formation} ` : ''}{p.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {series.length === 0 && (
+          <div className="text-center py-8 text-slate-400 border border-dashed border-slate-600 rounded-lg">
+            <Copy size={32} className="mx-auto mb-2 opacity-50" />
+            <p>No look-alike series defined yet.</p>
+            <p className="text-sm mt-1">Group plays that share formation, motion, or backfield action.</p>
+          </div>
+        )}
+
+        <button
+          onClick={addSeries}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-700/50 border border-dashed border-slate-500 rounded-lg text-slate-300 hover:bg-slate-700 hover:border-slate-400 transition-colors"
+        >
+          <Plus size={18} />
+          Add Look-Alike Series
         </button>
       </div>
     </div>
