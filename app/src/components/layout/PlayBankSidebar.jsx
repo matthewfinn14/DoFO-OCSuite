@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSchool } from '../../context/SchoolContext';
+import { usePlayDetailsModal } from '../PlayDetailsModal';
 import {
   ChevronLeft,
   ChevronRight,
@@ -16,6 +17,7 @@ import {
 
 export default function PlayBankSidebar({ isOpen, onToggle }) {
   const navigate = useNavigate();
+  const { openPlayDetails } = usePlayDetailsModal();
   const {
     playsArray,
     settings,
@@ -266,6 +268,8 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
         className="flex items-center py-1.5 px-2 border-b border-slate-100 text-sm cursor-grab hover:bg-slate-50"
         draggable
         onDragStart={(e) => handleDragStart(e, play)}
+        onDoubleClick={() => openPlayDetails(play.id)}
+        title="Double-click to view details"
       >
         <div className="flex-1 min-w-0">
           <div className="font-medium text-slate-800 truncate">
@@ -277,7 +281,7 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
         )}
       </div>
     );
-  }, [handleDragStart]);
+  }, [handleDragStart, openPlayDetails]);
 
   // Render category with families
   const renderCategory = useCallback((category) => {
