@@ -935,37 +935,83 @@ export default function Setup() {
       {/* Setup Mode Selector - Offense/Defense/ST */}
       {(isOffense || isDefense || isST) && (
         <div className="mb-6 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-white font-medium">Setup Mode</h3>
-              <p className="text-sm text-slate-400">
-                {(localConfig.setupMode?.[phase] || 'standard') === 'standard'
-                  ? 'Simple setup with Formation + Play syntax. Great for getting started.'
-                  : 'Full customization with bucket-specific syntax and term signals.'}
-              </p>
+          <div className="flex flex-col gap-4">
+            {/* Header with mode buttons */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-white font-medium flex items-center gap-2">
+                  Setup Mode
+                  <span className={`text-xs px-2 py-0.5 rounded ${
+                    (localConfig.setupMode?.[phase] || 'standard') === 'standard'
+                      ? 'bg-green-600/30 text-green-400'
+                      : 'bg-purple-600/30 text-purple-400'
+                  }`}>
+                    {(localConfig.setupMode?.[phase] || 'standard') === 'standard' ? 'Standard' : 'Advanced'}
+                  </span>
+                </h3>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => updateLocal('setupMode', { ...localConfig.setupMode, [phase]: 'standard' })}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    (localConfig.setupMode?.[phase] || 'standard') === 'standard'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  Standard
+                </button>
+                <button
+                  onClick={() => updateLocal('setupMode', { ...localConfig.setupMode, [phase]: 'advanced' })}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    (localConfig.setupMode?.[phase] || 'standard') === 'advanced'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  Advanced
+                </button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => updateLocal('setupMode', { ...localConfig.setupMode, [phase]: 'standard' })}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  (localConfig.setupMode?.[phase] || 'standard') === 'standard'
-                    ? 'bg-sky-600 text-white'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                }`}
-              >
-                Standard
-              </button>
-              <button
-                onClick={() => updateLocal('setupMode', { ...localConfig.setupMode, [phase]: 'advanced' })}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  (localConfig.setupMode?.[phase] || 'standard') === 'advanced'
-                    ? 'bg-sky-600 text-white'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                }`}
-              >
-                Advanced
-              </button>
+
+            {/* Mode description cards */}
+            <div className="grid md:grid-cols-2 gap-3">
+              {/* Standard Mode Card */}
+              <div className={`p-3 rounded-lg border transition-all ${
+                (localConfig.setupMode?.[phase] || 'standard') === 'standard'
+                  ? 'bg-green-900/20 border-green-600/50'
+                  : 'bg-slate-800/30 border-slate-700/50 opacity-60'
+              }`}>
+                <h4 className="text-green-400 font-medium text-sm mb-2">Standard Mode</h4>
+                <ul className="text-xs text-slate-400 space-y-1">
+                  <li>• Simple Formation + Play syntax</li>
+                  <li>• Quick play entry without complex parsing</li>
+                  <li>• Basic filtering by formation and play name</li>
+                  <li>• Great for JV programs or getting started</li>
+                </ul>
+              </div>
+
+              {/* Advanced Mode Card */}
+              <div className={`p-3 rounded-lg border transition-all ${
+                (localConfig.setupMode?.[phase] || 'standard') === 'advanced'
+                  ? 'bg-purple-900/20 border-purple-600/50'
+                  : 'bg-slate-800/30 border-slate-700/50 opacity-60'
+              }`}>
+                <h4 className="text-purple-400 font-medium text-sm mb-2">Advanced Mode</h4>
+                <ul className="text-xs text-slate-400 space-y-1">
+                  <li>• Custom syntax per play bucket (runs vs passes)</li>
+                  <li>• Term signals auto-fill multiple fields</li>
+                  <li>• Deep filtering for self-scout analysis</li>
+                  <li>• Full play call chain customization</li>
+                </ul>
+              </div>
             </div>
+
+            {/* Info note */}
+            <p className="text-xs text-slate-500 italic">
+              You can switch modes anytime. Start with Standard and upgrade to Advanced as your system grows,
+              or use different modes for different program levels (Varsity vs JV). Your data is preserved when switching.
+            </p>
           </div>
         </div>
       )}

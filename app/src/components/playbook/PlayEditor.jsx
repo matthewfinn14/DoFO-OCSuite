@@ -518,21 +518,29 @@ export default function PlayEditor({
                   </datalist>
                 </div>
                 {/* Preview of full call */}
-                <div className="mt-2 px-3 py-2 bg-slate-700/30 rounded-md">
-                  <span className="text-xs text-slate-500 uppercase tracking-wide">Full Call: </span>
-                  <span className="text-emerald-400 font-semibold">
-                    {formData.formation || formData.name
-                      ? `${formData.formation}${formData.formation && formData.name ? ' ' : ''}${formData.name}`
-                      : '...'}
-                  </span>
+                <div className="mt-2 px-3 py-2 bg-slate-700/30 rounded-md flex items-center justify-between">
+                  <div>
+                    <span className="text-xs text-slate-500 uppercase tracking-wide">Full Call: </span>
+                    <span className="text-emerald-400 font-semibold">
+                      {formData.formation || formData.name
+                        ? `${formData.formation}${formData.formation && formData.name ? ' ' : ''}${formData.name}`
+                        : '...'}
+                    </span>
+                  </div>
+                  {!isAdvancedMode && (
+                    <span className="text-xs text-green-500/70 bg-green-500/10 px-2 py-0.5 rounded">
+                      Standard Mode
+                    </span>
+                  )}
                 </div>
               </div>
 
-              {/* Play Call Chain Parsing - if syntax is defined */}
-              {playCallSyntax.length > 0 && (
+              {/* Play Call Chain Parsing - only in Advanced mode or when syntax has more than 2 parts */}
+              {isAdvancedMode && playCallSyntax.length > 2 && (
                 <div className="pt-3 border-t border-slate-700">
                   <label className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">
                     Play Call Breakdown
+                    <span className="ml-2 text-purple-400 text-[10px] font-normal">(Advanced)</span>
                   </label>
                   <div className="flex flex-wrap gap-2 mb-3">
                     {/* Show tokens from formation + play name */}
