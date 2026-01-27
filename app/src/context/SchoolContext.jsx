@@ -118,6 +118,9 @@ export function SchoolProvider({ children }) {
     gameplanTemplates: [],
     pregameTemplates: [],
 
+    // Read Types (Offense)
+    readTypes: [],
+
     // OL Schemes
     passProtections: [],
     runBlocking: []

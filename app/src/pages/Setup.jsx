@@ -31,7 +31,8 @@ import {
   Image,
   Cloud,
   CloudOff,
-  Loader2
+  Loader2,
+  Eye
 } from 'lucide-react';
 import PlayDiagramEditor from '../components/diagrams/PlayDiagramEditor';
 import DiagramPreview from '../components/diagrams/DiagramPreview';
@@ -672,7 +673,12 @@ export default function Setup() {
     tabs.push({ id: 'play-call-chain', label: 'Play Call Chain', icon: List });
     tabs.push(
       { id: 'formations', label: 'Formation/Front Setup', icon: LayoutGrid },
-      { id: 'play-buckets', label: isDefense || isST ? 'Categories' : 'Play Buckets', icon: Tag },
+      { id: 'play-buckets', label: isDefense || isST ? 'Categories' : 'Play Buckets', icon: Tag }
+    );
+    if (isOffense) {
+      tabs.push({ id: 'read-types', label: 'Read Types', icon: Eye });
+    }
+    tabs.push(
       { id: 'concept-groups', label: isDefense || isST ? 'Variations' : 'Concept Groups', icon: Grid }
     );
     if (isOffense) {
@@ -921,6 +927,14 @@ export default function Setup() {
               phase={phase}
               buckets={getPlayBuckets()}
               allBuckets={localConfig.playBuckets || []}
+              onUpdate={updateLocal}
+            />
+          )}
+
+          {/* Read Types Tab (Offense only) */}
+          {activeTab === 'read-types' && !isPractice && !isProgram && phase === 'OFFENSE' && (
+            <ReadTypesTab
+              readTypes={localConfig.readTypes || []}
               onUpdate={updateLocal}
             />
           )}
@@ -1572,6 +1586,85 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate }) {
 
       <div className="mt-6 p-4 bg-slate-700/30 rounded-lg text-sm text-slate-400">
         <strong>Note:</strong> {phase === 'DEFENSE' ? 'These categories organize your defensive scheme (e.g. Fronts, Coverages, Blitzes).' : phase === 'SPECIAL_TEAMS' ? 'These categories organize your special teams units.' : 'These buckets define the high-level organization (e.g. Run, Pass, RPO).'}
+      </div>
+    </div>
+  );
+}
+
+// Read Types Tab Component (Offense only)
+function ReadTypesTab({ readTypes, onUpdate }) {
+  const addReadType = () => {
+    const name = prompt('New Read Type Name:');
+    if (!name) return;
+    const newReadType = {
+      id: `read-${Date.now()}`,
+      name: name.trim(),
+      description: ''
+    };
+    onUpdate('readTypes', [...readTypes, newReadType]);
+  };
+
+  const deleteReadType = (id) => {
+    if (!confirm('Delete this read type?')) return;
+    onUpdate('readTypes', readTypes.filter(r => r.id !== id));
+  };
+
+  const updateReadType = (id, updates) => {
+    onUpdate('readTypes', readTypes.map(r => r.id === id ? { ...r, ...updates } : r));
+  };
+
+  return (
+    <div>
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold text-white">Read Types</h3>
+        <p className="text-slate-400 text-sm">
+          Define the types of reads your offense uses (e.g., Pre-snap, Post-snap, RPO reads).
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {readTypes.map(readType => (
+          <div
+            key={readType.id}
+            className="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg border border-slate-600"
+          >
+            <input
+              type="text"
+              value={readType.name}
+              onChange={(e) => updateReadType(readType.id, { name: e.target.value })}
+              className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white"
+              placeholder="Read type name"
+            />
+            <input
+              type="text"
+              value={readType.description || ''}
+              onChange={(e) => updateReadType(readType.id, { description: e.target.value })}
+              className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white text-sm"
+              placeholder="Description (optional)"
+            />
+            <button
+              onClick={() => deleteReadType(readType.id)}
+              className="p-2 text-slate-400 hover:text-red-400"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        ))}
+
+        {readTypes.length === 0 && (
+          <div className="text-center py-8 text-slate-400 border border-dashed border-slate-600 rounded-lg">
+            <Eye size={32} className="mx-auto mb-2 opacity-50" />
+            <p>No read types defined yet.</p>
+          </div>
+        )}
+
+        <button
+          onClick={addReadType}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-700/50 border border-dashed border-slate-500 rounded-lg text-slate-300 hover:bg-slate-700 hover:border-slate-400 transition-colors"
+        >
+          <Plus size={18} />
+          Add Read Type
+        </button>
       </div>
     </div>
   );
