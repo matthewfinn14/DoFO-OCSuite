@@ -932,6 +932,44 @@ export default function Setup() {
         ))}
       </div>
 
+      {/* Setup Mode Selector - Offense/Defense/ST */}
+      {(isOffense || isDefense || isST) && (
+        <div className="mb-6 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-white font-medium">Setup Mode</h3>
+              <p className="text-sm text-slate-400">
+                {(localConfig.setupMode?.[phase] || 'standard') === 'standard'
+                  ? 'Simple setup with Formation + Play syntax. Great for getting started.'
+                  : 'Full customization with bucket-specific syntax and term signals.'}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => updateLocal('setupMode', { ...localConfig.setupMode, [phase]: 'standard' })}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  (localConfig.setupMode?.[phase] || 'standard') === 'standard'
+                    ? 'bg-sky-600 text-white'
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+              >
+                Standard
+              </button>
+              <button
+                onClick={() => updateLocal('setupMode', { ...localConfig.setupMode, [phase]: 'advanced' })}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  (localConfig.setupMode?.[phase] || 'standard') === 'advanced'
+                    ? 'bg-sky-600 text-white'
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+              >
+                Advanced
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Offense Setup Overview */}
       {phase === 'OFFENSE' && !isPractice && !isProgram && (
         <HelpSection title="How Offense Setup Works" defaultOpen={false}>
@@ -1100,6 +1138,8 @@ export default function Setup() {
               buckets={getPlayBuckets()}
               allBuckets={localConfig.playBuckets || []}
               onUpdate={updateLocal}
+              setupMode={localConfig.setupMode?.[phase] || 'standard'}
+              setupConfig={localConfig}
             />
           )}
 
@@ -2103,9 +2143,29 @@ function ShiftMotionsTab({ shiftMotions, onUpdate }) {
 }
 
 // Play Buckets Tab Component (called Categories for Defense/ST)
-function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate }) {
+function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupMode, setupConfig }) {
   const phaseLabel = phase === 'DEFENSE' ? 'Defensive Categories' : phase === 'SPECIAL_TEAMS' ? 'Special Teams Categories' : 'Play Buckets';
   const itemLabel = phase === 'OFFENSE' ? 'Bucket' : 'Category';
+  const isAdvanced = setupMode === 'advanced';
+
+  // State for editing bucket syntax
+  const [editingSyntaxBucket, setEditingSyntaxBucket] = useState(null);
+
+  // Source categories for syntax parts
+  const SOURCE_CATEGORIES = phase === 'OFFENSE' ? [
+    { id: 'custom', label: 'Custom Term' },
+    { id: 'formations', label: 'Formation' },
+    { id: 'formationFamilies', label: 'Formation Family' },
+    { id: 'shiftMotions', label: 'Shift/Motion' },
+    { id: 'personnelGroupings', label: 'Personnel' },
+    { id: 'conceptGroups', label: 'Concept' },
+    { id: 'readTypes', label: 'Read Type' },
+    { id: 'passProtections', label: 'Pass Protection' },
+    { id: 'runBlocking', label: 'Run Scheme' },
+  ] : [
+    { id: 'custom', label: 'Custom Term' },
+    { id: 'formations', label: 'Front/Coverage' },
+  ];
 
   const addBucket = () => {
     const label = prompt(`New ${itemLabel} Label:`);
@@ -2115,7 +2175,12 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate }) {
       alert(`${itemLabel} ID already exists for this phase.`);
       return;
     }
-    onUpdate('playBuckets', [...allBuckets, { id, label, color: '#94a3b8', phase }]);
+    // Default syntax: Formation + Play
+    const defaultSyntax = [
+      { id: 'formation', label: 'Formation', sourceCategory: 'formations', required: true },
+      { id: 'play', label: 'Play', sourceCategory: 'conceptGroups', required: true },
+    ];
+    onUpdate('playBuckets', [...allBuckets, { id, label, color: '#94a3b8', phase, syntax: defaultSyntax }]);
   };
 
   const deleteBucket = (id) => {
@@ -2125,6 +2190,150 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate }) {
 
   const updateBucket = (id, updates) => {
     onUpdate('playBuckets', allBuckets.map(b => b.id === id ? { ...b, ...updates } : b));
+  };
+
+  // Syntax editing functions
+  const addSyntaxPart = (bucketId) => {
+    const bucket = buckets.find(b => b.id === bucketId);
+    const currentSyntax = bucket?.syntax || [];
+    const newPart = { id: `part-${Date.now()}`, label: 'New', sourceCategory: 'custom', required: false };
+    updateBucket(bucketId, { syntax: [...currentSyntax, newPart] });
+  };
+
+  const updateSyntaxPart = (bucketId, partIdx, updates) => {
+    const bucket = buckets.find(b => b.id === bucketId);
+    const currentSyntax = bucket?.syntax || [];
+    const newSyntax = [...currentSyntax];
+    newSyntax[partIdx] = { ...newSyntax[partIdx], ...updates };
+    updateBucket(bucketId, { syntax: newSyntax });
+  };
+
+  const deleteSyntaxPart = (bucketId, partIdx) => {
+    const bucket = buckets.find(b => b.id === bucketId);
+    const currentSyntax = bucket?.syntax || [];
+    updateBucket(bucketId, { syntax: currentSyntax.filter((_, i) => i !== partIdx) });
+  };
+
+  const moveSyntaxPart = (bucketId, partIdx, direction) => {
+    const bucket = buckets.find(b => b.id === bucketId);
+    const currentSyntax = bucket?.syntax || [];
+    const newIdx = partIdx + direction;
+    if (newIdx < 0 || newIdx >= currentSyntax.length) return;
+    const newSyntax = [...currentSyntax];
+    [newSyntax[partIdx], newSyntax[newIdx]] = [newSyntax[newIdx], newSyntax[partIdx]];
+    updateBucket(bucketId, { syntax: newSyntax });
+  };
+
+  // Get example call for a bucket
+  const getExampleCall = (bucket) => {
+    const syntax = bucket.syntax || [];
+    if (syntax.length === 0) return 'Formation + Play';
+    return syntax.map(p => p.label).join(' → ');
+  };
+
+  // Syntax editing modal
+  const SyntaxModal = () => {
+    if (!editingSyntaxBucket) return null;
+    const bucket = buckets.find(b => b.id === editingSyntaxBucket);
+    if (!bucket) return null;
+    const syntax = bucket.syntax || [];
+
+    return (
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+        <div className="bg-slate-800 rounded-xl w-full max-w-3xl overflow-hidden max-h-[90vh] flex flex-col">
+          <div className="flex items-center justify-between p-4 border-b border-slate-700">
+            <div>
+              <h3 className="text-lg font-semibold text-white">"{bucket.label}" Syntax</h3>
+              <p className="text-sm text-slate-400">Define the play call structure for {bucket.label} plays</p>
+            </div>
+            <button onClick={() => setEditingSyntaxBucket(null)} className="p-2 text-slate-400 hover:text-white">
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="p-4 overflow-y-auto flex-1">
+            {/* Example preview */}
+            <div className="mb-4 p-3 bg-slate-900 rounded-lg">
+              <span className="text-xs text-slate-500 uppercase">Call Structure: </span>
+              <span className="text-emerald-400 font-mono">{getExampleCall(bucket)}</span>
+            </div>
+
+            {/* Syntax parts */}
+            <div className="space-y-2">
+              {syntax.map((part, idx) => (
+                <div key={part.id} className="flex items-center gap-2 p-3 bg-slate-700/50 rounded-lg border border-slate-600">
+                  <span className="w-6 h-6 flex items-center justify-center bg-sky-600 rounded-full text-xs font-bold text-white flex-shrink-0">
+                    {idx + 1}
+                  </span>
+                  <input
+                    type="text"
+                    value={part.label}
+                    onChange={(e) => updateSyntaxPart(bucket.id, idx, { label: e.target.value })}
+                    placeholder="Part name"
+                    className="w-32 px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white text-sm"
+                  />
+                  <select
+                    value={part.sourceCategory || 'custom'}
+                    onChange={(e) => updateSyntaxPart(bucket.id, idx, { sourceCategory: e.target.value })}
+                    className="flex-1 px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white text-sm"
+                  >
+                    {SOURCE_CATEGORIES.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.label}</option>
+                    ))}
+                  </select>
+                  <label className="flex items-center gap-1 text-xs text-slate-400">
+                    <input
+                      type="checkbox"
+                      checked={part.required || false}
+                      onChange={(e) => updateSyntaxPart(bucket.id, idx, { required: e.target.checked })}
+                    />
+                    Req
+                  </label>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => moveSyntaxPart(bucket.id, idx, -1)}
+                      disabled={idx === 0}
+                      className="p-1 text-slate-400 hover:text-white disabled:opacity-30"
+                    >
+                      <ChevronUp size={14} />
+                    </button>
+                    <button
+                      onClick={() => moveSyntaxPart(bucket.id, idx, 1)}
+                      disabled={idx === syntax.length - 1}
+                      className="p-1 text-slate-400 hover:text-white disabled:opacity-30"
+                    >
+                      <ChevronDown size={14} />
+                    </button>
+                    <button
+                      onClick={() => deleteSyntaxPart(bucket.id, idx)}
+                      className="p-1 text-red-400 hover:text-red-300"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => addSyntaxPart(bucket.id)}
+              className="mt-3 flex items-center gap-2 px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600"
+            >
+              <Plus size={14} /> Add Part
+            </button>
+          </div>
+
+          <div className="p-4 border-t border-slate-700">
+            <button
+              onClick={() => setEditingSyntaxBucket(null)}
+              className="w-full px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -2138,6 +2347,12 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate }) {
           <Plus size={16} /> Add {itemLabel}
         </button>
       </div>
+
+      {isAdvanced && phase === 'OFFENSE' && (
+        <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm text-amber-200">
+          <strong>Advanced Mode:</strong> Each bucket has its own play call syntax. Click "Edit Syntax" to customize the call structure for each type of play.
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {buckets.map(bucket => (
@@ -2169,6 +2384,22 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate }) {
                 <Trash2 size={16} />
               </button>
             </div>
+
+            {/* Syntax preview and edit button - Advanced mode only */}
+            {isAdvanced && phase === 'OFFENSE' && (
+              <div className="mt-2 pt-2 border-t border-slate-600">
+                <div className="text-xs text-slate-500 mb-1">Syntax:</div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-slate-400 truncate">{getExampleCall(bucket)}</span>
+                  <button
+                    onClick={() => setEditingSyntaxBucket(bucket.id)}
+                    className="text-xs px-2 py-1 bg-slate-600 text-sky-400 rounded hover:bg-slate-500"
+                  >
+                    Edit
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -2183,6 +2414,9 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate }) {
       <div className="mt-6 p-4 bg-slate-700/30 rounded-lg text-sm text-slate-400">
         <strong>Note:</strong> {phase === 'DEFENSE' ? 'These categories organize your defensive scheme (e.g. Fronts, Coverages, Blitzes).' : phase === 'SPECIAL_TEAMS' ? 'These categories organize your special teams units.' : 'These buckets define the high-level organization (e.g. Run, Pass, RPO).'}
       </div>
+
+      {/* Syntax editing modal */}
+      <SyntaxModal />
     </div>
   );
 }

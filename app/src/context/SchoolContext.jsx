@@ -77,6 +77,9 @@ export function SchoolProvider({ children }) {
 
   // Setup configuration data
   const [setupConfig, setSetupConfig] = useState({
+    // Setup Mode: 'standard' (simple) or 'advanced' (bucket-specific syntax, signals, etc.)
+    setupMode: { OFFENSE: 'standard', DEFENSE: 'standard', SPECIAL_TEAMS: 'standard' },
+
     // Positions
     positionNames: {},
     positionColors: {},

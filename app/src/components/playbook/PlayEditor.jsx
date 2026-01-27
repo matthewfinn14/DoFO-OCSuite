@@ -41,15 +41,28 @@ export default function PlayEditor({
     { id: 'run', label: 'Run', icon: '🏃' },
   ];
 
-  // Separate state for play type to avoid hook ordering issues
+  // Separate state for play type and bucket to avoid hook ordering issues
   const [selectedPlayType, setSelectedPlayType] = useState('quick');
+  const [selectedBucketId, setSelectedBucketId] = useState('');
 
-  // Get play call chain syntax for current phase based on play type
+  // Check if in advanced setup mode
+  const isAdvancedMode = setupConfig?.setupMode?.[phase] === 'advanced';
+
+  // Get play call chain syntax for current phase based on bucket (advanced) or play type (standard)
   const playCallSyntax = useMemo(() => {
     const phaseKey = phase === 'SPECIAL_TEAMS' ? 'SPECIAL_TEAMS' : phase;
     const playType = selectedPlayType || 'quick';
 
-    // First check syntaxTemplates for the specific play type
+    // In advanced mode, check for bucket-specific syntax first
+    if (isAdvancedMode && selectedBucketId) {
+      const buckets = setupConfig?.playBuckets || [];
+      const selectedBucket = buckets.find(b => b.id === selectedBucketId);
+      if (selectedBucket?.syntax?.length > 0) {
+        return selectedBucket.syntax;
+      }
+    }
+
+    // Standard mode: check syntaxTemplates for the specific play type
     const templates = setupConfig?.syntaxTemplates?.[phaseKey];
     if (templates && templates[playType]?.length > 0) {
       return templates[playType];
@@ -72,7 +85,7 @@ export default function PlayEditor({
       { id: 'formation', label: 'Formation', order: 1 },
       { id: 'play', label: 'Play', order: 2 }
     ];
-  }, [setupConfig, phase, selectedPlayType]);
+  }, [setupConfig, phase, selectedPlayType, isAdvancedMode, selectedBucketId]);
 
   // Get term library for current phase
   const termLibrary = useMemo(() => {
@@ -163,6 +176,7 @@ export default function PlayEditor({
     if (play) {
       const playType = play.playType || 'quick';
       setSelectedPlayType(playType);
+      setSelectedBucketId(play.playCategory || '');
       setFormData({
         phase: play.phase || phase,
         name: play.name || '',
@@ -199,6 +213,7 @@ export default function PlayEditor({
     } else {
       // Reset form for new play
       setSelectedPlayType('quick');
+      setSelectedBucketId('');
       setFormData({
         phase: phase,
         name: '',
@@ -424,8 +439,8 @@ export default function PlayEditor({
             onToggle={() => toggleSection('basic')}
           >
             <div className="space-y-4">
-              {/* Play Type Selector - Only for Offense */}
-              {phase === 'OFFENSE' && (
+              {/* Play Type Selector - Only for Offense in Standard mode */}
+              {phase === 'OFFENSE' && !isAdvancedMode && (
                 <div>
                   <label className="block text-sm font-medium text-slate-400 mb-2">
                     Play Type
@@ -450,6 +465,28 @@ export default function PlayEditor({
                       </button>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Bucket Selector - Prominent in Advanced mode */}
+              {phase === 'OFFENSE' && isAdvancedMode && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">
+                    Play Bucket <span className="text-slate-500">(determines syntax)</span>
+                  </label>
+                  <select
+                    value={selectedBucketId}
+                    onChange={e => {
+                      setSelectedBucketId(e.target.value);
+                      setFormData(prev => ({ ...prev, playCategory: e.target.value, bucketId: '' }));
+                    }}
+                    className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white text-lg"
+                  >
+                    <option value="">Select Bucket...</option>
+                    {playBuckets.filter(b => (b.phase || 'OFFENSE') === formData.phase).map(bucket => (
+                      <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
+                    ))}
+                  </select>
                 </div>
               )}
 
