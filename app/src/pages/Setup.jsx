@@ -3028,6 +3028,9 @@ const DEFAULT_SYNTAX_TEMPLATES = {
     { id: 'formation', label: 'Formation', sourceCategory: 'formations', required: true },
     { id: 'play', label: 'Play', sourceCategory: 'conceptGroups', required: true },
   ],
+  single: [
+    { id: 'play', label: 'Play/Concept', sourceCategory: 'conceptGroups', required: true },
+  ],
 };
 
 // Play type template tabs configuration
@@ -3036,6 +3039,7 @@ const PLAY_TYPE_TEMPLATES = {
     { id: 'pass', label: 'Pass', icon: '🏈', description: 'Passing plays with routes, protection calls, and navigation' },
     { id: 'run', label: 'Run', icon: '🏃', description: 'Running plays with RB calls and RPO tags' },
     { id: 'quick', label: 'Quick', icon: '⚡', description: 'Simple two-part calls (Formation + Play)' },
+    { id: 'single', label: 'Single', icon: '1️⃣', description: 'One-word concept (e.g., SMASH, CHOICE)' },
     { id: 'custom', label: 'Custom', icon: '⚙️', description: 'Build your own syntax structure' },
   ],
   DEFENSE: [

@@ -38,6 +38,7 @@ export default function PlayEditor({
     { id: 'pass', label: 'Pass', icon: '🏈' },
     { id: 'run', label: 'Run', icon: '🏃' },
     { id: 'quick', label: 'Quick', icon: '⚡' },
+    { id: 'single', label: 'Single', icon: '1️⃣' },
   ];
 
   // Separate state for play type to avoid hook ordering issues
@@ -60,7 +61,13 @@ export default function PlayEditor({
       return customSyntax;
     }
 
-    // Default syntax: Formation + Play
+    // Default syntax based on play type
+    if (playType === 'single') {
+      return [
+        { id: 'play', label: 'Play/Concept', order: 1 }
+      ];
+    }
+    // Default: Formation + Play
     return [
       { id: 'formation', label: 'Formation', order: 1 },
       { id: 'play', label: 'Play', order: 2 }
