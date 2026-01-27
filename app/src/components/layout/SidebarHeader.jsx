@@ -11,13 +11,78 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
   // Get program levels from setupConfig (they're stored there when edited in Setup)
   const levels = setupConfig?.programLevels || programLevels || [];
 
-  // Get season phases from setupConfig
-  const seasonPhases = setupConfig?.seasonPhases || [];
+  // Get season phases from setupConfig with defaults
+  const DEFAULT_PHASES = [
+    { id: 'offseason', name: 'Offseason', color: 'slate', order: 0, numWeeks: 1 },
+    { id: 'summer', name: 'Summer', color: 'amber', order: 1, numWeeks: 8 },
+    { id: 'preseason', name: 'Preseason', color: 'purple', order: 2, numWeeks: 3 },
+    { id: 'season', name: 'Regular Season', color: 'emerald', order: 3, numWeeks: 13 }
+  ];
+  const seasonPhases = setupConfig?.seasonPhases?.length > 0 ? setupConfig.seasonPhases : DEFAULT_PHASES;
+
+  // Generate weeks from season phases
+  const generatedWeeks = useMemo(() => {
+    const allWeeks = [];
+
+    seasonPhases
+      .sort((a, b) => (a.order || 0) - (b.order || 0))
+      .forEach(phase => {
+        const numWeeks = phase.numWeeks || 4;
+
+        for (let i = 1; i <= numWeeks; i++) {
+          // Special naming for certain phases
+          let weekName;
+          if (phase.id === 'offseason' || phase.name?.toLowerCase() === 'offseason') {
+            weekName = i === 1 ? 'Offseason' : `Offseason ${i}`;
+          } else if (numWeeks === 1) {
+            weekName = phase.name;
+          } else {
+            weekName = `Week ${i} of ${phase.name}`;
+          }
+
+          // Calculate date if phase has a start date
+          let weekDate = null;
+          if (phase.startDate) {
+            const startDate = new Date(phase.startDate);
+            weekDate = new Date(startDate);
+            weekDate.setDate(weekDate.getDate() + (i - 1) * 7);
+          }
+
+          allWeeks.push({
+            id: `${phase.id}_week_${i}`,
+            phaseId: phase.id,
+            phaseName: phase.name,
+            phaseColor: phase.color,
+            weekNum: i,
+            name: weekName,
+            date: weekDate ? weekDate.toISOString().split('T')[0] : null
+          });
+        }
+      });
+
+    return allWeeks;
+  }, [seasonPhases]);
+
+  // Combine generated weeks with any existing weeks (prefer existing if they have more data)
+  const allWeeks = useMemo(() => {
+    if (weeks.length > 0) {
+      // If we have stored weeks, merge with generated ones
+      const mergedWeeks = generatedWeeks.map(genWeek => {
+        const existingWeek = weeks.find(w =>
+          w.id === genWeek.id ||
+          (w.phaseId === genWeek.phaseId && w.weekNum === genWeek.weekNum)
+        );
+        return existingWeek ? { ...genWeek, ...existingWeek } : genWeek;
+      });
+      return mergedWeeks;
+    }
+    return generatedWeeks;
+  }, [weeks, generatedWeeks]);
 
   // Find current week based on today's date
   const currentWeek = useMemo(() => {
     if (currentWeekId) {
-      return weeks.find(w => w.id === currentWeekId);
+      return allWeeks.find(w => w.id === currentWeekId);
     }
 
     // Auto-select based on today's date
@@ -25,16 +90,12 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
     today.setHours(0, 0, 0, 0);
 
     // Find week whose date range includes today
-    const sortedWeeks = [...weeks].sort((a, b) => {
-      if (!a.date) return 1;
-      if (!b.date) return -1;
+    const sortedWeeks = [...allWeeks].filter(w => w.date).sort((a, b) => {
       return new Date(a.date) - new Date(b.date);
     });
 
     for (let i = 0; i < sortedWeeks.length; i++) {
       const week = sortedWeeks[i];
-      if (!week.date) continue;
-
       const weekStart = new Date(week.date);
       weekStart.setHours(0, 0, 0, 0);
 
@@ -52,35 +113,22 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
       }
     }
 
-    // Default to last week if past all weeks
-    return sortedWeeks[sortedWeeks.length - 1] || null;
-  }, [weeks, currentWeekId]);
+    // Default to first week if no dates set
+    return allWeeks[0] || null;
+  }, [allWeeks, currentWeekId]);
 
   // Group weeks by phase for the dropdown
   const groupedWeeks = useMemo(() => {
-    if (seasonPhases.length === 0) {
-      // Fallback grouping if no phases defined
-      return [{
-        id: 'all',
-        name: 'All Weeks',
-        weeks: weeks.sort((a, b) => {
-          if (!a.date) return 1;
-          if (!b.date) return -1;
-          return new Date(a.date) - new Date(b.date);
-        })
-      }];
-    }
-
     return seasonPhases
       .sort((a, b) => (a.order || 0) - (b.order || 0))
       .map(phase => ({
         ...phase,
-        weeks: weeks
+        weeks: allWeeks
           .filter(w => w.phaseId === phase.id)
           .sort((a, b) => (a.weekNum || 0) - (b.weekNum || 0))
       }))
       .filter(phase => phase.weeks.length > 0);
-  }, [weeks, seasonPhases]);
+  }, [allWeeks, seasonPhases]);
 
   // Determine which levels the current user can access
   const accessibleLevels = levels.filter(level => {
@@ -169,7 +217,7 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
             )}
 
             {/* Active Week Selector */}
-            {weeks.length > 0 && (
+            {allWeeks.length > 0 && (
               <div className="relative">
                 <span className="text-[0.6rem] text-slate-500 uppercase tracking-wide">Week</span>
                 <select
