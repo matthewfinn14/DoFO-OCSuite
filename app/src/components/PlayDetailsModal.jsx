@@ -205,13 +205,13 @@ export default function PlayDetailsModal({
           </button>
 
           {/* Wristband Slot */}
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 ml-auto">
             <label className="text-sm font-semibold text-slate-500">WB:</label>
             <input
               type="text"
               value={play.wristbandSlot || ''}
               onChange={(e) => handleWristbandChange(e.target.value)}
-              className="w-16 px-2 py-1 text-sm font-semibold text-center border border-slate-300 rounded"
+              className="w-14 px-2 py-1.5 text-sm font-semibold text-center border border-slate-300 rounded"
               placeholder="--"
             />
           </div>
