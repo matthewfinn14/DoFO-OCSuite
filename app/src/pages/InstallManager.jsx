@@ -5,15 +5,12 @@ import {
   Layers,
   ChevronDown,
   ChevronRight,
-  Search,
-  Plus,
   Minus,
   Star,
   Sparkles,
   Copy,
   Trash2,
-  ArrowLeft,
-  GripVertical
+  ArrowLeft
 } from 'lucide-react';
 
 export default function InstallManager() {
@@ -32,9 +29,7 @@ export default function InstallManager() {
 
   // Local state
   const [activePhase, setActivePhase] = useState('OFFENSE');
-  const [searchTerm, setSearchTerm] = useState('');
   const [expandedCategories, setExpandedCategories] = useState({});
-  const [quickAddValue, setQuickAddValue] = useState('');
 
   // Get play categories and buckets from settings/setupConfig
   const playCategories = setupConfig?.playCategories || settings?.playCategories || [];
@@ -55,21 +50,6 @@ export default function InstallManager() {
   const phaseInstalledPlays = useMemo(() => {
     return installedPlays.filter(p => (p.phase || 'OFFENSE') === activePhase);
   }, [installedPlays, activePhase]);
-
-  // Master playbook (plays NOT in install list) filtered by phase
-  const masterList = useMemo(() => {
-    const installSet = new Set(installList);
-    return playsArray
-      .filter(p => !p.archived && !installSet.has(p.id) && (p.phase || 'OFFENSE') === activePhase)
-      .filter(p => {
-        if (!searchTerm) return true;
-        const search = searchTerm.toLowerCase();
-        return p.name?.toLowerCase().includes(search) ||
-               p.formation?.toLowerCase().includes(search) ||
-               p.concept?.toLowerCase().includes(search);
-      })
-      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-  }, [playsArray, installList, activePhase, searchTerm]);
 
   // Group installed plays by category and concept family
   const bucketData = useMemo(() => {
@@ -136,13 +116,6 @@ export default function InstallManager() {
   const toggleCategory = useCallback((catId) => {
     setExpandedCategories(prev => ({ ...prev, [catId]: !prev[catId] }));
   }, []);
-
-  // Add play to install
-  const handleAddToInstall = useCallback((playId) => {
-    if (!currentWeek || installList.includes(playId)) return;
-    const newList = [...installList, playId];
-    updateWeek(weekId, { installList: newList });
-  }, [currentWeek, installList, weekId, updateWeek]);
 
   // Remove play from install
   const handleRemoveFromInstall = useCallback((playId) => {
@@ -232,75 +205,7 @@ export default function InstallManager() {
   }
 
   return (
-    <div className="flex h-full">
-      {/* Left Sidebar - Master Playbook */}
-      <div className="w-72 flex-shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col">
-        {/* Header */}
-        <div className="p-3 border-b border-slate-800">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">
-            Master Playbook
-          </h3>
-          <div className="relative">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search plays..."
-              className="w-full pl-8 pr-3 py-1.5 text-sm bg-slate-800 border border-slate-700 rounded text-white placeholder-slate-500"
-            />
-          </div>
-        </div>
-
-        {/* Play List */}
-        <div className="flex-1 overflow-y-auto">
-          {masterList.length === 0 ? (
-            <div className="p-4 text-center text-slate-500 text-sm">
-              {searchTerm ? 'No plays found' : 'All plays installed'}
-            </div>
-          ) : (
-            <div className="divide-y divide-slate-800">
-              {masterList.map(play => (
-                <div
-                  key={play.id}
-                  className="flex items-center gap-2 px-3 py-2 hover:bg-slate-800/50"
-                >
-                  <button
-                    onClick={() => handleAddToInstall(play.id)}
-                    className="p-1 rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
-                    title="Add to install"
-                  >
-                    <Plus size={14} />
-                  </button>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-white truncate">
-                      {play.name}
-                    </div>
-                    {play.formation && (
-                      <div className="text-xs text-slate-500 truncate">
-                        {play.formation}
-                      </div>
-                    )}
-                  </div>
-                  {play.priority && (
-                    <Star size={12} className="text-amber-400 fill-amber-400 flex-shrink-0" />
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Quick Stats */}
-        <div className="p-3 border-t border-slate-800 bg-slate-800/50">
-          <div className="text-xs text-slate-400">
-            {masterList.length} available • {installList.length} installed
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <div className="px-4 py-3 border-b border-slate-800 bg-slate-900/50">
           <div className="flex items-center justify-between mb-3">
@@ -498,6 +403,5 @@ export default function InstallManager() {
           )}
         </div>
       </div>
-    </div>
   );
 }
