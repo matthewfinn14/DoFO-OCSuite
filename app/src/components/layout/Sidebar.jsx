@@ -19,6 +19,7 @@ import {
   ChevronDown,
   ChevronRight,
   FileText,
+  FileBarChart,
   Megaphone,
   Layers,
   Clipboard,
@@ -175,9 +176,9 @@ export default function Sidebar() {
                     label="Meeting Notes"
                   />
                   <WeeklyToolItem
-                    to={`/week/${currentWeekId}/practice`}
-                    icon={Megaphone}
-                    label="Practice Planner"
+                    to={`/week/${currentWeekId}/depth-charts`}
+                    icon={Users}
+                    label="Depth Chart"
                   />
                   <WeeklyToolItem
                     to={`/week/${currentWeekId}/install`}
@@ -185,16 +186,16 @@ export default function Sidebar() {
                     label="Install Manager"
                   />
                   <WeeklyToolItem
-                    to={`/week/${currentWeekId}/depth-charts`}
-                    icon={Users}
-                    label="Depth Charts"
+                    to={`/week/${currentWeekId}/practice`}
+                    icon={Megaphone}
+                    label="Practice Planner"
                   />
                   {!isOffseasonWeek && (
                     <>
                       <WeeklyToolItem
-                        to={`/week/${currentWeekId}/game-plan`}
-                        icon={Clipboard}
-                        label="Game Planner"
+                        to={`/week/${currentWeekId}/practice-scripts`}
+                        icon={FileText}
+                        label="Practice Scripts"
                       />
                       <WeeklyToolItem
                         to={`/week/${currentWeekId}/wristband`}
@@ -202,14 +203,19 @@ export default function Sidebar() {
                         label="Wristband Builder"
                       />
                       <WeeklyToolItem
-                        to={`/week/${currentWeekId}/practice-scripts`}
-                        icon={FileText}
-                        label="Practice Scripts"
+                        to={`/week/${currentWeekId}/game-plan`}
+                        icon={Clipboard}
+                        label="Game Planner"
                       />
                       <WeeklyToolItem
                         to={`/week/${currentWeekId}/pregame`}
                         icon={Clock}
                         label="Pre-Game Timeline"
+                      />
+                      <WeeklyToolItem
+                        to={`/week/${currentWeekId}/report`}
+                        icon={FileBarChart}
+                        label="Weekly Report"
                       />
                     </>
                   )}
