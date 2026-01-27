@@ -31,7 +31,7 @@ const TAG_CATEGORIES = {
 };
 
 export default function Playbook() {
-  const { playsArray, plays, updatePlays, addPlay, updatePlay, settings } = useSchool();
+  const { playsArray, plays, updatePlays, addPlay, updatePlay, setupConfig } = useSchool();
 
   // UI State
   const [activePhase, setActivePhase] = useState('OFFENSE');
@@ -42,8 +42,10 @@ export default function Playbook() {
   // Filter state
   const [filters, setFilters] = useState({
     formation: '',
-    playCategory: '',
     bucketId: '',
+    conceptGroup: '',
+    readType: '',
+    lookAlikeSeries: '',
     situation: '',
     tag: ''
   });
@@ -52,9 +54,11 @@ export default function Playbook() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingPlay, setEditingPlay] = useState(null);
 
-  // Get play buckets and concept families from settings
-  const playBuckets = settings?.playBuckets || [];
-  const conceptGroups = settings?.conceptGroups || [];
+  // Get play buckets, concept groups, read types, look-alike series from setupConfig
+  const playBuckets = setupConfig?.playBuckets || [];
+  const conceptGroups = setupConfig?.conceptGroups || [];
+  const readTypes = setupConfig?.readTypes || [];
+  const lookAlikeSeries = setupConfig?.lookAlikeSeries || [];
 
   // Get all unique tags from plays
   const allTags = useMemo(() => {
@@ -98,11 +102,20 @@ export default function Playbook() {
       // Formation filter
       if (filters.formation && play.formation !== filters.formation) return false;
 
-      // Category filter
-      if (filters.playCategory && play.playCategory !== filters.playCategory) return false;
-
       // Bucket filter
       if (filters.bucketId && play.bucketId !== filters.bucketId) return false;
+
+      // Concept Group filter
+      if (filters.conceptGroup && play.conceptFamily !== filters.conceptGroup) return false;
+
+      // Read Type filter (if play has readType field)
+      if (filters.readType && play.readType !== filters.readType) return false;
+
+      // Look-Alike Series filter
+      if (filters.lookAlikeSeries) {
+        const series = lookAlikeSeries.find(s => s.id === filters.lookAlikeSeries);
+        if (!series || !series.playIds.includes(play.id)) return false;
+      }
 
       // Situation/tag filter
       if (filters.situation) {
@@ -122,7 +135,7 @@ export default function Playbook() {
 
       return true;
     });
-  }, [phasePlays, searchTerm, filters]);
+  }, [phasePlays, searchTerm, filters, lookAlikeSeries]);
 
   // Phase counts
   const phaseCounts = useMemo(() => {
@@ -135,7 +148,7 @@ export default function Playbook() {
 
   // Clear all filters
   const clearFilters = () => {
-    setFilters({ formation: '', playCategory: '', bucketId: '', situation: '', tag: '' });
+    setFilters({ formation: '', bucketId: '', conceptGroup: '', readType: '', lookAlikeSeries: '', situation: '', tag: '' });
     setSearchTerm('');
   };
 
@@ -317,9 +330,10 @@ export default function Playbook() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {/* Row 1: Search and main filters */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-3">
           {/* Search with Quick Add */}
-          <div className="col-span-2 md:col-span-1">
+          <div className="col-span-2">
             <label className="block text-xs font-medium text-slate-500 uppercase mb-1">
               Search / Quick Add
             </label>
@@ -331,7 +345,7 @@ export default function Playbook() {
                 onChange={e => setSearchTerm(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
                 placeholder="Type name, Enter to add..."
-                className={`w-full pl-9 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm placeholder-slate-500 ${
+                className={`w-full h-[38px] pl-9 bg-slate-800 border border-slate-700 rounded-md text-white text-sm placeholder-slate-500 ${
                   searchTerm.trim() ? 'pr-20' : 'pr-3'
                 }`}
               />
@@ -361,51 +375,88 @@ export default function Playbook() {
             <select
               value={filters.formation}
               onChange={e => setFilters(prev => ({ ...prev, formation: e.target.value }))}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
+              className="w-full h-[38px] px-3 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
             >
-              <option value="">All {getPhaseLabel('formation')}s</option>
+              <option value="">All</option>
               {formations.map(f => (
                 <option key={f} value={f}>{f}</option>
               ))}
             </select>
           </div>
 
-          {/* Category */}
+          {/* Bucket */}
           <div>
             <label className="block text-xs font-medium text-slate-500 uppercase mb-1">
-              Category
+              Bucket
             </label>
             <select
-              value={filters.playCategory}
-              onChange={e => setFilters(prev => ({ ...prev, playCategory: e.target.value, bucketId: '' }))}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
+              value={filters.bucketId}
+              onChange={e => setFilters(prev => ({ ...prev, bucketId: e.target.value, conceptGroup: '' }))}
+              className="w-full h-[38px] px-3 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
             >
-              <option value="">All Categories</option>
-              {playBuckets.filter(c => (c.phase || 'OFFENSE') === activePhase).map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.label}</option>
+              <option value="">All</option>
+              {playBuckets.filter(b => (b.phase || 'OFFENSE') === activePhase).map(bucket => (
+                <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
               ))}
             </select>
           </div>
 
-          {/* Play Family */}
+          {/* Concept Group */}
           <div>
             <label className="block text-xs font-medium text-slate-500 uppercase mb-1">
-              Family
+              Concept Group
             </label>
             <select
-              value={filters.bucketId}
-              onChange={e => setFilters(prev => ({ ...prev, bucketId: e.target.value }))}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
+              value={filters.conceptGroup}
+              onChange={e => setFilters(prev => ({ ...prev, conceptGroup: e.target.value }))}
+              className="w-full h-[38px] px-3 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
             >
-              <option value="">All Families</option>
-              {playBuckets
-                .filter(b => !filters.playCategory || b.categoryId === filters.playCategory)
-                .map(bucket => (
-                  <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
+              <option value="">All</option>
+              {conceptGroups
+                .filter(cg => !filters.bucketId || cg.bucketId === filters.bucketId)
+                .map(cg => (
+                  <option key={cg.id} value={cg.id}>{cg.label}</option>
                 ))}
             </select>
           </div>
 
+          {/* Read Type */}
+          <div>
+            <label className="block text-xs font-medium text-slate-500 uppercase mb-1">
+              Read Type
+            </label>
+            <select
+              value={filters.readType}
+              onChange={e => setFilters(prev => ({ ...prev, readType: e.target.value }))}
+              className="w-full h-[38px] px-3 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
+            >
+              <option value="">All</option>
+              {readTypes.map(rt => (
+                <option key={rt.id} value={rt.id}>{rt.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Look-Alike Series */}
+          <div>
+            <label className="block text-xs font-medium text-slate-500 uppercase mb-1">
+              Look-Alike
+            </label>
+            <select
+              value={filters.lookAlikeSeries}
+              onChange={e => setFilters(prev => ({ ...prev, lookAlikeSeries: e.target.value }))}
+              className="w-full h-[38px] px-3 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
+            >
+              <option value="">All</option>
+              {lookAlikeSeries.map(series => (
+                <option key={series.id} value={series.id}>{series.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Row 2: Situation and Tag filters */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {/* Situation */}
           <div>
             <label className="block text-xs font-medium text-slate-500 uppercase mb-1">
@@ -414,7 +465,7 @@ export default function Playbook() {
             <select
               value={filters.situation}
               onChange={e => setFilters(prev => ({ ...prev, situation: e.target.value }))}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
+              className="w-full h-[38px] px-3 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
             >
               <option value="">All Situations</option>
               {Object.entries(TAG_CATEGORIES).map(([category, tags]) => (
@@ -435,7 +486,7 @@ export default function Playbook() {
             <select
               value={filters.tag}
               onChange={e => setFilters(prev => ({ ...prev, tag: e.target.value }))}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
+              className="w-full h-[38px] px-3 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
             >
               <option value="">All Tags</option>
               {allTags.map(tag => (
