@@ -13,11 +13,21 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
 
   // Get season phases from setupConfig with defaults
   const DEFAULT_PHASES = [
-    { id: 'offseason', name: 'Offseason', color: 'slate', order: 0, numWeeks: 1 },
+    { id: 'offseason', name: 'Offseason', color: 'slate', order: 0, isOffseason: true },
     { id: 'summer', name: 'Summer', color: 'amber', order: 1, numWeeks: 8 },
     { id: 'preseason', name: 'Preseason', color: 'purple', order: 2, numWeeks: 3 },
     { id: 'season', name: 'Regular Season', color: 'emerald', order: 3, numWeeks: 13 }
   ];
+
+  // Default offseason items (special weeks that aren't numbered)
+  const DEFAULT_OFFSEASON_ITEMS = [
+    { id: 'offseason_swot', name: 'SWOT Analysis', order: 1 },
+    { id: 'offseason_goals', name: 'Program Goals', order: 2 },
+    { id: 'offseason_schemes', name: 'Scheme Development', order: 3 },
+    { id: 'offseason_recruiting', name: 'Recruiting Plan', order: 4 },
+    { id: 'offseason_calendar', name: 'Annual Calendar', order: 5 }
+  ];
+
   const seasonPhases = setupConfig?.seasonPhases?.length > 0 ? setupConfig.seasonPhases : DEFAULT_PHASES;
 
   // Generate weeks from season phases
@@ -27,36 +37,48 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
     seasonPhases
       .sort((a, b) => (a.order || 0) - (b.order || 0))
       .forEach(phase => {
-        const numWeeks = phase.numWeeks || 4;
+        const isOffseason = phase.isOffseason || phase.id === 'offseason' || phase.name?.toLowerCase() === 'offseason';
 
-        for (let i = 1; i <= numWeeks; i++) {
-          // Special naming for certain phases
-          let weekName;
-          if (phase.id === 'offseason' || phase.name?.toLowerCase() === 'offseason') {
-            weekName = i === 1 ? 'Offseason' : `Offseason ${i}`;
-          } else if (numWeeks === 1) {
-            weekName = phase.name;
-          } else {
-            weekName = `Week ${i} of ${phase.name}`;
-          }
-
-          // Calculate date if phase has a start date
-          let weekDate = null;
-          if (phase.startDate) {
-            const startDate = new Date(phase.startDate);
-            weekDate = new Date(startDate);
-            weekDate.setDate(weekDate.getDate() + (i - 1) * 7);
-          }
-
-          allWeeks.push({
-            id: `${phase.id}_week_${i}`,
-            phaseId: phase.id,
-            phaseName: phase.name,
-            phaseColor: phase.color,
-            weekNum: i,
-            name: weekName,
-            date: weekDate ? weekDate.toISOString().split('T')[0] : null
+        if (isOffseason) {
+          // Use special offseason items instead of numbered weeks
+          const offseasonItems = phase.items || DEFAULT_OFFSEASON_ITEMS;
+          offseasonItems.forEach(item => {
+            allWeeks.push({
+              id: item.id || `${phase.id}_${item.name.toLowerCase().replace(/\s+/g, '_')}`,
+              phaseId: phase.id,
+              phaseName: phase.name,
+              phaseColor: phase.color,
+              weekNum: item.order || 0,
+              name: item.name,
+              isOffseason: true,
+              date: null
+            });
           });
+        } else {
+          // Generate numbered weeks for regular phases
+          const numWeeks = phase.numWeeks || 4;
+
+          for (let i = 1; i <= numWeeks; i++) {
+            let weekName = numWeeks === 1 ? phase.name : `Week ${i} of ${phase.name}`;
+
+            // Calculate date if phase has a start date
+            let weekDate = null;
+            if (phase.startDate) {
+              const startDate = new Date(phase.startDate);
+              weekDate = new Date(startDate);
+              weekDate.setDate(weekDate.getDate() + (i - 1) * 7);
+            }
+
+            allWeeks.push({
+              id: `${phase.id}_week_${i}`,
+              phaseId: phase.id,
+              phaseName: phase.name,
+              phaseColor: phase.color,
+              weekNum: i,
+              name: weekName,
+              date: weekDate ? weekDate.toISOString().split('T')[0] : null
+            });
+          }
         }
       });
 
