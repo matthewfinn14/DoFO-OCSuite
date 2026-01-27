@@ -1130,19 +1130,20 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
         {positions.map(pos => (
-          <div key={pos.key} className="bg-slate-700/50 p-4 rounded-lg border border-slate-600 relative overflow-hidden">
-            <button
-              onClick={() => pos.isCustom ? removePosition(pos.key) : hidePosition(pos.key)}
-              className="absolute top-2 right-2 p-1 text-red-400 hover:text-red-300 z-10"
-              title={pos.isCustom ? "Delete Position" : "Hide Position"}
-            >
-              <X size={14} />
-            </button>
-
+          <div key={pos.key} className="bg-slate-700/50 p-4 rounded-lg border border-slate-600 relative overflow-hidden group">
             <div className="flex justify-between items-center mb-2">
-              <span className="text-xs font-bold text-slate-400">
-                {positionNames[pos.key] || pos.default}
-              </span>
+              <div className="flex items-center gap-1">
+                <span className="text-xs font-bold text-slate-400">
+                  {positionNames[pos.key] || pos.default}
+                </span>
+                <button
+                  onClick={() => pos.isCustom ? removePosition(pos.key) : hidePosition(pos.key)}
+                  className="p-0.5 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                  title={pos.isCustom ? "Delete Position" : "Hide Position"}
+                >
+                  <X size={12} />
+                </button>
+              </div>
               <input
                 type="text"
                 value={positionDescriptions[pos.key] ?? pos.description}
