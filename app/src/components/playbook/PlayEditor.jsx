@@ -372,9 +372,9 @@ export default function PlayEditor({
                     Play Call Breakdown
                   </label>
                   <div className="flex flex-wrap gap-2 mb-3">
-                    {/* Show tokens from play name */}
-                    {formData.name ? (
-                      formData.name.split(/\s+/).filter(w => w.trim()).map((word, idx) => {
+                    {/* Show tokens from formation + play name */}
+                    {(formData.formation || formData.name) ? (
+                      `${formData.formation || ''} ${formData.name || ''}`.trim().split(/\s+/).filter(w => w.trim()).map((word, idx) => {
                         const isUsed = Object.values(formData.playCallParts || {}).includes(word);
                         return (
                           <div
@@ -397,7 +397,7 @@ export default function PlayEditor({
                         );
                       })
                     ) : (
-                      <span className="text-slate-500 text-sm italic">Enter play name above to see tokens</span>
+                      <span className="text-slate-500 text-sm italic">Enter formation or play name above to see tokens</span>
                     )}
                   </div>
 

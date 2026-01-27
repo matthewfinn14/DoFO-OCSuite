@@ -124,6 +124,11 @@ export function SchoolProvider({ children }) {
     // Look-Alike Series (Offense)
     lookAlikeSeries: [],
 
+    // Situations (Offense)
+    fieldZones: [],
+    downDistanceCategories: [],
+    specialSituations: [],
+
     // OL Schemes
     passProtections: [],
     runBlocking: []
