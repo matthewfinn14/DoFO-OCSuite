@@ -33,7 +33,8 @@ import {
   CloudOff,
   Loader2,
   Eye,
-  Copy
+  Copy,
+  Target
 } from 'lucide-react';
 import PlayDiagramEditor from '../components/diagrams/PlayDiagramEditor';
 import DiagramPreview from '../components/diagrams/DiagramPreview';
@@ -295,6 +296,25 @@ const TAB_HELP = {
         <p>
           <strong className="text-white">Why set this up?</strong> A centralized WIZ library ensures your OL coach and skill
           position coaches are speaking the same language about protections and blocking assignments.
+        </p>
+      </div>
+    )
+  },
+  situations: {
+    title: "About Define Situations",
+    content: (
+      <div className="pt-3 space-y-3">
+        <p>
+          <strong className="text-white">Purpose:</strong> Configure situational categories for tagging and filtering plays—
+          field zones (Red Zone, Gold Zone), down & distance categories (3rd & Long), and special situations (2-Min Offense).
+        </p>
+        <p>
+          <strong className="text-white">Connections:</strong> These categories appear in your Playbook filters and
+          Play Editor tag selection, allowing you to organize plays by game situation.
+        </p>
+        <p>
+          <strong className="text-white">Why set this up?</strong> Custom situations let you match your program's terminology
+          and game-planning approach. Tag plays with situations to quickly filter what to call in specific game scenarios.
         </p>
       </div>
     )
@@ -681,6 +701,7 @@ export default function Setup() {
       tabs.push(
         { id: 'read-types', label: 'Read Types', icon: Eye },
         { id: 'look-alike-series', label: 'Look-Alike Series', icon: Copy },
+        { id: 'situations', label: 'Define Situations', icon: Target },
         { id: 'oline-schemes', label: 'WIZ Library for OL', icon: Shield },
         { id: 'glossary', label: 'Glossary', icon: BookOpen }
       );
@@ -947,6 +968,16 @@ export default function Setup() {
             />
           )}
 
+          {/* Define Situations Tab (Offense only) */}
+          {activeTab === 'situations' && !isPractice && !isProgram && phase === 'OFFENSE' && (
+            <DefineSituationsTab
+              fieldZones={localConfig.fieldZones || []}
+              downDistanceCategories={localConfig.downDistanceCategories || []}
+              specialSituations={localConfig.specialSituations || []}
+              onUpdate={updateLocal}
+            />
+          )}
+
           {/* Concept Groups Tab */}
           {activeTab === 'concept-groups' && !isPractice && !isProgram && (
             <ConceptGroupsTab
@@ -1067,6 +1098,12 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
     onUpdate('customPositions', { ...customPositions, [phase]: current.filter(p => p.key !== key) });
   };
 
+  const hidePosition = (key) => {
+    const current = hiddenPositions[phase] || [];
+    if (current.includes(key)) return;
+    onUpdate('hiddenPositions', { ...hiddenPositions, [phase]: [...current, key] });
+  };
+
   const restorePosition = (key) => {
     const current = hiddenPositions[phase] || [];
     onUpdate('hiddenPositions', { ...hiddenPositions, [phase]: current.filter(h => h !== key) });
@@ -1094,15 +1131,13 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
         {positions.map(pos => (
           <div key={pos.key} className="bg-slate-700/50 p-4 rounded-lg border border-slate-600 relative overflow-hidden">
-            {pos.isCustom && (
-              <button
-                onClick={() => removePosition(pos.key)}
-                className="absolute top-2 right-2 p-1 text-red-400 hover:text-red-300 z-10"
-                title="Delete Position"
-              >
-                <X size={14} />
-              </button>
-            )}
+            <button
+              onClick={() => pos.isCustom ? removePosition(pos.key) : hidePosition(pos.key)}
+              className="absolute top-2 right-2 p-1 text-red-400 hover:text-red-300 z-10"
+              title={pos.isCustom ? "Delete Position" : "Hide Position"}
+            >
+              <X size={14} />
+            </button>
 
             <div className="flex justify-between items-center mb-2">
               <span className="text-xs font-bold text-slate-400">
@@ -1908,6 +1943,405 @@ function LookAlikeSeriesTab({ series, buckets, plays, onUpdate }) {
           <Plus size={18} />
           Add Look-Alike Series
         </button>
+      </div>
+    </div>
+  );
+}
+
+// Define Situations Tab Component
+function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituations, onUpdate }) {
+  const [expandedSections, setExpandedSections] = useState({
+    fieldZones: true,
+    downDistance: false,
+    special: false
+  });
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  // Default values for backward compatibility
+  const DEFAULT_FIELD_ZONES = [
+    { id: 'zone_backed', name: 'Backed Up', description: 'Own 1-10 yard line', startYard: 1, endYard: 10, color: '#ef4444', order: 1 },
+    { id: 'zone_minus', name: 'Minus Territory', description: 'Own 11-49 yard line', startYard: 11, endYard: 49, color: '#f97316', order: 2 },
+    { id: 'zone_plus', name: 'Plus Territory', description: 'Opponent 40-26 yard line', startYard: 60, endYard: 74, color: '#eab308', order: 3 },
+    { id: 'zone_fringe', name: 'Fringe', description: 'Opponent 25-21 yard line', startYard: 75, endYard: 79, color: '#84cc16', order: 4 },
+    { id: 'zone_red', name: 'Red Zone', description: 'Opponent 20-11 yard line', startYard: 80, endYard: 89, color: '#dc2626', order: 5 },
+    { id: 'zone_gold', name: 'Gold Zone', description: 'Opponent 10-4 yard line', startYard: 90, endYard: 96, color: '#f59e0b', order: 6 },
+    { id: 'zone_goal', name: 'Goal Line', description: 'Opponent 3 yard line and in', startYard: 97, endYard: 100, color: '#22c55e', order: 7 }
+  ];
+
+  const DEFAULT_DOWN_DISTANCE = [
+    { id: 'dd_1st', name: '1st Down', description: 'First down', down: '1', distanceType: 'any', order: 1 },
+    { id: 'dd_2long', name: '2nd & Long', description: '2nd down, 7+ yards', down: '2', distanceType: 'long', order: 2 },
+    { id: 'dd_2med', name: '2nd & Medium', description: '2nd down, 4-6 yards', down: '2', distanceType: 'medium', order: 3 },
+    { id: 'dd_2short', name: '2nd & Short', description: '2nd down, 1-3 yards', down: '2', distanceType: 'short', order: 4 },
+    { id: 'dd_3long', name: '3rd & Long', description: '3rd down, 7+ yards', down: '3', distanceType: 'long', order: 5 },
+    { id: 'dd_3med', name: '3rd & Medium', description: '3rd down, 4-6 yards', down: '3', distanceType: 'medium', order: 6 },
+    { id: 'dd_3short', name: '3rd & Short', description: '3rd down, 1-3 yards', down: '3', distanceType: 'short', order: 7 },
+    { id: 'dd_4th', name: '4th Down', description: 'Fourth down', down: '4', distanceType: 'any', order: 8 }
+  ];
+
+  const DEFAULT_SPECIAL_SITUATIONS = [
+    { id: 'sit_2min', name: '2-Min Offense', description: 'End of half hurry-up', order: 1 },
+    { id: 'sit_4min', name: '4-Min Offense', description: 'Ball control / milk clock', order: 2 },
+    { id: 'sit_must', name: 'Must Score', description: 'Need a touchdown', order: 3 },
+    { id: 'sit_clock', name: 'Clock Running', description: 'Standard tempo', order: 4 },
+    { id: 'sit_open', name: 'Openers', description: 'First play of drive', order: 5 }
+  ];
+
+  // Field Zones CRUD
+  const addFieldZone = () => {
+    const name = prompt('New Field Zone Name:');
+    if (!name) return;
+    const newZone = {
+      id: `zone_${Date.now()}`,
+      name: name.trim(),
+      description: '',
+      startYard: 0,
+      endYard: 0,
+      color: '#64748b',
+      order: fieldZones.length + 1
+    };
+    onUpdate('fieldZones', [...fieldZones, newZone]);
+  };
+
+  const updateFieldZone = (id, updates) => {
+    onUpdate('fieldZones', fieldZones.map(z => z.id === id ? { ...z, ...updates } : z));
+  };
+
+  const deleteFieldZone = (id) => {
+    if (!confirm('Delete this field zone?')) return;
+    onUpdate('fieldZones', fieldZones.filter(z => z.id !== id));
+  };
+
+  // Down & Distance CRUD
+  const addDownDistance = () => {
+    const name = prompt('New Down & Distance Category Name:');
+    if (!name) return;
+    const newCat = {
+      id: `dd_${Date.now()}`,
+      name: name.trim(),
+      description: '',
+      down: '',
+      distanceType: '',
+      order: downDistanceCategories.length + 1
+    };
+    onUpdate('downDistanceCategories', [...downDistanceCategories, newCat]);
+  };
+
+  const updateDownDistance = (id, updates) => {
+    onUpdate('downDistanceCategories', downDistanceCategories.map(d => d.id === id ? { ...d, ...updates } : d));
+  };
+
+  const deleteDownDistance = (id) => {
+    if (!confirm('Delete this down & distance category?')) return;
+    onUpdate('downDistanceCategories', downDistanceCategories.filter(d => d.id !== id));
+  };
+
+  // Special Situations CRUD
+  const addSpecialSituation = () => {
+    const name = prompt('New Special Situation Name:');
+    if (!name) return;
+    const newSit = {
+      id: `sit_${Date.now()}`,
+      name: name.trim(),
+      description: '',
+      order: specialSituations.length + 1
+    };
+    onUpdate('specialSituations', [...specialSituations, newSit]);
+  };
+
+  const updateSpecialSituation = (id, updates) => {
+    onUpdate('specialSituations', specialSituations.map(s => s.id === id ? { ...s, ...updates } : s));
+  };
+
+  const deleteSpecialSituation = (id) => {
+    if (!confirm('Delete this special situation?')) return;
+    onUpdate('specialSituations', specialSituations.filter(s => s.id !== id));
+  };
+
+  // Load defaults if empty
+  const loadDefaultFieldZones = () => {
+    if (fieldZones.length > 0 && !confirm('This will replace your current field zones. Continue?')) return;
+    onUpdate('fieldZones', DEFAULT_FIELD_ZONES);
+  };
+
+  const loadDefaultDownDistance = () => {
+    if (downDistanceCategories.length > 0 && !confirm('This will replace your current categories. Continue?')) return;
+    onUpdate('downDistanceCategories', DEFAULT_DOWN_DISTANCE);
+  };
+
+  const loadDefaultSpecialSituations = () => {
+    if (specialSituations.length > 0 && !confirm('This will replace your current situations. Continue?')) return;
+    onUpdate('specialSituations', DEFAULT_SPECIAL_SITUATIONS);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold text-white">Define Situations</h3>
+        <p className="text-slate-400 text-sm">
+          Configure field zones, down & distance categories, and special situations for tagging and filtering plays.
+        </p>
+      </div>
+
+      {/* Field Zones Section */}
+      <div className="bg-slate-700/50 rounded-lg border border-slate-600 overflow-hidden">
+        <button
+          onClick={() => toggleSection('fieldZones')}
+          className="w-full flex items-center justify-between p-3 bg-slate-700/30 hover:bg-slate-700/50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            {expandedSections.fieldZones ? <ChevronDown size={18} /> : <ChevronUp size={18} className="rotate-180" />}
+            <span className="font-medium text-white">Field Zones</span>
+            <span className="text-sm text-slate-400">({fieldZones.length} zones)</span>
+          </div>
+        </button>
+        {expandedSections.fieldZones && (
+          <div className="p-4 border-t border-slate-600 space-y-3">
+            {fieldZones.length === 0 && (
+              <div className="text-center py-4 text-slate-400">
+                <p className="mb-2">No field zones defined yet.</p>
+                <button
+                  onClick={loadDefaultFieldZones}
+                  className="text-sky-400 hover:text-sky-300 text-sm underline"
+                >
+                  Load default field zones
+                </button>
+              </div>
+            )}
+            {fieldZones.map(zone => (
+              <div key={zone.id} className="flex items-center gap-3 p-3 bg-slate-800 rounded-lg border border-slate-600">
+                <input
+                  type="color"
+                  value={zone.color || '#64748b'}
+                  onChange={(e) => updateFieldZone(zone.id, { color: e.target.value })}
+                  className="w-8 h-8 rounded cursor-pointer border-0"
+                />
+                <input
+                  type="text"
+                  value={zone.name}
+                  onChange={(e) => updateFieldZone(zone.id, { name: e.target.value })}
+                  className="flex-1 px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-white font-medium"
+                  placeholder="Zone name"
+                />
+                <input
+                  type="text"
+                  value={zone.description || ''}
+                  onChange={(e) => updateFieldZone(zone.id, { description: e.target.value })}
+                  className="flex-1 px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                  placeholder="Description"
+                />
+                <div className="flex items-center gap-1 text-sm text-slate-400">
+                  <input
+                    type="number"
+                    value={zone.startYard || 0}
+                    onChange={(e) => updateFieldZone(zone.id, { startYard: parseInt(e.target.value) || 0 })}
+                    className="w-14 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-center"
+                    min="0"
+                    max="100"
+                  />
+                  <span>-</span>
+                  <input
+                    type="number"
+                    value={zone.endYard || 0}
+                    onChange={(e) => updateFieldZone(zone.id, { endYard: parseInt(e.target.value) || 0 })}
+                    className="w-14 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-center"
+                    min="0"
+                    max="100"
+                  />
+                  <span>yds</span>
+                </div>
+                <button
+                  onClick={() => deleteFieldZone(zone.id)}
+                  className="p-1.5 text-slate-400 hover:text-red-400"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+            <div className="flex gap-2">
+              <button
+                onClick={addFieldZone}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-700/50 border border-dashed border-slate-500 rounded-lg text-slate-300 hover:bg-slate-700 hover:border-slate-400 transition-colors"
+              >
+                <Plus size={16} />
+                Add Field Zone
+              </button>
+              {fieldZones.length > 0 && (
+                <button
+                  onClick={loadDefaultFieldZones}
+                  className="px-3 py-2 text-slate-400 hover:text-slate-300 text-sm"
+                >
+                  Reset to Defaults
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Down & Distance Section */}
+      <div className="bg-slate-700/50 rounded-lg border border-slate-600 overflow-hidden">
+        <button
+          onClick={() => toggleSection('downDistance')}
+          className="w-full flex items-center justify-between p-3 bg-slate-700/30 hover:bg-slate-700/50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            {expandedSections.downDistance ? <ChevronDown size={18} /> : <ChevronUp size={18} className="rotate-180" />}
+            <span className="font-medium text-white">Down & Distance</span>
+            <span className="text-sm text-slate-400">({downDistanceCategories.length} categories)</span>
+          </div>
+        </button>
+        {expandedSections.downDistance && (
+          <div className="p-4 border-t border-slate-600 space-y-3">
+            {downDistanceCategories.length === 0 && (
+              <div className="text-center py-4 text-slate-400">
+                <p className="mb-2">No down & distance categories defined yet.</p>
+                <button
+                  onClick={loadDefaultDownDistance}
+                  className="text-sky-400 hover:text-sky-300 text-sm underline"
+                >
+                  Load default categories
+                </button>
+              </div>
+            )}
+            {downDistanceCategories.map(cat => (
+              <div key={cat.id} className="flex items-center gap-3 p-3 bg-slate-800 rounded-lg border border-slate-600">
+                <input
+                  type="text"
+                  value={cat.name}
+                  onChange={(e) => updateDownDistance(cat.id, { name: e.target.value })}
+                  className="flex-1 px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-white font-medium"
+                  placeholder="Category name"
+                />
+                <input
+                  type="text"
+                  value={cat.description || ''}
+                  onChange={(e) => updateDownDistance(cat.id, { description: e.target.value })}
+                  className="flex-1 px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                  placeholder="Description"
+                />
+                <select
+                  value={cat.down || ''}
+                  onChange={(e) => updateDownDistance(cat.id, { down: e.target.value })}
+                  className="w-24 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                >
+                  <option value="">Down</option>
+                  <option value="1">1st</option>
+                  <option value="2">2nd</option>
+                  <option value="3">3rd</option>
+                  <option value="4">4th</option>
+                </select>
+                <select
+                  value={cat.distanceType || ''}
+                  onChange={(e) => updateDownDistance(cat.id, { distanceType: e.target.value })}
+                  className="w-28 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                >
+                  <option value="">Distance</option>
+                  <option value="short">Short (1-3)</option>
+                  <option value="medium">Medium (4-6)</option>
+                  <option value="long">Long (7+)</option>
+                  <option value="any">Any</option>
+                </select>
+                <button
+                  onClick={() => deleteDownDistance(cat.id)}
+                  className="p-1.5 text-slate-400 hover:text-red-400"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+            <div className="flex gap-2">
+              <button
+                onClick={addDownDistance}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-700/50 border border-dashed border-slate-500 rounded-lg text-slate-300 hover:bg-slate-700 hover:border-slate-400 transition-colors"
+              >
+                <Plus size={16} />
+                Add Down & Distance
+              </button>
+              {downDistanceCategories.length > 0 && (
+                <button
+                  onClick={loadDefaultDownDistance}
+                  className="px-3 py-2 text-slate-400 hover:text-slate-300 text-sm"
+                >
+                  Reset to Defaults
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Special Situations Section */}
+      <div className="bg-slate-700/50 rounded-lg border border-slate-600 overflow-hidden">
+        <button
+          onClick={() => toggleSection('special')}
+          className="w-full flex items-center justify-between p-3 bg-slate-700/30 hover:bg-slate-700/50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            {expandedSections.special ? <ChevronDown size={18} /> : <ChevronUp size={18} className="rotate-180" />}
+            <span className="font-medium text-white">Special Situations</span>
+            <span className="text-sm text-slate-400">({specialSituations.length} situations)</span>
+          </div>
+        </button>
+        {expandedSections.special && (
+          <div className="p-4 border-t border-slate-600 space-y-3">
+            {specialSituations.length === 0 && (
+              <div className="text-center py-4 text-slate-400">
+                <p className="mb-2">No special situations defined yet.</p>
+                <button
+                  onClick={loadDefaultSpecialSituations}
+                  className="text-sky-400 hover:text-sky-300 text-sm underline"
+                >
+                  Load default situations
+                </button>
+              </div>
+            )}
+            {specialSituations.map(sit => (
+              <div key={sit.id} className="flex items-center gap-3 p-3 bg-slate-800 rounded-lg border border-slate-600">
+                <input
+                  type="text"
+                  value={sit.name}
+                  onChange={(e) => updateSpecialSituation(sit.id, { name: e.target.value })}
+                  className="flex-1 px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-white font-medium"
+                  placeholder="Situation name"
+                />
+                <input
+                  type="text"
+                  value={sit.description || ''}
+                  onChange={(e) => updateSpecialSituation(sit.id, { description: e.target.value })}
+                  className="flex-[2] px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                  placeholder="Description"
+                />
+                <button
+                  onClick={() => deleteSpecialSituation(sit.id)}
+                  className="p-1.5 text-slate-400 hover:text-red-400"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+            <div className="flex gap-2">
+              <button
+                onClick={addSpecialSituation}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-700/50 border border-dashed border-slate-500 rounded-lg text-slate-300 hover:bg-slate-700 hover:border-slate-400 transition-colors"
+              >
+                <Plus size={16} />
+                Add Special Situation
+              </button>
+              {specialSituations.length > 0 && (
+                <button
+                  onClick={loadDefaultSpecialSituations}
+                  className="px-3 py-2 text-slate-400 hover:text-slate-300 text-sm"
+                >
+                  Reset to Defaults
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
