@@ -1672,10 +1672,10 @@ function ConceptGroupsTab({ phase, buckets, allBuckets, onUpdate }) {
         })}
       </div>
 
-      {categories.length === 0 && (
+      {buckets.length === 0 && (
         <div className="text-center py-12 text-slate-400">
           <Grid size={48} className="mx-auto mb-4 opacity-30" />
-          <p>Define play buckets/categories first to add concept families.</p>
+          <p>Define play buckets first to add concept groups.</p>
         </div>
       )}
     </div>
