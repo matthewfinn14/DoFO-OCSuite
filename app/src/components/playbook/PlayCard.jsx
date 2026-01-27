@@ -51,24 +51,22 @@ export default function PlayCard({
 
   const elements = getDiagramElements();
 
-  // Get display name
+  // Get display name (formation first, then play name)
   const getDisplayName = () => {
-    return play.name || 'Unnamed Play';
+    const name = play.name || 'Unnamed Play';
+    if (play.formation) {
+      return `${play.formation} ${name}`;
+    }
+    return name;
   };
 
-  // Format meta info
+  // Format meta info (formation is now in main display name, so only show formationTag here)
   const getMetaInfo = () => {
     const parts = [];
     const nameLower = (play.name || '').toLowerCase();
 
-    // Show formation if not already in name
-    if (play.formation && !nameLower.includes(play.formation.toLowerCase())) {
-      let txt = play.formation;
-      if (play.formationTag && !nameLower.includes(play.formationTag.toLowerCase())) {
-        txt += ` (${play.formationTag})`;
-      }
-      parts.push(txt);
-    } else if (play.formationTag && !nameLower.includes(play.formationTag.toLowerCase())) {
+    // Show formationTag if not already in name
+    if (play.formationTag && !nameLower.includes(play.formationTag.toLowerCase())) {
       parts.push(`(${play.formationTag})`);
     }
 
