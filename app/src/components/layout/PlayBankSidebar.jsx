@@ -527,19 +527,6 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
           ))}
         </div>
 
-        {/* Search */}
-        <div className="p-2 bg-white border-b border-slate-200">
-          <div className="relative">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              placeholder="Search plays..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value.toUpperCase())}
-              className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-300 rounded bg-white text-slate-800 placeholder-slate-400"
-            />
-          </div>
-        </div>
-
         {/* Quick Add */}
         <div className="p-2 bg-slate-50 border-b border-slate-200">
           <div className="flex gap-1.5">
@@ -572,6 +559,19 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
             }
             {currentWeek ? ' • Auto-installs for this week' : ''}
           </p>
+        </div>
+
+        {/* Search */}
+        <div className="p-2 bg-white border-b border-slate-200">
+          <div className="relative">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              placeholder="Search plays..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value.toUpperCase())}
+              className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-300 rounded bg-white text-slate-800 placeholder-slate-400"
+            />
+          </div>
         </div>
 
         {/* Content */}
