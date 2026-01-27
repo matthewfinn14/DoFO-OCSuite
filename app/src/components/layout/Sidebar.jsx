@@ -74,15 +74,17 @@ function CollapsibleCategory({
 }
 
 // Weekly tool navigation item
-function WeeklyToolItem({ to, icon: Icon, label }) {
+function WeeklyToolItem({ to, icon: Icon, label, isLight = false }) {
   return (
     <NavLink
       to={to}
       className={({ isActive }) =>
         `flex items-center gap-2 px-3 py-1.5 text-xs rounded transition-colors ${
           isActive
-            ? 'text-sky-400 bg-sky-500/10'
-            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'
+            ? 'text-sky-500 bg-sky-500/10'
+            : isLight
+              ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'
         }`
       }
     >
@@ -93,7 +95,7 @@ function WeeklyToolItem({ to, icon: Icon, label }) {
 }
 
 // Navigation item component
-function NavItem({ to, icon: Icon, label, collapsed }) {
+function NavItem({ to, icon: Icon, label, collapsed, isLight = false }) {
   return (
     <NavLink
       to={to}
@@ -101,7 +103,9 @@ function NavItem({ to, icon: Icon, label, collapsed }) {
         `flex items-center gap-2 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
           isActive
             ? 'bg-sky-500/20 text-sky-400 border-l-2 border-sky-400'
-            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+            : isLight
+              ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
         } ${collapsed ? 'justify-center px-2' : ''}`
       }
     >
@@ -113,7 +117,7 @@ function NavItem({ to, icon: Icon, label, collapsed }) {
 
 export default function Sidebar() {
   const { currentPermissions, isSiteAdmin } = useAuth();
-  const { school, weeks, currentWeekId, visibleFeatures, setCurrentWeekId } = useSchool();
+  const { school, weeks, currentWeekId, visibleFeatures, setCurrentWeekId, settings } = useSchool();
   const navigate = useNavigate();
 
   // Persist collapse state to localStorage
@@ -126,41 +130,49 @@ export default function Sidebar() {
     currentWeek?.name === 'Offseason' ||
     currentWeek?.phaseId === 'offseason';
 
+  // Get theme from settings
+  const theme = settings?.theme || school?.settings?.theme || 'dark';
+  const isLight = theme === 'light';
+
   return (
     <aside
-      className={`flex flex-col bg-slate-900 border-r border-slate-800 transition-all duration-200 ${
+      className={`flex flex-col transition-all duration-200 ${
         collapsed ? 'w-16' : 'w-64'
+      } ${
+        isLight
+          ? 'bg-white border-r border-gray-200'
+          : 'bg-slate-900 border-r border-slate-800'
       }`}
     >
       {/* Header with logo, school info, switcher */}
       <SidebarHeader
         collapsed={collapsed}
         onToggleCollapse={() => setCollapsed(!collapsed)}
-        theme={school?.settings?.theme || 'dark'}
+        theme={theme}
       />
 
       {/* Fixed Core Navigation */}
-      <div className="px-2 py-1 border-b border-slate-800 flex-shrink-0">
+      <div className={`px-2 py-1 border-b flex-shrink-0 ${isLight ? 'border-gray-200' : 'border-slate-800'}`}>
         <div className="space-y-0.5">
           {currentPermissions.dashboard.view && (
-            <NavItem to="/dashboard" icon={Target} label="PROGRAM ALIGNMENT" collapsed={collapsed} />
+            <NavItem to="/dashboard" icon={Target} label="PROGRAM ALIGNMENT" collapsed={collapsed} isLight={isLight} />
           )}
           {visibleFeatures.gameWeek?.enabled && visibleFeatures.gameWeek?.items?.schemeSetup && (
-            <NavItem to="/setup" icon={Settings} label="SYSTEM SETUP" collapsed={collapsed} />
+            <NavItem to="/setup" icon={Settings} label="SYSTEM SETUP" collapsed={collapsed} isLight={isLight} />
           )}
           {visibleFeatures.gameWeek?.enabled && visibleFeatures.gameWeek?.items?.playbook && (
-            <NavItem to="/playbook" icon={Book} label="MASTER PLAYBOOK" collapsed={collapsed} />
+            <NavItem to="/playbook" icon={Book} label="MASTER PLAYBOOK" collapsed={collapsed} isLight={isLight} />
           )}
           {currentPermissions.dashboard.view && (
-            <NavItem to="/print" icon={Printer} label="PRINT CENTER" collapsed={collapsed} />
+            <NavItem to="/print" icon={Printer} label="PRINT CENTER" collapsed={collapsed} isLight={isLight} />
           )}
           {currentPermissions.dashboard.view && (
-            <NavItem to="/templates" icon={LayoutTemplate} label="TEMPLATES" collapsed={collapsed} />
+            <NavItem to="/templates" icon={LayoutTemplate} label="TEMPLATES" collapsed={collapsed} isLight={isLight} />
           )}
         </div>
 
         {!collapsed && currentPermissions.staff.view && (
-          <NavItem to="/staff" icon={Users} label="STAFF & ROSTER" collapsed={collapsed} />
+          <NavItem to="/staff" icon={Users} label="STAFF & ROSTER" collapsed={collapsed} isLight={isLight} />
         )}
       </div>
 
@@ -172,7 +184,7 @@ export default function Sidebar() {
             {currentWeekId && isOffseasonWeek && (
               <>
                 <div className="mb-1">
-                  <span className="px-2 text-[0.65rem] text-slate-500 uppercase tracking-wide">
+                  <span className={`px-2 text-[0.65rem] uppercase tracking-wide ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
                     Offseason Tools
                   </span>
                 </div>
@@ -182,26 +194,31 @@ export default function Sidebar() {
                     to={`/offseason/swot`}
                     icon={BarChart3}
                     label="SWOT Analysis"
+                    isLight={isLight}
                   />
                   <WeeklyToolItem
                     to={`/offseason/goals`}
                     icon={Target}
                     label="Program Goals"
+                    isLight={isLight}
                   />
                   <WeeklyToolItem
                     to={`/offseason/schemes`}
                     icon={Lightbulb}
                     label="Scheme Development"
+                    isLight={isLight}
                   />
                   <WeeklyToolItem
                     to={`/offseason/recruiting`}
                     icon={UserPlus}
                     label="Recruiting Plan"
+                    isLight={isLight}
                   />
                   <WeeklyToolItem
                     to={`/offseason/calendar`}
                     icon={Calendar}
                     label="Annual Calendar"
+                    isLight={isLight}
                   />
                 </div>
               </>
@@ -211,7 +228,7 @@ export default function Sidebar() {
             {currentWeekId && !isOffseasonWeek && (
               <>
                 <div className="mb-1">
-                  <span className="px-2 text-[0.65rem] text-slate-500 uppercase tracking-wide">
+                  <span className={`px-2 text-[0.65rem] uppercase tracking-wide ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
                     Weekly Tools
                   </span>
                 </div>
@@ -221,46 +238,55 @@ export default function Sidebar() {
                     to={`/week/${currentWeekId}/notes`}
                     icon={FileText}
                     label="Meeting Notes"
+                    isLight={isLight}
                   />
                   <WeeklyToolItem
                     to={`/week/${currentWeekId}/depth-charts`}
                     icon={Users}
                     label="Depth Chart"
+                    isLight={isLight}
                   />
                   <WeeklyToolItem
                     to={`/week/${currentWeekId}/install`}
                     icon={Layers}
                     label="Install Manager"
+                    isLight={isLight}
                   />
                   <WeeklyToolItem
                     to={`/week/${currentWeekId}/practice`}
                     icon={Megaphone}
                     label="Practice Planner"
+                    isLight={isLight}
                   />
                   <WeeklyToolItem
                     to={`/week/${currentWeekId}/practice?view=script`}
                     icon={FileText}
                     label="Practice Scripts"
+                    isLight={isLight}
                   />
                   <WeeklyToolItem
                     to={`/week/${currentWeekId}/wristband`}
                     icon={Watch}
                     label="Wristband Builder"
+                    isLight={isLight}
                   />
                   <WeeklyToolItem
                     to={`/week/${currentWeekId}/game-plan`}
                     icon={Clipboard}
                     label="Game Planner"
+                    isLight={isLight}
                   />
                   <WeeklyToolItem
                     to={`/week/${currentWeekId}/pregame`}
                     icon={Clock}
                     label="Pre-Game Timeline"
+                    isLight={isLight}
                   />
                   <WeeklyToolItem
                     to={`/week/${currentWeekId}/report`}
                     icon={FileBarChart}
                     label="Weekly Report"
+                    isLight={isLight}
                   />
                 </div>
               </>
@@ -269,7 +295,7 @@ export default function Sidebar() {
             {/* Prompt to select week if none selected */}
             {!currentWeekId && weeks.length > 0 && (
               <div className="px-2 py-2 text-center">
-                <p className="text-[0.65rem] text-slate-500">
+                <p className={`text-[0.65rem] ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
                   Select a week above to see weekly tools
                 </p>
               </div>
@@ -277,7 +303,7 @@ export default function Sidebar() {
 
             {!currentWeekId && weeks.length === 0 && (
               <div className="px-2 py-2 text-center">
-                <p className="text-[0.65rem] text-slate-500">
+                <p className={`text-[0.65rem] ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
                   Add weeks in Season Setup
                 </p>
               </div>

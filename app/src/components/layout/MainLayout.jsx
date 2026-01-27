@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PlayBankSidebar from './PlayBankSidebar';
 import { useSchool } from '../../context/SchoolContext';
 import { PlayDetailsModalProvider } from '../PlayDetailsModal';
+import { PlayBankProvider, usePlayBank } from '../../context/PlayBankContext';
 
-export default function MainLayout() {
+function MainLayoutContent() {
   const {
     loading,
     error,
@@ -19,6 +20,34 @@ export default function MainLayout() {
   } = useSchool();
   const [playBankOpen, setPlayBankOpen] = useState(false);
   const navigate = useNavigate();
+  const {
+    batchSelectMode,
+    batchSelectLabel,
+    handleBatchSelect,
+    cancelBatchSelect
+  } = usePlayBank();
+
+  // Auto-open play bank when batch select mode is activated
+  useEffect(() => {
+    if (batchSelectMode && !playBankOpen) {
+      setPlayBankOpen(true);
+    }
+  }, [batchSelectMode, playBankOpen]);
+
+  // Get current theme from settings
+  const theme = settings?.theme || 'dark';
+
+  // Apply theme class to document for global styling
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'light') {
+      root.classList.add('light-theme');
+      root.classList.remove('dark-theme');
+    } else {
+      root.classList.add('dark-theme');
+      root.classList.remove('light-theme');
+    }
+  }, [theme]);
 
   // Navigate to Playbook to edit a play
   const handleEditPlay = (playId) => {
@@ -43,7 +72,11 @@ export default function MainLayout() {
       updateSetupConfig={updateSetupConfig}
       onEditPlay={handleEditPlay}
     >
-      <div className="flex h-screen bg-slate-950 text-white">
+      <div className={`flex h-screen ${
+        theme === 'light'
+          ? 'bg-gray-100 text-gray-900'
+          : 'bg-slate-950 text-white'
+      }`}>
         {/* Sidebar */}
         <Sidebar />
 
@@ -82,8 +115,20 @@ export default function MainLayout() {
         <PlayBankSidebar
           isOpen={playBankOpen}
           onToggle={setPlayBankOpen}
+          batchSelectMode={batchSelectMode}
+          onBatchSelect={handleBatchSelect}
+          onCancelBatchSelect={cancelBatchSelect}
+          batchSelectLabel={batchSelectLabel}
         />
       </div>
     </PlayDetailsModalProvider>
+  );
+}
+
+export default function MainLayout() {
+  return (
+    <PlayBankProvider>
+      <MainLayoutContent />
+    </PlayBankProvider>
   );
 }

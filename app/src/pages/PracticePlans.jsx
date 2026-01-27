@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
+import { usePlayBank } from '../context/PlayBankContext';
 import {
   ArrowLeft,
   Plus,
@@ -21,7 +22,8 @@ import {
   MessageSquare,
   StickyNote,
   Layers,
-  Link2
+  Link2,
+  CheckSquare
 } from 'lucide-react';
 
 // Days of the week
@@ -1282,6 +1284,7 @@ export default function PracticePlans() {
   const viewParam = searchParams.get('view'); // 'script' or null
   const navigate = useNavigate();
   const { weeks, updateWeek, setupConfig, updateSetupConfig, staff, settings, activeLevelId, playsArray, plays } = useSchool();
+  const { startBatchSelect } = usePlayBank();
 
   // Get program levels from setup config
   const programLevels = useMemo(() => {
@@ -1612,6 +1615,50 @@ export default function PracticePlans() {
     const newScript = segment.script.filter(row => row.id !== rowId);
     updateSegment(segmentId, 'script', newScript);
   }, [currentPlan, updateSegment]);
+
+  // Batch add plays to script from Play Bank
+  const handleBatchAddToScript = useCallback((segmentId) => {
+    const segment = currentPlan?.segments?.find(s => s.id === segmentId);
+    if (!segment) return;
+
+    startBatchSelect((playIds) => {
+      const currentScript = segment.script || [];
+
+      // Get empty script rows
+      const emptyRowIndices = currentScript
+        .map((row, idx) => (!row.playId && !row.playName) ? idx : -1)
+        .filter(idx => idx !== -1);
+
+      // Fill empty rows with selected plays
+      let newScript = [...currentScript];
+      let playIndex = 0;
+
+      emptyRowIndices.forEach(rowIdx => {
+        if (playIndex < playIds.length) {
+          const play = plays[playIds[playIndex]];
+          newScript[rowIdx] = {
+            ...newScript[rowIdx],
+            playId: playIds[playIndex],
+            playName: play?.name || ''
+          };
+          playIndex++;
+        }
+      });
+
+      // If more plays than empty rows, add new rows
+      while (playIndex < playIds.length) {
+        const play = plays[playIds[playIndex]];
+        newScript.push({
+          ...createScriptRow(newScript.length),
+          playId: playIds[playIndex],
+          playName: play?.name || ''
+        });
+        playIndex++;
+      }
+
+      updateSegment(segmentId, 'script', newScript);
+    }, 'Add to Script');
+  }, [currentPlan, plays, startBatchSelect, updateSegment]);
 
   // Clear play from a script row
   const clearScriptRowPlay = useCallback((segmentId, rowId) => {
@@ -2454,13 +2501,22 @@ export default function PracticePlans() {
                           <span className="text-white font-semibold">{seg.type || 'NEW SEGMENT'}</span>
                           <span className="text-slate-400 text-sm">({seg.duration || 0} min)</span>
                         </div>
-                        <button
-                          onClick={() => addScriptRow(seg.id)}
-                          className="flex items-center gap-1 px-2 py-1 text-sm text-sky-400 hover:text-sky-300"
-                        >
-                          <Plus size={14} />
-                          Add Row
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleBatchAddToScript(seg.id)}
+                            className="flex items-center gap-1 px-2 py-1 text-sm text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 rounded"
+                          >
+                            <CheckSquare size={14} />
+                            Batch Add
+                          </button>
+                          <button
+                            onClick={() => addScriptRow(seg.id)}
+                            className="flex items-center gap-1 px-2 py-1 text-sm text-sky-400 hover:text-sky-300"
+                          >
+                            <Plus size={14} />
+                            Add Row
+                          </button>
+                        </div>
                       </div>
 
                       {/* Script Table */}

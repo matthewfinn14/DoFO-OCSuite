@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
-import { X, Search, Trash2, GripVertical, ChevronUp, ChevronDown, ArrowRight, Plus, Hash } from 'lucide-react';
+import { X, Search, Trash2, GripVertical, ChevronUp, ChevronDown, ArrowRight, Plus, Hash, CheckSquare } from 'lucide-react';
+import { usePlayBank } from '../../context/PlayBankContext';
 
 export default function BoxEditorModal({
   box,
@@ -18,11 +19,22 @@ export default function BoxEditorModal({
   getPlaysForSet,
   getWristbandLabel
 }) {
+  const { startBatchSelect } = usePlayBank();
   const [localBox, setLocalBox] = useState({ ...box });
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('editor'); // 'settings', 'editor'
   const [draggedQuickListIdx, setDraggedQuickListIdx] = useState(null);
   const [dragOverQuickListIdx, setDragOverQuickListIdx] = useState(null);
+
+  // Handle batch add from Play Bank
+  const handleBatchAdd = useCallback(() => {
+    startBatchSelect((playIds) => {
+      // Add all selected plays to the Quick List
+      playIds.forEach(playId => {
+        onAddPlayToQuickList(box.setId, playId);
+      });
+    }, `Add to ${box.header || 'Box'}`);
+  }, [startBatchSelect, onAddPlayToQuickList, box.setId, box.header]);
 
   // Get Quick List plays (assignedPlayIds)
   const quickListPlays = useMemo(() => {
@@ -282,6 +294,35 @@ export default function BoxEditorModal({
             </div>
           )}
         </div>
+
+        {/* Batch Add Button */}
+        {!isLocked && (
+          <div style={{ padding: '8px 12px', borderBottom: '1px solid #e2e8f0' }}>
+            <button
+              onClick={handleBatchAdd}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '8px 12px',
+                background: '#ecfdf5',
+                border: '1px solid #a7f3d0',
+                borderRadius: '6px',
+                color: '#059669',
+                fontWeight: '600',
+                fontSize: '0.8rem',
+                cursor: 'pointer'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = '#d1fae5'}
+              onMouseLeave={(e) => e.currentTarget.style.background = '#ecfdf5'}
+            >
+              <CheckSquare size={14} />
+              Batch Add from Play Bank
+            </button>
+          </div>
+        )}
 
         {/* Quick List Header */}
         <div style={{

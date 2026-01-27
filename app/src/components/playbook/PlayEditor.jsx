@@ -33,6 +33,21 @@ export default function PlayEditor({
     return { protections, runBlocking };
   }, [setupConfig]);
 
+  // Get position colors and names from setup config for WIZ Skill editor
+  const positionColors = useMemo(() => setupConfig?.positionColors || {}, [setupConfig?.positionColors]);
+  const positionNames = useMemo(() => setupConfig?.positionNames || {}, [setupConfig?.positionNames]);
+  const personnelGroupings = useMemo(() => setupConfig?.personnelGroupings || [], [setupConfig?.personnelGroupings]);
+
+  // Get offense positions (non-OL) from setup config for WIZ Skill editor
+  const offensePositions = useMemo(() => {
+    const hidden = setupConfig?.hiddenPositions?.OFFENSE || [];
+    const custom = setupConfig?.customPositions?.OFFENSE || [];
+    const defaults = ['QB', 'RB', 'FB', 'WR', 'TE', 'X', 'Y', 'Z', 'H', 'F'];
+    const visible = defaults.filter(p => !hidden.includes(p));
+    const customKeys = custom.map(p => p.key).filter(Boolean);
+    return [...visible, ...customKeys];
+  }, [setupConfig?.hiddenPositions?.OFFENSE, setupConfig?.customPositions?.OFFENSE]);
+
   // Play type options for offense
   const PLAY_TYPES = [
     { id: 'quick', label: 'Quick', icon: '⚡' },
@@ -156,6 +171,8 @@ export default function PlayEditor({
     setupPlayId: '', // Play that sets this one up
     premiumLooks: '', // Notes on fronts/coverages/blitzes this is good against
     targetProgressions: [], // Who are we targeting? Array of {position, isPrimary, order}
+    // Sub-level playbook assignments
+    levelPlaybooks: [],
   });
 
   const [loading, setSaving] = useState(false);
@@ -166,6 +183,7 @@ export default function PlayEditor({
     gameplan: false,
     diagrams: true,
     complementary: false,
+    levels: false,
     advanced: false
   });
 
@@ -225,6 +243,8 @@ export default function PlayEditor({
         setupPlayId: play.setupPlayId || '',
         premiumLooks: play.premiumLooks || '',
         targetProgressions: play.targetProgressions || [],
+        // Sub-level playbook assignments
+        levelPlaybooks: play.levelPlaybooks || [],
       });
     } else {
       // Reset form for new play
@@ -546,25 +566,45 @@ export default function PlayEditor({
               {/* ADVANCED MODE: Bucket Selector + Full Call + Breakdown */}
               {isAdvancedMode && (
                 <>
-                  {/* Bucket Selector */}
+                  {/* Bucket & Concept Group Selectors */}
                   {phase === 'OFFENSE' && (
-                    <div>
-                      <label className="block text-sm font-medium text-slate-400 mb-2">
-                        Play Bucket <span className="text-slate-500">(determines syntax)</span>
-                      </label>
-                      <select
-                        value={selectedBucketId}
-                        onChange={e => {
-                          setSelectedBucketId(e.target.value);
-                          setFormData(prev => ({ ...prev, playCategory: e.target.value, bucketId: '' }));
-                        }}
-                        className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white text-lg"
-                      >
-                        <option value="">Select Bucket...</option>
-                        {playBuckets.filter(b => (b.phase || 'OFFENSE') === formData.phase).map(bucket => (
-                          <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
-                        ))}
-                      </select>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-400 mb-2">
+                          Play Bucket <span className="text-slate-500">(determines syntax)</span>
+                        </label>
+                        <select
+                          value={selectedBucketId}
+                          onChange={e => {
+                            setSelectedBucketId(e.target.value);
+                            setFormData(prev => ({ ...prev, playCategory: e.target.value, bucketId: '' }));
+                          }}
+                          className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white"
+                        >
+                          <option value="">Select Bucket...</option>
+                          {playBuckets.filter(b => (b.phase || 'OFFENSE') === formData.phase).map(bucket => (
+                            <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-400 mb-2">
+                          Concept Group
+                        </label>
+                        <select
+                          value={formData.bucketId || ''}
+                          onChange={e => setFormData(prev => ({ ...prev, bucketId: e.target.value }))}
+                          className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white"
+                          disabled={!selectedBucketId}
+                        >
+                          <option value="">{selectedBucketId ? 'Select Group...' : 'Select bucket first'}</option>
+                          {conceptGroups
+                            .filter(cg => cg.categoryId === selectedBucketId)
+                            .map(group => (
+                              <option key={group.id} value={group.id}>{group.label}</option>
+                            ))}
+                        </select>
+                      </div>
                     </div>
                   )}
 
@@ -623,7 +663,10 @@ export default function PlayEditor({
                     {/* Show tokens from formation + play name */}
                     {(formData.formation || formData.name) ? (
                       `${formData.formation || ''} ${formData.name || ''}`.trim().split(/\s+/).filter(w => w.trim()).map((word, idx) => {
-                        const isUsed = Object.values(formData.playCallParts || {}).includes(word);
+                        // Check if word is used in any slot (including concatenated values)
+                        const isUsed = Object.values(formData.playCallParts || {}).some(
+                          val => val && val.split(/\s+/).includes(word)
+                        );
                         return (
                           <div
                             key={`${word}-${idx}`}
@@ -723,7 +766,17 @@ export default function PlayEditor({
                             e.currentTarget.classList.remove('border-sky-500', 'bg-sky-500/10');
                             const word = e.dataTransfer.getData('text/plain');
                             if (word) {
-                              handleTermSelection(word, slot.id);
+                              // If slot already has a value, concatenate with space
+                              const existingValue = formData.playCallParts?.[slot.id] || '';
+                              if (existingValue) {
+                                const newValue = `${existingValue} ${word}`;
+                                setFormData(prev => ({
+                                  ...prev,
+                                  playCallParts: { ...prev.playCallParts, [slot.id]: newValue }
+                                }));
+                              } else {
+                                handleTermSelection(word, slot.id);
+                              }
                             }
                           }}
                           className={`p-2 bg-slate-800 border border-dashed rounded-lg transition-colors ${
@@ -1275,8 +1328,9 @@ export default function PlayEditor({
                     <div className="space-y-2">
                       <DiagramPreview
                         elements={formData.wizSkillData}
+                        mode="wiz-skill"
                         width={200}
-                        height={133}
+                        height={118}
                         onClick={() => setShowSkillEditor(true)}
                       />
                       <div className="flex gap-2">
@@ -1543,6 +1597,86 @@ export default function PlayEditor({
             </div>
           </Section>
 
+          {/* Sub-Level Playbooks Section - Show if program levels exist */}
+          {(setupConfig?.programLevels?.length > 0) && (
+            <Section
+              title={
+                <span className="flex items-center gap-2">
+                  <Layers size={16} className="text-purple-400" />
+                  Sub-Level Playbooks
+                  {formData.levelPlaybooks?.length > 0 && (
+                    <span className="px-1.5 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded">
+                      {formData.levelPlaybooks.length}
+                    </span>
+                  )}
+                </span>
+              }
+              isOpen={expandedSections.levels}
+              onToggle={() => toggleSection('levels')}
+            >
+              <div className="space-y-4">
+                <p className="text-sm text-slate-400">
+                  Assign this play to lower-level playbooks (JV, Freshman, etc.) to share it across your program.
+                </p>
+
+                {/* Level checkboxes */}
+                <div className="space-y-2">
+                  {setupConfig.programLevels.map(level => {
+                    const isAssigned = (formData.levelPlaybooks || []).includes(level.id);
+                    return (
+                      <label
+                        key={level.id}
+                        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                          isAssigned
+                            ? 'bg-purple-500/10 border-purple-500/50'
+                            : 'bg-slate-800 border-slate-700 hover:border-slate-600'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isAssigned}
+                          onChange={() => {
+                            const current = formData.levelPlaybooks || [];
+                            const updated = isAssigned
+                              ? current.filter(id => id !== level.id)
+                              : [...current, level.id];
+                            setFormData(prev => ({ ...prev, levelPlaybooks: updated }));
+                          }}
+                          className="w-4 h-4 rounded text-purple-500 bg-slate-700 border-slate-600"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-white">{level.name}</span>
+                            {level.abbreviation && (
+                              <span className="text-xs px-1.5 py-0.5 bg-slate-700 text-slate-400 rounded">
+                                {level.abbreviation}
+                              </span>
+                            )}
+                          </div>
+                          {level.description && (
+                            <p className="text-xs text-slate-500 mt-0.5">{level.description}</p>
+                          )}
+                        </div>
+                        {isAssigned && (
+                          <span className="text-purple-400 text-xs font-medium">Assigned</span>
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+
+                {formData.levelPlaybooks?.length > 0 && (
+                  <div className="flex items-center gap-2 pt-2 border-t border-slate-700">
+                    <Layers size={14} className="text-purple-400" />
+                    <span className="text-xs text-slate-400">
+                      This play is shared with {formData.levelPlaybooks.length} sub-level playbook{formData.levelPlaybooks.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </Section>
+          )}
+
           {/* Mark as incomplete checkbox */}
           <div className="flex items-center gap-2">
             <input
@@ -1597,6 +1731,12 @@ export default function PlayEditor({
             <PlayDiagramEditor
               mode="wiz-skill"
               initialData={formData.wizSkillData ? { elements: formData.wizSkillData } : null}
+              formations={formations}
+              personnelGroupings={personnelGroupings}
+              offensePositions={offensePositions}
+              positionColors={positionColors}
+              positionNames={positionNames}
+              playName={formData.formation ? `${formData.formation} ${formData.name}` : formData.name}
               onSave={(data) => {
                 setFormData(prev => ({ ...prev, wizSkillData: data.elements }));
                 setShowSkillEditor(false);
@@ -1614,6 +1754,7 @@ export default function PlayEditor({
             <PlayDiagramEditor
               mode="wiz-oline"
               initialData={formData.wizOlineData ? { elements: formData.wizOlineData } : null}
+              playName={formData.formation ? `${formData.formation} ${formData.name}` : formData.name}
               onSave={(data) => {
                 setFormData(prev => ({ ...prev, wizOlineData: data.elements, wizOlineRef: null }));
                 setShowOLEditor(false);

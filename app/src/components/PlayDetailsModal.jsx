@@ -119,18 +119,17 @@ export default function PlayDetailsModal({
     onUpdateWeek(currentWeek.id, { newInstallIds: newIds });
   };
 
-  const handleBucketSelect = (bucketId) => {
-    const isSelected = play.bucketId === bucketId;
+  const handleBucketChange = (bucketId) => {
+    // Clear concept family when bucket changes (since families are bucket-specific)
     onUpdatePlay?.(playId, {
-      bucketId: isSelected ? null : bucketId,
-      conceptFamily: isSelected ? null : play.conceptFamily
+      bucketId: bucketId || '',
+      conceptFamily: ''
     });
   };
 
-  const handleFamilySelect = (familyLabel) => {
-    const isSelected = play.conceptFamily === familyLabel;
+  const handleFamilyChange = (familyLabel) => {
     onUpdatePlay?.(playId, {
-      conceptFamily: isSelected ? null : familyLabel
+      conceptFamily: familyLabel || ''
     });
   };
 
@@ -221,7 +220,7 @@ export default function PlayDetailsModal({
       onClick={onClose}
     >
       <div
-        className="bg-white w-[420px] max-h-[600px] rounded-xl shadow-2xl flex flex-col overflow-hidden"
+        className="bg-white w-[420px] max-h-[90vh] rounded-xl shadow-2xl flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -344,6 +343,8 @@ export default function PlayDetailsModal({
           </div>
         </div>
 
+        {/* Scrollable Content Area */}
+        <div className="flex-1 overflow-y-auto">
         {/* New Play Toggle (if week context available) */}
         {currentWeek && (
           <div className="px-4 py-2 border-b border-slate-200">
@@ -389,72 +390,56 @@ export default function PlayDetailsModal({
           </div>
         )}
 
-        {/* Bucket Selection */}
+        {/* Bucket & Concept Group Selection - Side by Side Dropdowns */}
         {phaseBuckets.length > 0 && (
           <div className="p-4 border-b border-slate-200">
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">
-              Bucket
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {phaseBuckets.map(b => {
-                const isSelected = play.bucketId === b.id;
-                return (
-                  <button
-                    key={b.id}
-                    onClick={() => handleBucketSelect(b.id)}
-                    className={`px-2.5 py-1.5 rounded-md text-sm font-semibold transition-all ${
-                      isSelected
-                        ? 'ring-2 ring-offset-1'
-                        : 'border border-slate-200 hover:border-slate-300'
-                    }`}
-                    style={isSelected ? {
-                      backgroundColor: b.color || '#3b82f6',
-                      color: b.textColor || '#fff',
-                      ringColor: b.color || '#3b82f6'
-                    } : {
-                      backgroundColor: 'white',
-                      color: '#64748b'
-                    }}
-                  >
-                    {b.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Bucket Selection */}
+              <div>
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">
+                  Bucket
+                </div>
+                <select
+                  value={play.bucketId || ''}
+                  onChange={(e) => handleBucketChange(e.target.value)}
+                  className="w-full px-2 py-1.5 text-sm bg-white border border-slate-300 rounded text-slate-700"
+                  style={bucket ? {
+                    backgroundColor: bucket.color || '#3b82f6',
+                    color: bucket.textColor || '#fff',
+                    borderColor: bucket.color || '#3b82f6'
+                  } : {}}
+                >
+                  <option value="">Select Bucket...</option>
+                  {phaseBuckets.map(b => (
+                    <option key={b.id} value={b.id}>{b.label}</option>
+                  ))}
+                </select>
+              </div>
 
-        {/* Concept Group Selection */}
-        {bucketConceptFamilies.length > 0 && (
-          <div className="p-4 border-b border-slate-200">
-            <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">
-              Concept Group
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {bucketConceptFamilies.map(cf => {
-                const isSelected = play.conceptFamily === cf.label;
-                return (
-                  <button
-                    key={cf.id}
-                    onClick={() => handleFamilySelect(cf.label)}
-                    className={`px-2.5 py-1.5 rounded-md text-sm font-semibold transition-all ${
-                      isSelected
-                        ? 'ring-2 ring-offset-1'
-                        : 'border border-slate-200 hover:border-slate-300'
-                    }`}
-                    style={isSelected ? {
-                      backgroundColor: cf.color || '#64748b',
-                      color: cf.textColor || '#fff',
-                      ringColor: cf.color || '#64748b'
-                    } : {
-                      backgroundColor: 'white',
-                      color: '#64748b'
-                    }}
-                  >
-                    {cf.label}
-                  </button>
-                );
-              })}
+              {/* Concept Group Selection */}
+              <div>
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">
+                  Concept Group
+                </div>
+                <select
+                  value={play.conceptFamily || ''}
+                  onChange={(e) => handleFamilyChange(e.target.value)}
+                  disabled={!play.bucketId || bucketConceptFamilies.length === 0}
+                  className="w-full px-2 py-1.5 text-sm bg-white border border-slate-300 rounded text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={conceptFamily ? {
+                    backgroundColor: conceptFamily.color || '#64748b',
+                    color: conceptFamily.textColor || '#fff',
+                    borderColor: conceptFamily.color || '#64748b'
+                  } : {}}
+                >
+                  <option value="">
+                    {!play.bucketId ? 'Select bucket first' : bucketConceptFamilies.length === 0 ? 'No groups available' : 'Select Group...'}
+                  </option>
+                  {bucketConceptFamilies.map(cf => (
+                    <option key={cf.id} value={cf.label}>{cf.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         )}
@@ -866,7 +851,7 @@ export default function PlayDetailsModal({
         </div>
 
         {/* Play Info */}
-        <div className="p-4 flex-1 overflow-y-auto">
+        <div className="p-4">
           <div className="space-y-3 text-sm">
             {play.concept && (
               <div>
@@ -882,6 +867,7 @@ export default function PlayDetailsModal({
             )}
           </div>
         </div>
+        </div>{/* End Scrollable Content Area */}
       </div>
 
       {/* Create Series Prompt Modal */}

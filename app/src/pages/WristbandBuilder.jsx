@@ -1,6 +1,9 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
+import { usePlayBank } from '../context/PlayBankContext';
+import PlayDiagramEditor from '../components/diagrams/PlayDiagramEditor';
+import DiagramPreview from '../components/diagrams/DiagramPreview';
 import {
   Watch,
   Plus,
@@ -11,7 +14,9 @@ import {
   ChevronDown,
   ChevronUp,
   PanelRightOpen,
-  PanelRightClose
+  PanelRightClose,
+  CheckSquare,
+  Library
 } from 'lucide-react';
 
 // Card tab definitions
@@ -83,10 +88,17 @@ export default function WristbandBuilder() {
     weeks,
     currentWeekId,
     updateWeek,
+    updatePlay,
     programLevels,
     activeLevelId,
-    setActiveLevelId
+    setActiveLevelId,
+    setupConfig,
+    formations,
+    personnelGroupings,
+    offensePositions
   } = useSchool();
+
+  const { startBatchSelect } = usePlayBank();
 
   // State
   const [activeCardId, setActiveCardId] = useState('card100');
@@ -94,6 +106,10 @@ export default function WristbandBuilder() {
   const [filterBucket, setFilterBucket] = useState('all');
   const [showPlayBank, setShowPlayBank] = useState(true);
   const [showPrintModal, setShowPrintModal] = useState(false);
+
+  // WIZ editing state
+  const [editingSkillPlay, setEditingSkillPlay] = useState(null);
+  const [showOLLibraryForPlay, setShowOLLibraryForPlay] = useState(null);
   const [selectedPlayId, setSelectedPlayId] = useState(null);
 
   // Get current week
@@ -167,6 +183,17 @@ export default function WristbandBuilder() {
     const cats = new Set(playsArray.filter(p => p.phase === 'offense').map(p => p.bucket).filter(Boolean));
     return ['all', ...Array.from(cats)];
   }, [playsArray]);
+
+  // Get OL schemes with diagrams for library selection
+  const olSchemes = useMemo(() => {
+    const protections = (setupConfig?.passProtections || []).filter(p => p.diagramData?.length > 0);
+    const runBlocking = (setupConfig?.runBlocking || []).filter(r => r.diagramData?.length > 0);
+    return { protections, runBlocking };
+  }, [setupConfig]);
+
+  // Get position colors and names for diagram editor
+  const positionColors = useMemo(() => setupConfig?.positionColors || {}, [setupConfig]);
+  const positionNames = useMemo(() => setupConfig?.positionNames || {}, [setupConfig]);
 
   // Update card settings
   const updateCardSettings = (updates) => {
@@ -245,11 +272,66 @@ export default function WristbandBuilder() {
     updateCardSettings({ rows });
   };
 
+  // Batch add plays to wristband slots
+  const handleBatchAddToWristband = useCallback(() => {
+    startBatchSelect((playIds) => {
+      // Get current slots and find empty ones
+      const currentSlots = { ...(currentCard.slots || {}) };
+      const emptySlots = slots.filter(slot => !currentSlots[slot]?.playId && !slotMap[slot]);
+
+      // Assign plays to empty slots in order
+      playIds.forEach((playId, index) => {
+        if (index < emptySlots.length) {
+          currentSlots[emptySlots[index]] = { playId };
+        }
+      });
+
+      updateCardSettings({ slots: currentSlots });
+    }, 'Add to Wristband');
+  }, [slots, currentCard.slots, slotMap, startBatchSelect, updateCardSettings]);
+
   // Get row color
   const getRowColor = (rowIndex, cardColor) => {
     if (!cardColor || cardColor === 'white') return 'transparent';
     const shade = Math.floor(rowIndex / 2) % 2 === 0 ? 'light' : 'medium';
     return COLOR_MAP[`${cardColor}-${shade}`] || 'transparent';
+  };
+
+  // Handle WIZ Skill diagram edit
+  const handleEditSkillDiagram = (play) => {
+    if (play) {
+      setEditingSkillPlay(play);
+    }
+  };
+
+  // Save WIZ Skill diagram
+  const handleSaveSkillDiagram = (data) => {
+    if (editingSkillPlay && updatePlay) {
+      updatePlay(editingSkillPlay.id, { wizSkillData: data.elements });
+    }
+    setEditingSkillPlay(null);
+  };
+
+  // Handle OL library selection
+  const handleSelectOLScheme = (play) => {
+    if (play && !play.wizOlineRef) {
+      setShowOLLibraryForPlay(play);
+    }
+  };
+
+  // Assign OL scheme to play
+  const handleAssignOLScheme = (scheme, type) => {
+    if (showOLLibraryForPlay && updatePlay) {
+      updatePlay(showOLLibraryForPlay.id, {
+        wizOlineRef: {
+          id: scheme.id,
+          name: scheme.name,
+          type: type,
+          diagramData: scheme.diagramData
+        }
+      });
+    }
+    setShowOLLibraryForPlay(null);
   };
 
   if (!currentWeek) {
@@ -334,6 +416,12 @@ export default function WristbandBuilder() {
                 ))}
               </select>
             )}
+            <button
+              onClick={handleBatchAddToWristband}
+              className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/20 text-emerald-400 rounded hover:bg-emerald-500/30 text-sm"
+            >
+              <CheckSquare size={16} /> Batch Add
+            </button>
             <button
               onClick={() => setShowPrintModal(true)}
               className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 text-white rounded hover:bg-slate-700 text-sm"
@@ -436,6 +524,7 @@ export default function WristbandBuilder() {
                   getPlayForSlot={getPlayForSlot}
                   onAssign={handleAssignSlot}
                   onClear={handleClearSlot}
+                  onEditDiagram={handleEditSkillDiagram}
                   selectedPlayId={selectedPlayId}
                 />
               </div>
@@ -448,6 +537,8 @@ export default function WristbandBuilder() {
                   getPlayForSlot={getPlayForSlot}
                   onAssign={handleAssignSlot}
                   onClear={handleClearSlot}
+                  onSelectOLScheme={handleSelectOLScheme}
+                  olSchemes={olSchemes}
                   selectedPlayId={selectedPlayId}
                 />
               </div>
@@ -490,8 +581,8 @@ export default function WristbandBuilder() {
               </div>
             </div>
           ) : (
-            /* Standard Layout */
-            <div style={{ width: '500px', aspectRatio: '5 / 3' }}>
+            /* Standard Layout - landscape wristband card */
+            <div style={{ width: '600px', aspectRatio: '5 / 3' }}>
               <SpreadsheetTable
                 slots={slots}
                 title={`${currentCard.opponent || 'OPPONENT'} ${currentCard.iteration || '1'}`}
@@ -518,6 +609,107 @@ export default function WristbandBuilder() {
           onClose={() => setShowPrintModal(false)}
         />
       )}
+
+      {/* WIZ Skill Diagram Editor Modal */}
+      {editingSkillPlay && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60]">
+          <div className="bg-slate-800 rounded-lg w-[95vw] h-[95vh] overflow-hidden">
+            <PlayDiagramEditor
+              mode="wiz-skill"
+              initialData={editingSkillPlay.wizSkillData ? { elements: editingSkillPlay.wizSkillData } : null}
+              formations={formations}
+              personnelGroupings={personnelGroupings}
+              offensePositions={offensePositions}
+              positionColors={positionColors}
+              positionNames={positionNames}
+              playName={editingSkillPlay.formation ? `${editingSkillPlay.formation} ${editingSkillPlay.name}` : editingSkillPlay.name}
+              onSave={handleSaveSkillDiagram}
+              onCancel={() => setEditingSkillPlay(null)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* OL Library Selection Modal */}
+      {showOLLibraryForPlay && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60] p-4">
+          <div className="bg-slate-800 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <div>
+                <h3 className="text-lg font-semibold text-white">Select OL Scheme</h3>
+                <p className="text-sm text-slate-400">For: {showOLLibraryForPlay.name}</p>
+              </div>
+              <button
+                onClick={() => setShowOLLibraryForPlay(null)}
+                className="p-2 text-slate-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {/* Pass Protections */}
+              {olSchemes.protections.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">
+                    Pass Protections
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {olSchemes.protections.map(prot => (
+                      <button
+                        key={prot.id}
+                        onClick={() => handleAssignOLScheme(prot, 'protection')}
+                        className="p-3 bg-slate-700/50 border border-slate-600 rounded-lg hover:border-sky-500 transition-colors text-left"
+                      >
+                        <p className="font-medium text-white mb-2">{prot.name}</p>
+                        <DiagramPreview
+                          elements={prot.diagramData}
+                          width={150}
+                          height={100}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Run Blocking */}
+              {olSchemes.runBlocking.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">
+                    Run Blocking Schemes
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {olSchemes.runBlocking.map(scheme => (
+                      <button
+                        key={scheme.id}
+                        onClick={() => handleAssignOLScheme(scheme, 'runBlocking')}
+                        className="p-3 bg-slate-700/50 border border-slate-600 rounded-lg hover:border-sky-500 transition-colors text-left"
+                      >
+                        <p className="font-medium text-white mb-2">{scheme.name}</p>
+                        <DiagramPreview
+                          elements={scheme.diagramData}
+                          width={150}
+                          height={100}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {olSchemes.protections.length === 0 && olSchemes.runBlocking.length === 0 && (
+                <div className="text-center py-12 text-slate-400">
+                  <Library size={48} className="mx-auto mb-4 opacity-30" />
+                  <p>No OL schemes with diagrams in your library yet.</p>
+                  <p className="text-sm mt-2">
+                    Add diagrams in System Setup → WIZ Library for OL
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -540,107 +732,123 @@ function SpreadsheetTable({ slots, title, cardLabel, cardColor, getPlayForSlot, 
   };
 
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', border: '2px solid black', background: 'white' }}>
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', border: '2px solid black', background: 'white', overflow: 'hidden' }}>
       {/* Header */}
       <div style={{
         background: 'black',
         color: 'white',
         fontWeight: 'bold',
-        fontSize: '10pt',
-        padding: '2px 8px',
+        fontSize: '9pt',
+        padding: '3px 8px',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        flexShrink: 0
       }}>
         <span>{cardLabel}</span>
         <span>{title}</span>
       </div>
-      {/* Table Grid */}
-      <table style={{ borderCollapse: 'collapse', width: '100%', flex: 1, tableLayout: 'fixed' }}>
-        <tbody>
-          {tableRows.map((rowGroup, rowIndex) => (
-            <tr key={rowIndex} style={{ background: getRowColor(rowIndex) }}>
-              {rowGroup.map((slot, colIndex) => {
-                if (slot === undefined) {
-                  return (
-                    <td key={`empty-${colIndex}`} colSpan={2} style={{ border: '1px solid #333' }} />
-                  );
-                }
-                const play = getPlayForSlot(slot);
-                const isClickable = selectedPlayId && !play;
+      {/* Table Grid - using CSS grid for even row distribution */}
+      <div style={{
+        flex: 1,
+        display: 'grid',
+        gridTemplateRows: `repeat(${rowCount}, 1fr)`,
+        overflow: 'hidden'
+      }}>
+        {tableRows.map((rowGroup, rowIndex) => (
+          <div
+            key={rowIndex}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '28px 1fr 28px 1fr',
+              background: getRowColor(rowIndex),
+              borderBottom: rowIndex < rowCount - 1 ? '1px solid #333' : 'none',
+              minHeight: 0
+            }}
+          >
+            {rowGroup.map((slot, colIndex) => {
+              if (slot === undefined) {
                 return [
-                  <td
-                    key={`slot-${slot}`}
-                    style={{
-                      fontWeight: 'bold',
-                      width: '32px',
-                      padding: '0 4px',
-                      border: '1px solid #333',
-                      fontSize: '0.55rem',
-                      textAlign: 'center',
-                      verticalAlign: 'middle',
-                      color: 'black'
-                    }}
-                  >
-                    {slot}
-                  </td>,
-                  <td
-                    key={`play-${slot}`}
-                    onClick={() => isClickable && onAssign(slot)}
-                    style={{
-                      padding: '0 4px',
-                      border: '1px solid #333',
-                      fontSize: '0.55rem',
-                      verticalAlign: 'middle',
-                      color: 'black',
-                      cursor: isClickable ? 'pointer' : 'default',
-                      background: isClickable ? 'rgba(56, 189, 248, 0.2)' : 'transparent',
-                      position: 'relative'
-                    }}
-                  >
-                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {play?.name || ''}
-                      {play?.formation && !play.name?.toLowerCase().includes(play.formation?.toLowerCase()) && ` - ${play.formation}`}
-                    </div>
-                    {play && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onClear(slot); }}
-                        style={{
-                          position: 'absolute',
-                          right: '2px',
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          fontSize: '10px',
-                          background: 'rgba(239,68,68,0.8)',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '2px',
-                          cursor: 'pointer',
-                          padding: '0 3px',
-                          lineHeight: '12px',
-                          display: 'none'
-                        }}
-                        className="clear-btn"
-                      >
-                        ×
-                      </button>
-                    )}
-                  </td>
+                  <div key={`empty-slot-${colIndex}`} style={{ borderRight: '1px solid #333' }} />,
+                  <div key={`empty-play-${colIndex}`} style={{ borderRight: colIndex === 0 ? '1px solid #333' : 'none' }} />
                 ];
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              }
+              const play = getPlayForSlot(slot);
+              const isClickable = selectedPlayId && !play;
+              return [
+                <div
+                  key={`slot-${slot}`}
+                  style={{
+                    fontWeight: 'bold',
+                    padding: '0 2px',
+                    borderRight: '1px solid #333',
+                    borderLeft: colIndex === 1 ? '1px solid #333' : 'none',
+                    fontSize: '0.6rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'black'
+                  }}
+                >
+                  {slot}
+                </div>,
+                <div
+                  key={`play-${slot}`}
+                  onClick={() => isClickable && onAssign(slot)}
+                  style={{
+                    padding: '0 3px',
+                    borderRight: colIndex === 0 ? '1px solid #333' : 'none',
+                    fontSize: '0.6rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: 'black',
+                    cursor: isClickable ? 'pointer' : 'default',
+                    background: isClickable ? 'rgba(56, 189, 248, 0.2)' : 'transparent',
+                    position: 'relative',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {play?.name || ''}
+                  </span>
+                  {play && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onClear(slot); }}
+                      style={{
+                        position: 'absolute',
+                        right: '2px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        fontSize: '10px',
+                        background: 'rgba(239,68,68,0.8)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '2px',
+                        cursor: 'pointer',
+                        padding: '0 3px',
+                        lineHeight: '12px',
+                        display: 'none'
+                      }}
+                      className="clear-btn"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ];
+            })}
+          </div>
+        ))}
+      </div>
       <style>{`
-        td:hover .clear-btn { display: block !important; }
+        div:hover .clear-btn { display: block !important; }
       `}</style>
     </div>
   );
 }
 
 // WIZ Grid Component
-function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, selectedPlayId }) {
+function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, onEditDiagram, onSelectOLScheme, olSchemes, selectedPlayId }) {
   const rows = [];
   for (let i = 0; i < slots.length; i += 4) {
     rows.push(slots.slice(i, i + 4));
@@ -673,6 +881,24 @@ function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, se
             {rowSlots.map((slot, cIndex) => {
               const play = getPlayForSlot(slot);
               const isClickable = selectedPlayId && !play;
+
+              // For SKILL view: show full play call (formation + name)
+              // For OLINE view: show OL WIZ card name (wizOlineRef.name), empty if none assigned
+              const fullPlayCall = play?.formation
+                ? `${play.formation} ${play.name}`
+                : (play?.name || '');
+              const displayName = viewType === 'skill'
+                ? fullPlayCall
+                : (play?.wizOlineRef?.name || '');
+
+              // Get diagram data for preview
+              const diagramData = viewType === 'skill'
+                ? play?.wizSkillData
+                : play?.wizOlineRef?.diagramData;
+
+              // For OLINE view without wizOlineRef, show option to select
+              const showOLSelector = viewType === 'oline' && play && !play.wizOlineRef;
+
               return (
                 <div
                   key={slot}
@@ -687,15 +913,31 @@ function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, se
                     position: 'relative'
                   }}
                 >
-                  {/* Diagram area placeholder */}
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9fafb' }}>
-                    {play && (
-                      <span style={{ fontSize: '8px', color: '#999', textAlign: 'center' }}>
-                        {viewType === 'skill' ? '✏️' : '🔧'}
-                      </span>
-                    )}
+                  {/* Diagram area */}
+                  <div
+                    onClick={(e) => {
+                      if (viewType === 'skill' && play && onEditDiagram) {
+                        e.stopPropagation();
+                        onEditDiagram(play);
+                      }
+                    }}
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: '#f9fafb',
+                      cursor: viewType === 'skill' && play ? 'pointer' : 'default',
+                      overflow: 'hidden'
+                    }}
+                  >
+                    {diagramData?.length > 0 ? (
+                      <DiagramPreview elements={diagramData} width={80} height={50} />
+                    ) : viewType === 'skill' && play ? (
+                      <span style={{ fontSize: '16px', opacity: 0.5 }} title="Click to edit diagram">✏️</span>
+                    ) : null}
                   </div>
-                  {/* Bottom row: slot number + play name */}
+                  {/* Bottom row: slot number + play/scheme name or selector */}
                   <div style={{
                     display: 'flex',
                     borderTop: '1px solid black',
@@ -726,11 +968,28 @@ function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, se
                       textOverflow: 'ellipsis',
                       color: '#000'
                     }}>
-                      {play?.name || ''}
+                      {showOLSelector ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectOLScheme && onSelectOLScheme(play);
+                          }}
+                          style={{
+                            fontSize: '6pt',
+                            color: '#3b82f6',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: 0
+                          }}
+                        >
+                          + Select OL Scheme
+                        </button>
+                      ) : displayName}
                     </div>
                   </div>
                   {/* Clear button */}
-                  {play && (
+                  {play && viewType === 'skill' && (
                     <button
                       onClick={(e) => { e.stopPropagation(); onClear(slot); }}
                       style={{

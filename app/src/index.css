@@ -13,6 +13,131 @@
   --light: #f9fafb;
 }
 
+/* Dark theme (default) */
+.dark-theme {
+  --page-bg: #0f172a;
+  --card-bg: #1e293b;
+  --card-bg-alt: #334155;
+  --border-color: #334155;
+  --text-primary: #ffffff;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+}
+
+/* Light theme */
+.light-theme {
+  --page-bg: #f1f5f9;
+  --card-bg: #ffffff;
+  --card-bg-alt: #f8fafc;
+  --border-color: #e2e8f0;
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+}
+
+/* Light theme overrides for common dark patterns */
+.light-theme .bg-slate-900 {
+  background-color: var(--card-bg) !important;
+}
+
+.light-theme .bg-slate-800 {
+  background-color: var(--card-bg-alt) !important;
+}
+
+.light-theme .bg-slate-950 {
+  background-color: var(--page-bg) !important;
+}
+
+.light-theme .border-slate-700,
+.light-theme .border-slate-800 {
+  border-color: var(--border-color) !important;
+}
+
+.light-theme .text-white {
+  color: var(--text-primary) !important;
+}
+
+.light-theme .text-slate-400 {
+  color: var(--text-secondary) !important;
+}
+
+.light-theme .text-slate-500 {
+  color: var(--text-muted) !important;
+}
+
+/* Light theme input fields and form elements */
+.light-theme .bg-slate-700,
+.light-theme .bg-slate-600 {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.light-theme input,
+.light-theme select,
+.light-theme textarea {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+.light-theme input::placeholder,
+.light-theme textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+.light-theme input:focus,
+.light-theme select:focus,
+.light-theme textarea:focus {
+  border-color: #3b82f6 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
+}
+
+/* Light theme table styling */
+.light-theme table {
+  background-color: #ffffff !important;
+}
+
+.light-theme th {
+  background-color: #f8fafc !important;
+  color: #475569 !important;
+  border-color: #e2e8f0 !important;
+}
+
+.light-theme td {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+.light-theme tr:hover td {
+  background-color: #f8fafc !important;
+}
+
+/* Light theme dropdown/select options */
+.light-theme option {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+}
+
+/* Light theme placeholder text in inputs */
+.light-theme .text-slate-500::placeholder,
+.light-theme .placeholder-slate-500::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Light theme scrollbar */
+.light-theme ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.light-theme ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+
+.light-theme ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
 /* Base Styles */
 html, body, #root {
   height: 100%;

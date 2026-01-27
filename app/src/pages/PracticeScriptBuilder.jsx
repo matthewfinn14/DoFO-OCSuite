@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { usePlayDetailsModal } from '../components/PlayDetailsModal';
+import { usePlayBank } from '../context/PlayBankContext';
 import {
   Calendar,
   Plus,
@@ -17,7 +18,8 @@ import {
   Settings,
   Save,
   FileText,
-  ListOrdered
+  ListOrdered,
+  CheckSquare
 } from 'lucide-react';
 
 // Hash patterns for script rows (alternating L to R)
@@ -82,6 +84,7 @@ const DEFAULT_SEGMENTS = [
 export default function PracticeScriptBuilder() {
   const { plays, playsArray, weeks, currentWeekId, setCurrentWeekId, updateWeeks } = useSchool();
   const { openPlayDetails } = usePlayDetailsModal();
+  const { startBatchSelect } = usePlayBank();
 
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [expandedSegments, setExpandedSegments] = useState({});
@@ -91,6 +94,7 @@ export default function PracticeScriptBuilder() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPhase, setFilterPhase] = useState('offense');
   const [showSettings, setShowSettings] = useState(false);
+  const [batchTargetSegmentId, setBatchTargetSegmentId] = useState(null);
 
   // Get current week
   const currentWeek = weeks.find(w => w.id === currentWeekId);
@@ -288,6 +292,47 @@ export default function PracticeScriptBuilder() {
     const newScript = segment.script.filter(row => row.id !== rowId);
     updateSegment(segmentId, { script: newScript });
   };
+
+  // Batch add plays to script from Play Bank
+  const handleBatchAddToScript = useCallback((segmentId) => {
+    setBatchTargetSegmentId(segmentId);
+    startBatchSelect((playIds) => {
+      const segment = segments.find(s => s.id === segmentId);
+      if (!segment?.script) return;
+
+      // Get empty script rows
+      const emptyRows = segment.script.filter(row => !row.playId && !row.playName);
+
+      // Fill empty rows with selected plays
+      let playIndex = 0;
+      const newScript = segment.script.map(row => {
+        if ((!row.playId && !row.playName) && playIndex < playIds.length) {
+          const play = plays[playIds[playIndex]];
+          playIndex++;
+          return {
+            ...row,
+            playId: play?.id || playIds[playIndex - 1],
+            playName: play?.name || ''
+          };
+        }
+        return row;
+      });
+
+      // If more plays than empty rows, add new rows
+      while (playIndex < playIds.length) {
+        const play = plays[playIds[playIndex]];
+        newScript.push({
+          ...createScriptRow(newScript.length),
+          playId: play?.id || playIds[playIndex],
+          playName: play?.name || ''
+        });
+        playIndex++;
+      }
+
+      updateSegment(segmentId, { script: newScript });
+      setBatchTargetSegmentId(null);
+    }, 'Add to Script');
+  }, [segments, plays, startBatchSelect, updateSegment]);
 
   // Get play by ID
   const getPlay = (playId) => plays[playId];
@@ -507,22 +552,32 @@ export default function PracticeScriptBuilder() {
                   </div>
 
                   {/* Script Table (when script is enabled) */}
-                  {segment.hasScript && segment.script?.length > 0 && (
+                  {segment.hasScript && (
                     <div className="mb-4">
                       <div className="flex items-center justify-between mb-2">
                         <label className="text-sm text-slate-400 flex items-center gap-2">
                           <ListOrdered size={14} />
-                          Script ({segment.script.filter(r => r.playId || r.playName).length}/{segment.script.length} filled)
+                          Script ({segment.script?.filter(r => r.playId || r.playName).length || 0}/{segment.script?.length || 0} filled)
                         </label>
-                        <button
-                          onClick={() => addScriptRow(segment.id)}
-                          className="flex items-center gap-1 px-2 py-1 text-sm text-sky-400 hover:text-sky-300"
-                        >
-                          <Plus size={14} />
-                          Add Row
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleBatchAddToScript(segment.id)}
+                            className="flex items-center gap-1 px-2 py-1 text-sm text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 rounded"
+                          >
+                            <CheckSquare size={14} />
+                            Batch Add
+                          </button>
+                          <button
+                            onClick={() => addScriptRow(segment.id)}
+                            className="flex items-center gap-1 px-2 py-1 text-sm text-sky-400 hover:text-sky-300"
+                          >
+                            <Plus size={14} />
+                            Add Row
+                          </button>
+                        </div>
                       </div>
 
+                      {segment.script?.length > 0 && (
                       <div className="bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden">
                         <table className="w-full text-sm">
                           <thead>
@@ -613,6 +668,7 @@ export default function PracticeScriptBuilder() {
                           </tbody>
                         </table>
                       </div>
+                      )}
                     </div>
                   )}
 

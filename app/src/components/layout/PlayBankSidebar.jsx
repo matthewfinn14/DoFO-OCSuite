@@ -12,10 +12,20 @@ import {
   BookOpen,
   Plus,
   PlusCircle,
-  Star
+  Star,
+  CheckSquare,
+  Square,
+  X
 } from 'lucide-react';
 
-export default function PlayBankSidebar({ isOpen, onToggle }) {
+export default function PlayBankSidebar({
+  isOpen,
+  onToggle,
+  batchSelectMode = false,
+  onBatchSelect = null,
+  onCancelBatchSelect = null,
+  batchSelectLabel = 'Add Selected'
+}) {
   const navigate = useNavigate();
   const { openPlayDetails } = usePlayDetailsModal();
   const {
@@ -38,6 +48,10 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
   const [quickAddValue, setQuickAddValue] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterValue, setFilterValue] = useState('');
+
+  // Batch selection state
+  const [selectedPlayIds, setSelectedPlayIds] = useState(new Set());
+  const [internalBatchMode, setInternalBatchMode] = useState(false); // For internal batch-to-install
 
   // Get play buckets and concept families from setupConfig (with settings fallback)
   const playBuckets = setupConfig?.playBuckets || settings?.playBuckets || [];
@@ -313,15 +327,18 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
         : remaining;
     }
 
-    // Build the play name and extract formation
+    // Find formation component
+    const formationComp = currentSyntax.find(c => c.label?.toLowerCase().includes('formation'));
+    const formation = formationComp ? syntaxValues[formationComp.id] || '' : '';
+
+    // Build the play name - EXCLUDE formation from name since it's stored separately
     const nameParts = currentSyntax.map(comp => {
+      // Skip formation component since it's stored separately
+      if (formationComp && comp.id === formationComp.id) return '';
       const value = syntaxValues[comp.id];
       if (!value) return '';
       return `${comp.prefix || ''}${value}${comp.suffix || ''}`;
     }).filter(Boolean);
-
-    const formationComp = currentSyntax.find(c => c.label?.toLowerCase().includes('formation'));
-    const formation = formationComp ? syntaxValues[formationComp.id] || '' : '';
 
     return {
       name: nameParts.join(' '),
@@ -378,6 +395,66 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
     setQuickAddValue('');
   }, [quickAddValue, playBankPhase, addPlay, currentWeek, currentWeekId, updateWeek, parseWithSyntax]);
 
+  // Toggle play selection for batch mode
+  const togglePlaySelection = useCallback((playId) => {
+    setSelectedPlayIds(prev => {
+      const next = new Set(prev);
+      if (next.has(playId)) {
+        next.delete(playId);
+      } else {
+        next.add(playId);
+      }
+      return next;
+    });
+  }, []);
+
+  // Handle batch select submit
+  const handleBatchSubmit = useCallback(() => {
+    if (onBatchSelect && selectedPlayIds.size > 0) {
+      onBatchSelect(Array.from(selectedPlayIds));
+      setSelectedPlayIds(new Set());
+    }
+  }, [onBatchSelect, selectedPlayIds]);
+
+  // Handle cancel batch select
+  const handleCancelBatch = useCallback(() => {
+    setSelectedPlayIds(new Set());
+    setInternalBatchMode(false);
+    if (onCancelBatchSelect) {
+      onCancelBatchSelect();
+    }
+  }, [onCancelBatchSelect]);
+
+  // Start internal batch mode for adding to install
+  const startBatchAddToInstall = useCallback(() => {
+    setInternalBatchMode(true);
+    setSelectedPlayIds(new Set());
+  }, []);
+
+  // Handle batch add to install
+  const handleBatchAddToInstall = useCallback(async () => {
+    if (!currentWeek || selectedPlayIds.size === 0) return;
+
+    const installList = currentWeek.installList || [];
+    const newInstallIds = currentWeek.newInstallIds || [];
+
+    // Filter out plays that are already installed
+    const newPlayIds = Array.from(selectedPlayIds).filter(id => !installList.includes(id));
+
+    if (newPlayIds.length > 0) {
+      await updateWeek(currentWeekId, {
+        installList: [...installList, ...newPlayIds],
+        newInstallIds: [...newInstallIds, ...newPlayIds]
+      });
+    }
+
+    setSelectedPlayIds(new Set());
+    setInternalBatchMode(false);
+  }, [currentWeek, currentWeekId, selectedPlayIds, updateWeek]);
+
+  // Check if in any batch mode (external or internal)
+  const isInBatchMode = batchSelectMode || internalBatchMode;
+
   // Render a single play row
   const renderPlayRow = useCallback((play) => {
     // Build play call with formation first
@@ -385,17 +462,32 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
       ? `${play.formation} ${play.name}`
       : play.name;
 
+    const isSelected = selectedPlayIds.has(play.id);
+
     return (
       <div
         key={play.id}
-        className="flex items-center py-1.5 px-2 border-b border-slate-100 text-sm cursor-grab hover:bg-slate-50"
-        draggable
-        onDragStart={(e) => handleDragStart(e, play)}
-        onDoubleClick={() => openPlayDetails(play.id)}
-        title="Double-click to view details"
+        className={`flex items-center py-1.5 px-2 border-b border-slate-100 text-sm hover:bg-slate-50 ${
+          isInBatchMode ? 'cursor-pointer' : 'cursor-grab'
+        } ${isSelected ? 'bg-sky-50 border-sky-200' : ''}`}
+        draggable={!isInBatchMode}
+        onDragStart={(e) => !isInBatchMode && handleDragStart(e, play)}
+        onClick={() => isInBatchMode && togglePlaySelection(play.id)}
+        onDoubleClick={() => !isInBatchMode && openPlayDetails(play.id)}
+        title={isInBatchMode ? 'Click to select' : 'Double-click to view details'}
       >
+        {/* Checkbox for batch mode */}
+        {isInBatchMode && (
+          <div className="mr-2 flex-shrink-0">
+            {isSelected ? (
+              <CheckSquare size={16} className="text-sky-500" />
+            ) : (
+              <Square size={16} className="text-slate-400" />
+            )}
+          </div>
+        )}
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-slate-800 truncate">
+          <div className={`font-medium truncate ${isSelected ? 'text-sky-700' : 'text-slate-800'}`}>
             {playCall}
           </div>
         </div>
@@ -404,7 +496,7 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
         )}
       </div>
     );
-  }, [handleDragStart, openPlayDetails]);
+  }, [handleDragStart, openPlayDetails, isInBatchMode, selectedPlayIds, togglePlaySelection]);
 
   // Render bucket with concept families
   const renderBucket = useCallback((bucket) => {
@@ -550,6 +642,32 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
           </button>
         </div>
 
+        {/* Batch Select Mode Banner */}
+        {isInBatchMode && (
+          <div className={`px-3 py-2 ${internalBatchMode ? 'bg-emerald-500' : 'bg-sky-500'} text-white`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckSquare size={16} />
+                <span className="text-sm font-semibold">
+                  {internalBatchMode ? 'Select Plays to Install' : 'Select Plays'}
+                </span>
+              </div>
+              <button
+                onClick={handleCancelBatch}
+                className="text-xs font-medium underline hover:no-underline"
+              >
+                Cancel
+              </button>
+            </div>
+            <p className="text-xs opacity-80 mt-1">
+              {internalBatchMode
+                ? 'Click plays to select them, then click "Add to Install" below'
+                : `Click plays to select them, then click "${batchSelectLabel}" below`
+              }
+            </p>
+          </div>
+        )}
+
         {/* Week Stats */}
         {currentWeek && (
           <div className="flex flex-col items-center gap-1.5 py-2.5 px-3 bg-slate-50 border-b border-slate-200">
@@ -688,6 +806,16 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
         <div className="flex-1 overflow-y-auto p-2 bg-white">
           {activeTab === 'usage' && (
             <>
+              {/* Batch Add to Install Button */}
+              {currentWeek && !isInBatchMode && (
+                <button
+                  onClick={startBatchAddToInstall}
+                  className="w-full mb-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 text-sm font-medium hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2"
+                >
+                  <CheckSquare size={14} />
+                  Batch Add to Install
+                </button>
+              )}
               {usageData.length > 0 ? (
                 usageData.map(renderBucket)
               ) : (
@@ -726,6 +854,49 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
             </>
           )}
         </div>
+
+        {/* Batch Selection Action Bar */}
+        {isInBatchMode && (
+          <div className="border-t border-slate-300 bg-slate-100 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-semibold text-slate-700">
+                {selectedPlayIds.size} play{selectedPlayIds.size !== 1 ? 's' : ''} selected
+              </span>
+              <button
+                onClick={handleCancelBatch}
+                className="p-1 text-slate-500 hover:text-slate-700"
+                title="Cancel selection"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setSelectedPlayIds(new Set())}
+                className="flex-1 px-3 py-2 bg-slate-200 text-slate-700 rounded text-sm font-medium hover:bg-slate-300 transition-colors"
+              >
+                Clear All
+              </button>
+              {internalBatchMode ? (
+                <button
+                  onClick={handleBatchAddToInstall}
+                  disabled={selectedPlayIds.size === 0}
+                  className="flex-1 px-3 py-2 bg-emerald-500 text-white rounded text-sm font-semibold hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Add to Install ({selectedPlayIds.size})
+                </button>
+              ) : (
+                <button
+                  onClick={handleBatchSubmit}
+                  disabled={selectedPlayIds.size === 0}
+                  className="flex-1 px-3 py-2 bg-sky-500 text-white rounded text-sm font-semibold hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {batchSelectLabel} ({selectedPlayIds.size})
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
