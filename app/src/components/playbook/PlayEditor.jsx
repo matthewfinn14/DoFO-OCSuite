@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { X, Save, Trash2, Upload, ChevronDown, ChevronRight, Edit3, Library, GripVertical, Handshake, Link2 } from 'lucide-react';
+import { X, Save, Trash2, Upload, ChevronDown, ChevronRight, Edit3, Library, GripVertical, Handshake, Link2, MapPin, Hash, AlertTriangle, Eye, Layers } from 'lucide-react';
 import { useSchool } from '../../context/SchoolContext';
 import PlayDiagramEditor from '../diagrams/PlayDiagramEditor';
 import DiagramPreview from '../diagrams/DiagramPreview';
@@ -33,10 +33,18 @@ export default function PlayEditor({
     return { protections, runBlocking };
   }, [setupConfig]);
 
-  // Get play call chain syntax for current phase
+  // Get play call chain syntax for current phase (default to Formation + Play)
   const playCallSyntax = useMemo(() => {
     const phaseKey = phase === 'SPECIAL_TEAMS' ? 'SPECIAL_TEAMS' : phase;
-    return setupConfig?.syntax?.[phaseKey] || [];
+    const customSyntax = setupConfig?.syntax?.[phaseKey];
+    if (customSyntax && customSyntax.length > 0) {
+      return customSyntax;
+    }
+    // Default syntax: Formation + Play
+    return [
+      { id: 'formation', label: 'Formation', order: 1 },
+      { id: 'play', label: 'Play', order: 2 }
+    ];
   }, [setupConfig, phase]);
 
   // Get term library for current phase
@@ -72,6 +80,9 @@ export default function PlayEditor({
     baseType: '',
     fieldZones: [],
     downDistance: [],
+    situations: [],
+    readType: '',
+    seriesId: '',
     concept: '',
     incomplete: false,
     complementaryPlays: [],
@@ -81,6 +92,7 @@ export default function PlayEditor({
   const [expandedSections, setExpandedSections] = useState({
     basic: true,
     playCall: true,
+    situations: false,
     diagrams: true,
     complementary: false,
     advanced: false
@@ -90,6 +102,13 @@ export default function PlayEditor({
   const [showSeriesPrompt, setShowSeriesPrompt] = useState(false);
   const [pendingSeriesPlays, setPendingSeriesPlays] = useState([]);
   const [seriesName, setSeriesName] = useState('');
+
+  // Check if using default syntax (Formation + Play)
+  const isDefaultSyntax = useMemo(() => {
+    const phaseKey = phase === 'SPECIAL_TEAMS' ? 'SPECIAL_TEAMS' : phase;
+    const customSyntax = setupConfig?.syntax?.[phaseKey];
+    return !customSyntax || customSyntax.length === 0;
+  }, [setupConfig, phase]);
 
   // Initialize form with play data when editing
   useEffect(() => {
@@ -113,6 +132,9 @@ export default function PlayEditor({
         baseType: play.baseType || '',
         fieldZones: play.fieldZones || [],
         downDistance: play.downDistance || [],
+        situations: play.situations || [],
+        readType: play.readType || '',
+        seriesId: play.seriesId || '',
         concept: play.concept || '',
         incomplete: play.incomplete || false,
         complementaryPlays: play.complementaryPlays || [],
@@ -145,6 +167,9 @@ export default function PlayEditor({
         baseType: '',
         fieldZones: [],
         downDistance: [],
+        situations: [],
+        readType: '',
+        seriesId: '',
         concept: '',
         incomplete: false,
         complementaryPlays: [],
@@ -157,6 +182,27 @@ export default function PlayEditor({
       });
     }
   }, [play, phase]);
+
+  // Auto-populate playCallParts with formation and name when using default syntax
+  useEffect(() => {
+    if (isDefaultSyntax) {
+      const newFormationPart = formData.formation || '';
+      const newPlayPart = formData.name || '';
+
+      // Only update if values have changed to avoid infinite loop
+      if (formData.playCallParts?.formation !== newFormationPart ||
+          formData.playCallParts?.play !== newPlayPart) {
+        setFormData(prev => ({
+          ...prev,
+          playCallParts: {
+            ...prev.playCallParts,
+            formation: newFormationPart,
+            play: newPlayPart
+          }
+        }));
+      }
+    }
+  }, [formData.formation, formData.name, isDefaultSyntax]);
 
   // Get unique formations from props
   const availableFormations = useMemo(() => {
@@ -512,8 +558,190 @@ export default function PlayEditor({
                   </div>
                 </div>
               </div>
+
+              {/* Read Type & Series */}
+              <div className="pt-3 border-t border-slate-700">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Read Type */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-1">
+                      <Eye size={14} className="inline mr-1" />
+                      Read Type
+                    </label>
+                    <select
+                      value={formData.readType || ''}
+                      onChange={e => setFormData(prev => ({ ...prev, readType: e.target.value }))}
+                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
+                    >
+                      <option value="">No Read</option>
+                      {(setupConfig?.readTypes || []).map(rt => (
+                        <option key={rt.id} value={rt.id}>{rt.label || rt.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Look-Alike Series */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-1">
+                      <Layers size={14} className="inline mr-1" />
+                      Look-Alike Series
+                    </label>
+                    <select
+                      value={formData.seriesId || ''}
+                      onChange={e => setFormData(prev => ({ ...prev, seriesId: e.target.value }))}
+                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
+                    >
+                      <option value="">None</option>
+                      {(setupConfig?.lookAlikeSeries || []).map(series => (
+                        <option key={series.id} value={series.id}>{series.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
             </div>
           </Section>
+
+          {/* Situations Section - only show if user has defined situations */}
+          {(setupConfig?.fieldZones?.length > 0 || setupConfig?.downDistanceCategories?.length > 0 || setupConfig?.specialSituations?.length > 0) && (
+            <Section
+              title={
+                <span className="flex items-center gap-2">
+                  <MapPin size={16} className="text-amber-400" />
+                  Situations
+                  {(formData.fieldZones?.length > 0 || formData.downDistance?.length > 0 || formData.situations?.length > 0) && (
+                    <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-xs rounded">
+                      {(formData.fieldZones?.length || 0) + (formData.downDistance?.length || 0) + (formData.situations?.length || 0)}
+                    </span>
+                  )}
+                </span>
+              }
+              isOpen={expandedSections.situations}
+              onToggle={() => toggleSection('situations')}
+            >
+              <div className="space-y-4">
+                {/* Field Zones */}
+                {setupConfig?.fieldZones?.length > 0 && (
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+                      <MapPin size={12} />
+                      Field Zone
+                    </label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {setupConfig.fieldZones.map(zone => {
+                        const isSelected = (formData.fieldZones || []).includes(zone.id);
+                        return (
+                          <button
+                            key={zone.id}
+                            type="button"
+                            onClick={() => {
+                              const current = formData.fieldZones || [];
+                              const updated = isSelected
+                                ? current.filter(z => z !== zone.id)
+                                : [...current, zone.id];
+                              setFormData(prev => ({ ...prev, fieldZones: updated }));
+                            }}
+                            className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                              isSelected
+                                ? 'ring-2 ring-offset-1 ring-offset-slate-900'
+                                : 'opacity-60 hover:opacity-100'
+                            }`}
+                            style={{
+                              backgroundColor: isSelected ? zone.color : 'rgba(100,116,139,0.3)',
+                              color: isSelected ? '#fff' : '#94a3b8',
+                              ringColor: zone.color
+                            }}
+                          >
+                            {zone.label || zone.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Down & Distance */}
+                {setupConfig?.downDistanceCategories?.length > 0 && (
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+                      <Hash size={12} />
+                      Down & Distance
+                    </label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {setupConfig.downDistanceCategories.map(dd => {
+                        const isSelected = (formData.downDistance || []).includes(dd.id);
+                        return (
+                          <button
+                            key={dd.id}
+                            type="button"
+                            onClick={() => {
+                              const current = formData.downDistance || [];
+                              const updated = isSelected
+                                ? current.filter(d => d !== dd.id)
+                                : [...current, dd.id];
+                              setFormData(prev => ({ ...prev, downDistance: updated }));
+                            }}
+                            className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                              isSelected
+                                ? 'ring-2 ring-offset-1 ring-offset-slate-900'
+                                : 'opacity-60 hover:opacity-100'
+                            }`}
+                            style={{
+                              backgroundColor: isSelected ? dd.color : 'rgba(100,116,139,0.3)',
+                              color: isSelected ? '#fff' : '#94a3b8',
+                              ringColor: dd.color
+                            }}
+                          >
+                            {dd.label || dd.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Special Situations */}
+                {setupConfig?.specialSituations?.length > 0 && (
+                  <div>
+                    <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+                      <AlertTriangle size={12} />
+                      Special Situations
+                    </label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {setupConfig.specialSituations.map(sit => {
+                        const isSelected = (formData.situations || []).includes(sit.id);
+                        return (
+                          <button
+                            key={sit.id}
+                            type="button"
+                            onClick={() => {
+                              const current = formData.situations || [];
+                              const updated = isSelected
+                                ? current.filter(s => s !== sit.id)
+                                : [...current, sit.id];
+                              setFormData(prev => ({ ...prev, situations: updated }));
+                            }}
+                            className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                              isSelected
+                                ? 'ring-2 ring-offset-1 ring-offset-slate-900'
+                                : 'opacity-60 hover:opacity-100'
+                            }`}
+                            style={{
+                              backgroundColor: isSelected ? sit.color : 'rgba(100,116,139,0.3)',
+                              color: isSelected ? '#fff' : '#94a3b8',
+                              ringColor: sit.color
+                            }}
+                          >
+                            {sit.label || sit.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Section>
+          )}
 
           {/* Diagrams Section - Only for Offense */}
           {phase === 'OFFENSE' && (

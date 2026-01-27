@@ -1,5 +1,5 @@
 import { useState, useEffect, createContext, useContext } from 'react';
-import { X, Star, Zap, FileText, Handshake, Link2 } from 'lucide-react';
+import { X, Star, Zap, FileText, Handshake, Link2, MapPin, Hash, AlertTriangle, Eye, Layers } from 'lucide-react';
 
 // Context for opening PlayDetailsModal from anywhere
 const PlayDetailsModalContext = createContext({
@@ -438,6 +438,179 @@ export default function PlayDetailsModal({
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* Read Type & Series */}
+        <div className="p-4 border-b border-slate-200">
+          <div className="grid grid-cols-2 gap-3">
+            {/* Read Type */}
+            <div>
+              <label className="flex items-center gap-1 text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">
+                <Eye size={12} />
+                Read Type
+              </label>
+              <select
+                value={play.readType || ''}
+                onChange={(e) => onUpdatePlay?.(playId, { readType: e.target.value })}
+                className="w-full px-2 py-1.5 text-xs bg-white border border-slate-300 rounded text-slate-700"
+              >
+                <option value="">No Read</option>
+                {(setupConfig?.readTypes || []).map(rt => (
+                  <option key={rt.id} value={rt.id}>{rt.label || rt.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Look-Alike Series */}
+            <div>
+              <label className="flex items-center gap-1 text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">
+                <Layers size={12} />
+                Series
+              </label>
+              <select
+                value={play.seriesId || ''}
+                onChange={(e) => onUpdatePlay?.(playId, { seriesId: e.target.value })}
+                className="w-full px-2 py-1.5 text-xs bg-white border border-slate-300 rounded text-slate-700"
+              >
+                <option value="">None</option>
+                {(setupConfig?.lookAlikeSeries || []).map(series => (
+                  <option key={series.id} value={series.id}>{series.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Situations Section - only show if user has defined situations */}
+        {(setupConfig?.fieldZones?.length > 0 || setupConfig?.downDistanceCategories?.length > 0 || setupConfig?.specialSituations?.length > 0) && (
+          <div className="p-4 border-b border-slate-200">
+            <div className="flex items-center gap-2 mb-3">
+              <MapPin size={14} className="text-amber-500" />
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">Situations</span>
+              {((play.fieldZones?.length || 0) + (play.downDistance?.length || 0) + (play.situations?.length || 0)) > 0 && (
+                <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-xs rounded font-semibold">
+                  {(play.fieldZones?.length || 0) + (play.downDistance?.length || 0) + (play.situations?.length || 0)}
+                </span>
+              )}
+            </div>
+
+            {/* Field Zones */}
+            {setupConfig?.fieldZones?.length > 0 && (
+              <div className="mb-3">
+                <label className="flex items-center gap-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
+                  <MapPin size={10} />
+                  Field Zone
+                </label>
+                <div className="flex flex-wrap gap-1">
+                  {setupConfig.fieldZones.map(zone => {
+                    const isSelected = (play.fieldZones || []).includes(zone.id);
+                    return (
+                      <button
+                        key={zone.id}
+                        onClick={() => {
+                          const current = play.fieldZones || [];
+                          const updated = isSelected
+                            ? current.filter(z => z !== zone.id)
+                            : [...current, zone.id];
+                          onUpdatePlay?.(playId, { fieldZones: updated });
+                        }}
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-semibold transition-all ${
+                          isSelected
+                            ? 'ring-1 ring-offset-1'
+                            : 'opacity-50 hover:opacity-100'
+                        }`}
+                        style={{
+                          backgroundColor: isSelected ? zone.color : '#f1f5f9',
+                          color: isSelected ? '#fff' : '#64748b',
+                          ringColor: zone.color
+                        }}
+                      >
+                        {zone.label || zone.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Down & Distance */}
+            {setupConfig?.downDistanceCategories?.length > 0 && (
+              <div className="mb-3">
+                <label className="flex items-center gap-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
+                  <Hash size={10} />
+                  Down & Distance
+                </label>
+                <div className="flex flex-wrap gap-1">
+                  {setupConfig.downDistanceCategories.map(dd => {
+                    const isSelected = (play.downDistance || []).includes(dd.id);
+                    return (
+                      <button
+                        key={dd.id}
+                        onClick={() => {
+                          const current = play.downDistance || [];
+                          const updated = isSelected
+                            ? current.filter(d => d !== dd.id)
+                            : [...current, dd.id];
+                          onUpdatePlay?.(playId, { downDistance: updated });
+                        }}
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-semibold transition-all ${
+                          isSelected
+                            ? 'ring-1 ring-offset-1'
+                            : 'opacity-50 hover:opacity-100'
+                        }`}
+                        style={{
+                          backgroundColor: isSelected ? dd.color : '#f1f5f9',
+                          color: isSelected ? '#fff' : '#64748b',
+                          ringColor: dd.color
+                        }}
+                      >
+                        {dd.label || dd.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Special Situations */}
+            {setupConfig?.specialSituations?.length > 0 && (
+              <div>
+                <label className="flex items-center gap-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
+                  <AlertTriangle size={10} />
+                  Special Situations
+                </label>
+                <div className="flex flex-wrap gap-1">
+                  {setupConfig.specialSituations.map(sit => {
+                    const isSelected = (play.situations || []).includes(sit.id);
+                    return (
+                      <button
+                        key={sit.id}
+                        onClick={() => {
+                          const current = play.situations || [];
+                          const updated = isSelected
+                            ? current.filter(s => s !== sit.id)
+                            : [...current, sit.id];
+                          onUpdatePlay?.(playId, { situations: updated });
+                        }}
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-semibold transition-all ${
+                          isSelected
+                            ? 'ring-1 ring-offset-1'
+                            : 'opacity-50 hover:opacity-100'
+                        }`}
+                        style={{
+                          backgroundColor: isSelected ? sit.color : '#f1f5f9',
+                          color: isSelected ? '#fff' : '#64748b',
+                          ringColor: sit.color
+                        }}
+                      >
+                        {sit.label || sit.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
