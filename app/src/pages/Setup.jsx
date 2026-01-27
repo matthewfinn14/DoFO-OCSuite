@@ -673,16 +673,12 @@ export default function Setup() {
     tabs.push({ id: 'play-call-chain', label: 'Play Call Chain', icon: List });
     tabs.push(
       { id: 'formations', label: 'Formation/Front Setup', icon: LayoutGrid },
-      { id: 'play-buckets', label: isDefense || isST ? 'Categories' : 'Play Buckets', icon: Tag }
-    );
-    if (isOffense) {
-      tabs.push({ id: 'read-types', label: 'Read Types', icon: Eye });
-    }
-    tabs.push(
+      { id: 'play-buckets', label: isDefense || isST ? 'Categories' : 'Play Buckets', icon: Tag },
       { id: 'concept-groups', label: isDefense || isST ? 'Variations' : 'Concept Groups', icon: Grid }
     );
     if (isOffense) {
       tabs.push(
+        { id: 'read-types', label: 'Read Types', icon: Eye },
         { id: 'oline-schemes', label: 'WIZ Library for OL', icon: Shield },
         { id: 'glossary', label: 'Glossary', icon: BookOpen }
       );
