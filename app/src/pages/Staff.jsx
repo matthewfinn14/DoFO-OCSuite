@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
+import { useAuth } from '../context/AuthContext';
 import {
   Users,
   Plus,
@@ -140,7 +141,28 @@ const TABS = [
 // STAFF TAB COMPONENT
 // ============================================
 function StaffTab() {
-  const { staff, updateStaff, setupConfig, programLevels } = useSchool();
+  const { staff, updateStaff, setupConfig, programLevels, school, updateSchool } = useSchool();
+  const { user, isSiteAdmin } = useAuth();
+
+  // Check if current user is a school admin
+  const isSchoolAdmin = useMemo(() => {
+    if (isSiteAdmin) return true;
+    if (!user?.email || !school) return false;
+
+    const userEmail = user.email.toLowerCase();
+
+    // Check if user is the designated school admin
+    if (school.schoolAdminEmail?.toLowerCase() === userEmail) return true;
+
+    // Check if user has isSchoolAdmin flag in staff
+    const userStaff = staff.find(s => s.email?.toLowerCase() === userEmail);
+    if (userStaff?.isSchoolAdmin) return true;
+
+    // Check permission level
+    if (userStaff?.permissionLevel === 'admin') return true;
+
+    return false;
+  }, [user?.email, school, staff, isSiteAdmin]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState('all');
@@ -337,8 +359,15 @@ function StaffTab() {
     );
   };
 
-  const saveStaff = () => {
+  const saveStaff = async () => {
     if (!editingStaff.name) return;
+
+    // For new staff members, email is required for coach access flow
+    const isNew = !staff.find(s => s.id === editingStaff.id);
+    if (isNew && !editingStaff.email) {
+      alert('Email is required for new staff members so they can access the app.');
+      return;
+    }
 
     const exists = staff.find(s => s.id === editingStaff.id);
     let newStaff;
@@ -349,14 +378,54 @@ function StaffTab() {
       newStaff = [...staff, editingStaff];
     }
 
+    // If adding a new staff member with an email, also add to memberList
+    if (isNew && editingStaff.email && school) {
+      const email = editingStaff.email.toLowerCase();
+      const currentMemberList = school.memberList || [];
+
+      // Only add if not already in memberList
+      if (!currentMemberList.some(m =>
+        (typeof m === 'string' ? m : m.email)?.toLowerCase() === email
+      )) {
+        const newMemberList = [...currentMemberList, email];
+        // Update both staff and memberList together
+        await updateSchool({
+          staff: newStaff,
+          memberList: newMemberList
+        });
+        setShowEditor(false);
+        setEditingStaff(null);
+        return;
+      }
+    }
+
     updateStaff(newStaff);
     setShowEditor(false);
     setEditingStaff(null);
   };
 
-  const deleteStaff = (staffId) => {
-    if (!confirm('Remove this staff member?')) return;
+  const deleteStaff = async (staffId) => {
+    if (!confirm('Remove this staff member? They will lose access to the app.')) return;
+
+    const memberToRemove = staff.find(s => s.id === staffId);
     const newStaff = staff.filter(s => s.id !== staffId);
+
+    // Also remove from memberList if they have an email
+    if (memberToRemove?.email && school) {
+      const emailToRemove = memberToRemove.email.toLowerCase();
+      const currentMemberList = school.memberList || [];
+      const newMemberList = currentMemberList.filter(m =>
+        (typeof m === 'string' ? m : m.email)?.toLowerCase() !== emailToRemove
+      );
+
+      // Update both staff and memberList together
+      await updateSchool({
+        staff: newStaff,
+        memberList: newMemberList
+      });
+      return;
+    }
+
     updateStaff(newStaff);
   };
 
@@ -560,14 +629,22 @@ function StaffTab() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Email</label>
+                  <label className="text-sm text-slate-400 block mb-1">
+                    Email {!staff.find(s => s.id === editingStaff?.id) && <span className="text-red-400">*</span>}
+                  </label>
                   <input
                     type="email"
                     value={editingStaff.email || ''}
                     onChange={e => setEditingStaff({ ...editingStaff, email: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
                     placeholder="coach@school.edu"
+                    required={!staff.find(s => s.id === editingStaff?.id)}
                   />
+                  {!staff.find(s => s.id === editingStaff?.id) && (
+                    <p className="text-xs text-slate-500 mt-1">
+                      Required for app access. Use their Google account email.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="text-sm text-slate-400 block mb-1">Phone</label>
@@ -602,13 +679,25 @@ function StaffTab() {
               </button>
               <button
                 onClick={saveStaff}
-                disabled={!editingStaff.name}
+                disabled={!editingStaff.name || (!staff.find(s => s.id === editingStaff?.id) && !editingStaff.email)}
                 className="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Save
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Info box for school admins */}
+      {isSchoolAdmin && (
+        <div className="mt-6 p-4 bg-sky-500/10 border border-sky-500/30 rounded-lg">
+          <h4 className="font-medium text-sky-400 mb-2">Adding Coaches</h4>
+          <p className="text-sm text-slate-400">
+            As a school admin, when you add a staff member with their Google email address,
+            they'll be able to sign in to DoFO and automatically access your school's data.
+            Make sure to use the email address associated with their Google account.
+          </p>
         </div>
       )}
     </div>

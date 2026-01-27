@@ -3,14 +3,15 @@ import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
+// Production Firebase config (dofo-ocsuite-prod)
 const firebaseConfig = {
-  apiKey: "AIzaSyCkhw8oHLkLURwmJyjlkBlIgx1TUzH8IrU",
-  authDomain: "dofo-oc-suite.firebaseapp.com",
-  projectId: "dofo-oc-suite",
-  storageBucket: "dofo-oc-suite.firebasestorage.app",
-  messagingSenderId: "620991340354",
-  appId: "1:620991340354:web:1673825ec67d1875a3f2db",
-  measurementId: "G-ET6K18RG1Z"
+  apiKey: "AIzaSyBSN0enEOC6opYM71kxCPLo13npMdY0dog",
+  authDomain: "dofo-ocsuite-prod.firebaseapp.com",
+  projectId: "dofo-ocsuite-prod",
+  storageBucket: "dofo-ocsuite-prod.firebasestorage.app",
+  messagingSenderId: "388773904656",
+  appId: "1:388773904656:web:df87487a0b1441344de595",
+  measurementId: "G-0DS2K18FX9"
 };
 
 // Initialize Firebase

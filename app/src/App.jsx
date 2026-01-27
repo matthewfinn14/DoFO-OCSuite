@@ -5,7 +5,8 @@ import {
   LoginScreen,
   AccessRequestForm,
   PendingApprovalScreen,
-  SchoolOnboardingWizard
+  SchoolOnboardingWizard,
+  SubscriptionExpired
 } from './components/auth';
 import { MainLayout } from './components/layout';
 import {
@@ -60,7 +61,7 @@ function LoadingScreen() {
 
 // Auth router - shows appropriate screen based on auth state
 function AuthRouter() {
-  const { authState } = useAuth();
+  const { authState, currentSchool, subscriptionStatus } = useAuth();
 
   switch (authState) {
     case AUTH_STATES.LOADING:
@@ -77,6 +78,9 @@ function AuthRouter() {
 
     case AUTH_STATES.NEEDS_SCHOOL:
       return <SchoolOnboardingWizard />;
+
+    case AUTH_STATES.SUBSCRIPTION_EXPIRED:
+      return <SubscriptionExpired school={currentSchool} subscriptionStatus={subscriptionStatus} />;
 
     case AUTH_STATES.READY:
       return (

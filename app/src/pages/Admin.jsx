@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
   Shield,
@@ -15,16 +15,42 @@ import {
   Eye,
   ChevronDown,
   ChevronRight,
-  RefreshCw
+  RefreshCw,
+  Plus,
+  Edit2,
+  X,
+  Pause,
+  Play,
+  AlertTriangle,
+  CalendarPlus
 } from 'lucide-react';
-import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, deleteDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import { getSubscriptionStatus, SUBSCRIPTION_STATUS, calculateTrialEndDate } from '../hooks/useSubscriptionStatus';
 
 // Tab options
 const TABS = [
   { id: 'requests', label: 'Access Requests', icon: Clock },
   { id: 'users', label: 'All Users', icon: Users },
-  { id: 'schools', label: 'Schools', icon: School }
+  { id: 'schools', label: 'Schools', icon: School },
+  { id: 'create', label: 'Create School', icon: Plus }
+];
+
+// Trial duration options (in days)
+const TRIAL_DURATIONS = [
+  { value: 7, label: '7 days' },
+  { value: 14, label: '14 days' },
+  { value: 30, label: '30 days' },
+  { value: 60, label: '60 days' },
+  { value: 90, label: '90 days' }
+];
+
+// Subscription status options for editing
+const STATUS_OPTIONS = [
+  { value: 'trial', label: 'Trial', color: 'sky' },
+  { value: 'active', label: 'Active', color: 'green' },
+  { value: 'expired', label: 'Expired', color: 'red' },
+  { value: 'suspended', label: 'Suspended', color: 'amber' }
 ];
 
 export default function Admin() {
@@ -37,6 +63,22 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedSchool, setExpandedSchool] = useState(null);
+
+  // Create school form state
+  const [newSchool, setNewSchool] = useState({
+    name: '',
+    mascot: '',
+    adminEmail: '',
+    trialDuration: 30,
+    notes: ''
+  });
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState(null);
+  const [createSuccess, setCreateSuccess] = useState(false);
+
+  // Edit school modal state
+  const [editingSchool, setEditingSchool] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   // Load data
   useEffect(() => {
@@ -115,6 +157,137 @@ export default function Admin() {
     }
   };
 
+  // Create new school
+  const createSchool = async (e) => {
+    e.preventDefault();
+    setCreateError(null);
+    setCreateSuccess(false);
+
+    if (!newSchool.name || !newSchool.adminEmail) {
+      setCreateError('School name and admin email are required');
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const schoolId = `school_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const now = new Date();
+      const trialEndDate = calculateTrialEndDate(now, newSchool.trialDuration);
+
+      const schoolData = {
+        name: newSchool.name,
+        mascot: newSchool.mascot || '',
+        schoolAdminEmail: newSchool.adminEmail.toLowerCase(),
+        memberList: [newSchool.adminEmail.toLowerCase()],
+        staff: [{
+          id: `staff_${Date.now()}`,
+          email: newSchool.adminEmail.toLowerCase(),
+          name: '',
+          role: 'head_coach',
+          permissionLevel: 'admin',
+          isSchoolAdmin: true
+        }],
+        subscription: {
+          status: SUBSCRIPTION_STATUS.TRIAL,
+          trialStartDate: now.toISOString(),
+          trialEndDate: trialEndDate.toISOString(),
+          activatedAt: null,
+          suspendedAt: null,
+          suspendedReason: null,
+          notes: newSchool.notes || ''
+        },
+        createdBy: user?.email,
+        createdAt: now.toISOString(),
+        updatedAt: now.toISOString(),
+        // Initialize empty arrays for school data
+        roster: [],
+        plays: {},
+        weeks: [],
+        depthChart: {},
+        wristbands: {},
+        gamePlans: {},
+        settings: {},
+        programLevels: [],
+        culture: {},
+        setupConfig: {}
+      };
+
+      await setDoc(doc(db, 'schools', schoolId), schoolData);
+
+      setCreateSuccess(true);
+      setNewSchool({
+        name: '',
+        mascot: '',
+        adminEmail: '',
+        trialDuration: 30,
+        notes: ''
+      });
+
+      // Refresh schools list
+      loadData();
+
+      // Switch to schools tab after a moment
+      setTimeout(() => {
+        setActiveTab('schools');
+        setCreateSuccess(false);
+      }, 2000);
+    } catch (err) {
+      console.error('Error creating school:', err);
+      setCreateError(err.message || 'Failed to create school');
+    }
+    setCreating(false);
+  };
+
+  // Update school subscription
+  const updateSchoolSubscription = async (schoolId, updates) => {
+    setSaving(true);
+    try {
+      await updateDoc(doc(db, 'schools', schoolId), {
+        ...updates,
+        updatedAt: new Date().toISOString(),
+        updatedBy: user?.email
+      });
+      loadData();
+      setEditingSchool(null);
+    } catch (err) {
+      console.error('Error updating school:', err);
+      alert('Failed to update school');
+    }
+    setSaving(false);
+  };
+
+  // Quick actions for schools
+  const extendTrial = async (school, days) => {
+    const currentEnd = school.subscription?.trialEndDate
+      ? new Date(school.subscription.trialEndDate)
+      : new Date();
+    const newEnd = new Date(currentEnd);
+    newEnd.setDate(newEnd.getDate() + days);
+
+    await updateSchoolSubscription(school.id, {
+      'subscription.trialEndDate': newEnd.toISOString(),
+      'subscription.status': SUBSCRIPTION_STATUS.TRIAL
+    });
+  };
+
+  const suspendSchool = async (school) => {
+    const reason = prompt('Reason for suspension (optional):');
+    await updateSchoolSubscription(school.id, {
+      'subscription.status': SUBSCRIPTION_STATUS.SUSPENDED,
+      'subscription.suspendedAt': new Date().toISOString(),
+      'subscription.suspendedReason': reason || null
+    });
+  };
+
+  const reactivateSchool = async (school) => {
+    await updateSchoolSubscription(school.id, {
+      'subscription.status': SUBSCRIPTION_STATUS.ACTIVE,
+      'subscription.suspendedAt': null,
+      'subscription.suspendedReason': null,
+      'subscription.activatedAt': new Date().toISOString()
+    });
+  };
+
   // Filter items based on search
   const filterItems = (items, fields) => {
     if (!searchTerm) return items;
@@ -136,6 +309,18 @@ export default function Admin() {
     });
   };
 
+  // Get status badge color classes
+  const getStatusBadgeClasses = (color) => {
+    const colors = {
+      sky: 'bg-sky-500/20 text-sky-400',
+      green: 'bg-green-500/20 text-green-400',
+      red: 'bg-red-500/20 text-red-400',
+      amber: 'bg-amber-500/20 text-amber-400',
+      slate: 'bg-slate-500/20 text-slate-400'
+    };
+    return colors[color] || colors.slate;
+  };
+
   // Check if user is admin
   if (!isSiteAdmin) {
     return (
@@ -152,7 +337,14 @@ export default function Admin() {
   const pendingRequests = accessRequests.filter(r => r.status === 'pending');
   const filteredRequests = filterItems(accessRequests, ['email', 'schoolName', 'role']);
   const filteredUsers = filterItems(users, ['email', 'displayName']);
-  const filteredSchools = filterItems(schools, ['name', 'mascot']);
+  const filteredSchools = filterItems(schools, ['name', 'mascot', 'schoolAdminEmail']);
+
+  // Sort schools by creation date (newest first)
+  const sortedSchools = [...filteredSchools].sort((a, b) => {
+    const dateA = new Date(a.createdAt || 0);
+    const dateB = new Date(b.createdAt || 0);
+    return dateB - dateA;
+  });
 
   return (
     <div className="p-6">
@@ -161,7 +353,7 @@ export default function Admin() {
         <div>
           <h1 className="text-3xl font-bold text-white mb-1">Admin Panel</h1>
           <p className="text-slate-400">
-            {pendingRequests.length} pending request{pendingRequests.length !== 1 ? 's' : ''}
+            {pendingRequests.length} pending request{pendingRequests.length !== 1 ? 's' : ''} • {schools.length} school{schools.length !== 1 ? 's' : ''}
           </p>
         </div>
         <button
@@ -175,7 +367,7 @@ export default function Admin() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-6 flex-wrap">
         {TABS.map(tab => (
           <button
             key={tab.id}
@@ -197,19 +389,21 @@ export default function Admin() {
         ))}
       </div>
 
-      {/* Search */}
-      <div className="mb-6">
-        <div className="relative max-w-md">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            placeholder="Search..."
-            className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500"
-          />
+      {/* Search (not shown on create tab) */}
+      {activeTab !== 'create' && (
+        <div className="mb-6">
+          <div className="relative max-w-md">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              placeholder="Search..."
+              className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Content */}
       {loading ? (
@@ -266,7 +460,7 @@ export default function Admin() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-slate-400 text-sm">
-                          {formatDate(request.createdAt)}
+                          {formatDate(request.requestedAt)}
                         </td>
                         <td className="px-4 py-3 text-right">
                           {request.status === 'pending' ? (
@@ -363,73 +557,380 @@ export default function Admin() {
           {/* Schools Tab */}
           {activeTab === 'schools' && (
             <div className="space-y-3">
-              {filteredSchools.length === 0 ? (
+              {sortedSchools.length === 0 ? (
                 <div className="bg-slate-900 rounded-lg border border-slate-800 p-12 text-center">
                   <School size={32} className="mx-auto mb-2 text-slate-600" />
-                  <p className="text-slate-500">No schools found</p>
+                  <p className="text-slate-500 mb-4">No schools found</p>
+                  <button
+                    onClick={() => setActiveTab('create')}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600"
+                  >
+                    <Plus size={18} />
+                    Create School
+                  </button>
                 </div>
               ) : (
-                filteredSchools.map(school => (
-                  <div
-                    key={school.id}
-                    className="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden"
-                  >
+                sortedSchools.map(school => {
+                  const subStatus = getSubscriptionStatus(school);
+
+                  return (
                     <div
-                      className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-800/50"
-                      onClick={() => setExpandedSchool(expandedSchool === school.id ? null : school.id)}
+                      key={school.id}
+                      className="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden"
                     >
-                      <button className="text-slate-500">
-                        {expandedSchool === school.id ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-                      </button>
-
                       <div
-                        className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold"
-                        style={{ backgroundColor: school.primaryColor || '#3b82f6' }}
+                        className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-800/50"
+                        onClick={() => setExpandedSchool(expandedSchool === school.id ? null : school.id)}
                       >
-                        {school.name?.charAt(0) || '?'}
-                      </div>
+                        <button className="text-slate-500">
+                          {expandedSchool === school.id ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                        </button>
 
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-white">{school.name}</h3>
-                        <p className="text-sm text-slate-400">{school.mascot || 'No mascot set'}</p>
-                      </div>
+                        <div
+                          className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold"
+                          style={{ backgroundColor: school.primaryColor || '#3b82f6' }}
+                        >
+                          {school.name?.charAt(0) || '?'}
+                        </div>
 
-                      <div className="text-right">
-                        <div className="text-sm text-slate-400">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-white">{school.name}</h3>
+                          <p className="text-sm text-slate-400 truncate">
+                            {school.schoolAdminEmail || school.mascot || 'No admin set'}
+                          </p>
+                        </div>
+
+                        {/* Subscription Status Badge */}
+                        <div className="flex items-center gap-3">
+                          <span className={`px-3 py-1 text-xs rounded-full font-medium ${getStatusBadgeClasses(subStatus.statusColor)}`}>
+                            {subStatus.statusLabel}
+                          </span>
+                        </div>
+
+                        <div className="text-right text-sm text-slate-400">
                           {school.roster?.length || 0} players
                         </div>
-                        <div className="text-sm text-slate-500">
-                          {Object.keys(school.plays || {}).length} plays
-                        </div>
                       </div>
-                    </div>
 
-                    {expandedSchool === school.id && (
-                      <div className="border-t border-slate-800 p-4 grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-slate-500">ID:</span>
-                          <span className="ml-2 text-slate-300 font-mono">{school.id}</span>
+                      {expandedSchool === school.id && (
+                        <div className="border-t border-slate-800 p-4">
+                          {/* School details grid */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
+                            <div>
+                              <span className="text-slate-500 block">School Admin:</span>
+                              <span className="text-slate-300">{school.schoolAdminEmail || 'Not set'}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500 block">Trial Ends:</span>
+                              <span className="text-slate-300">
+                                {school.subscription?.trialEndDate
+                                  ? formatDate(school.subscription.trialEndDate)
+                                  : 'Not set'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500 block">Created:</span>
+                              <span className="text-slate-300">{formatDate(school.createdAt)}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500 block">Created By:</span>
+                              <span className="text-slate-300">{school.createdBy || 'Unknown'}</span>
+                            </div>
+                          </div>
+
+                          {/* Notes if any */}
+                          {school.subscription?.notes && (
+                            <div className="mb-4 p-3 bg-slate-800/50 rounded-lg text-sm">
+                              <span className="text-slate-500">Notes: </span>
+                              <span className="text-slate-300">{school.subscription.notes}</span>
+                            </div>
+                          )}
+
+                          {/* Action buttons */}
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setEditingSchool(school); }}
+                              className="flex items-center gap-1 px-3 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 text-sm"
+                            >
+                              <Edit2 size={14} />
+                              Edit
+                            </button>
+
+                            {/* Extend trial dropdown */}
+                            <div className="relative group">
+                              <button
+                                className="flex items-center gap-1 px-3 py-2 bg-sky-500/20 text-sky-400 rounded-lg hover:bg-sky-500/30 text-sm"
+                              >
+                                <CalendarPlus size={14} />
+                                Extend Trial
+                                <ChevronDown size={14} />
+                              </button>
+                              <div className="absolute top-full left-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                                {[7, 14, 30, 60, 90].map(days => (
+                                  <button
+                                    key={days}
+                                    onClick={(e) => { e.stopPropagation(); extendTrial(school, days); }}
+                                    className="block w-full px-4 py-2 text-left text-sm text-slate-300 hover:bg-slate-700 first:rounded-t-lg last:rounded-b-lg"
+                                  >
+                                    +{days} days
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {subStatus.isSuspended ? (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); reactivateSchool(school); }}
+                                className="flex items-center gap-1 px-3 py-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 text-sm"
+                              >
+                                <Play size={14} />
+                                Reactivate
+                              </button>
+                            ) : (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); suspendSchool(school); }}
+                                className="flex items-center gap-1 px-3 py-2 bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 text-sm"
+                              >
+                                <Pause size={14} />
+                                Suspend
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <span className="text-slate-500">Created:</span>
-                          <span className="ml-2 text-slate-300">{formatDate(school.createdAt)}</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-500">Staff:</span>
-                          <span className="ml-2 text-slate-300">{school.staff?.length || 0} members</span>
-                        </div>
-                        <div>
-                          <span className="text-slate-500">Weeks:</span>
-                          <span className="ml-2 text-slate-300">{school.weeks?.length || 0} weeks</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))
+                      )}
+                    </div>
+                  );
+                })
               )}
             </div>
           )}
+
+          {/* Create School Tab */}
+          {activeTab === 'create' && (
+            <div className="max-w-xl mx-auto">
+              <div className="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden">
+                <div className="p-4 border-b border-slate-800">
+                  <h2 className="text-xl font-semibold text-white">Create New School</h2>
+                  <p className="text-slate-400 text-sm">Set up a new school with trial access</p>
+                </div>
+
+                <form onSubmit={createSchool} className="p-4 space-y-4">
+                  {createError && (
+                    <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm flex items-center gap-2">
+                      <AlertTriangle size={16} />
+                      {createError}
+                    </div>
+                  )}
+
+                  {createSuccess && (
+                    <div className="p-3 bg-green-500/20 border border-green-500/50 rounded-lg text-green-400 text-sm flex items-center gap-2">
+                      <CheckCircle size={16} />
+                      School created successfully!
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="text-sm text-slate-400 block mb-1">School Name *</label>
+                    <input
+                      type="text"
+                      value={newSchool.name}
+                      onChange={e => setNewSchool({ ...newSchool, name: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                      placeholder="Lincoln High School"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm text-slate-400 block mb-1">Mascot</label>
+                    <input
+                      type="text"
+                      value={newSchool.mascot}
+                      onChange={e => setNewSchool({ ...newSchool, mascot: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                      placeholder="Vikings"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm text-slate-400 block mb-1">School Admin Email * (must be a Google account)</label>
+                    <input
+                      type="email"
+                      value={newSchool.adminEmail}
+                      onChange={e => setNewSchool({ ...newSchool, adminEmail: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                      placeholder="coach.johnson@gmail.com"
+                      required
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      This person will be the school admin and can add other coaches.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="text-sm text-slate-400 block mb-1">Trial Duration</label>
+                    <select
+                      value={newSchool.trialDuration}
+                      onChange={e => setNewSchool({ ...newSchool, trialDuration: parseInt(e.target.value) })}
+                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                    >
+                      {TRIAL_DURATIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm text-slate-400 block mb-1">Notes (optional)</label>
+                    <textarea
+                      value={newSchool.notes}
+                      onChange={e => setNewSchool({ ...newSchool, notes: e.target.value })}
+                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white resize-none"
+                      rows={3}
+                      placeholder="Friend from coaching clinic, testing for their program..."
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('schools')}
+                      className="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={creating || !newSchool.name || !newSchool.adminEmail}
+                      className="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {creating ? 'Creating...' : 'Create School'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </>
+      )}
+
+      {/* Edit School Modal */}
+      {editingSchool && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 rounded-xl w-full max-w-lg overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-slate-800">
+              <h3 className="text-lg font-semibold text-white">Edit School</h3>
+              <button
+                onClick={() => setEditingSchool(null)}
+                className="p-2 text-slate-400 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="text-sm text-slate-400 block mb-1">School Name</label>
+                <input
+                  type="text"
+                  value={editingSchool.name || ''}
+                  onChange={e => setEditingSchool({ ...editingSchool, name: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm text-slate-400 block mb-1">Mascot</label>
+                <input
+                  type="text"
+                  value={editingSchool.mascot || ''}
+                  onChange={e => setEditingSchool({ ...editingSchool, mascot: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm text-slate-400 block mb-1">School Admin Email</label>
+                <input
+                  type="email"
+                  value={editingSchool.schoolAdminEmail || ''}
+                  onChange={e => setEditingSchool({ ...editingSchool, schoolAdminEmail: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-slate-400 block mb-1">Subscription Status</label>
+                  <select
+                    value={editingSchool.subscription?.status || 'trial'}
+                    onChange={e => setEditingSchool({
+                      ...editingSchool,
+                      subscription: { ...editingSchool.subscription, status: e.target.value }
+                    })}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                  >
+                    {STATUS_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-sm text-slate-400 block mb-1">Trial End Date</label>
+                  <input
+                    type="date"
+                    value={editingSchool.subscription?.trialEndDate
+                      ? new Date(editingSchool.subscription.trialEndDate).toISOString().split('T')[0]
+                      : ''}
+                    onChange={e => setEditingSchool({
+                      ...editingSchool,
+                      subscription: {
+                        ...editingSchool.subscription,
+                        trialEndDate: e.target.value ? new Date(e.target.value).toISOString() : null
+                      }
+                    })}
+                    className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm text-slate-400 block mb-1">Notes</label>
+                <textarea
+                  value={editingSchool.subscription?.notes || ''}
+                  onChange={e => setEditingSchool({
+                    ...editingSchool,
+                    subscription: { ...editingSchool.subscription, notes: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white resize-none"
+                  rows={2}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 p-4 border-t border-slate-800">
+              <button
+                onClick={() => setEditingSchool(null)}
+                className="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => updateSchoolSubscription(editingSchool.id, {
+                  name: editingSchool.name,
+                  mascot: editingSchool.mascot,
+                  schoolAdminEmail: editingSchool.schoolAdminEmail,
+                  subscription: editingSchool.subscription
+                })}
+                disabled={saving}
+                className="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

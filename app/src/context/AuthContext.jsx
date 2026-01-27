@@ -13,6 +13,7 @@ import {
   updateUserProfile,
   addSchoolMembership
 } from '../services/auth';
+import { getSubscriptionStatus } from '../hooks/useSubscriptionStatus';
 
 // Auth States - Clean state machine
 export const AUTH_STATES = {
@@ -21,6 +22,7 @@ export const AUTH_STATES = {
   PENDING_REQUEST: 'pending_request',      // User needs to submit access request
   AWAITING_APPROVAL: 'awaiting_approval',  // Access request submitted, waiting
   NEEDS_SCHOOL: 'needs_school_setup',      // Approved but no school set up
+  SUBSCRIPTION_EXPIRED: 'subscription_expired', // Trial/subscription expired
   READY: 'ready'                           // Fully authenticated with school
 };
 
@@ -58,8 +60,31 @@ export function AuthProvider({ children }) {
   const [userProfile, setUserProfile] = useState(null);
   const [currentSchool, setCurrentSchool] = useState(null);
   const [accessRequest, setAccessRequest] = useState(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState(null);
   const [error, setError] = useState(null);
   const [devMode, setDevMode] = useState(false);
+
+  /**
+   * Helper to check subscription and set final auth state
+   */
+  const checkSubscriptionAndSetReady = useCallback((school, userEmail) => {
+    const subStatus = getSubscriptionStatus(school);
+    setSubscriptionStatus(subStatus);
+
+    // Site admins bypass subscription checks
+    if (isSiteAdmin(userEmail)) {
+      setAuthState(AUTH_STATES.READY);
+      return;
+    }
+
+    // Check if subscription allows access
+    if (!subStatus.canAccess) {
+      setAuthState(AUTH_STATES.SUBSCRIPTION_EXPIRED);
+      return;
+    }
+
+    setAuthState(AUTH_STATES.READY);
+  }, []);
 
   /**
    * Determine auth state based on user data
@@ -72,6 +97,7 @@ export function AuthProvider({ children }) {
       setUserProfile(null);
       setCurrentSchool(null);
       setAccessRequest(null);
+      setSubscriptionStatus(null);
       return;
     }
 
@@ -89,6 +115,8 @@ export function AuthProvider({ children }) {
           const school = await getSchool(profile.activeSchoolId);
           if (school) {
             setCurrentSchool(school);
+            // Site admins bypass subscription check
+            setSubscriptionStatus(getSubscriptionStatus(school));
             setAuthState(AUTH_STATES.READY);
             return;
           }
@@ -113,7 +141,7 @@ export function AuthProvider({ children }) {
             const school = await getSchool(profile.activeSchoolId);
             if (school) {
               setCurrentSchool(school);
-              setAuthState(AUTH_STATES.READY);
+              checkSubscriptionAndSetReady(school, email);
               return;
             }
           }
@@ -130,7 +158,7 @@ export function AuthProvider({ children }) {
             });
             setCurrentSchool(existingSchool);
             setUserProfile({ ...profile, activeSchoolId: existingSchool.id });
-            setAuthState(AUTH_STATES.READY);
+            checkSubscriptionAndSetReady(existingSchool, email);
             return;
           }
 
@@ -165,7 +193,7 @@ export function AuthProvider({ children }) {
         if (school) {
           setCurrentSchool(school);
           setUserProfile({ activeSchoolId: invite.schoolId });
-          setAuthState(AUTH_STATES.READY);
+          checkSubscriptionAndSetReady(school, email);
           return;
         }
       }
@@ -181,7 +209,7 @@ export function AuthProvider({ children }) {
         });
         setCurrentSchool(existingSchool);
         setUserProfile({ activeSchoolId: existingSchool.id });
-        setAuthState(AUTH_STATES.READY);
+        checkSubscriptionAndSetReady(existingSchool, email);
         return;
       }
 
@@ -193,7 +221,7 @@ export function AuthProvider({ children }) {
       setError(err.message);
       setAuthState(AUTH_STATES.UNAUTHENTICATED);
     }
-  }, []);
+  }, [checkSubscriptionAndSetReady]);
 
   // Check for dev mode bypass on mount
   useEffect(() => {
@@ -413,12 +441,14 @@ export function AuthProvider({ children }) {
     userProfile,
     currentSchool,
     accessRequest,
+    subscriptionStatus,
     error,
     devMode,
 
     // Computed
     isAuthenticated: authState === AUTH_STATES.READY,
     isLoading: authState === AUTH_STATES.LOADING,
+    isSubscriptionExpired: authState === AUTH_STATES.SUBSCRIPTION_EXPIRED,
     isSiteAdmin: devMode || (user?.email ? isSiteAdmin(user.email) : false),
     currentPermissions,
     isHeadCoach: devMode || isHeadCoach,
