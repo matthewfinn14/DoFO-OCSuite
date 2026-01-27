@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./styles/wristband-print.css";
 
 /* Custom CSS Variables */
 :root {
@@ -52,6 +53,64 @@ body {
 
   .print-only {
     display: block !important;
+  }
+
+  /* Hide everything except print content */
+  body > *:not(.print-container) {
+    display: none !important;
+  }
+
+  /* Wristband Print Styles */
+  .print-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Player wristband format: 4 cards per page (2x2 grid) */
+  .wristband-print-player {
+    display: grid;
+    grid-template-columns: repeat(2, 3.5in);
+    gap: 0.25in;
+    padding: 0.25in;
+  }
+
+  .wristband-print-player .print-card {
+    width: 3.5in;
+    height: 4.5in;
+    font-size: 8px;
+    padding: 0.125in;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  /* Coach wristband format: 2 cards per page (stacked) */
+  .wristband-print-coach {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5in;
+    padding: 0.5in;
+  }
+
+  .wristband-print-coach .print-card {
+    width: 7.5in;
+    height: 4.5in;
+    font-size: 12px;
+    padding: 0.25in;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  /* Ensure colors print correctly */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  /* Page setup */
+  @page {
+    size: letter;
+    margin: 0.25in;
   }
 }
 
