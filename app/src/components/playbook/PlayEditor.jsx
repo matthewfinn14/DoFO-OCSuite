@@ -35,10 +35,10 @@ export default function PlayEditor({
 
   // Play type options for offense
   const PLAY_TYPES = [
-    { id: 'pass', label: 'Pass', icon: '🏈' },
-    { id: 'run', label: 'Run', icon: '🏃' },
     { id: 'quick', label: 'Quick', icon: '⚡' },
     { id: 'single', label: 'Single', icon: '1️⃣' },
+    { id: 'pass', label: 'Pass', icon: '🏈' },
+    { id: 'run', label: 'Run', icon: '🏃' },
   ];
 
   // Separate state for play type to avoid hook ordering issues

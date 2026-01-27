@@ -3036,10 +3036,10 @@ const DEFAULT_SYNTAX_TEMPLATES = {
 // Play type template tabs configuration
 const PLAY_TYPE_TEMPLATES = {
   OFFENSE: [
-    { id: 'pass', label: 'Pass', icon: '🏈', description: 'Passing plays with routes, protection calls, and navigation' },
-    { id: 'run', label: 'Run', icon: '🏃', description: 'Running plays with RB calls and RPO tags' },
     { id: 'quick', label: 'Quick', icon: '⚡', description: 'Simple two-part calls (Formation + Play)' },
     { id: 'single', label: 'Single', icon: '1️⃣', description: 'One-word concept (e.g., SMASH, CHOICE)' },
+    { id: 'pass', label: 'Pass', icon: '🏈', description: 'Passing plays with routes, protection calls, and navigation' },
+    { id: 'run', label: 'Run', icon: '🏃', description: 'Running plays with RB calls and RPO tags' },
     { id: 'custom', label: 'Custom', icon: '⚙️', description: 'Build your own syntax structure' },
   ],
   DEFENSE: [
