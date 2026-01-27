@@ -34,7 +34,8 @@ import {
   Loader2,
   Eye,
   Copy,
-  Target
+  Target,
+  ArrowRightLeft
 } from 'lucide-react';
 import PlayDiagramEditor from '../components/diagrams/PlayDiagramEditor';
 import DiagramPreview from '../components/diagrams/DiagramPreview';
@@ -681,34 +682,103 @@ export default function Setup() {
     }
     if (isPractice) {
       return [
+        { id: 'position-groups', label: 'Position Groups', icon: Users },
         { id: 'segment-types', label: 'Segment Types', icon: Layers },
         { id: 'segment-focus', label: 'Segment Focus', icon: Target }
       ];
     }
+    // Top persistent section
     const tabs = [
       { id: 'positions', label: 'Name Positions', icon: Users },
-      { id: 'position-groups', label: 'Position Groups', icon: Layers },
     ];
     if (isOffense) {
-      tabs.push({ id: 'personnel', label: 'Personnel Groupings', icon: UserCheck });
+      tabs.push(
+        { id: 'personnel', label: 'Personnel Groupings', icon: UserCheck },
+        { id: 'situations', label: 'Define Situations', icon: Target },
+        { id: 'play-buckets', label: 'Define Play Buckets', icon: Tag }
+      );
     }
     tabs.push({ id: 'play-call-chain', label: 'Play Call Chain', icon: List });
-    tabs.push(
-      { id: 'formations', label: 'Formation/Front Setup', icon: LayoutGrid },
-      { id: 'play-buckets', label: isDefense || isST ? 'Categories' : 'Play Buckets', icon: Tag },
-      { id: 'concept-groups', label: isDefense || isST ? 'Variations' : 'Concept Groups', icon: Grid }
-    );
-    if (isOffense) {
+
+    // Add divider after stationary items
+    tabs.push({ divider: true });
+
+    // For Defense/ST, add buckets after play call chain
+    if (!isOffense) {
       tabs.push(
-        { id: 'read-types', label: 'Read Types', icon: Eye },
-        { id: 'look-alike-series', label: 'Look-Alike Series', icon: Copy },
-        { id: 'situations', label: 'Define Situations', icon: Target },
-        { id: 'oline-schemes', label: 'WIZ Library for OL', icon: Shield },
-        { id: 'glossary', label: 'Glossary', icon: BookOpen }
+        { id: 'play-buckets', label: isDefense ? 'Categories' : 'Categories', icon: Tag },
+        { id: 'concept-groups', label: 'Variations', icon: Grid }
       );
-    } else {
-      tabs.push({ id: 'glossary', label: 'Glossary', icon: BookOpen });
     }
+
+    // Middle section - ordered by play call syntax sequence
+    const savedSyntax = setupConfig?.syntax?.[phase] || [];
+    const addedTabs = new Set(); // Track which tabs we've added to avoid duplicates
+
+    // Map sourceCategory to tab config
+    const categoryToTab = {
+      formations: { id: 'formations', label: 'Formations/Families', icon: LayoutGrid },
+      formationFamilies: { id: 'formations', label: 'Formations/Families', icon: LayoutGrid },
+      shiftMotions: { id: 'shifts-motions', label: 'Shifts/Motions', icon: ArrowRightLeft },
+      conceptGroups: { id: 'concept-groups', label: 'Concepts/Groups', icon: Grid },
+      readTypes: { id: 'read-types', label: 'Read Types', icon: Eye },
+      lookAlikeSeries: { id: 'look-alike-series', label: 'Look-Alike Series', icon: Copy },
+      passProtections: { id: 'oline-schemes', label: 'WIZ Library for OL', icon: Shield },
+      runBlocking: { id: 'oline-schemes', label: 'WIZ Library for OL', icon: Shield },
+    };
+
+    // Add tabs in the order they appear in the play call syntax
+    savedSyntax.forEach(syntaxPart => {
+      if (syntaxPart.sourceCategory && syntaxPart.sourceCategory !== 'custom') {
+        const tabConfig = categoryToTab[syntaxPart.sourceCategory];
+        if (tabConfig && !addedTabs.has(tabConfig.id)) {
+          tabs.push({ ...tabConfig });
+          addedTabs.add(tabConfig.id);
+        }
+      } else if ((!syntaxPart.sourceCategory || syntaxPart.sourceCategory === 'custom') &&
+                 syntaxPart.label && syntaxPart.label !== 'New') {
+        // Custom syntax tab
+        tabs.push({
+          id: `custom-syntax-${syntaxPart.id}`,
+          label: syntaxPart.label,
+          icon: FileText,
+          isCustomSyntax: true,
+          syntaxPartId: syntaxPart.id
+        });
+      }
+    });
+
+    // Add remaining tabs that weren't in the syntax (for offense)
+    if (isOffense) {
+      if (!addedTabs.has('formations')) {
+        tabs.push({ id: 'formations', label: 'Formations/Families', icon: LayoutGrid });
+      }
+      if (!addedTabs.has('shifts-motions')) {
+        tabs.push({ id: 'shifts-motions', label: 'Shifts/Motions', icon: ArrowRightLeft });
+      }
+      if (!addedTabs.has('concept-groups')) {
+        tabs.push({ id: 'concept-groups', label: 'Concepts/Groups', icon: Grid });
+      }
+      if (!addedTabs.has('read-types')) {
+        tabs.push({ id: 'read-types', label: 'Read Types', icon: Eye });
+      }
+      if (!addedTabs.has('look-alike-series')) {
+        tabs.push({ id: 'look-alike-series', label: 'Look-Alike Series', icon: Copy });
+      }
+      if (!addedTabs.has('oline-schemes')) {
+        tabs.push({ id: 'oline-schemes', label: 'WIZ Library for OL', icon: Shield });
+      }
+    } else {
+      // Defense/ST - add formations if not added
+      if (!addedTabs.has('formations')) {
+        tabs.push({ id: 'formations', label: 'Formation/Front Setup', icon: LayoutGrid });
+      }
+    }
+
+    // Bottom - Glossary (with divider)
+    tabs.push({ divider: true });
+    tabs.push({ id: 'glossary', label: 'Glossary', icon: BookOpen });
+
     return tabs;
   };
 
@@ -862,24 +932,96 @@ export default function Setup() {
         ))}
       </div>
 
+      {/* Offense Setup Overview */}
+      {phase === 'OFFENSE' && !isPractice && !isProgram && (
+        <HelpSection title="How Offense Setup Works" defaultOpen={false}>
+          <div className="pt-3 space-y-4">
+            <p className="text-slate-300">
+              Offense Setup builds the foundation for your entire playbook. The items you define here become the
+              dropdowns, filters, and categories used throughout the app when creating plays, building wristbands,
+              and planning game weeks.
+            </p>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="bg-slate-700/30 rounded-lg p-3">
+                <h4 className="text-white font-medium mb-2 flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs flex items-center justify-center">1</span>
+                  Define Your Building Blocks
+                </h4>
+                <p className="text-sm text-slate-400">
+                  Start with the top section: <strong>Name Positions</strong> to customize position labels,
+                  <strong> Personnel Groupings</strong> for your packages (11, 12, 21, etc.),
+                  <strong> Situations</strong> for down/distance and field zones, and
+                  <strong> Play Buckets</strong> to organize your playbook into categories.
+                </p>
+              </div>
+
+              <div className="bg-slate-700/30 rounded-lg p-3">
+                <h4 className="text-white font-medium mb-2 flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs flex items-center justify-center">2</span>
+                  Build Your Play Call Syntax
+                </h4>
+                <p className="text-sm text-slate-400">
+                  The <strong>Play Call Chain</strong> defines how your plays are called. Each part of the call
+                  (formation, motion, protection, play name, tag) can pull from the categories you've defined,
+                  ensuring consistency across your staff.
+                </p>
+              </div>
+
+              <div className="bg-slate-700/30 rounded-lg p-3">
+                <h4 className="text-white font-medium mb-2 flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs flex items-center justify-center">3</span>
+                  Customize the Middle Section
+                </h4>
+                <p className="text-sm text-slate-400">
+                  The tabs below the line are ordered by your play call syntax. Define your <strong>Formations</strong>,
+                  <strong> Shifts/Motions</strong>, <strong>Concepts</strong>, and other elements. These become
+                  the options available when building plays.
+                </p>
+              </div>
+
+              <div className="bg-slate-700/30 rounded-lg p-3">
+                <h4 className="text-white font-medium mb-2 flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs flex items-center justify-center">4</span>
+                  Why This Matters
+                </h4>
+                <p className="text-sm text-slate-400">
+                  When you add a play, you'll select from these defined options instead of typing freeform.
+                  This means consistent naming, powerful filtering, and the ability to quickly build
+                  wristbands and game plans by situation, formation family, or concept.
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-500 italic">
+              Tip: Start with the defaults and customize as you go. You can always come back and add more options later.
+            </p>
+          </div>
+        </HelpSection>
+      )}
+
       {/* Content Tabs + Panel */}
       <div className="flex gap-6">
         {/* Tab Navigation */}
         <div className="w-56 flex-shrink-0">
           <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-2">
-            {getTabs().map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => handleTabChange(tab.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-sm transition-colors ${
-                  activeTab === tab.id
-                    ? 'bg-sky-500/20 text-sky-400'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
-                }`}
-              >
-                <tab.icon size={16} />
-                {tab.label}
-              </button>
+            {getTabs().map((tab, idx) => (
+              tab.divider ? (
+                <div key={`divider-${idx}`} className="my-2 mx-2 border-t border-slate-600" />
+              ) : (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-sm transition-colors ${
+                    activeTab === tab.id
+                      ? 'bg-sky-500/20 text-sky-400'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                  }`}
+                >
+                  <tab.icon size={16} />
+                  {tab.label}
+                </button>
+              )
             ))}
           </div>
         </div>
@@ -907,8 +1049,8 @@ export default function Setup() {
             />
           )}
 
-          {/* Position Groups Tab */}
-          {activeTab === 'position-groups' && !isPractice && !isProgram && (
+          {/* Position Groups Tab (Practice Setup) */}
+          {activeTab === 'position-groups' && isPractice && (
             <PositionGroupsTab
               phase={phase}
               positionGroups={localConfig.positionGroups || {}}
@@ -934,10 +1076,20 @@ export default function Setup() {
               phase={phase}
               formations={(localConfig.formations || []).filter(f => f.phase === phase)}
               personnelGroupings={localConfig.personnelGroupings || []}
+              formationFamilies={localConfig.formationFamilies || []}
               onUpdate={(formations) => {
                 const otherFormations = (localConfig.formations || []).filter(f => f.phase !== phase);
                 updateLocal('formations', [...otherFormations, ...formations]);
               }}
+              onUpdateFamilies={(families) => updateLocal('formationFamilies', families)}
+            />
+          )}
+
+          {/* Shifts/Motions Tab (Offense only) */}
+          {activeTab === 'shifts-motions' && !isPractice && !isProgram && phase === 'OFFENSE' && (
+            <ShiftMotionsTab
+              shiftMotions={localConfig.shiftMotions || []}
+              onUpdate={(items) => updateLocal('shiftMotions', items)}
             />
           )}
 
@@ -994,10 +1146,29 @@ export default function Setup() {
             <PlayCallChainTab
               phase={phase}
               syntax={localConfig.syntax || {}}
+              syntaxTemplates={localConfig.syntaxTemplates || {}}
               termLibrary={localConfig.termLibrary || {}}
+              setupConfig={localConfig}
               onUpdate={updateLocal}
             />
           )}
+
+          {/* Custom Syntax Term Tabs */}
+          {activeTab.startsWith('custom-syntax-') && !isPractice && !isProgram && (() => {
+            const syntaxPartId = activeTab.replace('custom-syntax-', '');
+            const currentSyntax = localConfig.syntax?.[phase] || [];
+            const syntaxPart = currentSyntax.find(s => s.id === syntaxPartId);
+            if (!syntaxPart) return null;
+            return (
+              <CustomSyntaxTermsTab
+                phase={phase}
+                syntaxPart={syntaxPart}
+                termLibrary={localConfig.termLibrary || {}}
+                syntax={localConfig.syntax || {}}
+                onUpdate={updateLocal}
+              />
+            );
+          })()}
 
           {/* Glossary Definitions Tab */}
           {activeTab === 'glossary' && !isPractice && !isProgram && (
@@ -1479,7 +1650,10 @@ function PersonnelTab({ personnelGroupings, positions, positionNames, positionCo
 }
 
 // Formations Tab Component
-function FormationsTab({ phase, formations, personnelGroupings, onUpdate }) {
+function FormationsTab({ phase, formations, personnelGroupings, formationFamilies = [], onUpdate, onUpdateFamilies }) {
+  const [showFamiliesSection, setShowFamiliesSection] = useState(true);
+  const isOffense = phase === 'OFFENSE';
+
   const addFormation = () => {
     const name = prompt('Formation name:');
     if (!name) return;
@@ -1487,6 +1661,7 @@ function FormationsTab({ phase, formations, personnelGroupings, onUpdate }) {
       id: `form_${Date.now()}`,
       name,
       personnel: '',
+      families: [],
       phase,
       createdAt: new Date().toISOString()
     };
@@ -1502,62 +1677,426 @@ function FormationsTab({ phase, formations, personnelGroupings, onUpdate }) {
     onUpdate(formations.map(f => f.id === id ? { ...f, ...updates } : f));
   };
 
+  // Default formation families organized by category
+  const DEFAULT_FAMILIES = [
+    // Receiver Distribution (numbers)
+    { id: 'family_2x2', name: '2x2', color: '#3b82f6', category: 'distribution' },
+    { id: 'family_3x1', name: '3x1', color: '#8b5cf6', category: 'distribution' },
+    { id: 'family_2x1', name: '2x1', color: '#06b6d4', category: 'distribution' },
+    { id: 'family_3x2', name: '3x2', color: '#6366f1', category: 'distribution' },
+    // QB-Center Exchange
+    { id: 'family_under', name: 'Under Center', color: '#ef4444', category: 'exchange' },
+    { id: 'family_gun', name: 'Gun', color: '#22c55e', category: 'exchange' },
+    { id: 'family_pistol', name: 'Pistol', color: '#f59e0b', category: 'exchange' },
+    // TE Alignment
+    { id: 'family_yon', name: 'Y On', color: '#ec4899', category: 'te' },
+    { id: 'family_yoff', name: 'Y Off', color: '#14b8a6', category: 'te' },
+    { id: 'family_nub', name: 'Nub', color: '#f97316', category: 'te' },
+    { id: 'family_wing', name: 'Wing', color: '#a855f7', category: 'te' },
+    // Groupings
+    { id: 'family_trips', name: 'Trips', color: '#0ea5e9', category: 'grouping' },
+    { id: 'family_twins', name: 'Twins', color: '#84cc16', category: 'grouping' },
+    { id: 'family_bunch', name: 'Bunch', color: '#f43f5e', category: 'grouping' },
+    { id: 'family_stack', name: 'Stack', color: '#7c3aed', category: 'grouping' },
+    { id: 'family_empty', name: 'Empty', color: '#64748b', category: 'grouping' },
+    // Direction/Side
+    { id: 'family_right', name: 'Right', color: '#059669', category: 'direction' },
+    { id: 'family_left', name: 'Left', color: '#dc2626', category: 'direction' },
+    // Strength (formation strength)
+    { id: 'family_str_right', name: 'Strength Right', color: '#0891b2', category: 'strength' },
+    { id: 'family_str_left', name: 'Strength Left', color: '#7c2d12', category: 'strength' },
+    { id: 'family_balanced', name: 'Balanced', color: '#6b7280', category: 'strength' },
+    // Formation Type
+    { id: 'family_open', name: 'Open', color: '#0d9488', category: 'type' },
+    { id: 'family_closed', name: 'Closed', color: '#b45309', category: 'type' },
+  ];
+
+  const loadDefaultFamilies = () => {
+    if (formationFamilies.length > 0 && !confirm('This will add default families to your existing list. Continue?')) return;
+    // Only add families that don't already exist (by name)
+    const existingNames = formationFamilies.map(f => f.name.toLowerCase());
+    const newFamilies = DEFAULT_FAMILIES.filter(f => !existingNames.includes(f.name.toLowerCase()));
+    onUpdateFamilies([...formationFamilies, ...newFamilies]);
+  };
+
+  // Family management
+  const addFamily = () => {
+    const name = prompt('Family name:');
+    if (!name) return;
+    const newFamily = {
+      id: `family_${Date.now()}`,
+      name,
+      color: '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')
+    };
+    onUpdateFamilies([...formationFamilies, newFamily]);
+  };
+
+  const deleteFamily = (id) => {
+    if (!confirm('Delete this family? Formations will be untagged.')) return;
+    onUpdateFamilies(formationFamilies.filter(f => f.id !== id));
+    // Remove family from all formations
+    onUpdate(formations.map(f => ({
+      ...f,
+      families: (f.families || []).filter(fId => fId !== id)
+    })));
+  };
+
+  const updateFamily = (id, updates) => {
+    onUpdateFamilies(formationFamilies.map(f => f.id === id ? { ...f, ...updates } : f));
+  };
+
+  const toggleFormationFamily = (formationId, familyId) => {
+    const formation = formations.find(f => f.id === formationId);
+    if (!formation) return;
+    const currentFamilies = formation.families || [];
+    const newFamilies = currentFamilies.includes(familyId)
+      ? currentFamilies.filter(id => id !== familyId)
+      : [...currentFamilies, familyId];
+    updateFormation(formationId, { families: newFamilies });
+  };
+
   const phaseLabel = phase === 'DEFENSE' ? 'Fronts' : phase === 'SPECIAL_TEAMS' ? 'Packages' : 'Formations';
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <h3 className="text-lg font-semibold text-white">{phaseLabel}</h3>
-          <p className="text-slate-400 text-sm">Define your {phaseLabel.toLowerCase()} and link them to personnel packages.</p>
+    <div className="space-y-6">
+      {/* Families Section (Offense only) */}
+      {isOffense && (
+        <div className="bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden">
+          <button
+            onClick={() => setShowFamiliesSection(!showFamiliesSection)}
+            className="w-full flex items-center justify-between p-4 text-left hover:bg-slate-700/30"
+          >
+            <div className="flex items-center gap-2">
+              <Layers size={18} className="text-amber-400" />
+              <span className="font-semibold text-white">Formation Families</span>
+              <span className="text-sm text-slate-400">({formationFamilies.length})</span>
+            </div>
+            {showFamiliesSection ? <ChevronDown size={18} className="text-slate-400" /> : <ChevronUp size={18} className="text-slate-400 rotate-180" />}
+          </button>
+
+          {showFamiliesSection && (
+            <div className="p-4 border-t border-slate-700">
+              <div className="flex items-start justify-between gap-4 mb-3">
+                <p className="text-sm text-slate-400">
+                  Group formations by receiver distribution (2x2, 3x1), QB exchange (Gun, Under), TE alignment (Y On/Off, Nub), groupings (Trips, Bunch), strength (Right/Left/Balanced), or formation type (Open/Closed).
+                </p>
+                {formationFamilies.length === 0 && (
+                  <button
+                    onClick={loadDefaultFamilies}
+                    className="flex-shrink-0 px-3 py-1.5 bg-amber-600 text-white text-sm rounded-lg hover:bg-amber-700"
+                  >
+                    Load Defaults
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-2 mb-4">
+                {formationFamilies.map(family => (
+                  <div
+                    key={family.id}
+                    className="group flex items-center gap-1.5 px-2 py-1 rounded-lg border"
+                    style={{ backgroundColor: family.color + '20', borderColor: family.color }}
+                  >
+                    <input
+                      type="color"
+                      value={family.color}
+                      onChange={(e) => updateFamily(family.id, { color: e.target.value })}
+                      className="w-4 h-4 rounded cursor-pointer border-0"
+                    />
+                    <input
+                      type="text"
+                      value={family.name}
+                      onChange={(e) => updateFamily(family.id, { name: e.target.value })}
+                      className="bg-transparent text-white text-sm font-medium border-none focus:outline-none w-20"
+                    />
+                    <button
+                      onClick={() => deleteFamily(family.id)}
+                      className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-opacity"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={addFamily}
+                  className="flex items-center gap-1 px-3 py-1 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 text-sm"
+                >
+                  <Plus size={14} /> Add Family
+                </button>
+              </div>
+
+              {formationFamilies.length === 0 ? (
+                <p className="text-xs text-slate-500 italic">No families defined yet. Click "Load Defaults" above or add custom families.</p>
+              ) : (
+                <button
+                  onClick={loadDefaultFamilies}
+                  className="text-xs text-amber-400 hover:text-amber-300 underline"
+                >
+                  + Add more default families
+                </button>
+              )}
+            </div>
+          )}
         </div>
-        <button
-          onClick={addFormation}
-          className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700"
-        >
-          <Plus size={16} /> Add {phase === 'DEFENSE' ? 'Front' : phase === 'SPECIAL_TEAMS' ? 'Package' : 'Formation'}
-        </button>
+      )}
+
+      {/* Formations Section */}
+      <div>
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h3 className="text-lg font-semibold text-white">{phaseLabel}</h3>
+            <p className="text-slate-400 text-sm">
+              {isOffense
+                ? 'Define formations and assign them to families and personnel packages.'
+                : `Define your ${phaseLabel.toLowerCase()} and link them to personnel packages.`}
+            </p>
+          </div>
+          <button
+            onClick={addFormation}
+            className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700"
+          >
+            <Plus size={16} /> Add {phase === 'DEFENSE' ? 'Front' : phase === 'SPECIAL_TEAMS' ? 'Package' : 'Formation'}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {formations.map(formation => (
+            <div key={formation.id} className="bg-slate-700/50 rounded-lg border border-slate-600 p-4">
+              <div className="flex justify-between items-start mb-3">
+                <input
+                  type="text"
+                  value={formation.name}
+                  onChange={(e) => updateFormation(formation.id, { name: e.target.value })}
+                  className="font-semibold text-white bg-transparent border-none focus:outline-none"
+                />
+                <button onClick={() => deleteFormation(formation.id)} className="text-red-400 hover:text-red-300">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+
+              {/* Family Tags (Offense only) */}
+              {isOffense && formationFamilies.length > 0 && (
+                <div className="mb-3">
+                  <label className="text-xs text-slate-400 block mb-1.5">Families</label>
+                  <div className="flex flex-wrap gap-1">
+                    {formationFamilies.map(family => {
+                      const isSelected = (formation.families || []).includes(family.id);
+                      return (
+                        <button
+                          key={family.id}
+                          onClick={() => toggleFormationFamily(formation.id, family.id)}
+                          className={`px-2 py-0.5 rounded text-xs font-medium transition-all ${
+                            isSelected
+                              ? 'ring-1 ring-offset-1 ring-offset-slate-700'
+                              : 'opacity-50 hover:opacity-100'
+                          }`}
+                          style={{
+                            backgroundColor: isSelected ? family.color : 'rgba(100,116,139,0.3)',
+                            color: isSelected ? '#fff' : '#94a3b8',
+                            ringColor: family.color
+                          }}
+                        >
+                          {family.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Personnel (Offense only) */}
+              {isOffense && personnelGroupings.length > 0 && (
+                <div>
+                  <label className="text-xs text-slate-400 block mb-1">Personnel</label>
+                  <select
+                    value={formation.personnel || ''}
+                    onChange={(e) => updateFormation(formation.id, { personnel: e.target.value })}
+                    className="w-full px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white text-sm"
+                  >
+                    <option value="">-- Select Personnel --</option>
+                    {personnelGroupings.map(p => (
+                      <option key={p.id} value={p.code}>{p.code} - {p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {formations.length === 0 && (
+          <div className="text-center py-12 text-slate-400">
+            <LayoutGrid size={48} className="mx-auto mb-4 opacity-30" />
+            <p>No {phaseLabel.toLowerCase()} defined.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Shifts/Motions Tab Component (Offense only)
+function ShiftMotionsTab({ shiftMotions, onUpdate }) {
+  const DEFAULT_SHIFT_MOTIONS = [
+    // Motions
+    { id: 'sm_jet', name: 'Jet', type: 'motion', color: '#ef4444' },
+    { id: 'sm_orbit', name: 'Orbit', type: 'motion', color: '#f97316' },
+    { id: 'sm_fly', name: 'Fly', type: 'motion', color: '#eab308' },
+    { id: 'sm_rocket', name: 'Rocket', type: 'motion', color: '#22c55e' },
+    { id: 'sm_return', name: 'Return', type: 'motion', color: '#14b8a6' },
+    { id: 'sm_zip', name: 'Zip', type: 'motion', color: '#06b6d4' },
+    { id: 'sm_over', name: 'Over', type: 'motion', color: '#0ea5e9' },
+    // Shifts
+    { id: 'sm_trade', name: 'Trade', type: 'shift', color: '#8b5cf6' },
+    { id: 'sm_shift_rt', name: 'Shift Right', type: 'shift', color: '#a855f7' },
+    { id: 'sm_shift_lt', name: 'Shift Left', type: 'shift', color: '#d946ef' },
+    { id: 'sm_trey', name: 'Trey', type: 'shift', color: '#ec4899' },
+  ];
+
+  const loadDefaults = () => {
+    if (shiftMotions.length > 0 && !confirm('This will add default shifts/motions to your existing list. Continue?')) return;
+    const existingNames = shiftMotions.map(s => s.name.toLowerCase());
+    const newItems = DEFAULT_SHIFT_MOTIONS.filter(s => !existingNames.includes(s.name.toLowerCase()));
+    onUpdate([...shiftMotions, ...newItems]);
+  };
+
+  const addItem = (type) => {
+    const name = prompt(`${type === 'motion' ? 'Motion' : 'Shift'} name:`);
+    if (!name) return;
+    onUpdate([...shiftMotions, {
+      id: `sm_${Date.now()}`,
+      name,
+      type,
+      color: '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')
+    }]);
+  };
+
+  const deleteItem = (id) => {
+    if (!confirm('Delete this item?')) return;
+    onUpdate(shiftMotions.filter(s => s.id !== id));
+  };
+
+  const updateItem = (id, updates) => {
+    onUpdate(shiftMotions.map(s => s.id === id ? { ...s, ...updates } : s));
+  };
+
+  const motions = shiftMotions.filter(s => s.type === 'motion');
+  const shifts = shiftMotions.filter(s => s.type === 'shift');
+
+  return (
+    <div>
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <h3 className="text-lg font-semibold text-white">Shifts & Motions</h3>
+          <p className="text-slate-400 text-sm">
+            Define pre-snap shifts and motions that can be tagged to plays.
+          </p>
+        </div>
+        {shiftMotions.length === 0 && (
+          <button
+            onClick={loadDefaults}
+            className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700"
+          >
+            Load Defaults
+          </button>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {formations.map(formation => (
-          <div key={formation.id} className="bg-slate-700/50 rounded-lg border border-slate-600 p-4">
-            <div className="flex justify-between items-start mb-3">
+      {/* Motions Section */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-sm font-semibold text-slate-300 uppercase tracking-wide">Motions</h4>
+          <button
+            onClick={() => addItem('motion')}
+            className="flex items-center gap-1 px-3 py-1.5 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 text-sm"
+          >
+            <Plus size={14} /> Add Motion
+          </button>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {motions.map(item => (
+            <div
+              key={item.id}
+              className="group flex items-center gap-2 p-3 rounded-lg border bg-slate-700/50"
+              style={{ borderColor: item.color }}
+            >
+              <input
+                type="color"
+                value={item.color}
+                onChange={(e) => updateItem(item.id, { color: e.target.value })}
+                className="w-6 h-6 rounded cursor-pointer border-0 flex-shrink-0"
+              />
               <input
                 type="text"
-                value={formation.name}
-                onChange={(e) => updateFormation(formation.id, { name: e.target.value })}
-                className="font-semibold text-white bg-transparent border-none focus:outline-none"
+                value={item.name}
+                onChange={(e) => updateItem(item.id, { name: e.target.value })}
+                className="flex-1 bg-transparent text-white font-medium border-none focus:outline-none min-w-0"
               />
-              <button onClick={() => deleteFormation(formation.id)} className="text-red-400 hover:text-red-300">
+              <button
+                onClick={() => deleteItem(item.id)}
+                className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-opacity flex-shrink-0"
+              >
                 <Trash2 size={14} />
               </button>
             </div>
-
-            {phase === 'OFFENSE' && personnelGroupings.length > 0 && (
-              <div>
-                <label className="text-xs text-slate-400 block mb-1">Personnel</label>
-                <select
-                  value={formation.personnel || ''}
-                  onChange={(e) => updateFormation(formation.id, { personnel: e.target.value })}
-                  className="w-full px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white text-sm"
-                >
-                  <option value="">-- Select Personnel --</option>
-                  {personnelGroupings.map(p => (
-                    <option key={p.id} value={p.code}>{p.code} - {p.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-        ))}
+          ))}
+        </div>
+        {motions.length === 0 && (
+          <p className="text-sm text-slate-500 italic py-4">No motions defined. Add motions like Jet, Orbit, Fly, Rocket.</p>
+        )}
       </div>
 
-      {formations.length === 0 && (
-        <div className="text-center py-12 text-slate-400">
-          <LayoutGrid size={48} className="mx-auto mb-4 opacity-30" />
-          <p>No {phaseLabel.toLowerCase()} defined.</p>
+      {/* Shifts Section */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-sm font-semibold text-slate-300 uppercase tracking-wide">Shifts</h4>
+          <button
+            onClick={() => addItem('shift')}
+            className="flex items-center gap-1 px-3 py-1.5 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 text-sm"
+          >
+            <Plus size={14} /> Add Shift
+          </button>
         </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {shifts.map(item => (
+            <div
+              key={item.id}
+              className="group flex items-center gap-2 p-3 rounded-lg border bg-slate-700/50"
+              style={{ borderColor: item.color }}
+            >
+              <input
+                type="color"
+                value={item.color}
+                onChange={(e) => updateItem(item.id, { color: e.target.value })}
+                className="w-6 h-6 rounded cursor-pointer border-0 flex-shrink-0"
+              />
+              <input
+                type="text"
+                value={item.name}
+                onChange={(e) => updateItem(item.id, { name: e.target.value })}
+                className="flex-1 bg-transparent text-white font-medium border-none focus:outline-none min-w-0"
+              />
+              <button
+                onClick={() => deleteItem(item.id)}
+                className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-opacity flex-shrink-0"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+        {shifts.length === 0 && (
+          <p className="text-sm text-slate-500 italic py-4">No shifts defined. Add shifts like Trade, Shift Right, Trey.</p>
+        )}
+      </div>
+
+      {shiftMotions.length > 0 && (
+        <button
+          onClick={loadDefaults}
+          className="text-sm text-cyan-400 hover:text-cyan-300 underline"
+        >
+          + Add more defaults
+        </button>
       )}
     </div>
   );
@@ -2466,27 +3005,395 @@ function ConceptGroupsTab({ phase, buckets, allBuckets, onUpdate }) {
   );
 }
 
-// Play Call Chain Tab Component
-function PlayCallChainTab({ phase, syntax, termLibrary, onUpdate }) {
-  const currentSyntax = syntax[phase] || [];
+// Default syntax templates for offense
+const DEFAULT_SYNTAX_TEMPLATES = {
+  pass: [
+    { id: 'shift', label: 'Shift', sourceCategory: 'shiftMotions', required: false },
+    { id: 'formation', label: 'Formation', sourceCategory: 'formations', required: true },
+    { id: 'formationTag', label: 'Tag', sourceCategory: 'custom', required: false },
+    { id: 'protection', label: 'Protection/RB', sourceCategory: 'custom', required: false },
+    { id: 'motion', label: 'Motion', sourceCategory: 'shiftMotions', required: false },
+    { id: 'concept', label: 'Concept', sourceCategory: 'conceptGroups', required: true },
+    { id: 'conceptMod', label: 'Modifier', sourceCategory: 'custom', required: false },
+    { id: 'routeCall', label: 'Route Call', sourceCategory: 'custom', required: false },
+    { id: 'navigation', label: 'Navigation', sourceCategory: 'custom', required: false },
+  ],
+  run: [
+    { id: 'formation', label: 'Formation', sourceCategory: 'formations', required: true },
+    { id: 'rbCall', label: 'RB/Direction', sourceCategory: 'custom', required: false },
+    { id: 'concept', label: 'Run Concept', sourceCategory: 'conceptGroups', required: true },
+    { id: 'rpoTag', label: 'RPO Tag', sourceCategory: 'custom', required: false },
+  ],
+  quick: [
+    { id: 'formation', label: 'Formation', sourceCategory: 'formations', required: true },
+    { id: 'play', label: 'Play', sourceCategory: 'conceptGroups', required: true },
+  ],
+};
+
+// Play type template tabs configuration
+const PLAY_TYPE_TEMPLATES = {
+  OFFENSE: [
+    { id: 'pass', label: 'Pass', icon: '🏈', description: 'Passing plays with routes, protection calls, and navigation' },
+    { id: 'run', label: 'Run', icon: '🏃', description: 'Running plays with RB calls and RPO tags' },
+    { id: 'quick', label: 'Quick', icon: '⚡', description: 'Simple two-part calls (Formation + Play)' },
+    { id: 'custom', label: 'Custom', icon: '⚙️', description: 'Build your own syntax structure' },
+  ],
+  DEFENSE: [
+    { id: 'custom', label: 'Custom', icon: '⚙️', description: 'Build your own syntax structure' },
+  ],
+  SPECIAL_TEAMS: [
+    { id: 'custom', label: 'Custom', icon: '⚙️', description: 'Build your own syntax structure' },
+  ],
+};
+
+// Teach Play Call Modal Component - Learn from example play calls
+function TeachPlayCallModal({ isOpen, onClose, phase, currentSyntax, termLibrary, onUpdate }) {
+  const [rawCall, setRawCall] = useState('');
+  const [tokens, setTokens] = useState([]);
+  const [tokenAssignments, setTokenAssignments] = useState({});
+
+  // Parse raw call into tokens
+  const parseRawCall = (input) => {
+    if (!input.trim()) {
+      setTokens([]);
+      setTokenAssignments({});
+      return;
+    }
+
+    // Split by spaces, but keep quoted strings together
+    const parsed = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < input.length; i++) {
+      const char = input[i];
+      if (char === '"' || char === "'") {
+        inQuotes = !inQuotes;
+        current += char;
+      } else if (char === ' ' && !inQuotes) {
+        if (current.trim()) {
+          parsed.push(current.trim().replace(/^["']|["']$/g, ''));
+        }
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    if (current.trim()) {
+      parsed.push(current.trim().replace(/^["']|["']$/g, ''));
+    }
+
+    setTokens(parsed);
+    // Reset assignments
+    setTokenAssignments({});
+  };
+
+  // Update assignment for a token
+  const setAssignment = (tokenIdx, syntaxPartId) => {
+    setTokenAssignments(prev => ({
+      ...prev,
+      [tokenIdx]: syntaxPartId
+    }));
+  };
+
+  // Get unassigned syntax parts
+  const getAvailableSyntaxParts = (excludeTokenIdx) => {
+    const assigned = Object.entries(tokenAssignments)
+      .filter(([idx]) => parseInt(idx) !== excludeTokenIdx)
+      .map(([, partId]) => partId);
+    return currentSyntax.filter(part => !assigned.includes(part.id) || part.sourceCategory === 'custom');
+  };
+
+  // Apply the teaching - create terms from assignments
+  const handleApply = () => {
+    const currentTerms = termLibrary[phase] || {};
+    const newTerms = { ...currentTerms };
+
+    tokens.forEach((token, idx) => {
+      const syntaxPartId = tokenAssignments[idx];
+      if (!syntaxPartId) return;
+
+      const syntaxPart = currentSyntax.find(p => p.id === syntaxPartId);
+      if (!syntaxPart) return;
+
+      // Only add to term library if it's a custom source
+      if (!syntaxPart.sourceCategory || syntaxPart.sourceCategory === 'custom') {
+        const existingTerms = newTerms[syntaxPartId] || [];
+        // Check if term already exists
+        const exists = existingTerms.some(t => t.label.toLowerCase() === token.toLowerCase());
+        if (!exists) {
+          newTerms[syntaxPartId] = [
+            ...existingTerms,
+            { id: Date.now().toString() + idx, label: token }
+          ];
+        }
+      }
+    });
+
+    onUpdate('termLibrary', { ...termLibrary, [phase]: newTerms });
+    onClose();
+    setRawCall('');
+    setTokens([]);
+    setTokenAssignments({});
+  };
+
+  // Count assigned tokens
+  const assignedCount = Object.keys(tokenAssignments).length;
+  const canApply = tokens.length > 0 && assignedCount > 0;
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-slate-800 rounded-xl w-full max-w-2xl overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-slate-700">
+          <div>
+            <h3 className="text-lg font-semibold text-white">Teach from Example</h3>
+            <p className="text-sm text-slate-400">Enter a play call and tag each part to teach the system</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-white"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-6">
+          {/* Raw call input */}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              Enter a full play call
+            </label>
+            <input
+              type="text"
+              value={rawCall}
+              onChange={(e) => {
+                setRawCall(e.target.value);
+                parseRawCall(e.target.value);
+              }}
+              placeholder='e.g., SCRAMBLE 887 SNUG BROWN Z THRU SMASH'
+              className="w-full px-4 py-3 bg-slate-900 border border-slate-600 rounded-lg text-white text-lg font-mono placeholder-slate-500"
+              autoFocus
+            />
+          </div>
+
+          {/* Token display and tagging */}
+          {tokens.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-3">
+                Tag each part of the call
+              </label>
+              <div className="space-y-2">
+                {tokens.map((token, idx) => {
+                  const assignment = tokenAssignments[idx];
+                  const syntaxPart = assignment ? currentSyntax.find(p => p.id === assignment) : null;
+                  return (
+                    <div
+                      key={idx}
+                      className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                        assignment
+                          ? 'bg-sky-500/10 border-sky-500/50'
+                          : 'bg-slate-700/50 border-slate-600'
+                      }`}
+                    >
+                      <span className="text-lg font-mono font-bold text-white min-w-[100px]">
+                        {token}
+                      </span>
+                      <span className="text-slate-500">→</span>
+                      <select
+                        value={assignment || ''}
+                        onChange={(e) => setAssignment(idx, e.target.value || null)}
+                        className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white text-sm"
+                      >
+                        <option value="">-- Select category --</option>
+                        {getAvailableSyntaxParts(idx).map(part => (
+                          <option key={part.id} value={part.id}>
+                            {part.label}
+                            {part.sourceCategory && part.sourceCategory !== 'custom' && ' (from setup)'}
+                          </option>
+                        ))}
+                      </select>
+                      {syntaxPart && (
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          syntaxPart.sourceCategory && syntaxPart.sourceCategory !== 'custom'
+                            ? 'bg-slate-600 text-slate-300'
+                            : 'bg-emerald-500/20 text-emerald-400'
+                        }`}>
+                          {syntaxPart.sourceCategory && syntaxPart.sourceCategory !== 'custom'
+                            ? 'Matches setup'
+                            : 'Will add term'}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Preview of what will be created */}
+          {canApply && (
+            <div className="p-3 bg-slate-900 rounded-lg border border-slate-600">
+              <p className="text-xs text-slate-500 uppercase tracking-wide mb-2">Preview: Terms to be added</p>
+              <div className="flex flex-wrap gap-2">
+                {tokens.map((token, idx) => {
+                  const syntaxPartId = tokenAssignments[idx];
+                  if (!syntaxPartId) return null;
+                  const syntaxPart = currentSyntax.find(p => p.id === syntaxPartId);
+                  if (!syntaxPart || (syntaxPart.sourceCategory && syntaxPart.sourceCategory !== 'custom')) {
+                    return null;
+                  }
+                  return (
+                    <span key={idx} className="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded text-sm">
+                      {token} → {syntaxPart.label}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3 p-4 border-t border-slate-700">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleApply}
+            disabled={!canApply}
+            className="flex-1 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Apply ({assignedCount} tagged)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Play Call Chain Tab Component - now with template support
+function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupConfig, onUpdate }) {
+  // State for selected template type
+  const [selectedTemplate, setSelectedTemplate] = useState(() => {
+    // Default to 'custom' if templates exist there, otherwise 'pass' for offense
+    const templates = syntaxTemplates?.[phase];
+    if (templates?.custom?.length > 0) return 'custom';
+    if (phase === 'OFFENSE') return 'pass';
+    return 'custom';
+  });
+
+  // State for teach modal
+  const [showTeachModal, setShowTeachModal] = useState(false);
+
+  // Get available templates for this phase
+  const availableTemplates = PLAY_TYPE_TEMPLATES[phase] || PLAY_TYPE_TEMPLATES.OFFENSE;
+
+  // Get current syntax based on selected template
+  // First check syntaxTemplates, fall back to legacy syntax
+  const getCurrentSyntax = () => {
+    const templates = syntaxTemplates?.[phase];
+    if (templates && templates[selectedTemplate]?.length > 0) {
+      return templates[selectedTemplate];
+    }
+    // Fall back to legacy syntax for custom template
+    if (selectedTemplate === 'custom' && syntax?.[phase]?.length > 0) {
+      return syntax[phase];
+    }
+    // Return default template if available
+    if (phase === 'OFFENSE' && DEFAULT_SYNTAX_TEMPLATES[selectedTemplate]) {
+      return DEFAULT_SYNTAX_TEMPLATES[selectedTemplate];
+    }
+    return [];
+  };
+
+  const currentSyntax = getCurrentSyntax();
   const currentTerms = termLibrary[phase] || {};
+
+  // Define source categories based on phase
+  const SOURCE_CATEGORIES = phase === 'OFFENSE' ? [
+    { id: 'custom', label: 'Custom Term', description: 'Use the term library below' },
+    { id: 'formations', label: 'a Formation', description: 'From Formations/Families setup' },
+    { id: 'formationFamilies', label: 'a Formation Family', description: '2x2, 3x1, Gun, etc.' },
+    { id: 'shiftMotions', label: 'a Shift or Motion', description: 'Jet, Orbit, Trade, etc.' },
+    { id: 'personnelGroupings', label: 'a Personnel Grouping', description: '11, 12, 21, etc.' },
+    { id: 'playBuckets', label: 'a Play Bucket', description: 'Run, Pass, RPO, etc.' },
+    { id: 'conceptGroups', label: 'a Concept', description: 'Inside Zone, Outside Zone, etc.' },
+    { id: 'readTypes', label: 'a Read Type', description: 'Pre-snap, Post-snap, etc.' },
+    { id: 'lookAlikeSeries', label: 'a Series', description: 'Play series groupings' },
+    { id: 'passProtections', label: 'a Pass Protection', description: 'OL protection schemes' },
+    { id: 'runBlocking', label: 'a Run Scheme', description: 'OL blocking schemes' },
+    { id: 'fieldZones', label: 'a Field Zone', description: 'Red Zone, +50, etc.' },
+    { id: 'downDistanceCategories', label: 'a Down & Distance', description: '1st & 10, 3rd & Short, etc.' },
+  ] : phase === 'DEFENSE' ? [
+    { id: 'custom', label: 'Custom Term', description: 'Use the term library below' },
+    { id: 'formations', label: 'a Front or Coverage', description: 'From Formation/Front setup' },
+  ] : [
+    { id: 'custom', label: 'Custom Term', description: 'Use the term library below' },
+  ];
+
+  // Get items from a source category
+  const getSourceItems = (sourceId) => {
+    if (sourceId === 'custom' || !sourceId) return [];
+    const config = setupConfig || {};
+    switch (sourceId) {
+      case 'formations': return (config.formations || []).map(f => f.name || f);
+      case 'formationFamilies': return (config.formationFamilies || []).map(f => f.name);
+      case 'shiftMotions': return (config.shiftMotions || []).map(f => f.name);
+      case 'personnelGroupings': return (config.personnelGroupings || []).map(f => f.name || f);
+      case 'playBuckets': return (config.playBuckets || []).map(f => f.name);
+      case 'conceptGroups': return (config.conceptGroups || []).map(f => f.name);
+      case 'readTypes': return (config.readTypes || []).map(f => f.name || f);
+      case 'lookAlikeSeries': return (config.lookAlikeSeries || []).map(f => f.name);
+      case 'passProtections': return (config.passProtections || []).map(f => f.name || f);
+      case 'runBlocking': return (config.runBlocking || []).map(f => f.name || f);
+      case 'fieldZones': return (config.fieldZones || []).map(f => f.name || f);
+      case 'downDistanceCategories': return (config.downDistanceCategories || []).map(f => f.name || f);
+      default: return [];
+    }
+  };
+
+  // Update syntax for current template
+  const updateTemplateSyntax = (newSyntax) => {
+    const currentTemplates = syntaxTemplates || {
+      OFFENSE: { pass: [], run: [], quick: [], custom: [] },
+      DEFENSE: { custom: [] },
+      SPECIAL_TEAMS: { custom: [] }
+    };
+    const phaseTemplates = currentTemplates[phase] || {};
+    const updatedTemplates = {
+      ...currentTemplates,
+      [phase]: {
+        ...phaseTemplates,
+        [selectedTemplate]: newSyntax
+      }
+    };
+    onUpdate('syntaxTemplates', updatedTemplates);
+    // Also update legacy syntax for backwards compatibility
+    if (selectedTemplate === 'custom') {
+      onUpdate('syntax', { ...syntax, [phase]: newSyntax });
+    }
+  };
 
   const addSyntaxComponent = () => {
     const newId = Date.now().toString();
-    const newSyntax = [...currentSyntax, { id: newId, label: 'New', type: 'text' }];
-    onUpdate('syntax', { ...syntax, [phase]: newSyntax });
+    const newSyntax = [...currentSyntax, { id: newId, label: 'New', type: 'text', required: false }];
+    updateTemplateSyntax(newSyntax);
   };
 
   const updateSyntaxComponent = (idx, updates) => {
     const newSyntax = [...currentSyntax];
     newSyntax[idx] = { ...newSyntax[idx], ...updates };
-    onUpdate('syntax', { ...syntax, [phase]: newSyntax });
+    updateTemplateSyntax(newSyntax);
   };
 
   const deleteSyntaxComponent = (idx) => {
     if (!confirm('Delete this syntax component?')) return;
     const newSyntax = currentSyntax.filter((_, i) => i !== idx);
-    onUpdate('syntax', { ...syntax, [phase]: newSyntax });
+    updateTemplateSyntax(newSyntax);
   };
 
   const moveSyntax = (idx, direction) => {
@@ -2494,7 +3401,14 @@ function PlayCallChainTab({ phase, syntax, termLibrary, onUpdate }) {
     const newIdx = idx + direction;
     if (newIdx < 0 || newIdx >= newSyntax.length) return;
     [newSyntax[idx], newSyntax[newIdx]] = [newSyntax[newIdx], newSyntax[idx]];
-    onUpdate('syntax', { ...syntax, [phase]: newSyntax });
+    updateTemplateSyntax(newSyntax);
+  };
+
+  // Initialize template with defaults if empty
+  const initializeTemplate = () => {
+    if (phase === 'OFFENSE' && DEFAULT_SYNTAX_TEMPLATES[selectedTemplate]) {
+      updateTemplateSyntax(DEFAULT_SYNTAX_TEMPLATES[selectedTemplate]);
+    }
   };
 
   const addTerm = (catId) => {
@@ -2515,34 +3429,104 @@ function PlayCallChainTab({ phase, syntax, termLibrary, onUpdate }) {
   // Generate example play call from current syntax
   const getExampleCall = () => {
     return currentSyntax.map(item => {
-      const terms = currentTerms[item.id] || [];
-      const exampleTerm = terms[0]?.label || item.label;
+      let exampleTerm = item.label;
+      if (item.sourceCategory && item.sourceCategory !== 'custom') {
+        const sourceItems = getSourceItems(item.sourceCategory);
+        if (sourceItems.length > 0) exampleTerm = sourceItems[0];
+      } else {
+        const terms = currentTerms[item.id] || [];
+        if (terms.length > 0) exampleTerm = terms[0]?.label || item.label;
+      }
       return `${item.prefix || ''}${exampleTerm}${item.suffix || ''}`;
     }).join(' ');
   };
 
+  // Check if any components use custom source (need term library)
+  const hasCustomComponents = currentSyntax.some(item => !item.sourceCategory || item.sourceCategory === 'custom');
+
+  // Check if using default template (not yet customized)
+  const isUsingDefault = phase === 'OFFENSE' &&
+    selectedTemplate !== 'custom' &&
+    (!syntaxTemplates?.[phase]?.[selectedTemplate]?.length);
+
   return (
     <div>
+      {/* Template Type Selector - Only show for Offense */}
+      {phase === 'OFFENSE' && availableTemplates.length > 1 && (
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-white mb-3">Play Type Templates</h3>
+          <p className="text-slate-400 text-sm mb-4">
+            Different play types have different syntax structures. Select a template to configure.
+          </p>
+          <div className="flex gap-3 flex-wrap">
+            {availableTemplates.map(template => (
+              <button
+                key={template.id}
+                onClick={() => setSelectedTemplate(template.id)}
+                className={`flex-1 min-w-[140px] max-w-[200px] p-4 rounded-lg border-2 transition-all text-left ${
+                  selectedTemplate === template.id
+                    ? 'border-sky-500 bg-sky-500/10'
+                    : 'border-slate-600 bg-slate-800/50 hover:border-slate-500'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xl">{template.icon}</span>
+                  <span className={`font-semibold ${selectedTemplate === template.id ? 'text-sky-400' : 'text-white'}`}>
+                    {template.label}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400">{template.description}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Play Call Structure - Horizontal Layout */}
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h3 className="text-lg font-semibold text-white">Play Call Structure</h3>
+            <h3 className="text-lg font-semibold text-white">
+              {selectedTemplate !== 'custom' ? `${availableTemplates.find(t => t.id === selectedTemplate)?.label} Template` : 'Play Call Structure'}
+            </h3>
             <p className="text-slate-400 text-sm">Build your play call syntax left to right, like reading a sentence.</p>
           </div>
-          <button
-            onClick={addSyntaxComponent}
-            className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700"
-          >
-            <Plus size={16} /> Add Component
-          </button>
+          <div className="flex gap-2">
+            {currentSyntax.length > 0 && (
+              <button
+                onClick={() => setShowTeachModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500"
+                title="Learn from an example play call"
+              >
+                <BookOpen size={16} /> Teach from Example
+              </button>
+            )}
+            {isUsingDefault && (
+              <button
+                onClick={initializeTemplate}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+              >
+                <Check size={16} /> Use Default Template
+              </button>
+            )}
+            <button
+              onClick={addSyntaxComponent}
+              className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700"
+            >
+              <Plus size={16} /> Add Component
+            </button>
+          </div>
         </div>
 
         {currentSyntax.length === 0 ? (
           <div className="text-center py-12 text-slate-400 border-2 border-dashed border-slate-600 rounded-lg">
             <BookOpen size={48} className="mx-auto mb-4 opacity-30" />
-            <p>No play components defined.</p>
-            <p className="text-sm">Click "Add Component" to start building your play call structure.</p>
+            <p>No play components defined for this template.</p>
+            {isUsingDefault ? (
+              <p className="text-sm mt-2">Click "Use Default Template" to start with recommended components, or "Add Component" to build from scratch.</p>
+            ) : (
+              <p className="text-sm mt-2">Click "Add Component" to start building your play call structure.</p>
+            )}
           </div>
         ) : (
           <>
@@ -2557,12 +3541,19 @@ function PlayCallChainTab({ phase, syntax, termLibrary, onUpdate }) {
               {currentSyntax.map((item, idx) => (
                 <div key={item.id} className="flex items-center gap-2">
                   {/* Component Card */}
-                  <div className="flex-shrink-0 w-48 bg-slate-700/50 rounded-lg border border-slate-600 overflow-hidden">
+                  <div className={`flex-shrink-0 w-48 bg-slate-700/50 rounded-lg border overflow-hidden ${
+                    item.required ? 'border-amber-500/50' : 'border-slate-600'
+                  }`}>
                     {/* Header with number and controls */}
                     <div className="flex items-center justify-between px-3 py-2 bg-slate-600/50 border-b border-slate-600">
-                      <span className="w-6 h-6 flex items-center justify-center bg-sky-600 rounded-full text-xs font-bold text-white">
-                        {idx + 1}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 flex items-center justify-center bg-sky-600 rounded-full text-xs font-bold text-white">
+                          {idx + 1}
+                        </span>
+                        {item.required && (
+                          <span className="text-[9px] px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded uppercase">Required</span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => moveSyntax(idx, -1)}
@@ -2600,6 +3591,40 @@ function PlayCallChainTab({ phase, syntax, termLibrary, onUpdate }) {
                           placeholder="e.g. Formation"
                           className="w-full px-2 py-1.5 bg-slate-600 border border-slate-500 rounded text-white text-sm"
                         />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-500 uppercase tracking-wide">Source Category</label>
+                        <select
+                          value={item.sourceCategory || 'custom'}
+                          onChange={(e) => updateSyntaxComponent(idx, { sourceCategory: e.target.value })}
+                          className="w-full px-2 py-1.5 bg-slate-600 border border-slate-500 rounded text-white text-sm"
+                        >
+                          {SOURCE_CATEGORIES.map(cat => (
+                            <option key={cat.id} value={cat.id}>{cat.label}</option>
+                          ))}
+                        </select>
+                        {item.sourceCategory && item.sourceCategory !== 'custom' && (() => {
+                          const items = getSourceItems(item.sourceCategory);
+                          return (
+                            <div className="mt-1">
+                              <p className="text-[10px] text-slate-400">
+                                {items.length > 0 ? `${items.length} items: ` : 'No items defined yet'}
+                                <span className="text-slate-500">{items.slice(0, 3).join(', ')}{items.length > 3 ? '...' : ''}</span>
+                              </p>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-1.5 text-[10px] text-slate-400 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={item.required || false}
+                            onChange={(e) => updateSyntaxComponent(idx, { required: e.target.checked })}
+                            className="w-3 h-3 rounded"
+                          />
+                          Required
+                        </label>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
@@ -2646,21 +3671,22 @@ function PlayCallChainTab({ phase, syntax, termLibrary, onUpdate }) {
         )}
       </div>
 
-      {/* Term Library - Horizontal layout matching the chain */}
-      {currentSyntax.length > 0 && (
+      {/* Term Library - Only show for components using custom source */}
+      {hasCustomComponents && (
         <div>
           <h3 className="text-lg font-semibold text-white mb-2">Term Library</h3>
-          <p className="text-slate-400 text-sm mb-4">Add terms for each component. These will be available when building plays.</p>
+          <p className="text-slate-400 text-sm mb-4">Add terms for components using "Custom (Term Library)" source.</p>
 
           <div className="flex gap-2 overflow-x-auto pb-4">
-            {currentSyntax.map((cat, idx) => {
+            {currentSyntax.filter(cat => !cat.sourceCategory || cat.sourceCategory === 'custom').map((cat, idx) => {
               const terms = currentTerms[cat.id] || [];
+              const originalIdx = currentSyntax.findIndex(c => c.id === cat.id);
               return (
                 <div key={cat.id} className="flex-shrink-0 w-48 bg-slate-700/50 rounded-lg border border-slate-600 overflow-hidden">
                   <div className="flex justify-between items-center px-3 py-2 bg-slate-600/50 border-b border-slate-600">
                     <div className="flex items-center gap-2">
                       <span className="w-5 h-5 flex items-center justify-center bg-sky-600 rounded-full text-[10px] font-bold text-white">
-                        {idx + 1}
+                        {originalIdx + 1}
                       </span>
                       <span className="text-xs font-bold text-slate-300 uppercase tracking-wide truncate">{cat.label}</span>
                     </div>
@@ -2702,6 +3728,340 @@ function PlayCallChainTab({ phase, syntax, termLibrary, onUpdate }) {
           </div>
         </div>
       )}
+
+      {/* Teach from Example Modal */}
+      <TeachPlayCallModal
+        isOpen={showTeachModal}
+        onClose={() => setShowTeachModal(false)}
+        phase={phase}
+        currentSyntax={currentSyntax}
+        termLibrary={termLibrary}
+        onUpdate={onUpdate}
+      />
+    </div>
+  );
+}
+
+// Signal field options for terms
+const SIGNAL_FIELD_OPTIONS = {
+  OFFENSE: [
+    { id: 'playType', label: 'Play Type', values: ['pass', 'run', 'quick'] },
+    { id: 'protection', label: 'Protection', values: 'custom' },
+    { id: 'rbAlignment', label: 'RB Alignment', values: 'custom' },
+    { id: 'motion', label: 'Motion', values: 'custom' },
+    { id: 'formationTag', label: 'Formation Tag', values: 'custom' },
+    { id: 'blocking', label: 'Blocking Scheme', values: 'custom' },
+  ],
+  DEFENSE: [
+    { id: 'coverage', label: 'Coverage', values: 'custom' },
+    { id: 'front', label: 'Front', values: 'custom' },
+  ],
+  SPECIAL_TEAMS: []
+};
+
+// Custom Syntax Terms Tab Component - for user-defined play call chain parts
+function CustomSyntaxTermsTab({ phase, syntaxPart, termLibrary, syntax, onUpdate }) {
+  const currentTerms = termLibrary[phase] || {};
+  const terms = currentTerms[syntaxPart.id] || [];
+  const subdivisions = syntaxPart.subdivisions || [];
+
+  // State for signal editing modal
+  const [editingSignalsTerm, setEditingSignalsTerm] = useState(null);
+
+  // Group terms by subdivision
+  const termsBySubdivision = {};
+  subdivisions.forEach(sub => {
+    termsBySubdivision[sub] = terms.filter(t => t.subdivision === sub);
+  });
+  const ungroupedTerms = terms.filter(t => !t.subdivision || !subdivisions.includes(t.subdivision));
+
+  // Get available signal fields for this phase
+  const signalFields = SIGNAL_FIELD_OPTIONS[phase] || [];
+
+  const addSubdivision = () => {
+    const name = prompt(`Enter new ${syntaxPart.label} category:`);
+    if (!name?.trim()) return;
+    // Update the syntax part with new subdivision
+    const currentSyntax = syntax[phase] || [];
+    const newSyntax = currentSyntax.map(s =>
+      s.id === syntaxPart.id
+        ? { ...s, subdivisions: [...(s.subdivisions || []), name.trim()] }
+        : s
+    );
+    onUpdate('syntax', { ...syntax, [phase]: newSyntax });
+  };
+
+  const deleteSubdivision = (subName) => {
+    if (!confirm(`Delete "${subName}" category? Terms will become ungrouped.`)) return;
+    // Remove subdivision from syntax part
+    const currentSyntax = syntax[phase] || [];
+    const newSyntax = currentSyntax.map(s =>
+      s.id === syntaxPart.id
+        ? { ...s, subdivisions: (s.subdivisions || []).filter(sub => sub !== subName) }
+        : s
+    );
+    onUpdate('syntax', { ...syntax, [phase]: newSyntax });
+    // Clear subdivision from affected terms
+    const newTerms = terms.map(t =>
+      t.subdivision === subName ? { ...t, subdivision: null } : t
+    );
+    onUpdate('termLibrary', {
+      ...termLibrary,
+      [phase]: { ...currentTerms, [syntaxPart.id]: newTerms }
+    });
+  };
+
+  const addTerm = (subdivision = null) => {
+    const term = prompt(`Enter new ${syntaxPart.label}:`);
+    if (!term?.trim()) return;
+    const newTerm = { id: Date.now().toString(), label: term.trim(), signals: {} };
+    if (subdivision) newTerm.subdivision = subdivision;
+    const newTerms = [...terms, newTerm];
+    onUpdate('termLibrary', {
+      ...termLibrary,
+      [phase]: { ...currentTerms, [syntaxPart.id]: newTerms }
+    });
+  };
+
+  const updateTerm = (termId, updates) => {
+    const newTerms = terms.map(t =>
+      t.id === termId ? { ...t, ...updates } : t
+    );
+    onUpdate('termLibrary', {
+      ...termLibrary,
+      [phase]: { ...currentTerms, [syntaxPart.id]: newTerms }
+    });
+  };
+
+  const deleteTerm = (termId) => {
+    if (!confirm('Delete this term?')) return;
+    const newTerms = terms.filter(t => t.id !== termId);
+    onUpdate('termLibrary', {
+      ...termLibrary,
+      [phase]: { ...currentTerms, [syntaxPart.id]: newTerms }
+    });
+  };
+
+  const updateTermSignal = (termId, fieldId, value) => {
+    const term = terms.find(t => t.id === termId);
+    if (!term) return;
+    const newSignals = { ...(term.signals || {}) };
+    if (value) {
+      newSignals[fieldId] = value;
+    } else {
+      delete newSignals[fieldId];
+    }
+    updateTerm(termId, { signals: newSignals });
+  };
+
+  const getSignalCount = (term) => {
+    return Object.keys(term.signals || {}).filter(k => term.signals[k]).length;
+  };
+
+  const TermCard = ({ term }) => {
+    const signalCount = getSignalCount(term);
+    return (
+      <div className="p-2 bg-slate-700/50 rounded-lg border border-slate-600 group">
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={term.label}
+            onChange={(e) => updateTerm(term.id, { label: e.target.value })}
+            className="flex-1 bg-transparent text-white text-sm font-medium focus:outline-none focus:ring-1 focus:ring-sky-500 rounded px-1 min-w-0"
+          />
+          {subdivisions.length > 0 && (
+            <select
+              value={term.subdivision || ''}
+              onChange={(e) => updateTerm(term.id, { subdivision: e.target.value || null })}
+              className="text-xs bg-slate-600 border border-slate-500 rounded px-1 py-0.5 text-slate-300"
+            >
+              <option value="">No category</option>
+              {subdivisions.map(sub => (
+                <option key={sub} value={sub}>{sub}</option>
+              ))}
+            </select>
+          )}
+          <button
+            onClick={() => deleteTerm(term.id)}
+            className="p-1 text-slate-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <X size={14} />
+          </button>
+        </div>
+        {/* Signals indicator and edit button */}
+        {signalFields.length > 0 && (
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <button
+              onClick={() => setEditingSignalsTerm(term)}
+              className={`text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 ${
+                signalCount > 0
+                  ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
+                  : 'bg-slate-600 text-slate-400 hover:bg-slate-500 opacity-0 group-hover:opacity-100'
+              }`}
+            >
+              {signalCount > 0 ? (
+                <>Signals {signalCount} field{signalCount > 1 ? 's' : ''}</>
+              ) : (
+                <>+ Add signals</>
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Signals editing modal
+  const SignalsModal = () => {
+    if (!editingSignalsTerm) return null;
+    const term = editingSignalsTerm;
+    const termSignals = term.signals || {};
+
+    return (
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+        <div className="bg-slate-800 rounded-xl w-full max-w-md overflow-hidden">
+          <div className="flex items-center justify-between p-4 border-b border-slate-700">
+            <div>
+              <h3 className="text-lg font-semibold text-white">Configure Signals</h3>
+              <p className="text-sm text-slate-400">"{term.label}" - auto-fills other fields when selected</p>
+            </div>
+            <button
+              onClick={() => setEditingSignalsTerm(null)}
+              className="p-2 text-slate-400 hover:text-white"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+            <p className="text-sm text-slate-400">
+              When "{term.label}" is selected in a play, it will automatically fill these fields:
+            </p>
+            {signalFields.map(field => (
+              <div key={field.id} className="space-y-1">
+                <label className="block text-sm font-medium text-slate-300">{field.label}</label>
+                {field.values === 'custom' ? (
+                  <input
+                    type="text"
+                    value={termSignals[field.id] || ''}
+                    onChange={(e) => updateTermSignal(term.id, field.id, e.target.value)}
+                    placeholder={`Auto-fill ${field.label.toLowerCase()} with...`}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white placeholder-slate-500 text-sm"
+                  />
+                ) : (
+                  <select
+                    value={termSignals[field.id] || ''}
+                    onChange={(e) => updateTermSignal(term.id, field.id, e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white text-sm"
+                  >
+                    <option value="">-- No auto-fill --</option>
+                    {field.values.map(v => (
+                      <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="p-4 border-t border-slate-700">
+            <button
+              onClick={() => setEditingSignalsTerm(null)}
+              className="w-full px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h3 className="text-lg font-semibold text-white">{syntaxPart.label} Terms</h3>
+          <p className="text-slate-400 text-sm">
+            Define the values available for "{syntaxPart.label}" in your play call chain.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={addSubdivision}
+            className="flex items-center gap-2 px-3 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-500"
+          >
+            <Layers size={16} /> Add Category
+          </button>
+          <button
+            onClick={() => addTerm()}
+            className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700"
+          >
+            <Plus size={16} /> Add {syntaxPart.label}
+          </button>
+        </div>
+      </div>
+
+      {terms.length === 0 && subdivisions.length === 0 ? (
+        <div className="text-center py-12 text-slate-400 border-2 border-dashed border-slate-600 rounded-lg">
+          <FileText size={48} className="mx-auto mb-4 opacity-30" />
+          <p>No {syntaxPart.label.toLowerCase()} terms defined yet.</p>
+          <p className="text-sm mt-2">Click "Add {syntaxPart.label}" to create terms, or "Add Category" to organize them.</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Subdivisions */}
+          {subdivisions.map(sub => (
+            <div key={sub} className="bg-slate-800/50 rounded-lg border border-slate-600 overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-3 bg-slate-700/50 border-b border-slate-600">
+                <h4 className="font-medium text-white">{sub}</h4>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => addTerm(sub)}
+                    className="p-1.5 text-sky-400 hover:text-sky-300 hover:bg-slate-600 rounded"
+                    title={`Add ${syntaxPart.label} to ${sub}`}
+                  >
+                    <Plus size={16} />
+                  </button>
+                  <button
+                    onClick={() => deleteSubdivision(sub)}
+                    className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-600 rounded"
+                    title="Delete category"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+              <div className="p-4">
+                {termsBySubdivision[sub]?.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                    {termsBySubdivision[sub].map(term => (
+                      <TermCard key={term.id} term={term} />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-500 text-sm italic">No terms in this category</p>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {/* Ungrouped terms */}
+          {ungroupedTerms.length > 0 && (
+            <div>
+              {subdivisions.length > 0 && (
+                <h4 className="font-medium text-slate-400 mb-3">Uncategorized</h4>
+              )}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                {ungroupedTerms.map(term => (
+                  <TermCard key={term.id} term={term} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Signals editing modal */}
+      <SignalsModal />
     </div>
   );
 }

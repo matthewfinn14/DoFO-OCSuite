@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { X, Save, Trash2, Upload, ChevronDown, ChevronRight, Edit3, Library, GripVertical, Handshake, Link2, MapPin, Hash, AlertTriangle, Eye, Layers } from 'lucide-react';
 import { useSchool } from '../../context/SchoolContext';
 import PlayDiagramEditor from '../diagrams/PlayDiagramEditor';
@@ -33,25 +33,66 @@ export default function PlayEditor({
     return { protections, runBlocking };
   }, [setupConfig]);
 
-  // Get play call chain syntax for current phase (default to Formation + Play)
+  // Play type options for offense
+  const PLAY_TYPES = [
+    { id: 'pass', label: 'Pass', icon: '🏈' },
+    { id: 'run', label: 'Run', icon: '🏃' },
+    { id: 'quick', label: 'Quick', icon: '⚡' },
+  ];
+
+  // Separate state for play type to avoid hook ordering issues
+  const [selectedPlayType, setSelectedPlayType] = useState('quick');
+
+  // Get play call chain syntax for current phase based on play type
   const playCallSyntax = useMemo(() => {
     const phaseKey = phase === 'SPECIAL_TEAMS' ? 'SPECIAL_TEAMS' : phase;
+    const playType = selectedPlayType || 'quick';
+
+    // First check syntaxTemplates for the specific play type
+    const templates = setupConfig?.syntaxTemplates?.[phaseKey];
+    if (templates && templates[playType]?.length > 0) {
+      return templates[playType];
+    }
+
+    // Fall back to legacy syntax (custom template)
     const customSyntax = setupConfig?.syntax?.[phaseKey];
     if (customSyntax && customSyntax.length > 0) {
       return customSyntax;
     }
+
     // Default syntax: Formation + Play
     return [
       { id: 'formation', label: 'Formation', order: 1 },
       { id: 'play', label: 'Play', order: 2 }
     ];
-  }, [setupConfig, phase]);
+  }, [setupConfig, phase, selectedPlayType]);
 
   // Get term library for current phase
   const termLibrary = useMemo(() => {
     const phaseKey = phase === 'SPECIAL_TEAMS' ? 'SPECIAL_TEAMS' : phase;
     return setupConfig?.termLibrary?.[phaseKey] || {};
   }, [setupConfig, phase]);
+
+  // Get items from a source category for play call chain
+  const getSourceItems = useCallback((sourceId) => {
+    if (sourceId === 'custom' || !sourceId) return [];
+    const config = setupConfig || {};
+    switch (sourceId) {
+      case 'formations': return (config.formations || []).map(f => f.name || f);
+      case 'formationFamilies': return (config.formationFamilies || []).map(f => f.name);
+      case 'shiftMotions': return (config.shiftMotions || []).map(f => f.name);
+      case 'personnelGroupings': return (config.personnelGroupings || []).map(f => f.name || f);
+      case 'playBuckets': return (config.playBuckets || []).map(f => f.name);
+      case 'conceptGroups': return (config.conceptGroups || []).map(f => f.name);
+      case 'readTypes': return (config.readTypes || []).map(f => f.name || f);
+      case 'lookAlikeSeries': return (config.lookAlikeSeries || []).map(f => f.name);
+      case 'passProtections': return (config.passProtections || []).map(f => f.name || f);
+      case 'runBlocking': return (config.runBlocking || []).map(f => f.name || f);
+      case 'fieldZones': return (config.fieldZones || []).map(f => f.name || f);
+      case 'downDistanceCategories': return (config.downDistanceCategories || []).map(f => f.name || f);
+      default: return [];
+    }
+  }, [setupConfig]);
 
   // Diagram editor state
   const [showSkillEditor, setShowSkillEditor] = useState(false);
@@ -74,7 +115,7 @@ export default function PlayEditor({
     image: null,
     wristbandSlot: '',
     staplesSlot: '',
-    playType: '',
+    playType: 'quick', // Default to quick (simple Formation + Play)
     actionTypes: [],
     hashPreference: 'Any',
     baseType: '',
@@ -113,6 +154,8 @@ export default function PlayEditor({
   // Initialize form with play data when editing
   useEffect(() => {
     if (play) {
+      const playType = play.playType || 'quick';
+      setSelectedPlayType(playType);
       setFormData({
         phase: play.phase || phase,
         name: play.name || '',
@@ -126,7 +169,7 @@ export default function PlayEditor({
         image: play.image || null,
         wristbandSlot: play.wristbandSlot || '',
         staplesSlot: play.staplesSlot || '',
-        playType: play.playType || '',
+        playType: playType,
         actionTypes: play.actionTypes || [],
         hashPreference: play.hashPreference || 'Any',
         baseType: play.baseType || '',
@@ -148,6 +191,7 @@ export default function PlayEditor({
       });
     } else {
       // Reset form for new play
+      setSelectedPlayType('quick');
       setFormData({
         phase: phase,
         name: '',
@@ -161,7 +205,7 @@ export default function PlayEditor({
         image: null,
         wristbandSlot: '',
         staplesSlot: '',
-        playType: '',
+        playType: 'quick',
         actionTypes: [],
         hashPreference: 'Any',
         baseType: '',
@@ -373,6 +417,35 @@ export default function PlayEditor({
             onToggle={() => toggleSection('basic')}
           >
             <div className="space-y-4">
+              {/* Play Type Selector - Only for Offense */}
+              {phase === 'OFFENSE' && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">
+                    Play Type
+                  </label>
+                  <div className="flex gap-2">
+                    {PLAY_TYPES.map(type => (
+                      <button
+                        key={type.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedPlayType(type.id);
+                          setFormData(prev => ({ ...prev, playType: type.id }));
+                        }}
+                        className={`flex-1 px-3 py-2 rounded-lg border-2 transition-all text-center ${
+                          selectedPlayType === type.id
+                            ? 'border-sky-500 bg-sky-500/10 text-sky-400'
+                            : 'border-slate-600 bg-slate-800 text-slate-300 hover:border-slate-500'
+                        }`}
+                      >
+                        <span className="text-lg mr-1">{type.icon}</span>
+                        <span className="font-medium">{type.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Full Play Call - Formation + Name combined */}
               <div>
                 <label className="block text-sm font-medium text-slate-400 mb-1">
@@ -451,7 +524,60 @@ export default function PlayEditor({
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                     {playCallSyntax.map((slot) => {
                       const slotValue = formData.playCallParts?.[slot.id] || '';
+                      // Use source category items if defined, otherwise fall back to term library
+                      const sourceItems = slot.sourceCategory && slot.sourceCategory !== 'custom'
+                        ? getSourceItems(slot.sourceCategory)
+                        : [];
                       const slotTerms = termLibrary[slot.id] || [];
+                      const dropdownItems = sourceItems.length > 0 ? sourceItems : slotTerms.map(t => t.label);
+
+                      // Check if selected term has signals and apply them
+                      const handleTermSelection = (selectedValue, slotId) => {
+                        if (!selectedValue) return;
+
+                        // Find the term in the term library to check for signals
+                        const slotTermsForSignals = termLibrary[slotId] || [];
+                        const selectedTerm = slotTermsForSignals.find(t => t.label === selectedValue);
+
+                        const updates = {
+                          playCallParts: { ...formData.playCallParts, [slotId]: selectedValue }
+                        };
+
+                        // Apply any signals from the selected term
+                        if (selectedTerm?.signals) {
+                          const signals = selectedTerm.signals;
+                          // Auto-fill signaled fields
+                          if (signals.playType) {
+                            updates.playType = signals.playType;
+                          }
+                          // Add signaled values to playCallParts for other fields
+                          Object.entries(signals).forEach(([key, value]) => {
+                            if (key !== 'playType' && value) {
+                              // Auto-fill other playCallParts if they're empty
+                              if (!formData.playCallParts?.[key]) {
+                                updates.playCallParts[key] = value;
+                              }
+                            }
+                          });
+                        }
+
+                        setFormData(prev => ({ ...prev, ...updates }));
+                      };
+
+                      // Check if this slot's value was auto-filled by a signal
+                      const wasAutoFilled = (() => {
+                        // Check all terms in the library for signals that match this slot
+                        const allTerms = Object.values(termLibrary).flat();
+                        return allTerms.some(termGroup => {
+                          if (Array.isArray(termGroup)) {
+                            return termGroup.some(t =>
+                              t.signals?.[slot.id] === slotValue &&
+                              Object.values(formData.playCallParts || {}).includes(t.label)
+                            );
+                          }
+                          return false;
+                        });
+                      })();
 
                       return (
                         <div
@@ -468,16 +594,20 @@ export default function PlayEditor({
                             e.currentTarget.classList.remove('border-sky-500', 'bg-sky-500/10');
                             const word = e.dataTransfer.getData('text/plain');
                             if (word) {
-                              setFormData(prev => ({
-                                ...prev,
-                                playCallParts: { ...prev.playCallParts, [slot.id]: word }
-                              }));
+                              handleTermSelection(word, slot.id);
                             }
                           }}
-                          className="p-2 bg-slate-800 border border-dashed border-slate-600 rounded-lg transition-colors"
+                          className={`p-2 bg-slate-800 border border-dashed rounded-lg transition-colors ${
+                            wasAutoFilled ? 'border-amber-500/50 bg-amber-500/5' : 'border-slate-600'
+                          }`}
                         >
-                          <div className="text-[10px] text-slate-500 uppercase tracking-wide mb-1">
-                            {slot.label}
+                          <div className="flex items-center gap-1 mb-1">
+                            <span className="text-[10px] text-slate-500 uppercase tracking-wide">
+                              {slot.label}
+                            </span>
+                            {wasAutoFilled && (
+                              <span className="text-[9px] px-1 py-0.5 bg-amber-500/20 text-amber-400 rounded">auto</span>
+                            )}
                           </div>
                           {slotValue ? (
                             <div className="flex items-center justify-between">
@@ -492,22 +622,15 @@ export default function PlayEditor({
                                 <X size={12} />
                               </button>
                             </div>
-                          ) : slotTerms.length > 0 ? (
+                          ) : dropdownItems.length > 0 ? (
                             <select
-                              onChange={(e) => {
-                                if (e.target.value) {
-                                  setFormData(prev => ({
-                                    ...prev,
-                                    playCallParts: { ...prev.playCallParts, [slot.id]: e.target.value }
-                                  }));
-                                }
-                              }}
+                              onChange={(e) => handleTermSelection(e.target.value, slot.id)}
                               className="w-full px-1 py-0.5 bg-slate-700 border border-slate-600 rounded text-xs text-slate-400"
                               value=""
                             >
                               <option value="">Select or drop...</option>
-                              {slotTerms.map(term => (
-                                <option key={term.id} value={term.label}>{term.label}</option>
+                              {dropdownItems.map((item, i) => (
+                                <option key={i} value={item}>{item}</option>
                               ))}
                             </select>
                           ) : (

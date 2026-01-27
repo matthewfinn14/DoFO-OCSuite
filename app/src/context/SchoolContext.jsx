@@ -93,14 +93,37 @@ export function SchoolProvider({ children }) {
     // Formations
     formations: [],
 
+    // Formation Families (Offense) - groupings like 2x2, 3x1, Under/Gun, Open/Closed, etc.
+    formationFamilies: [],
+
+    // Shifts & Motions (Offense) - pre-snap movement tags
+    shiftMotions: [],
+
     // Play Buckets (formerly playCategories) - top level organization
     playBuckets: [],
 
     // Concept Families (formerly playBuckets) - sub-level organization within buckets
     conceptGroups: [],
 
-    // Play Call Syntax
+    // Play Call Syntax (legacy - single syntax per phase)
     syntax: { OFFENSE: [], DEFENSE: [], SPECIAL_TEAMS: [] },
+
+    // Play Call Syntax Templates (new - multiple templates per phase)
+    // Each phase has templates: pass, run, quick, custom
+    syntaxTemplates: {
+      OFFENSE: {
+        pass: [],
+        run: [],
+        quick: [],
+        custom: []
+      },
+      DEFENSE: {
+        custom: []
+      },
+      SPECIAL_TEAMS: {
+        custom: []
+      }
+    },
 
     // Term Library / Play Call Chain Terms
     termLibrary: { OFFENSE: {}, DEFENSE: {}, SPECIAL_TEAMS: {} },
@@ -176,6 +199,23 @@ export function SchoolProvider({ children }) {
               config.conceptGroups = config.conceptFamilies;
             }
             delete config.conceptFamilies;
+            // Migrate legacy syntax to syntaxTemplates
+            if (config.syntax && !config.syntaxTemplates) {
+              config.syntaxTemplates = {
+                OFFENSE: {
+                  pass: [],
+                  run: [],
+                  quick: [],
+                  custom: config.syntax.OFFENSE || []
+                },
+                DEFENSE: {
+                  custom: config.syntax.DEFENSE || []
+                },
+                SPECIAL_TEAMS: {
+                  custom: config.syntax.SPECIAL_TEAMS || []
+                }
+              };
+            }
             setSetupConfig(prev => ({ ...prev, ...config }));
           }
           if (data.meetingNotes) setMeetingNotes(data.meetingNotes);
@@ -237,6 +277,23 @@ export function SchoolProvider({ children }) {
               config.conceptGroups = config.conceptFamilies;
             }
             delete config.conceptFamilies;
+            // Migrate legacy syntax to syntaxTemplates
+            if (config.syntax && !config.syntaxTemplates) {
+              config.syntaxTemplates = {
+                OFFENSE: {
+                  pass: [],
+                  run: [],
+                  quick: [],
+                  custom: config.syntax.OFFENSE || []
+                },
+                DEFENSE: {
+                  custom: config.syntax.DEFENSE || []
+                },
+                SPECIAL_TEAMS: {
+                  custom: config.syntax.SPECIAL_TEAMS || []
+                }
+              };
+            }
             setSetupConfig(prev => ({ ...prev, ...config }));
           }
           if (data.meetingNotes) setMeetingNotes(data.meetingNotes);
