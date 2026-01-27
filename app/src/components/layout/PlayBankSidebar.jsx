@@ -36,10 +36,74 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedSections, setExpandedSections] = useState({});
   const [quickAddValue, setQuickAddValue] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterValue, setFilterValue] = useState('');
 
   // Get play buckets and concept families from setupConfig (with settings fallback)
   const playBuckets = setupConfig?.playBuckets || settings?.playBuckets || [];
   const conceptGroups = setupConfig?.conceptGroups || settings?.conceptGroups || [];
+  const formations = setupConfig?.formations || settings?.formations || [];
+  const readTypes = setupConfig?.readTypes || [];
+  const lookAlikeSeries = setupConfig?.lookAlikeSeries || [];
+  const fieldZones = setupConfig?.fieldZones || [];
+  const specialSituations = setupConfig?.specialSituations || [];
+
+  // Get filter options based on selected category
+  const getFilterOptions = useCallback(() => {
+    switch (filterCategory) {
+      case 'formation':
+        return formations
+          .filter(f => !f.phase || f.phase === playBankPhase)
+          .map(f => ({ id: f.id || f.name, label: f.name || f.label }));
+      case 'bucket':
+        return playBuckets
+          .filter(b => (b.phase || 'OFFENSE') === playBankPhase)
+          .map(b => ({ id: b.id, label: b.label }));
+      case 'conceptGroup':
+        return conceptGroups
+          .filter(c => {
+            const bucket = playBuckets.find(b => b.id === c.categoryId);
+            return bucket && (bucket.phase || 'OFFENSE') === playBankPhase;
+          })
+          .map(c => ({ id: c.id, label: c.label }));
+      case 'readType':
+        return readTypes.map(r => ({ id: r.id, label: r.name }));
+      case 'lookAlike':
+        return lookAlikeSeries.map(s => ({ id: s.id, label: s.name }));
+      case 'situation':
+        const zones = fieldZones.map(z => ({ id: z.id || z.name, label: z.name, type: 'zone' }));
+        const specials = specialSituations.map(s => ({ id: s.id || s.name, label: s.name, type: 'special' }));
+        return [...zones, ...specials];
+      default:
+        return [];
+    }
+  }, [filterCategory, formations, playBuckets, conceptGroups, readTypes, lookAlikeSeries, fieldZones, specialSituations, playBankPhase]);
+
+  const filterOptions = getFilterOptions();
+
+  // Check if a play matches the current filter
+  const playMatchesFilter = useCallback((play) => {
+    if (!filterCategory || !filterValue) return true;
+
+    switch (filterCategory) {
+      case 'formation':
+        return play.formation === filterValue || play.formationId === filterValue;
+      case 'bucket':
+        return play.bucketId === filterValue;
+      case 'conceptGroup':
+        const cg = conceptGroups.find(c => c.id === filterValue);
+        return cg && play.bucketId === cg.categoryId && play.conceptFamily === cg.label;
+      case 'readType':
+        return play.readType === filterValue;
+      case 'lookAlike':
+        const series = lookAlikeSeries.find(s => s.id === filterValue);
+        return series && series.playIds?.includes(play.id);
+      case 'situation':
+        return play.fieldZones?.includes(filterValue) || play.situations?.includes(filterValue);
+      default:
+        return true;
+    }
+  }, [filterCategory, filterValue, conceptGroups, lookAlikeSeries]);
 
   // Get current week
   const currentWeek = weeks.find(w => w.id === currentWeekId) || null;
@@ -62,7 +126,7 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
   const usageData = useMemo(() => {
     // Filter by phase first (plays without phase default to OFFENSE)
     const filteredPlays = (playsArray || []).filter(p =>
-      !p.archived && (p.phase || 'OFFENSE') === playBankPhase
+      !p.archived && (p.phase || 'OFFENSE') === playBankPhase && playMatchesFilter(p)
     );
     const query = searchTerm.toLowerCase();
 
@@ -119,16 +183,16 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
     }
 
     return buckets;
-  }, [playsArray, playBuckets, conceptGroups, searchTerm, playBankPhase]);
+  }, [playsArray, playBuckets, conceptGroups, searchTerm, playBankPhase, playMatchesFilter]);
 
   // Calculate install data organized by bucket and concept family (like usageData but filtered to installed plays)
   const installUsageData = useMemo(() => {
     const installList = currentWeek?.installList || [];
     if (installList.length === 0) return [];
 
-    // Filter by install list, phase, and search
+    // Filter by install list, phase, search, and category filter
     const installedPlays = (playsArray || []).filter(p =>
-      !p.archived && installList.includes(p.id) && (p.phase || 'OFFENSE') === playBankPhase
+      !p.archived && installList.includes(p.id) && (p.phase || 'OFFENSE') === playBankPhase && playMatchesFilter(p)
     );
     const query = searchTerm.toLowerCase();
 
@@ -183,7 +247,7 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
     }
 
     return buckets;
-  }, [playsArray, playBuckets, conceptGroups, currentWeek, searchTerm, playBankPhase]);
+  }, [playsArray, playBuckets, conceptGroups, currentWeek, searchTerm, playBankPhase, playMatchesFilter]);
 
   // Total install count for display
   const installTotalCount = useMemo(() => {
@@ -572,6 +636,52 @@ export default function PlayBankSidebar({ isOpen, onToggle }) {
               className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-300 rounded bg-white text-slate-800 placeholder-slate-400"
             />
           </div>
+        </div>
+
+        {/* Filter Dropdowns */}
+        <div className="p-2 bg-slate-50 border-b border-slate-200">
+          <div className="flex gap-2">
+            <select
+              value={filterCategory}
+              onChange={(e) => {
+                setFilterCategory(e.target.value);
+                setFilterValue('');
+              }}
+              className="flex-1 px-2 py-1.5 text-xs border border-slate-300 rounded bg-white text-slate-700"
+            >
+              <option value="">Filter by...</option>
+              <option value="formation">Formation</option>
+              <option value="bucket">Bucket</option>
+              <option value="conceptGroup">Concept Group</option>
+              <option value="readType">Read Type</option>
+              <option value="lookAlike">Look-Alike Series</option>
+              <option value="situation">Situation</option>
+            </select>
+            <select
+              value={filterValue}
+              onChange={(e) => setFilterValue(e.target.value)}
+              disabled={!filterCategory}
+              className="flex-1 px-2 py-1.5 text-xs border border-slate-300 rounded bg-white text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="">
+                {filterCategory ? 'Select...' : 'Select category first'}
+              </option>
+              {filterOptions.map(opt => (
+                <option key={opt.id} value={opt.id}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+          {(filterCategory || filterValue) && (
+            <button
+              onClick={() => {
+                setFilterCategory('');
+                setFilterValue('');
+              }}
+              className="mt-1.5 text-[10px] text-sky-500 hover:text-sky-600 font-medium"
+            >
+              Clear filter
+            </button>
+          )}
         </div>
 
         {/* Content */}
