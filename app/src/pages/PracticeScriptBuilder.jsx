@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useSchool } from '../context/SchoolContext';
+import { usePlayDetailsModal } from '../components/PlayDetailsModal';
 import {
   Calendar,
   Plus,
@@ -14,8 +15,46 @@ import {
   Play,
   Copy,
   Settings,
-  Save
+  Save,
+  FileText,
+  ListOrdered
 } from 'lucide-react';
+
+// Hash patterns for script rows (alternating L to R)
+const HASH_PATTERN_A = ['L', 'LM', 'M', 'RM', 'R', 'RM', 'M', 'LM'];
+const HASH_PATTERN_B = ['R', 'RM', 'M', 'LM', 'L', 'LM', 'M', 'RM'];
+
+// Create a script row with hash based on index
+const createScriptRow = (index, pattern = HASH_PATTERN_A) => ({
+  id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+  playId: '',
+  playName: '',
+  hash: pattern[index % 8],
+  notes: ''
+});
+
+// Generate script rows based on segment duration (~1.6 plays per minute)
+const generateScriptRows = (duration, existingScript = []) => {
+  const targetCount = Math.round((parseInt(duration) || 0) * 1.6) || 8;
+
+  // Determine pattern based on first row or default
+  let pattern = HASH_PATTERN_A;
+  if (existingScript.length > 0 && existingScript[0]?.hash === 'R') {
+    pattern = HASH_PATTERN_B;
+  }
+
+  // Keep existing rows and add more if needed
+  const currentRows = [...existingScript];
+  const needed = targetCount - currentRows.length;
+
+  if (needed <= 0) return currentRows;
+
+  for (let i = 0; i < needed; i++) {
+    currentRows.push(createScriptRow(currentRows.length, pattern));
+  }
+
+  return currentRows;
+};
 
 // Practice segment types
 const SEGMENT_TYPES = [
@@ -42,11 +81,13 @@ const DEFAULT_SEGMENTS = [
 
 export default function PracticeScriptBuilder() {
   const { plays, weeks, currentWeekId, setCurrentWeekId, updateWeeks } = useSchool();
+  const { openPlayDetails } = usePlayDetailsModal();
 
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [expandedSegments, setExpandedSegments] = useState({});
   const [showPlaySelector, setShowPlaySelector] = useState(false);
   const [activeSegmentId, setActiveSegmentId] = useState(null);
+  const [activeScriptRowId, setActiveScriptRowId] = useState(null); // Track which script row to fill
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPhase, setFilterPhase] = useState('offense');
   const [showSettings, setShowSettings] = useState(false);
@@ -171,6 +212,81 @@ export default function PracticeScriptBuilder() {
 
     const newPlays = segment.plays.filter((_, idx) => idx !== playIndex);
     updateSegment(segmentId, { plays: newPlays });
+  };
+
+  // Toggle script on/off for a segment
+  const toggleScript = (segmentId) => {
+    const segment = segments.find(s => s.id === segmentId);
+    if (!segment) return;
+
+    if (segment.hasScript) {
+      // Turn off - keep script data but mark as disabled
+      updateSegment(segmentId, { hasScript: false });
+    } else {
+      // Turn on - generate script rows if none exist
+      const script = segment.script?.length > 0
+        ? segment.script
+        : generateScriptRows(segment.duration);
+      updateSegment(segmentId, { hasScript: true, script });
+    }
+  };
+
+  // Update a specific script row
+  const updateScriptRow = (segmentId, rowId, updates) => {
+    const segment = segments.find(s => s.id === segmentId);
+    if (!segment?.script) return;
+
+    const newScript = segment.script.map(row =>
+      row.id === rowId ? { ...row, ...updates } : row
+    );
+    updateSegment(segmentId, { script: newScript });
+  };
+
+  // Open play selector for a specific script row
+  const openScriptPlaySelector = (segmentId, rowId) => {
+    setActiveSegmentId(segmentId);
+    setActiveScriptRowId(rowId);
+    setShowPlaySelector(true);
+    setSearchTerm('');
+  };
+
+  // Add play to script row
+  const addPlayToScriptRow = (play) => {
+    if (!activeSegmentId || !activeScriptRowId) return;
+
+    const segment = segments.find(s => s.id === activeSegmentId);
+    if (!segment?.script) return;
+
+    const newScript = segment.script.map(row =>
+      row.id === activeScriptRowId
+        ? { ...row, playId: play.id, playName: play.name }
+        : row
+    );
+    updateSegment(activeSegmentId, { script: newScript });
+  };
+
+  // Clear play from script row
+  const clearScriptRow = (segmentId, rowId) => {
+    updateScriptRow(segmentId, rowId, { playId: '', playName: '' });
+  };
+
+  // Add new script row at end
+  const addScriptRow = (segmentId) => {
+    const segment = segments.find(s => s.id === segmentId);
+    if (!segment) return;
+
+    const script = segment.script || [];
+    const newRow = createScriptRow(script.length);
+    updateSegment(segmentId, { script: [...script, newRow] });
+  };
+
+  // Delete script row
+  const deleteScriptRow = (segmentId, rowId) => {
+    const segment = segments.find(s => s.id === segmentId);
+    if (!segment?.script) return;
+
+    const newScript = segment.script.filter(row => row.id !== rowId);
+    updateSegment(segmentId, { script: newScript });
   };
 
   // Get play by ID
@@ -310,7 +426,10 @@ export default function PracticeScriptBuilder() {
                     </span>
                   </div>
                   <div className="text-sm text-slate-500 mt-0.5">
-                    {startTime} • {segment.plays?.length || 0} plays
+                    {startTime} • {segment.hasScript
+                      ? `${segment.script?.filter(r => r.playId || r.playName).length || 0}/${segment.script?.length || 0} script`
+                      : `${segment.plays?.length || 0} plays`
+                    }
                   </div>
                 </div>
 
@@ -322,7 +441,14 @@ export default function PracticeScriptBuilder() {
                       value={segment.duration}
                       onChange={(e) => {
                         e.stopPropagation();
-                        updateSegment(segment.id, { duration: parseInt(e.target.value) || 0 });
+                        const newDuration = parseInt(e.target.value) || 0;
+                        // If script is enabled, regenerate rows for new duration
+                        if (segment.hasScript) {
+                          const newScript = generateScriptRows(newDuration, segment.script);
+                          updateSegment(segment.id, { duration: newDuration, script: newScript });
+                        } else {
+                          updateSegment(segment.id, { duration: newDuration });
+                        }
                       }}
                       onClick={(e) => e.stopPropagation()}
                       className="w-12 px-2 py-1 bg-slate-800 border border-slate-700 rounded text-white text-sm text-center"
@@ -330,6 +456,20 @@ export default function PracticeScriptBuilder() {
                     />
                     <span className="text-slate-500 text-sm">min</span>
                   </div>
+
+                  {/* Script Toggle */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleScript(segment.id); }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      segment.hasScript
+                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50'
+                        : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-600'
+                    }`}
+                    title={segment.hasScript ? 'Script enabled' : 'Enable script'}
+                  >
+                    <ListOrdered size={14} />
+                    Script
+                  </button>
 
                   <button
                     onClick={(e) => { e.stopPropagation(); removeSegment(segment.id); }}
@@ -366,7 +506,118 @@ export default function PracticeScriptBuilder() {
                     </div>
                   </div>
 
-                  {/* Plays List */}
+                  {/* Script Table (when script is enabled) */}
+                  {segment.hasScript && segment.script?.length > 0 && (
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-sm text-slate-400 flex items-center gap-2">
+                          <ListOrdered size={14} />
+                          Script ({segment.script.filter(r => r.playId || r.playName).length}/{segment.script.length} filled)
+                        </label>
+                        <button
+                          onClick={() => addScriptRow(segment.id)}
+                          className="flex items-center gap-1 px-2 py-1 text-sm text-sky-400 hover:text-sky-300"
+                        >
+                          <Plus size={14} />
+                          Add Row
+                        </button>
+                      </div>
+
+                      <div className="bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-slate-700 text-slate-400 text-xs">
+                              <th className="p-2 text-center w-10">#</th>
+                              <th className="p-2 text-center w-16">Hash</th>
+                              <th className="p-2 text-left">Play</th>
+                              <th className="p-2 text-left w-32">Notes</th>
+                              <th className="p-2 w-10"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {segment.script.map((row, idx) => {
+                              const play = row.playId ? getPlay(row.playId) : null;
+                              return (
+                                <tr key={row.id} className="border-b border-slate-700/50 hover:bg-slate-700/30">
+                                  <td className="p-2 text-center text-slate-500">{idx + 1}</td>
+                                  <td className="p-2 text-center">
+                                    <select
+                                      value={row.hash || 'M'}
+                                      onChange={(e) => updateScriptRow(segment.id, row.id, { hash: e.target.value })}
+                                      className="w-full px-1 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs text-center"
+                                    >
+                                      <option value="L">L</option>
+                                      <option value="LM">LM</option>
+                                      <option value="M">M</option>
+                                      <option value="RM">RM</option>
+                                      <option value="R">R</option>
+                                    </select>
+                                  </td>
+                                  <td className="p-2">
+                                    {row.playId && play ? (
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => openPlayDetails(row.playId)}
+                                          className="text-sky-400 hover:text-sky-300 hover:underline text-left truncate"
+                                        >
+                                          {play.name}
+                                        </button>
+                                        <button
+                                          onClick={() => clearScriptRow(segment.id, row.id)}
+                                          className="p-0.5 text-slate-500 hover:text-red-400"
+                                          title="Clear play"
+                                        >
+                                          <X size={12} />
+                                        </button>
+                                      </div>
+                                    ) : row.playName ? (
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-white truncate">{row.playName}</span>
+                                        <button
+                                          onClick={() => clearScriptRow(segment.id, row.id)}
+                                          className="p-0.5 text-slate-500 hover:text-red-400"
+                                          title="Clear play"
+                                        >
+                                          <X size={12} />
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <button
+                                        onClick={() => openScriptPlaySelector(segment.id, row.id)}
+                                        className="w-full px-2 py-1 bg-slate-700/50 border border-dashed border-slate-600 rounded text-slate-500 hover:text-slate-400 hover:border-slate-500 text-xs text-left"
+                                      >
+                                        + Select play...
+                                      </button>
+                                    )}
+                                  </td>
+                                  <td className="p-2">
+                                    <input
+                                      type="text"
+                                      value={row.notes || ''}
+                                      onChange={(e) => updateScriptRow(segment.id, row.id, { notes: e.target.value })}
+                                      placeholder="Notes..."
+                                      className="w-full px-2 py-1 bg-slate-700/50 border border-slate-600 rounded text-white text-xs placeholder-slate-500"
+                                    />
+                                  </td>
+                                  <td className="p-2 text-center">
+                                    <button
+                                      onClick={() => deleteScriptRow(segment.id, row.id)}
+                                      className="p-1 text-slate-600 hover:text-red-400"
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Plays List (legacy/simple mode) */}
+                  {!segment.hasScript && (
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="text-sm text-slate-400">Plays / Cards</label>
@@ -440,6 +691,7 @@ export default function PracticeScriptBuilder() {
                       </div>
                     )}
                   </div>
+                  )}
 
                   {/* Notes */}
                   <div className="mt-4">
@@ -473,9 +725,15 @@ export default function PracticeScriptBuilder() {
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-slate-900 rounded-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-4 border-b border-slate-800">
-              <h3 className="text-lg font-semibold text-white">Add Play to Segment</h3>
+              <h3 className="text-lg font-semibold text-white">
+                {activeScriptRowId ? 'Select Play for Script Row' : 'Add Play to Segment'}
+              </h3>
               <button
-                onClick={() => { setShowPlaySelector(false); setActiveSegmentId(null); }}
+                onClick={() => {
+                  setShowPlaySelector(false);
+                  setActiveSegmentId(null);
+                  setActiveScriptRowId(null);
+                }}
                 className="p-2 text-slate-400 hover:text-white"
               >
                 <X size={20} />
@@ -518,9 +776,16 @@ export default function PracticeScriptBuilder() {
                     <button
                       key={play.id}
                       onClick={() => {
-                        addPlayToSegment(play.id);
+                        if (activeScriptRowId) {
+                          // Add to specific script row
+                          addPlayToScriptRow(play);
+                        } else {
+                          // Legacy: add to segment plays list
+                          addPlayToSegment(play.id);
+                        }
                         setShowPlaySelector(false);
                         setActiveSegmentId(null);
+                        setActiveScriptRowId(null);
                       }}
                       className="p-3 bg-slate-800 rounded-lg hover:bg-slate-700 text-left"
                     >
