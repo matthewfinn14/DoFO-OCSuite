@@ -67,8 +67,9 @@ function TemplateCard({ template, onDelete, onRename }) {
       )}
 
       <p className="text-xs text-slate-400 mb-2">
-        {template.segments?.length || 0} segments
+        {template.segments?.length || template.schedule?.length || 0} {template.schedule ? 'items' : 'segments'}
         {template.dayOfWeek && ` • ${template.dayOfWeek}`}
+        {template.gameTime && ` • Kickoff: ${template.gameTime}`}
       </p>
 
       <div className="text-xs text-slate-500">

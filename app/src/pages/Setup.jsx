@@ -1164,6 +1164,7 @@ export default function Setup() {
               positionNames={localConfig.positionNames || {}}
               positionColors={localConfig.positionColors || {}}
               positionDescriptions={localConfig.positionDescriptions || {}}
+              positionTypes={localConfig.positionTypes || {}}
               hiddenPositions={localConfig.hiddenPositions || {}}
               customPositions={localConfig.customPositions || {}}
               onUpdate={updateLocal}
@@ -1380,8 +1381,20 @@ export default function Setup() {
 
 // ============= SUB-COMPONENTS =============
 
+// Default position types (skill = ball carrier, line = lineman)
+const DEFAULT_POSITION_TYPES = {
+  QB: 'skill', RB: 'skill', FB: 'skill', WR: 'skill', TE: 'skill',
+  X: 'skill', Y: 'skill', Z: 'skill', H: 'skill', F: 'skill',
+  LT: 'line', LG: 'line', C: 'line', RG: 'line', RT: 'line',
+  // Defense - all skill for game plan purposes
+  DE: 'skill', DT: 'skill', NT: 'skill', OLB: 'skill', ILB: 'skill',
+  MLB: 'skill', CB: 'skill', FS: 'skill', SS: 'skill', NB: 'skill', DB: 'skill',
+  // Special Teams
+  K: 'skill', P: 'skill', LS: 'line', KR: 'skill', PR: 'skill', G: 'skill', PP: 'skill'
+};
+
 // Positions Tab Component
-function PositionsTab({ phase, positions, positionNames, positionColors, positionDescriptions, hiddenPositions, customPositions, onUpdate }) {
+function PositionsTab({ phase, positions, positionNames, positionColors, positionDescriptions, positionTypes, hiddenPositions, customPositions, onUpdate }) {
   const addPosition = () => {
     const key = prompt('Enter Position Key (1-3 letters, e.g., "F" or "S2"):');
     if (!key) return;
@@ -1427,6 +1440,14 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
 
   const updatePositionDesc = (key, value) => {
     onUpdate('positionDescriptions', { ...positionDescriptions, [key]: value });
+  };
+
+  const updatePositionType = (key, value) => {
+    onUpdate('positionTypes', { ...(positionTypes || {}), [key]: value });
+  };
+
+  const getPositionType = (key) => {
+    return positionTypes?.[key] || DEFAULT_POSITION_TYPES[key] || 'skill';
   };
 
   const hiddenList = hiddenPositions[phase] || [];
@@ -1486,6 +1507,20 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
                 style={{ backgroundColor: positionColors[pos.key] || DEFAULT_POSITION_COLORS[pos.key] || '#64748b' }}
               />
             </div>
+
+            {/* Position Type Selector - Only show for Offense */}
+            {phase === 'OFFENSE' && (
+              <div className="mt-2">
+                <select
+                  value={getPositionType(pos.key)}
+                  onChange={(e) => updatePositionType(pos.key, e.target.value)}
+                  className="w-full px-2 py-1 text-xs bg-slate-800 border border-slate-600 rounded text-slate-300"
+                >
+                  <option value="skill">Ball Carrier / Skill</option>
+                  <option value="line">Lineman</option>
+                </select>
+              </div>
+            )}
           </div>
         ))}
 
@@ -5686,13 +5721,99 @@ const PHASE_COLORS = [
   { id: 'orange', label: 'Orange', class: 'bg-orange-600' }
 ];
 
-// Default phases if none defined
+// Default phases if none defined - includes default week counts and configurations
 const DEFAULT_PHASES = [
-  { id: 'offseason', name: 'Offseason', color: 'slate', order: 0 },
-  { id: 'summer', name: 'Summer', color: 'amber', order: 1 },
-  { id: 'preseason', name: 'Preseason', color: 'purple', order: 2 },
-  { id: 'season', name: 'Regular Season', color: 'emerald', order: 3 }
+  { id: 'offseason', name: 'Offseason', color: 'slate', order: 0, numWeeks: 0, isOffseason: true },
+  { id: 'summer', name: 'Summer', color: 'amber', order: 1, numWeeks: 6, startDate: '' },
+  { id: 'preseason', name: 'Preseason', color: 'purple', order: 2, numWeeks: 4, startDate: '' },
+  { id: 'season', name: 'Regular Season', color: 'emerald', order: 3, numWeeks: 10, startDate: '' }
 ];
+
+// Default week names for each phase (customizable templates)
+const DEFAULT_WEEK_CONFIGS = {
+  offseason: {
+    // Offseason is a single special entry, not multiple weeks
+    weeks: [{ name: 'Offseason', isOffseason: true }]
+  },
+  summer: {
+    // Summer camp / 7-on-7 weeks
+    weeks: [
+      { name: 'Summer Week 1', weekNum: 1 },
+      { name: 'Summer Week 2', weekNum: 2 },
+      { name: 'Summer Week 3', weekNum: 3 },
+      { name: 'Summer Week 4', weekNum: 4 },
+      { name: 'Summer Week 5', weekNum: 5 },
+      { name: 'Summer Week 6', weekNum: 6 }
+    ]
+  },
+  preseason: {
+    // Fall camp / preseason practice weeks
+    weeks: [
+      { name: 'Camp Week 1', weekNum: 1 },
+      { name: 'Camp Week 2', weekNum: 2 },
+      { name: 'Camp Week 3', weekNum: 3 },
+      { name: 'Scrimmage Week', weekNum: 4 }
+    ]
+  },
+  season: {
+    // Regular season game weeks
+    weeks: [
+      { name: 'Week 1', weekNum: 1, opponent: '', isHome: true },
+      { name: 'Week 2', weekNum: 2, opponent: '', isHome: false },
+      { name: 'Week 3', weekNum: 3, opponent: '', isHome: true },
+      { name: 'Week 4', weekNum: 4, opponent: '', isHome: false },
+      { name: 'Week 5', weekNum: 5, opponent: '', isHome: true },
+      { name: 'Week 6', weekNum: 6, opponent: '', isHome: false },
+      { name: 'Week 7', weekNum: 7, opponent: '', isHome: true },
+      { name: 'Week 8', weekNum: 8, opponent: '', isHome: false },
+      { name: 'Week 9', weekNum: 9, opponent: '', isHome: true },
+      { name: 'Week 10', weekNum: 10, opponent: '', isHome: false }
+    ]
+  }
+};
+
+// Helper function to generate default weeks for all phases
+function generateDefaultWeeks(phases, activeYear) {
+  const allWeeks = [];
+
+  phases.forEach(phase => {
+    const config = DEFAULT_WEEK_CONFIGS[phase.id];
+    if (!config) return;
+
+    config.weeks.forEach((weekConfig, index) => {
+      // Calculate date if phase has a start date
+      let date = null;
+      if (phase.startDate && weekConfig.weekNum) {
+        const start = new Date(phase.startDate);
+        start.setDate(start.getDate() + ((weekConfig.weekNum - 1) * 7));
+        date = start.toISOString().split('T')[0];
+      }
+
+      const week = {
+        id: phase.id === 'offseason' ? 'offseason' : `${phase.id}_week_${weekConfig.weekNum || index + 1}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        name: weekConfig.name,
+        phaseId: phase.id,
+        phaseName: phase.name,
+        phaseColor: phase.color,
+        weekNum: weekConfig.weekNum || 0,
+        date: date,
+        year: activeYear,
+        isOffseason: weekConfig.isOffseason || false,
+        opponent: weekConfig.opponent || '',
+        createdAt: new Date().toISOString()
+      };
+
+      // Only add isHome for season weeks (where it's defined)
+      if (typeof weekConfig.isHome === 'boolean') {
+        week.isHome = weekConfig.isHome;
+      }
+
+      allWeeks.push(week);
+    });
+  });
+
+  return allWeeks;
+}
 
 // Season Phases Tab Component - Define and configure season phases
 function SeasonPhasesTab({ seasonPhases, onUpdate }) {
@@ -5994,8 +6115,117 @@ function SeasonScheduleTab({ weeks, seasonPhases, programLevels, activeYear, onU
     onUpdateWeeks([...weeks, ...newWeeks]);
   };
 
+  // Initialize all default weeks for the season
+  const initializeSeason = () => {
+    if (weeks.length > 0) {
+      if (!confirm('This will add default weeks for all phases. Existing weeks will be kept. Continue?')) return;
+    }
+
+    const existingPhaseWeekNums = {};
+    weeks.forEach(w => {
+      if (!existingPhaseWeekNums[w.phaseId]) existingPhaseWeekNums[w.phaseId] = new Set();
+      existingPhaseWeekNums[w.phaseId].add(w.weekNum);
+    });
+
+    const newWeeks = [];
+    phases.forEach(phase => {
+      const config = DEFAULT_WEEK_CONFIGS[phase.id];
+      if (!config) return;
+
+      config.weeks.forEach((weekConfig, index) => {
+        // Skip if this week number already exists for this phase
+        const weekNum = weekConfig.weekNum || 0;
+        if (existingPhaseWeekNums[phase.id]?.has(weekNum)) return;
+
+        // Calculate date if phase has a start date
+        let date = null;
+        if (phase.startDate && weekNum) {
+          const start = new Date(phase.startDate);
+          start.setDate(start.getDate() + ((weekNum - 1) * 7));
+          date = start.toISOString().split('T')[0];
+        }
+
+        const week = {
+          id: phase.id === 'offseason' && weekConfig.isOffseason ? 'offseason' : `${phase.id}_week_${weekNum}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+          name: weekConfig.name,
+          phaseId: phase.id,
+          phaseName: phase.name,
+          phaseColor: phase.color,
+          weekNum: weekNum,
+          date: date,
+          year: activeYear,
+          isOffseason: weekConfig.isOffseason || false,
+          opponent: weekConfig.opponent || '',
+          createdAt: new Date().toISOString()
+        };
+
+        // Only add isHome for season weeks (where it's defined)
+        if (typeof weekConfig.isHome === 'boolean') {
+          week.isHome = weekConfig.isHome;
+        }
+
+        newWeeks.push(week);
+      });
+    });
+
+    if (newWeeks.length === 0) {
+      alert('All default weeks already exist.');
+      return;
+    }
+
+    onUpdateWeeks([...weeks, ...newWeeks]);
+  };
+
+  // Calculate total expected weeks for comparison
+  const totalExpectedWeeks = phases.reduce((sum, p) => {
+    const config = DEFAULT_WEEK_CONFIGS[p.id];
+    return sum + (config?.weeks?.length || 0);
+  }, 0);
+
   return (
     <div className="space-y-6">
+      {/* Season Weeks Info Banner */}
+      <div className="p-4 bg-slate-800/50 border border-slate-700 rounded-xl">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-slate-700 rounded-lg">
+              <Calendar size={20} className="text-slate-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-white">
+                {weeks.length} Week{weeks.length !== 1 ? 's' : ''} Configured
+              </h3>
+              <p className="text-slate-500 text-xs">
+                Edit names, opponents, and dates below
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {weeks.length < totalExpectedWeeks && (
+              <button
+                onClick={initializeSeason}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 rounded-lg hover:bg-emerald-600/30 transition-colors"
+              >
+                <Plus size={14} />
+                Add Missing Weeks
+              </button>
+            )}
+            <button
+              onClick={() => {
+                if (confirm('Reset all weeks to defaults? This will remove any custom weeks and opponents.')) {
+                  const year = activeYear || new Date().getFullYear().toString();
+                  const defaultWeeks = generateDefaultWeeks(phases, year);
+                  onUpdateWeeks(defaultWeeks);
+                }
+              }}
+              className="px-3 py-1.5 text-sm text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+            >
+              Reset to Defaults
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Header with filters */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">

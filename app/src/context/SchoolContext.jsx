@@ -1,9 +1,83 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { doc, onSnapshot, updateDoc, collection } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from './AuthContext';
 
 const SchoolContext = createContext(null);
+
+// Default season phases
+const DEFAULT_SEASON_PHASES = [
+  { id: 'offseason', name: 'Offseason', color: 'slate', order: 0, numWeeks: 0, isOffseason: true },
+  { id: 'summer', name: 'Summer', color: 'amber', order: 1, numWeeks: 6 },
+  { id: 'preseason', name: 'Preseason', color: 'purple', order: 2, numWeeks: 4 },
+  { id: 'season', name: 'Regular Season', color: 'emerald', order: 3, numWeeks: 10 }
+];
+
+// Default week configurations for each phase
+const DEFAULT_WEEK_CONFIGS = {
+  offseason: [
+    { name: 'Offseason', weekNum: 0, isOffseason: true }
+  ],
+  summer: [
+    { name: 'Summer Week 1', weekNum: 1 },
+    { name: 'Summer Week 2', weekNum: 2 },
+    { name: 'Summer Week 3', weekNum: 3 },
+    { name: 'Summer Week 4', weekNum: 4 },
+    { name: 'Summer Week 5', weekNum: 5 },
+    { name: 'Summer Week 6', weekNum: 6 }
+  ],
+  preseason: [
+    { name: 'Camp Week 1', weekNum: 1 },
+    { name: 'Camp Week 2', weekNum: 2 },
+    { name: 'Camp Week 3', weekNum: 3 },
+    { name: 'Scrimmage Week', weekNum: 4 }
+  ],
+  season: [
+    { name: 'Week 1', weekNum: 1, opponent: '', isHome: true },
+    { name: 'Week 2', weekNum: 2, opponent: '', isHome: false },
+    { name: 'Week 3', weekNum: 3, opponent: '', isHome: true },
+    { name: 'Week 4', weekNum: 4, opponent: '', isHome: false },
+    { name: 'Week 5', weekNum: 5, opponent: '', isHome: true },
+    { name: 'Week 6', weekNum: 6, opponent: '', isHome: false },
+    { name: 'Week 7', weekNum: 7, opponent: '', isHome: true },
+    { name: 'Week 8', weekNum: 8, opponent: '', isHome: false },
+    { name: 'Week 9', weekNum: 9, opponent: '', isHome: true },
+    { name: 'Week 10', weekNum: 10, opponent: '', isHome: false }
+  ]
+};
+
+// Generate default weeks for all phases
+function generateDefaultWeeks(year, phases = DEFAULT_SEASON_PHASES) {
+  const allWeeks = [];
+  const timestamp = Date.now();
+
+  phases.forEach((phase, phaseIndex) => {
+    const weekConfigs = DEFAULT_WEEK_CONFIGS[phase.id] || [];
+
+    weekConfigs.forEach((config, weekIndex) => {
+      const week = {
+        id: config.isOffseason ? 'offseason' : `${phase.id}_week_${config.weekNum}_${timestamp}_${phaseIndex}_${weekIndex}`,
+        name: config.name,
+        phaseId: phase.id,
+        phaseName: phase.name,
+        phaseColor: phase.color,
+        weekNum: config.weekNum || 0,
+        year: year,
+        isOffseason: config.isOffseason || false,
+        opponent: config.opponent || '',
+        date: null,
+        createdAt: new Date().toISOString()
+      };
+      // Only add isHome for season weeks (where it's defined)
+      if (typeof config.isHome === 'boolean') {
+        week.isHome = config.isHome;
+      }
+      allWeeks.push(week);
+    });
+  });
+
+  return allWeeks;
+}
 
 export function SchoolProvider({ children }) {
   const { currentSchool, isAuthenticated, user, devMode } = useAuth();
@@ -312,6 +386,58 @@ export function SchoolProvider({ children }) {
 
     return () => unsubscribe();
   }, [isAuthenticated, currentSchool?.id, devMode]);
+
+  // Track if we've already auto-initialized weeks to prevent duplicate runs
+  const weeksInitializedRef = useRef(false);
+
+  /**
+   * Auto-initialize default weeks when school loads with no weeks
+   */
+  useEffect(() => {
+    // Skip if still loading, no school, or already initialized
+    if (loading || !school || weeksInitializedRef.current) return;
+
+    // Skip if weeks already exist
+    if (weeks.length > 0) {
+      weeksInitializedRef.current = true;
+      return;
+    }
+
+    // Generate and save default weeks
+    const initializeWeeks = async () => {
+      console.log('📅 Auto-initializing default weeks...');
+      weeksInitializedRef.current = true;
+
+      const year = activeYear || new Date().getFullYear().toString();
+      const phases = setupConfig?.seasonPhases?.length > 0 ? setupConfig.seasonPhases : DEFAULT_SEASON_PHASES;
+      const defaultWeeks = generateDefaultWeeks(year, phases);
+
+      try {
+        if (devMode) {
+          // Dev mode: save to localStorage
+          const cached = localStorage.getItem('dofo_dev_school_data');
+          const current = cached ? JSON.parse(cached) : {};
+          const updated = { ...current, weeks: defaultWeeks, updatedAt: new Date().toISOString() };
+          localStorage.setItem('dofo_dev_school_data', JSON.stringify(updated));
+          setWeeks(defaultWeeks);
+        } else if (currentSchool?.id) {
+          // Production: save to Firebase
+          const schoolRef = doc(db, 'schools', currentSchool.id);
+          await updateDoc(schoolRef, {
+            weeks: defaultWeeks,
+            updatedAt: new Date().toISOString()
+          });
+          // State will update via onSnapshot listener
+        }
+        console.log(`✅ Created ${defaultWeeks.length} default weeks`);
+      } catch (err) {
+        console.error('Error auto-initializing weeks:', err);
+        weeksInitializedRef.current = false; // Allow retry on error
+      }
+    };
+
+    initializeWeeks();
+  }, [loading, school, weeks.length, activeYear, setupConfig?.seasonPhases, devMode, currentSchool?.id]);
 
   /**
    * Update school data

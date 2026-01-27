@@ -13,18 +13,31 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
 
   // Get season phases from setupConfig with defaults
   const DEFAULT_PHASES = [
-    { id: 'offseason', name: 'Offseason', color: 'slate', order: 0, isOffseason: true },
-    { id: 'summer', name: 'Summer', color: 'amber', order: 1, numWeeks: 8 },
-    { id: 'preseason', name: 'Preseason', color: 'purple', order: 2, numWeeks: 3 },
-    { id: 'season', name: 'Regular Season', color: 'emerald', order: 3, numWeeks: 13 }
+    { id: 'offseason', name: 'Offseason', color: 'slate', order: 0, isOffseason: true, numWeeks: 0 },
+    { id: 'summer', name: 'Summer', color: 'amber', order: 1, numWeeks: 6 },
+    { id: 'preseason', name: 'Preseason', color: 'purple', order: 2, numWeeks: 4 },
+    { id: 'season', name: 'Regular Season', color: 'emerald', order: 3, numWeeks: 10 }
   ];
 
   const seasonPhases = setupConfig?.seasonPhases?.length > 0 ? setupConfig.seasonPhases : DEFAULT_PHASES;
 
-  // Generate weeks from season phases
-  const generatedWeeks = useMemo(() => {
-    const allWeeks = [];
+  // Use stored weeks directly if they exist, otherwise generate fallback weeks
+  const allWeeks = useMemo(() => {
+    // If we have stored weeks in Firebase, use those directly
+    if (weeks.length > 0) {
+      // Enhance weeks with phase info if missing
+      return weeks.map(week => {
+        const phase = seasonPhases.find(p => p.id === week.phaseId);
+        return {
+          ...week,
+          phaseName: week.phaseName || phase?.name || 'Unknown',
+          phaseColor: week.phaseColor || phase?.color || 'slate'
+        };
+      });
+    }
 
+    // Fallback: Generate weeks from season phases (for backwards compatibility)
+    const generated = [];
     seasonPhases
       .sort((a, b) => (a.order || 0) - (b.order || 0))
       .forEach(phase => {
@@ -32,7 +45,7 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
 
         if (isOffseason) {
           // Offseason is a single item, not multiple weeks
-          allWeeks.push({
+          generated.push({
             id: 'offseason',
             phaseId: phase.id,
             phaseName: phase.name,
@@ -57,7 +70,7 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
               weekDate.setDate(weekDate.getDate() + (i - 1) * 7);
             }
 
-            allWeeks.push({
+            generated.push({
               id: `${phase.id}_week_${i}`,
               phaseId: phase.id,
               phaseName: phase.name,
@@ -70,24 +83,8 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
         }
       });
 
-    return allWeeks;
-  }, [seasonPhases]);
-
-  // Combine generated weeks with any existing weeks (prefer existing if they have more data)
-  const allWeeks = useMemo(() => {
-    if (weeks.length > 0) {
-      // If we have stored weeks, merge with generated ones
-      const mergedWeeks = generatedWeeks.map(genWeek => {
-        const existingWeek = weeks.find(w =>
-          w.id === genWeek.id ||
-          (w.phaseId === genWeek.phaseId && w.weekNum === genWeek.weekNum)
-        );
-        return existingWeek ? { ...genWeek, ...existingWeek } : genWeek;
-      });
-      return mergedWeeks;
-    }
-    return generatedWeeks;
-  }, [weeks, generatedWeeks]);
+    return generated;
+  }, [weeks, seasonPhases]);
 
   // Find current week based on today's date
   const currentWeek = useMemo(() => {
