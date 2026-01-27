@@ -131,7 +131,10 @@ export default function PlayDetailsModal({
         {/* Header */}
         <div className="p-4 border-b border-slate-200 flex justify-between items-start">
           <div>
-            <h3 className="text-xl font-bold text-slate-900">{play.name}</h3>
+            <h3 className="text-xl font-bold text-slate-900">
+              {play.formation && <span className="text-slate-500">{play.formation} </span>}
+              {play.name}
+            </h3>
             {/* Category and Family badges */}
             {(category || family) && (
               <div className="flex gap-1 mt-1.5 flex-wrap">
@@ -306,12 +309,6 @@ export default function PlayDetailsModal({
         {/* Play Info */}
         <div className="p-4 flex-1 overflow-y-auto">
           <div className="space-y-3 text-sm">
-            {play.formation && (
-              <div>
-                <span className="text-slate-400 font-medium">Formation:</span>
-                <span className="ml-2 text-slate-700">{play.formation}</span>
-              </div>
-            )}
             {play.concept && (
               <div>
                 <span className="text-slate-400 font-medium">Concept:</span>
