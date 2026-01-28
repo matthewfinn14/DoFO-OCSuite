@@ -3,6 +3,7 @@ import {
   Target,
   Calendar,
   FileText,
+  FileBarChart,
   Megaphone,
   Layers,
   Users,
