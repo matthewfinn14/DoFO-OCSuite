@@ -1440,13 +1440,17 @@ export default function PracticePlans() {
     return segType?.focusItems || [];
   }, [getSegmentTypesForPhase]);
 
-  // Get position groups from setup
+  // Get position groups from setup (use abbreviations for @mentions)
   const positionGroups = useMemo(() => {
     const groups = new Set();
-    // Collect from all phases
+    // Collect from all phases - prefer abbrev over name
     ['OFFENSE', 'DEFENSE', 'SPECIAL_TEAMS'].forEach(phase => {
       const phaseGroups = setupConfig?.positionGroups?.[phase] || [];
-      phaseGroups.forEach(g => groups.add(g.name || g));
+      phaseGroups.forEach(g => {
+        // Use abbreviation if available, otherwise name
+        const groupLabel = g.abbrev || g.name || g;
+        groups.add(groupLabel);
+      });
     });
     // Also collect from staff position assignments
     (staff || []).forEach(s => {

@@ -166,7 +166,23 @@ export function SchoolProvider({ children }) {
     hiddenPositions: { OFFENSE: [], DEFENSE: [], SPECIAL_TEAMS: [] },
 
     // Position Groups (with coach assignments and Big 3)
-    positionGroups: { OFFENSE: [], DEFENSE: [], SPECIAL_TEAMS: [] },
+    positionGroups: {
+      OFFENSE: [
+        { id: 'grp_qb', name: 'Quarterbacks', abbrev: 'QB', positions: ['QB'], coachId: null, big3: [] },
+        { id: 'grp_rb', name: 'Running Backs', abbrev: 'RB', positions: ['RB', 'FB'], coachId: null, big3: [] },
+        { id: 'grp_wr', name: 'Wide Receivers', abbrev: 'WR', positions: ['WR', 'X', 'Z', 'H', 'Y'], coachId: null, big3: [] },
+        { id: 'grp_te', name: 'Tight Ends', abbrev: 'TE', positions: ['TE'], coachId: null, big3: [] },
+        { id: 'grp_ol', name: 'Offensive Line', abbrev: 'OL', positions: ['LT', 'LG', 'C', 'RG', 'RT'], coachId: null, big3: [] }
+      ],
+      DEFENSE: [
+        { id: 'grp_dl', name: 'Defensive Line', abbrev: 'DL', positions: ['DE', 'DT', 'NT', 'NG'], coachId: null, big3: [] },
+        { id: 'grp_lb', name: 'Linebackers', abbrev: 'LB', positions: ['ILB', 'OLB', 'MLB', 'WLB', 'SLB', 'MIKE', 'WILL', 'SAM'], coachId: null, big3: [] },
+        { id: 'grp_db', name: 'Defensive Backs', abbrev: 'DB', positions: ['CB', 'S', 'FS', 'SS', 'NB'], coachId: null, big3: [] }
+      ],
+      SPECIAL_TEAMS: [
+        { id: 'grp_k', name: 'Kickers', abbrev: 'K', positions: ['K', 'P', 'LS'], coachId: null, big3: [] }
+      ]
+    },
 
     // Personnel Groupings (Offense only)
     personnelGroupings: [],

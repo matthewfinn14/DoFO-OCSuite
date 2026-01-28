@@ -66,46 +66,41 @@ export default function CoachesNotes() {
   // Get position groups from setup config
   const positionGroups = setupConfig?.positionGroups || { OFFENSE: [], DEFENSE: [], SPECIAL_TEAMS: [] };
 
-  // Build list of position group coaches with their assigned staff
-  const positionGroupCoaches = useMemo(() => {
-    const coaches = [];
+  // Build list of position groups with their assigned staff (show all groups, not just ones with coaches)
+  const positionGroupEntries = useMemo(() => {
+    const entries = [];
 
     ['OFFENSE', 'DEFENSE', 'SPECIAL_TEAMS'].forEach(phase => {
       const phaseGroups = positionGroups[phase] || [];
       phaseGroups.forEach(group => {
-        if (group.coachId) {
-          const staffMember = staff?.find(s => s.id === group.coachId);
-          if (staffMember) {
-            // Check if this staff member is already added (might coach multiple groups)
-            const existing = coaches.find(c => c.staffId === staffMember.id);
-            if (existing) {
-              // Add this group to their list
-              existing.groups.push({ id: group.id, name: group.name, abbrev: group.abbrev });
-            } else {
-              coaches.push({
-                id: `pg_${staffMember.id}`,
-                staffId: staffMember.id,
-                name: staffMember.name,
-                phase,
-                groups: [{ id: group.id, name: group.name, abbrev: group.abbrev }]
-              });
-            }
-          }
-        }
+        const staffMember = group.coachId ? staff?.find(s => s.id === group.coachId) : null;
+
+        entries.push({
+          id: `pg_${group.id}`,
+          groupId: group.id,
+          staffId: staffMember?.id || null,
+          // Display name: coach name if assigned, otherwise group name
+          name: staffMember?.name || group.name,
+          displayLabel: staffMember?.name || group.name,
+          groupName: group.name,
+          groupAbbrev: group.abbrev,
+          phase,
+          hasCoach: !!staffMember
+        });
       });
     });
 
-    return coaches;
+    return entries;
   }, [positionGroups, staff]);
 
   // Get custom coaches (ones manually added that aren't coordinators or position group coaches)
   const customCoaches = useMemo(() => {
-    const pgCoachNames = positionGroupCoaches.map(c => c.name);
+    const pgCoachNames = positionGroupEntries.filter(e => e.hasCoach).map(e => e.name);
     return coaches.filter(c =>
       !DEFAULT_COACHES.includes(c) &&
       !pgCoachNames.includes(c)
     );
-  }, [coaches, positionGroupCoaches]);
+  }, [coaches, positionGroupEntries]);
 
   // Check if current user can edit a coach's row
   const canEdit = isHeadCoach || isTeamAdmin || isSiteAdmin;
@@ -322,10 +317,10 @@ export default function CoachesNotes() {
                 );
               })}
 
-              {/* Position Group Coaches by Phase */}
+              {/* Position Groups by Phase */}
               {['OFFENSE', 'DEFENSE', 'SPECIAL_TEAMS'].map(phase => {
-                const phaseCoaches = positionGroupCoaches.filter(c => c.phase === phase);
-                if (phaseCoaches.length === 0) return null;
+                const phaseEntries = positionGroupEntries.filter(e => e.phase === phase);
+                if (phaseEntries.length === 0) return null;
 
                 const phaseColors = PHASE_COLORS[phase];
                 const phaseLabel = phase === 'SPECIAL_TEAMS' ? 'Special Teams' : phase.charAt(0) + phase.slice(1).toLowerCase();
@@ -342,28 +337,33 @@ export default function CoachesNotes() {
                       </td>
                     </tr>
 
-                    {/* Position Group Coach Rows */}
-                    {phaseCoaches.map((pgCoach, idx) => {
-                      const editable = canEditRow(pgCoach.name, pgCoach.staffId);
-                      const groupAbbrevs = pgCoach.groups.map(g => g.abbrev || g.name).join(', ');
+                    {/* Position Group Rows */}
+                    {phaseEntries.map((entry, idx) => {
+                      const editable = canEditRow(entry.name, entry.staffId);
+                      // Use group name as the key for notes storage (consistent regardless of coach assignment)
+                      const noteKey = entry.groupAbbrev || entry.groupName;
 
                       return (
                         <tr
-                          key={pgCoach.id}
+                          key={entry.id}
                           className={`${phaseColors.bg} border-t border-slate-800 border-l-2 ${phaseColors.border}`}
                         >
                           <td className={`px-4 py-2 sticky left-0 z-10 ${phaseColors.bg}`}>
                             <div className="flex flex-col">
-                              <span className={`font-semibold ${phaseColors.text}`}>{pgCoach.name}</span>
-                              <span className="text-[0.65rem] text-slate-500">{groupAbbrevs}</span>
+                              <span className={`font-semibold ${phaseColors.text}`}>
+                                {entry.hasCoach ? entry.name : entry.groupName}
+                              </span>
+                              <span className="text-[0.65rem] text-slate-500">
+                                {entry.hasCoach ? entry.groupAbbrev : (entry.hasCoach === false ? 'No coach assigned' : '')}
+                              </span>
                             </div>
                           </td>
                           {NOTE_CATEGORIES.map(cat => (
                             <td key={cat.key} className="px-2 py-2">
                               <textarea
-                                value={data[pgCoach.name]?.[cat.key] || ''}
-                                onChange={(e) => editable && updateNote(pgCoach.name, cat.key, e.target.value)}
-                                placeholder={editable ? `${pgCoach.name} ${cat.label.toLowerCase()}...` : ''}
+                                value={data[noteKey]?.[cat.key] || ''}
+                                onChange={(e) => editable && updateNote(noteKey, cat.key, e.target.value)}
+                                placeholder={editable ? `${entry.groupAbbrev} ${cat.label.toLowerCase()}...` : ''}
                                 readOnly={!editable}
                                 rows={3}
                                 className={`w-full px-2 py-1.5 text-xs rounded border resize-y min-h-[60px] ${

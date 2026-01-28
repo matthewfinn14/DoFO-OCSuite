@@ -1640,16 +1640,29 @@ function PositionGroupsTab({ phase, positionGroups, staff, onUpdate }) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {groups.map(group => (
           <div key={group.id} className="bg-slate-700/50 rounded-lg border border-slate-600 p-4">
-            <div className="flex justify-between items-center mb-3">
-              <div className="flex items-center gap-2">
-                <span className="bg-sky-500 text-black px-2 py-1 rounded text-xs font-bold">
-                  {group.abbrev}
-                </span>
-                <span className="font-semibold text-white">{group.name}</span>
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex-1 space-y-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={group.abbrev || ''}
+                    onChange={(e) => updateGroup(group.id, { abbrev: e.target.value.toUpperCase() })}
+                    className="w-14 bg-sky-500 text-black px-2 py-1 rounded text-xs font-bold text-center uppercase"
+                    placeholder="ABB"
+                    maxLength={4}
+                  />
+                  <input
+                    type="text"
+                    value={group.name || ''}
+                    onChange={(e) => updateGroup(group.id, { name: e.target.value })}
+                    className="flex-1 bg-transparent border-b border-slate-500 text-white font-semibold focus:border-sky-500 focus:outline-none px-1"
+                    placeholder="Group Name"
+                  />
+                </div>
               </div>
               <button
                 onClick={() => deleteGroup(group.id)}
-                className="p-1 text-red-400 hover:text-red-300"
+                className="p-1 text-red-400 hover:text-red-300 ml-2"
               >
                 <Trash2 size={14} />
               </button>

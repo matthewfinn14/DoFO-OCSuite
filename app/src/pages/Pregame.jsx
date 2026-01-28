@@ -643,14 +643,16 @@ export default function Pregame() {
   // Get existing pregame templates
   const existingTemplates = setupConfig?.pregameTemplates || [];
 
-  // Get position groups for @mentions
+  // Get position groups for @mentions (use abbreviations)
   const positionGroups = useMemo(() => {
     const groups = new Set();
-    // Get unique position group names from setupConfig
+    // Get unique position group abbreviations from setupConfig
     const pgConfig = setupConfig?.positionGroups || {};
     Object.values(pgConfig).forEach(phaseGroups => {
       (phaseGroups || []).forEach(group => {
-        if (group.name) groups.add(group.name);
+        // Use abbreviation if available, otherwise name
+        const groupLabel = group.abbrev || group.name;
+        if (groupLabel) groups.add(groupLabel);
       });
     });
     return Array.from(groups);
