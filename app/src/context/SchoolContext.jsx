@@ -339,7 +339,19 @@ export function SchoolProvider({ children }) {
                 }
               };
             }
-            setSetupConfig(prev => ({ ...prev, ...config }));
+            // Preserve default position groups if stored data has empty arrays
+            setSetupConfig(prev => {
+              const merged = { ...prev, ...config };
+              if (config.positionGroups) {
+                const pg = config.positionGroups;
+                merged.positionGroups = {
+                  OFFENSE: (pg.OFFENSE?.length > 0) ? pg.OFFENSE : prev.positionGroups.OFFENSE,
+                  DEFENSE: (pg.DEFENSE?.length > 0) ? pg.DEFENSE : prev.positionGroups.DEFENSE,
+                  SPECIAL_TEAMS: (pg.SPECIAL_TEAMS?.length > 0) ? pg.SPECIAL_TEAMS : prev.positionGroups.SPECIAL_TEAMS
+                };
+              }
+              return merged;
+            });
           }
           if (data.meetingNotes) setMeetingNotes(data.meetingNotes);
           if (data.practiceGrades) setPracticeGrades(data.practiceGrades);
@@ -419,7 +431,19 @@ export function SchoolProvider({ children }) {
                 }
               };
             }
-            setSetupConfig(prev => ({ ...prev, ...config }));
+            // Preserve default position groups if stored data has empty arrays
+            setSetupConfig(prev => {
+              const merged = { ...prev, ...config };
+              if (config.positionGroups) {
+                const pg = config.positionGroups;
+                merged.positionGroups = {
+                  OFFENSE: (pg.OFFENSE?.length > 0) ? pg.OFFENSE : prev.positionGroups.OFFENSE,
+                  DEFENSE: (pg.DEFENSE?.length > 0) ? pg.DEFENSE : prev.positionGroups.DEFENSE,
+                  SPECIAL_TEAMS: (pg.SPECIAL_TEAMS?.length > 0) ? pg.SPECIAL_TEAMS : prev.positionGroups.SPECIAL_TEAMS
+                };
+              }
+              return merged;
+            });
           }
           if (data.meetingNotes) setMeetingNotes(data.meetingNotes);
           if (data.practiceGrades) setPracticeGrades(data.practiceGrades);
