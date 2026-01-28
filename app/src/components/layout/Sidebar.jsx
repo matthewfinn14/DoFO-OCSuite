@@ -118,7 +118,7 @@ function NavItem({ to, icon: Icon, label, collapsed, isLight = false }) {
 
 export default function Sidebar() {
   const { currentPermissions, isSiteAdmin } = useAuth();
-  const { school, weeks, currentWeekId, visibleFeatures, setCurrentWeekId, settings } = useSchool();
+  const { school, weeks, currentWeekId, visibleFeatures, setCurrentWeekId, settings, setupConfig } = useSchool();
   const navigate = useNavigate();
 
   // Persist collapse state to localStorage
@@ -126,10 +126,18 @@ export default function Sidebar() {
 
   // Get current week - check if it's offseason
   const currentWeek = weeks.find(w => w.id === currentWeekId);
+
+  // Get season phases from setupConfig to check phase properties
+  const seasonPhases = setupConfig?.seasonPhases || [];
+  const currentPhase = currentWeek?.phaseId ? seasonPhases.find(p => p.id === currentWeek.phaseId) : null;
+
   const isOffseasonWeek = currentWeekId === 'offseason' ||
     currentWeek?.isOffseason ||
     currentWeek?.name === 'Offseason' ||
-    currentWeek?.phaseId === 'offseason';
+    currentWeek?.name?.toLowerCase() === 'offseason' ||
+    currentWeek?.phaseId === 'offseason' ||
+    currentPhase?.isOffseason ||
+    currentPhase?.id === 'offseason';
 
   // Get theme from settings
   const theme = settings?.theme || school?.settings?.theme || 'dark';

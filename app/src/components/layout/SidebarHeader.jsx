@@ -28,10 +28,17 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
       // Enhance weeks with phase info if missing
       return weeks.map(week => {
         const phase = seasonPhases.find(p => p.id === week.phaseId);
+        // Determine if this is an offseason week
+        const isOffseason = week.isOffseason ||
+          week.id === 'offseason' ||
+          week.phaseId === 'offseason' ||
+          week.name === 'Offseason' ||
+          phase?.isOffseason;
         return {
           ...week,
           phaseName: week.phaseName || phase?.name || 'Unknown',
-          phaseColor: week.phaseColor || phase?.color || 'slate'
+          phaseColor: week.phaseColor || phase?.color || 'slate',
+          isOffseason
         };
       });
     }
