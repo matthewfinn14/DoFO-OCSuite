@@ -296,7 +296,7 @@ export default function PrintCenter() {
   return (
     <div className="flex h-[calc(100vh-64px)] bg-gray-50 print:block print:h-auto print:bg-white">
       {/* Sidebar - Template Selection & Settings */}
-      <div className="w-96 bg-white border-r border-gray-200 overflow-y-auto print:hidden">
+      <div className="w-96 bg-white border-r border-gray-200 overflow-y-auto print:hidden flex-shrink-0">
         {/* Header */}
         <div className="p-4 border-b border-gray-200">
           <h1 className="text-xl font-bold text-gray-900">Print Center</h1>
@@ -369,17 +369,6 @@ export default function PrintCenter() {
           </div>
         </div>
 
-        {/* Template-Specific Settings */}
-        {selectedTemplate && (
-          <PrintSettingsPanel
-            template={selectedTemplate}
-            settings={printSettings}
-            onChange={setPrintSettings}
-            weekData={weekData}
-            roster={roster}
-            staff={staff}
-          />
-        )}
       </div>
 
       {/* Main Content - Preview */}
@@ -398,15 +387,31 @@ export default function PrintCenter() {
             )}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 relative">
             {selectedTemplate && (
-              <button
-                onClick={handlePrint}
-                className="flex items-center gap-2 px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors"
-              >
-                <Printer size={18} />
-                Print
-              </button>
+              <>
+                <div className="flex-1 px-4 lg:px-6">
+                  <PrintSettingsPanel
+                    template={selectedTemplate}
+                    settings={printSettings}
+                    onChange={setPrintSettings}
+                    weekData={weekData}
+                    roster={roster}
+                    staff={staff}
+                    layout="horizontal"
+                  />
+                </div>
+
+                <div className="flex-shrink-0">
+                  <button
+                    onClick={handlePrint}
+                    className="flex items-center gap-2 px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors shadow-sm"
+                  >
+                    <Printer size={18} />
+                    <span className="hidden sm:inline">Print</span>
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </div>

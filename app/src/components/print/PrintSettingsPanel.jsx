@@ -1,4 +1,5 @@
-import { Settings } from 'lucide-react';
+import { Settings, ChevronDown, Check } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
 
 /**
  * Dynamic settings panel that shows template-specific options
@@ -9,11 +10,12 @@ export default function PrintSettingsPanel({
   onChange,
   weekData,
   roster,
-  staff
+  staff,
+  layout = 'vertical'
 }) {
   if (!template) {
     return (
-      <div className="p-4 border-b border-gray-200">
+      <div className={`border-b border-gray-200 ${layout === 'vertical' ? 'p-4' : 'px-4 py-2'}`}>
         <div className="text-gray-400 text-sm text-center py-4">
           Select a template to see settings
         </div>
@@ -27,44 +29,47 @@ export default function PrintSettingsPanel({
 
   // Render settings based on template type
   const renderSettings = () => {
+    const props = { settings, onChange: updateSetting, layout };
     switch (template.id) {
       case 'wristband':
-        return <WristbandSettings settings={settings} onChange={updateSetting} weekData={weekData} />;
+        return <WristbandSettings {...props} weekData={weekData} />;
       case 'coach_wristband':
-        return <CoachWristbandSettings settings={settings} onChange={updateSetting} weekData={weekData} />;
+        return <CoachWristbandSettings {...props} weekData={weekData} />;
       case 'depth_chart':
-        return <DepthChartSettings settings={settings} onChange={updateSetting} />;
+        return <DepthChartSettings {...props} />;
       case 'practice_plan':
-        return <PracticePlanSettings settings={settings} onChange={updateSetting} staff={staff} />;
+        return <PracticePlanSettings {...props} staff={staff} />;
       case 'game_plan':
-        return <GamePlanSettings settings={settings} onChange={updateSetting} />;
+        return <GamePlanSettings {...props} />;
       case 'pregame':
-        return <PreGameSettings settings={settings} onChange={updateSetting} />;
+        return <PreGameSettings {...props} />;
       case 'roster':
-        return <RosterSettings settings={settings} onChange={updateSetting} />;
+        return <RosterSettings {...props} />;
       case 'playbook':
-        return <PlaybookSettings settings={settings} onChange={updateSetting} />;
+        return <PlaybookSettings {...props} />;
       default:
-        return <CommonSettings settings={settings} onChange={updateSetting} />;
+        return <CommonSettings {...props} />;
     }
   };
 
   return (
-    <div className="p-4">
-      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
-        <Settings size={14} />
-        {template.name} Settings
-      </div>
+    <div className={layout === 'vertical' ? 'p-4' : 'flex items-center gap-4 flex-wrap'}>
+      {layout === 'vertical' && (
+        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3 flex items-center gap-2">
+          <Settings size={14} />
+          {template.name} Settings
+        </div>
+      )}
       {renderSettings()}
     </div>
   );
 }
 
 // Common settings (orientation, etc.)
-function CommonSettings({ settings, onChange }) {
+function CommonSettings({ settings, onChange, layout }) {
   return (
     <>
-      <SettingsField label="Orientation">
+      <SettingsField label="Orientation" layout={layout}>
         <select
           value={settings.orientation || 'portrait'}
           onChange={(e) => onChange('orientation', e.target.value)}
@@ -77,13 +82,14 @@ function CommonSettings({ settings, onChange }) {
         checked={settings.includeLogo !== false}
         onChange={(e) => onChange('includeLogo', e.target.checked)}
         label="Include team logo"
+        layout={layout}
       />
     </>
   );
 }
 
 // Wristband-specific settings
-function WristbandSettings({ settings, onChange, weekData }) {
+function WristbandSettings({ settings, onChange, weekData, layout }) {
   const cardOptions = [
     { id: 'card100', label: '100s' },
     { id: 'card200', label: '200s' },
@@ -96,7 +102,7 @@ function WristbandSettings({ settings, onChange, weekData }) {
 
   return (
     <>
-      <SettingsField label="Format">
+      <SettingsField label="Format" layout={layout}>
         <select
           value={settings.format || 'player'}
           onChange={(e) => onChange('format', e.target.value)}
@@ -106,27 +112,36 @@ function WristbandSettings({ settings, onChange, weekData }) {
         </select>
       </SettingsField>
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Cards to Print</label>
-        <div className="space-y-2">
-          {cardOptions.map(card => (
-            <SettingsCheckbox
-              key={card.id}
-              checked={(settings.cardSelection || ['card100']).includes(card.id)}
-              onChange={(e) => {
-                const current = settings.cardSelection || ['card100'];
-                const updated = e.target.checked
-                  ? [...current, card.id]
-                  : current.filter(c => c !== card.id);
-                onChange('cardSelection', updated);
-              }}
-              label={card.label}
-            />
-          ))}
+      {layout === 'horizontal' ? (
+        <MultiSelectDropdown
+          label="Cards"
+          options={cardOptions}
+          selectedIds={settings.cardSelection || ['card100']}
+          onChange={(updated) => onChange('cardSelection', updated)}
+        />
+      ) : (
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Cards to Print</label>
+          <div className="space-y-2">
+            {cardOptions.map(card => (
+              <SettingsCheckbox
+                key={card.id}
+                checked={(settings.cardSelection || ['card100']).includes(card.id)}
+                onChange={(e) => {
+                  const current = settings.cardSelection || ['card100'];
+                  const updated = e.target.checked
+                    ? [...current, card.id]
+                    : current.filter(c => c !== card.id);
+                  onChange('cardSelection', updated);
+                }}
+                label={card.label}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      <SettingsField label="WIZ Card Type">
+      <SettingsField label="WIZ Card Type" layout={layout}>
         <select
           value={settings.wizType || 'both'}
           onChange={(e) => onChange('wizType', e.target.value)}
@@ -141,22 +156,24 @@ function WristbandSettings({ settings, onChange, weekData }) {
         checked={settings.showSlotNumbers !== false}
         onChange={(e) => onChange('showSlotNumbers', e.target.checked)}
         label="Show slot numbers"
+        layout={layout}
       />
 
       <SettingsCheckbox
         checked={settings.showFormation === true}
         onChange={(e) => onChange('showFormation', e.target.checked)}
         label="Show formation names"
+        layout={layout}
       />
     </>
   );
 }
 
 // Coach's consolidated wristband settings
-function CoachWristbandSettings({ settings, onChange, weekData }) {
+function CoachWristbandSettings({ settings, onChange, weekData, layout }) {
   return (
     <>
-      <SettingsField label="Consolidation Mode">
+      <SettingsField label="Consolidation Mode" layout={layout}>
         <select
           value={settings.consolidationMode || 'byCard'}
           onChange={(e) => onChange('consolidationMode', e.target.value)}
@@ -166,7 +183,7 @@ function CoachWristbandSettings({ settings, onChange, weekData }) {
         </select>
       </SettingsField>
 
-      <SettingsField label="Font Size">
+      <SettingsField label="Font Size" layout={layout}>
         <select
           value={settings.fontSize || 'medium'}
           onChange={(e) => onChange('fontSize', e.target.value)}
@@ -181,13 +198,14 @@ function CoachWristbandSettings({ settings, onChange, weekData }) {
         checked={settings.showColorCoding !== false}
         onChange={(e) => onChange('showColorCoding', e.target.checked)}
         label="Show color coding"
+        layout={layout}
       />
     </>
   );
 }
 
 // Depth chart settings
-function DepthChartSettings({ settings, onChange }) {
+function DepthChartSettings({ settings, onChange, layout }) {
   const chartTypes = [
     { id: 'offense', label: 'Offense' },
     { id: 'defense', label: 'Defense' },
@@ -210,7 +228,7 @@ function DepthChartSettings({ settings, onChange }) {
 
   return (
     <>
-      <SettingsField label="View Mode">
+      <SettingsField label="View Mode" layout={layout}>
         <select
           value={settings.viewMode || 'full'}
           onChange={(e) => onChange('viewMode', e.target.value)}
@@ -222,48 +240,66 @@ function DepthChartSettings({ settings, onChange }) {
       </SettingsField>
 
       {isFormationView ? (
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Formation Pages to Print</label>
-          <div className="space-y-2">
-            {formationPairOptions.map(pair => (
-              <SettingsCheckbox
-                key={pair.id}
-                checked={(settings.formationPairs || ['offense-defense']).includes(pair.id)}
-                onChange={(e) => {
-                  const current = settings.formationPairs || ['offense-defense'];
-                  const updated = e.target.checked
-                    ? [...current, pair.id]
-                    : current.filter(p => p !== pair.id);
-                  onChange('formationPairs', updated.length > 0 ? updated : ['offense-defense']);
-                }}
-                label={pair.label}
-              />
-            ))}
+        layout === 'horizontal' ? (
+          <MultiSelectDropdown
+            label="Formation Pages"
+            options={formationPairOptions}
+            selectedIds={settings.formationPairs || ['offense-defense']}
+            onChange={(updated) => onChange('formationPairs', updated.length > 0 ? updated : ['offense-defense'])}
+          />
+        ) : (
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Formation Pages to Print</label>
+            <div className="space-y-2">
+              {formationPairOptions.map(pair => (
+                <SettingsCheckbox
+                  key={pair.id}
+                  checked={(settings.formationPairs || ['offense-defense']).includes(pair.id)}
+                  onChange={(e) => {
+                    const current = settings.formationPairs || ['offense-defense'];
+                    const updated = e.target.checked
+                      ? [...current, pair.id]
+                      : current.filter(p => p !== pair.id);
+                    onChange('formationPairs', updated.length > 0 ? updated : ['offense-defense']);
+                  }}
+                  label={pair.label}
+                />
+              ))}
+            </div>
           </div>
-        </div>
+        )
       ) : (
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Charts to Print</label>
-          <div className="space-y-2">
-            {chartTypes.map(chart => (
-              <SettingsCheckbox
-                key={chart.id}
-                checked={(settings.chartTypes || ['offense', 'defense']).includes(chart.id)}
-                onChange={(e) => {
-                  const current = settings.chartTypes || ['offense', 'defense'];
-                  const updated = e.target.checked
-                    ? [...current, chart.id]
-                    : current.filter(c => c !== chart.id);
-                  onChange('chartTypes', updated);
-                }}
-                label={chart.label}
-              />
-            ))}
+        layout === 'horizontal' ? (
+          <MultiSelectDropdown
+            label="Charts"
+            options={chartTypes}
+            selectedIds={settings.chartTypes || ['offense', 'defense']}
+            onChange={(updated) => onChange('chartTypes', updated)}
+          />
+        ) : (
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Charts to Print</label>
+            <div className="space-y-2">
+              {chartTypes.map(chart => (
+                <SettingsCheckbox
+                  key={chart.id}
+                  checked={(settings.chartTypes || ['offense', 'defense']).includes(chart.id)}
+                  onChange={(e) => {
+                    const current = settings.chartTypes || ['offense', 'defense'];
+                    const updated = e.target.checked
+                      ? [...current, chart.id]
+                      : current.filter(c => c !== chart.id);
+                    onChange('chartTypes', updated);
+                  }}
+                  label={chart.label}
+                />
+              ))}
+            </div>
           </div>
-        </div>
+        )
       )}
 
-      <SettingsField label="Depth Levels">
+      <SettingsField label="Depth Levels" layout={layout}>
         <select
           value={settings.depthLevels || 2}
           onChange={(e) => onChange('depthLevels', parseInt(e.target.value))}
@@ -277,7 +313,8 @@ function DepthChartSettings({ settings, onChange }) {
         <SettingsCheckbox
           checked={settings.showBackups !== false}
           onChange={(e) => onChange('showBackups', e.target.checked)}
-          label="Show backup players"
+          label="Show backups"
+          layout={layout}
         />
       )}
     </>
@@ -285,7 +322,7 @@ function DepthChartSettings({ settings, onChange }) {
 }
 
 // Practice plan settings
-function PracticePlanSettings({ settings, onChange, staff }) {
+function PracticePlanSettings({ settings, onChange, staff, layout }) {
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   return (
@@ -294,10 +331,11 @@ function PracticePlanSettings({ settings, onChange, staff }) {
         checked={settings.coachView === true}
         onChange={(e) => onChange('coachView', e.target.checked)}
         label="Coach-specific view"
+        layout={layout}
       />
 
       {settings.coachView && staff?.length > 0 && (
-        <SettingsField label="Filter by Coach">
+        <SettingsField label="Filter by Coach" layout={layout}>
           <select
             value={settings.coachId || ''}
             onChange={(e) => onChange('coachId', e.target.value || null)}
@@ -312,33 +350,43 @@ function PracticePlanSettings({ settings, onChange, staff }) {
         </SettingsField>
       )}
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Days to Print</label>
-        <div className="space-y-2">
-          {days.map(day => (
-            <SettingsCheckbox
-              key={day}
-              checked={(settings.days || days.slice(0, 5)).includes(day)}
-              onChange={(e) => {
-                const current = settings.days || days.slice(0, 5);
-                const updated = e.target.checked
-                  ? [...current, day]
-                  : current.filter(d => d !== day);
-                onChange('days', updated);
-              }}
-              label={day}
-            />
-          ))}
+      {layout === 'horizontal' ? (
+        <MultiSelectDropdown
+          label="Days"
+          options={days.map(d => ({ id: d, label: d }))}
+          selectedIds={settings.days || days.slice(0, 5)}
+          onChange={(updated) => onChange('days', updated)}
+        />
+      ) : (
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Days to Print</label>
+          <div className="space-y-2">
+            {days.map(day => (
+              <SettingsCheckbox
+                key={day}
+                checked={(settings.days || days.slice(0, 5)).includes(day)}
+                onChange={(e) => {
+                  const current = settings.days || days.slice(0, 5);
+                  const updated = e.target.checked
+                    ? [...current, day]
+                    : current.filter(d => d !== day);
+                  onChange('days', updated);
+                }}
+                label={day}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <SettingsCheckbox
         checked={settings.includeScripts === true}
         onChange={(e) => onChange('includeScripts', e.target.checked)}
-        label="Include practice scripts"
+        label="Include scripts"
+        layout={layout}
       />
 
-      <SettingsField label="Orientation">
+      <SettingsField label="Orientation" layout={layout}>
         <select
           value={settings.orientation || 'portrait'}
           onChange={(e) => onChange('orientation', e.target.value)}
@@ -352,22 +400,24 @@ function PracticePlanSettings({ settings, onChange, staff }) {
         checked={settings.showNotes !== false}
         onChange={(e) => onChange('showNotes', e.target.checked)}
         label="Show notes"
+        layout={layout}
       />
 
       <SettingsCheckbox
         checked={settings.showContactLevel === true}
         onChange={(e) => onChange('showContactLevel', e.target.checked)}
         label="Show contact level"
+        layout={layout}
       />
     </>
   );
 }
 
 // Game plan settings
-function GamePlanSettings({ settings, onChange }) {
+function GamePlanSettings({ settings, onChange, layout }) {
   return (
     <>
-      <SettingsField label="View Type">
+      <SettingsField label="View Type" layout={layout}>
         <select
           value={settings.viewType || 'sheet'}
           onChange={(e) => onChange('viewType', e.target.value)}
@@ -378,7 +428,7 @@ function GamePlanSettings({ settings, onChange }) {
         </select>
       </SettingsField>
 
-      <SettingsField label="Orientation">
+      <SettingsField label="Orientation" layout={layout}>
         <select
           value={settings.orientation || 'landscape'}
           onChange={(e) => onChange('orientation', e.target.value)}
@@ -388,7 +438,7 @@ function GamePlanSettings({ settings, onChange }) {
         </select>
       </SettingsField>
 
-      <SettingsField label="Font Size">
+      <SettingsField label="Font Size" layout={layout}>
         <select
           value={settings.fontSize || 'medium'}
           onChange={(e) => onChange('fontSize', e.target.value)}
@@ -402,23 +452,25 @@ function GamePlanSettings({ settings, onChange }) {
       <SettingsCheckbox
         checked={settings.includeLogo !== false}
         onChange={(e) => onChange('includeLogo', e.target.checked)}
-        label="Include team logo"
+        label="Tm Logo"
+        layout={layout}
       />
 
       <SettingsCheckbox
         checked={settings.includeOpponent !== false}
         onChange={(e) => onChange('includeOpponent', e.target.checked)}
-        label="Include opponent name"
+        label="Opp Name"
+        layout={layout}
       />
     </>
   );
 }
 
 // Pre-game timeline settings
-function PreGameSettings({ settings, onChange }) {
+function PreGameSettings({ settings, onChange, layout }) {
   return (
     <>
-      <SettingsField label="Game Time">
+      <SettingsField label="Game Time" layout={layout}>
         <input
           type="time"
           value={settings.gameTime || '19:00'}
@@ -426,18 +478,18 @@ function PreGameSettings({ settings, onChange }) {
         />
       </SettingsField>
 
-      <SettingsField label="Time Format">
+      <SettingsField label="Time Format" layout={layout}>
         <select
           value={settings.timeFormat || 'actual'}
           onChange={(e) => onChange('timeFormat', e.target.value)}
         >
-          <option value="actual">Actual Time (2:30 PM)</option>
-          <option value="relative">Relative Time (-90 min)</option>
+          <option value="actual">Actual</option>
+          <option value="relative">Relative</option>
           <option value="both">Both</option>
         </select>
       </SettingsField>
 
-      <SettingsField label="Orientation">
+      <SettingsField label="Orientation" layout={layout}>
         <select
           value={settings.orientation || 'portrait'}
           onChange={(e) => onChange('orientation', e.target.value)}
@@ -450,23 +502,34 @@ function PreGameSettings({ settings, onChange }) {
       <SettingsCheckbox
         checked={settings.includeCheckboxes !== false}
         onChange={(e) => onChange('includeCheckboxes', e.target.checked)}
-        label="Include checkboxes"
+        label="Checkboxes"
+        layout={layout}
       />
 
       <SettingsCheckbox
         checked={settings.showNotes !== false}
         onChange={(e) => onChange('showNotes', e.target.checked)}
         label="Show notes"
+        layout={layout}
       />
     </>
   );
 }
 
 // Roster/attendance settings
-function RosterSettings({ settings, onChange }) {
+function RosterSettings({ settings, onChange, layout }) {
+  const columns = [
+    { id: 'number', label: 'Jersey' },
+    { id: 'name', label: 'Name' },
+    { id: 'position', label: 'Pos' },
+    { id: 'year', label: 'Year' },
+    { id: 'height', label: 'Ht' },
+    { id: 'weight', label: 'Wt' }
+  ];
+
   return (
     <>
-      <SettingsField label="Sort By">
+      <SettingsField label="Sort By" layout={layout}>
         <select
           value={settings.sortBy || 'number'}
           onChange={(e) => onChange('sortBy', e.target.value)}
@@ -478,34 +541,44 @@ function RosterSettings({ settings, onChange }) {
         </select>
       </SettingsField>
 
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Columns to Show</label>
-        <div className="space-y-2">
-          {['number', 'name', 'position', 'year', 'height', 'weight'].map(col => (
-            <SettingsCheckbox
-              key={col}
-              checked={(settings.columns || ['number', 'name', 'position', 'year']).includes(col)}
-              onChange={(e) => {
-                const current = settings.columns || ['number', 'name', 'position', 'year'];
-                const updated = e.target.checked
-                  ? [...current, col]
-                  : current.filter(c => c !== col);
-                onChange('columns', updated);
-              }}
-              label={col.charAt(0).toUpperCase() + col.slice(1)}
-            />
-          ))}
+      {layout === 'horizontal' ? (
+        <MultiSelectDropdown
+          label="Columns"
+          options={columns}
+          selectedIds={settings.columns || ['number', 'name', 'position', 'year']}
+          onChange={(updated) => onChange('columns', updated)}
+        />
+      ) : (
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Columns to Show</label>
+          <div className="space-y-2">
+            {columns.map(col => (
+              <SettingsCheckbox
+                key={col.id}
+                checked={(settings.columns || ['number', 'name', 'position', 'year']).includes(col.id)}
+                onChange={(e) => {
+                  const current = settings.columns || ['number', 'name', 'position', 'year'];
+                  const updated = e.target.checked
+                    ? [...current, col.id]
+                    : current.filter(c => c !== col.id);
+                  onChange('columns', updated);
+                }}
+                label={col.label}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <SettingsCheckbox
         checked={settings.checkboxColumn !== false}
         onChange={(e) => onChange('checkboxColumn', e.target.checked)}
-        label="Include attendance checkbox"
+        label="Att. Box"
+        layout={layout}
       />
 
       {settings.checkboxColumn !== false && (
-        <SettingsField label="Checkbox Size">
+        <SettingsField label="Box Size" layout={layout}>
           <select
             value={settings.checkboxSize || 'medium'}
             onChange={(e) => onChange('checkboxSize', e.target.value)}
@@ -521,10 +594,10 @@ function RosterSettings({ settings, onChange }) {
 }
 
 // Playbook settings
-function PlaybookSettings({ settings, onChange }) {
+function PlaybookSettings({ settings, onChange, layout }) {
   return (
     <>
-      <SettingsField label="View Mode">
+      <SettingsField label="View Mode" layout={layout}>
         <select
           value={settings.viewMode || 'cards'}
           onChange={(e) => onChange('viewMode', e.target.value)}
@@ -535,7 +608,7 @@ function PlaybookSettings({ settings, onChange }) {
       </SettingsField>
 
       {settings.viewMode !== 'list' && (
-        <SettingsField label="Cards Per Page">
+        <SettingsField label="Cards/Page" layout={layout}>
           <select
             value={settings.cardsPerPage || 4}
             onChange={(e) => onChange('cardsPerPage', parseInt(e.target.value))}
@@ -553,25 +626,51 @@ function PlaybookSettings({ settings, onChange }) {
         checked={settings.showDiagrams !== false}
         onChange={(e) => onChange('showDiagrams', e.target.checked)}
         label="Show diagrams"
+        layout={layout}
       />
 
       <SettingsCheckbox
         checked={settings.showFormation !== false}
         onChange={(e) => onChange('showFormation', e.target.checked)}
-        label="Show formation names"
+        label="Show formation"
+        layout={layout}
       />
 
       <SettingsCheckbox
         checked={settings.showTags === true}
         onChange={(e) => onChange('showTags', e.target.checked)}
-        label="Show play tags"
+        label="Show tags"
+        layout={layout}
       />
     </>
   );
 }
 
-// Helper Components
-function SettingsField({ label, children }) {
+function SettingsField({ label, children, layout }) {
+  if (layout === 'horizontal') {
+    return (
+      <div className="flex items-center gap-2">
+        <label className="text-xs font-semibold text-gray-500 whitespace-nowrap uppercase tracking-wide">{label}</label>
+        <div className="relative">
+          {/* Inject compact styles into children if they are selects/inputs */}
+          {children.type === 'select' ? (
+            <select
+              {...children.props}
+              className="w-full pl-2 pr-8 py-1.5 bg-white border border-gray-300 rounded text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 font-medium"
+            >
+              {children.props.children}
+            </select>
+          ) : (
+            <input
+              {...children.props}
+              className="w-full px-2 py-1.5 bg-white border border-gray-300 rounded text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 font-medium"
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mb-4">
       <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
@@ -594,7 +693,25 @@ function SettingsField({ label, children }) {
   );
 }
 
-function SettingsCheckbox({ checked, onChange, label }) {
+function SettingsCheckbox({ checked, onChange, label, layout }) {
+  if (layout === 'horizontal') {
+    return (
+      <label className={`flex items-center gap-1.5 cursor-pointer select-none px-3 py-1.5 rounded transition-colors border ${checked
+          ? 'bg-sky-50 border-sky-200 text-sky-700'
+          : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+        }`}>
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={onChange}
+          className="sr-only" // Hidden native checkbox
+        />
+        {checked && <Check size={12} strokeWidth={3} />}
+        <span className="text-xs font-semibold uppercase tracking-wide">{label}</span>
+      </label>
+    );
+  }
+
   return (
     <label className="flex items-center gap-2 cursor-pointer mb-2">
       <input
@@ -605,5 +722,65 @@ function SettingsCheckbox({ checked, onChange, label }) {
       />
       <span className="text-sm text-gray-700">{label}</span>
     </label>
+  );
+}
+
+/**
+ * Helper component for multi-select checklists in horizontal mode
+ */
+function MultiSelectDropdown({ label, options, selectedIds, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  // Close when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [containerRef]);
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 ${isOpen ? 'ring-2 ring-sky-500 border-sky-500' : ''}`}
+      >
+        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</span>
+        <span className="bg-gray-100 text-gray-600 px-1.5 rounded text-xs font-bold">
+          {selectedIds.length}
+        </span>
+        <ChevronDown size={14} className="text-gray-400" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg p-2 z-50 animate-in fade-in slide-in-from-top-1 duration-100">
+          <div className="space-y-1 max-h-60 overflow-y-auto">
+            {options.map(option => (
+              <label
+                key={option.id}
+                className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedIds.includes(option.id)}
+                  onChange={(e) => {
+                    const updated = e.target.checked
+                      ? [...selectedIds, option.id]
+                      : selectedIds.filter(id => id !== option.id);
+                    onChange(updated);
+                  }}
+                  className="w-3.5 h-3.5 rounded border-gray-300 text-sky-500 focus:ring-sky-500"
+                />
+                <span className="text-sm text-gray-700">{option.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
