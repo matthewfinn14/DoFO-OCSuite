@@ -907,6 +907,81 @@ export default function Admin() {
                   rows={2}
                 />
               </div>
+
+              {/* Member List Section */}
+              <div>
+                <label className="text-sm text-slate-400 block mb-1">
+                  Member List ({editingSchool.memberList?.length || 0} members)
+                </label>
+                <div className="bg-slate-800 border border-slate-700 rounded-lg p-2 max-h-32 overflow-y-auto mb-2">
+                  {editingSchool.memberList?.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {editingSchool.memberList.map((email, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-slate-700 text-slate-300 text-xs rounded"
+                        >
+                          {email}
+                          <button
+                            type="button"
+                            onClick={() => setEditingSchool({
+                              ...editingSchool,
+                              memberList: editingSchool.memberList.filter((_, i) => i !== idx)
+                            })}
+                            className="text-slate-500 hover:text-red-400"
+                          >
+                            <X size={12} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-slate-500 text-sm">No members</p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    id="newMemberEmail"
+                    placeholder="Add email to member list"
+                    className="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const input = e.target;
+                        const email = input.value.toLowerCase().trim();
+                        if (email && !editingSchool.memberList?.includes(email)) {
+                          setEditingSchool({
+                            ...editingSchool,
+                            memberList: [...(editingSchool.memberList || []), email]
+                          });
+                          input.value = '';
+                        }
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const input = document.getElementById('newMemberEmail');
+                      const email = input.value.toLowerCase().trim();
+                      if (email && !editingSchool.memberList?.includes(email)) {
+                        setEditingSchool({
+                          ...editingSchool,
+                          memberList: [...(editingSchool.memberList || []), email]
+                        });
+                        input.value = '';
+                      }
+                    }}
+                    className="px-3 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 text-sm"
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Users in this list can access the school when they sign in with Google.
+                </p>
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 p-4 border-t border-slate-800">
@@ -921,6 +996,7 @@ export default function Admin() {
                   name: editingSchool.name,
                   mascot: editingSchool.mascot,
                   schoolAdminEmail: editingSchool.schoolAdminEmail,
+                  memberList: editingSchool.memberList || [],
                   subscription: editingSchool.subscription
                 })}
                 disabled={saving}
