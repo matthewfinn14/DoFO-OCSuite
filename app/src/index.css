@@ -139,7 +139,9 @@
 }
 
 /* Base Styles */
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   margin: 0;
   padding: 0;
@@ -180,10 +182,7 @@ body {
     display: block !important;
   }
 
-  /* Hide everything except print content */
-  body > *:not(.print-container) {
-    display: none !important;
-  }
+
 
   /* Wristband Print Styles */
   .print-card {
@@ -232,11 +231,7 @@ body {
     color-adjust: exact !important;
   }
 
-  /* Page setup */
-  @page {
-    size: letter;
-    margin: 0.25in;
-  }
+
 }
 
 .print-only {

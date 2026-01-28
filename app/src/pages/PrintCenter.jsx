@@ -20,6 +20,7 @@ import {
 import PrintPreview from '../components/print/PrintPreview';
 import WeekSelector from '../components/print/WeekSelector';
 import PrintSettingsPanel from '../components/print/PrintSettingsPanel';
+import PrintPageStyle from '../components/print/PrintPageStyle';
 
 // Import print templates
 import WristbandPrint from '../components/print/templates/WristbandPrint';
@@ -293,8 +294,31 @@ export default function PrintCenter() {
     return <TemplateComponent {...templateProps} />;
   };
 
+  // Calculate print margins based on template
+  const printMargins = useMemo(() => {
+    if (!selectedTemplate) return '0.5in';
+
+    // Wristbands need tight margins
+    if (selectedTemplate.id === 'wristband' || selectedTemplate.id === 'coach_wristband') {
+      return '0.25in';
+    }
+
+    // Depth charts in landscape (formation/halfsheet) often need minimal margins
+    if (selectedTemplate.id === 'depth_chart' && previewOrientation === 'landscape') {
+      return '0in';
+    }
+
+    return '0.5in';
+  }, [selectedTemplate, previewOrientation]);
+
   return (
     <div className="flex h-[calc(100vh-64px)] bg-gray-50 print:block print:h-auto print:bg-white">
+      {/* Dynamic Print Styles */}
+      <PrintPageStyle
+        orientation={previewOrientation}
+        margins={printMargins}
+      />
+
       {/* Sidebar - Template Selection & Settings */}
       <div className="w-96 bg-white border-r border-gray-200 overflow-y-auto print:hidden flex-shrink-0">
         {/* Header */}

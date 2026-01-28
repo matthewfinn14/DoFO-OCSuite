@@ -23,18 +23,7 @@
     display: block !important;
   }
 
-  /* Base page setup */
-  @page {
-    margin: 0.25in;
-  }
 
-  @page landscape {
-    size: letter landscape;
-  }
-
-  @page portrait {
-    size: letter portrait;
-  }
 
   /* Ensure colors print correctly */
   * {
@@ -342,10 +331,7 @@
     page-break-inside: avoid;
   }
 
-  @page coach-megacard {
-    size: letter landscape;
-    margin: 0.25in;
-  }
+
 }
 
 /* ============================================
@@ -420,10 +406,7 @@
     page-break-after: always;
   }
 
-  @page depth-chart-landscape {
-    size: letter landscape;
-    margin: 0;
-  }
+
 }
 
 /* ============================================
@@ -531,10 +514,7 @@
 
 @media print {
   .gameplan-print-portrait {
-    @page {
-      size: letter portrait;
-      margin: 0.5in;
-    }
+    margin: 0.5in;
   }
 }
 

@@ -216,12 +216,12 @@ export default function WristbandPrint({
 
         /* Player format: 4 cards per page (2x2 grid) on LANDSCAPE paper */
         /* Landscape letter = 11" wide x 8.5" tall */
-        /* Standard cards: 5" x 2.8" each - wide format for wristband holders */
+        /* Standard cards: 4.75" x 2.8" each - optimal print width */
         .wristband-print-player {
           display: grid;
-          grid-template-columns: repeat(2, 5in);
+          grid-template-columns: repeat(2, 4.75in);
           grid-template-rows: repeat(2, 2.8in);
-          gap: 0.4in 0.5in;
+          gap: 0.4in 0.3in;
           justify-content: center;
           align-content: center;
           padding: 0.25in;
@@ -230,7 +230,7 @@ export default function WristbandPrint({
         }
 
         .wristband-print-player .wristband-card {
-          width: 5in;
+          width: 4.75in;
           height: 2.8in;
           border: 2px solid black;
           background: white;
@@ -640,8 +640,8 @@ function StandardLayout({ slots, getPlayForSlot, showSlotNumbers, showFormation,
             const play = getPlayForSlot(slot);
             const playText = play
               ? (showFormation && play.formation
-                  ? `${play.formation} ${play.name}`
-                  : play.name)
+                ? `${play.formation} ${play.name}`
+                : play.name)
               : '';
 
             return [

@@ -46,18 +46,16 @@ function HelpSection({ title, children, defaultOpen = false, isLight = false }) 
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className={`mb-4 rounded-lg overflow-hidden border ${
-      isLight
-        ? 'bg-white border-gray-200 shadow-sm'
-        : 'bg-slate-700/30 border-slate-600'
-    }`}>
+    <div className={`mb-4 rounded-lg overflow-hidden border ${isLight
+      ? 'bg-white border-gray-200 shadow-sm'
+      : 'bg-slate-700/30 border-slate-600'
+      }`}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors ${
-          isLight
-            ? 'hover:bg-gray-200'
-            : 'hover:bg-slate-700/50'
-        }`}
+        className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors ${isLight
+          ? 'hover:bg-gray-200'
+          : 'hover:bg-slate-700/50'
+          }`}
       >
         <div className="flex items-center gap-2">
           <HelpCircle size={18} className="text-sky-500" />
@@ -70,11 +68,10 @@ function HelpSection({ title, children, defaultOpen = false, isLight = false }) 
         )}
       </button>
       {isOpen && (
-        <div className={`px-4 pb-4 text-sm leading-relaxed border-t ${
-          isLight
-            ? 'text-gray-600 border-gray-300'
-            : 'text-slate-400 border-slate-600'
-        }`}>
+        <div className={`px-4 pb-4 text-sm leading-relaxed border-t ${isLight
+          ? 'text-gray-600 border-gray-300'
+          : 'text-slate-400 border-slate-600'
+          }`}>
           {children}
         </div>
       )}
@@ -788,7 +785,7 @@ export default function Setup() {
             addedTabs.add(tabConfig.id);
           }
         } else if ((!syntaxPart.sourceCategory || syntaxPart.sourceCategory === 'custom') &&
-                   syntaxPart.label && syntaxPart.label !== 'New') {
+          syntaxPart.label && syntaxPart.label !== 'New') {
           // Custom syntax tab - hidden in Basic mode
           tabs.push({
             id: `custom-syntax-${syntaxPart.id}`,
@@ -976,13 +973,12 @@ export default function Setup() {
           <button
             key={p.id}
             onClick={() => handlePhaseChange(p.id)}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              phase === p.id
-                ? 'bg-sky-600 text-white'
-                : isLight
-                  ? 'bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-300'
-                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-            }`}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${phase === p.id
+              ? 'bg-sky-600 text-white'
+              : isLight
+                ? 'bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-300'
+                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+              }`}
           >
             {p.label}
           </button>
@@ -991,63 +987,48 @@ export default function Setup() {
 
       {/* Setup Mode Selector - Offense/Defense/ST */}
       {(isOffense || isDefense || isST) && (
-        <div className={`mb-6 p-4 rounded-lg border ${
-          isLight
-            ? 'bg-white border-gray-200 shadow-sm'
-            : 'bg-slate-800/50 border-slate-700'
-        }`}>
+        <div className={`mb-6 p-4 rounded-lg border ${isLight
+          ? 'bg-white border-gray-200 shadow-sm'
+          : 'bg-slate-800/50 border-slate-700'
+          }`}>
           <div className="flex flex-col gap-4">
             {/* Header with mode buttons */}
             <div className="flex items-center justify-between">
               <div>
                 <h3 className={`font-medium flex items-center gap-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
                   Setup Mode
-                  <span className={`text-xs px-2 py-0.5 rounded ${
-                    (localConfig.setupMode?.[phase] || 'standard') === 'basic'
-                      ? isLight ? 'bg-gray-200 text-gray-600' : 'bg-slate-600/30 text-slate-300'
-                      : (localConfig.setupMode?.[phase] || 'standard') === 'standard'
+                  <span className={`text-xs px-2 py-0.5 rounded ${(localConfig.setupMode?.[phase] || 'standard') === 'basic'
+                    ? isLight ? 'bg-gray-200 text-gray-600' : 'bg-slate-600/30 text-slate-300'
+                    : (localConfig.setupMode?.[phase] || 'standard') === 'standard'
                       ? 'bg-green-600/30 text-green-400'
                       : 'bg-purple-600/30 text-purple-400'
-                  }`}>
+                    }`}>
                     {(localConfig.setupMode?.[phase] || 'standard') === 'basic' ? 'Basic' :
-                     (localConfig.setupMode?.[phase] || 'standard') === 'standard' ? 'Standard' : 'Advanced'}
+                      (localConfig.setupMode?.[phase] || 'standard') === 'standard' ? 'Standard' : 'Advanced'}
                   </span>
                 </h3>
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => updateLocal('setupMode', { ...localConfig.setupMode, [phase]: 'basic' })}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    (localConfig.setupMode?.[phase] || 'standard') === 'basic'
-                      ? 'bg-slate-500 text-white'
-                      : isLight
-                        ? 'bg-gray-200 text-gray-600 hover:bg-gray-300 border border-gray-300'
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                  }`}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${(localConfig.setupMode?.[phase] || 'standard') === 'basic'
+                    ? 'bg-slate-500 text-white'
+                    : isLight
+                      ? 'bg-gray-200 text-gray-600 hover:bg-gray-300 border border-gray-300'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    }`}
                 >
                   Basic
                 </button>
-                <button
-                  onClick={() => updateLocal('setupMode', { ...localConfig.setupMode, [phase]: 'standard' })}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    (localConfig.setupMode?.[phase] || 'standard') === 'standard'
-                      ? 'bg-green-600 text-white'
-                      : isLight
-                        ? 'bg-gray-200 text-gray-600 hover:bg-gray-300 border border-gray-300'
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                  }`}
-                >
-                  Standard
-                </button>
+
                 <button
                   onClick={() => updateLocal('setupMode', { ...localConfig.setupMode, [phase]: 'advanced' })}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    (localConfig.setupMode?.[phase] || 'standard') === 'advanced'
-                      ? 'bg-purple-600 text-white'
-                      : isLight
-                        ? 'bg-gray-200 text-gray-600 hover:bg-gray-300 border border-gray-300'
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                  }`}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${(localConfig.setupMode?.[phase] || 'standard') === 'advanced'
+                    ? 'bg-purple-600 text-white'
+                    : isLight
+                      ? 'bg-gray-200 text-gray-600 hover:bg-gray-300 border border-gray-300'
+                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    }`}
                 >
                   Advanced
                 </button>
@@ -1055,17 +1036,16 @@ export default function Setup() {
             </div>
 
             {/* Mode description cards */}
-            <div className="grid md:grid-cols-3 gap-3">
+            <div className="grid md:grid-cols-2 gap-3">
               {/* Basic Mode Card */}
-              <div className={`p-3 rounded-lg border transition-all ${
-                (localConfig.setupMode?.[phase] || 'standard') === 'basic'
-                  ? isLight
-                    ? 'bg-gray-50 border-gray-400 shadow-sm'
-                    : 'bg-slate-700/40 border-slate-500/50'
-                  : isLight
-                    ? 'bg-white border-gray-200 opacity-60'
-                    : 'bg-slate-800/30 border-slate-700/50 opacity-60'
-              }`}>
+              <div className={`p-3 rounded-lg border transition-all ${(localConfig.setupMode?.[phase] || 'standard') === 'basic'
+                ? isLight
+                  ? 'bg-gray-50 border-gray-400 shadow-sm'
+                  : 'bg-slate-700/40 border-slate-500/50'
+                : isLight
+                  ? 'bg-white border-gray-200 opacity-60'
+                  : 'bg-slate-800/30 border-slate-700/50 opacity-60'
+                }`}>
                 <h4 className={`font-medium text-sm mb-2 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>Basic Mode</h4>
                 <ul className={`text-xs space-y-1 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
                   <li>• Type entire play call in one field</li>
@@ -1075,35 +1055,17 @@ export default function Setup() {
                 </ul>
               </div>
 
-              {/* Standard Mode Card */}
-              <div className={`p-3 rounded-lg border transition-all ${
-                (localConfig.setupMode?.[phase] || 'standard') === 'standard'
-                  ? isLight
-                    ? 'bg-green-50 border-green-400 shadow-sm'
-                    : 'bg-green-900/20 border-green-600/50'
-                  : isLight
-                    ? 'bg-white border-gray-200 opacity-60'
-                    : 'bg-slate-800/30 border-slate-700/50 opacity-60'
-              }`}>
-                <h4 className={`font-medium text-sm mb-2 ${isLight ? 'text-green-700' : 'text-green-400'}`}>Standard Mode</h4>
-                <ul className={`text-xs space-y-1 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
-                  <li>• Formation + Motion + Play structure</li>
-                  <li>• Filter by formation, motion, bucket</li>
-                  <li>• Great for JV or getting started</li>
-                  <li>• Upgrade anytime as system grows</li>
-                </ul>
-              </div>
+
 
               {/* Advanced Mode Card */}
-              <div className={`p-3 rounded-lg border transition-all ${
-                (localConfig.setupMode?.[phase] || 'standard') === 'advanced'
-                  ? isLight
-                    ? 'bg-purple-50 border-purple-400 shadow-sm'
-                    : 'bg-purple-900/20 border-purple-600/50'
-                  : isLight
-                    ? 'bg-white border-gray-200 opacity-60'
-                    : 'bg-slate-800/30 border-slate-700/50 opacity-60'
-              }`}>
+              <div className={`p-3 rounded-lg border transition-all ${(localConfig.setupMode?.[phase] || 'standard') === 'advanced'
+                ? isLight
+                  ? 'bg-purple-50 border-purple-400 shadow-sm'
+                  : 'bg-purple-900/20 border-purple-600/50'
+                : isLight
+                  ? 'bg-white border-gray-200 opacity-60'
+                  : 'bg-slate-800/30 border-slate-700/50 opacity-60'
+                }`}>
                 <h4 className={`font-medium text-sm mb-2 ${isLight ? 'text-purple-700' : 'text-purple-400'}`}>Advanced Mode</h4>
                 <ul className={`text-xs space-y-1 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
                   <li>• Custom syntax per play bucket</li>
@@ -1202,15 +1164,14 @@ export default function Setup() {
                 <button
                   key={tab.id}
                   onClick={() => handleTabChange(tab.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-sm transition-colors ${
-                    activeTab === tab.id
-                      ? isLight
-                        ? 'bg-sky-100 text-sky-700 font-medium'
-                        : 'bg-sky-500/20 text-sky-400'
-                      : isLight
-                        ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
-                        : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
-                  }`}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-sm transition-colors ${activeTab === tab.id
+                    ? isLight
+                      ? 'bg-sky-100 text-sky-700 font-medium'
+                      : 'bg-sky-500/20 text-sky-400'
+                    : isLight
+                      ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                    }`}
                 >
                   <tab.icon size={16} />
                   {tab.label}
@@ -1542,11 +1503,10 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
         {positions.map(pos => (
-          <div key={pos.key} className={`p-4 rounded-lg border relative overflow-hidden group ${
-            isLight
-              ? 'bg-white border-gray-200 shadow-sm'
-              : 'bg-slate-700/50 border-slate-600'
-          }`}>
+          <div key={pos.key} className={`p-4 rounded-lg border relative overflow-hidden group ${isLight
+            ? 'bg-white border-gray-200 shadow-sm'
+            : 'bg-slate-700/50 border-slate-600'
+            }`}>
             <div className="flex justify-between items-center mb-2">
               <div className="flex items-center gap-1">
                 <span className={`text-xs font-bold ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
@@ -1565,9 +1525,8 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
                 value={positionDescriptions[pos.key] ?? pos.description}
                 onChange={(e) => updatePositionDesc(pos.key, e.target.value)}
                 placeholder={pos.description}
-                className={`text-xs text-right bg-transparent border-none w-24 focus:outline-none ${
-                  isLight ? 'text-gray-600' : 'text-slate-300'
-                }`}
+                className={`text-xs text-right bg-transparent border-none w-24 focus:outline-none ${isLight ? 'text-gray-600' : 'text-slate-300'
+                  }`}
               />
             </div>
 
@@ -1588,7 +1547,7 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
               </div>
               <input
                 type="text"
-                value={positionNames[pos.key] || pos.default}
+                value={positionNames[pos.key] ?? pos.default}
                 onChange={(e) => updatePositionName(pos.key, e.target.value)}
                 placeholder={pos.default}
                 maxLength={3}
@@ -1987,7 +1946,7 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
     const newFamily = {
       id: `family_${Date.now()}`,
       name,
-      color: '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')
+      color: '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')
     };
     onUpdateFamilies([...formationFamilies, newFamily]);
   };
@@ -2146,11 +2105,10 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
                         <button
                           key={family.id}
                           onClick={() => toggleFormationFamily(formation.id, family.id)}
-                          className={`px-2 py-0.5 rounded text-xs font-medium transition-all ${
-                            isSelected
-                              ? 'ring-1 ring-offset-1 ring-offset-slate-700'
-                              : 'opacity-50 hover:opacity-100'
-                          }`}
+                          className={`px-2 py-0.5 rounded text-xs font-medium transition-all ${isSelected
+                            ? 'ring-1 ring-offset-1 ring-offset-slate-700'
+                            : 'opacity-50 hover:opacity-100'
+                            }`}
                           style={{
                             backgroundColor: isSelected ? family.color : 'rgba(100,116,139,0.3)',
                             color: isSelected ? '#fff' : '#94a3b8',
@@ -2228,7 +2186,7 @@ function ShiftMotionsTab({ shiftMotions, onUpdate }) {
       id: `sm_${Date.now()}`,
       name,
       type,
-      color: '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')
+      color: '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')
     }]);
   };
 
@@ -2369,6 +2327,23 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupMode, setup
   const itemLabel = phase === 'OFFENSE' ? 'Bucket' : 'Category';
   const isBasicMode = setupMode === 'basic';
   const isAdvanced = setupMode === 'advanced';
+
+  // Default buckets for Offense
+  const DEFAULT_OFFENSE_BUCKETS = [
+    { id: 'run', label: 'Run', color: '#3b82f6', phase: 'OFFENSE' },
+    { id: 'pass', label: 'Pass', color: '#8b5cf6', phase: 'OFFENSE' },
+    { id: 'screen', label: 'Screen', color: '#f97316', phase: 'OFFENSE' },
+    { id: 'rpo', label: 'RPO', color: '#10b981', phase: 'OFFENSE' }
+  ];
+
+  // Initialize defaults if empty
+  useEffect(() => {
+    if (phase === 'OFFENSE' && buckets.length === 0) {
+      // Check if we already have them in allBuckets to avoid duplicates (though buckets.length=0 implies we don't for this phase)
+      const newBuckets = [...allBuckets, ...DEFAULT_OFFENSE_BUCKETS];
+      onUpdate('playBuckets', newBuckets);
+    }
+  }, [phase, buckets.length]);
 
   // State for editing bucket syntax
   const [editingSyntaxBucket, setEditingSyntaxBucket] = useState(null);
@@ -2855,11 +2830,10 @@ function LookAlikeSeriesTab({ series, buckets, plays, onUpdate }) {
                         <button
                           key={el.id}
                           onClick={() => toggleCommonElement(s.id, el.id)}
-                          className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                            (s.commonElements || []).includes(el.id)
-                              ? 'bg-sky-500/20 text-sky-400 border border-sky-500/50'
-                              : 'bg-slate-800 text-slate-400 border border-slate-600 hover:border-slate-500'
-                          }`}
+                          className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${(s.commonElements || []).includes(el.id)
+                            ? 'bg-sky-500/20 text-sky-400 border border-sky-500/50'
+                            : 'bg-slate-800 text-slate-400 border border-slate-600 hover:border-slate-500'
+                            }`}
                         >
                           {el.label}
                         </button>
@@ -3651,11 +3625,10 @@ function TeachPlayCallModal({ isOpen, onClose, phase, currentSyntax, termLibrary
                   return (
                     <div
                       key={idx}
-                      className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                        assignment
-                          ? 'bg-sky-500/10 border-sky-500/50'
-                          : 'bg-slate-700/50 border-slate-600'
-                      }`}
+                      className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${assignment
+                        ? 'bg-sky-500/10 border-sky-500/50'
+                        : 'bg-slate-700/50 border-slate-600'
+                        }`}
                     >
                       <span className="text-lg font-mono font-bold text-white min-w-[100px]">
                         {token}
@@ -3675,11 +3648,10 @@ function TeachPlayCallModal({ isOpen, onClose, phase, currentSyntax, termLibrary
                         ))}
                       </select>
                       {syntaxPart && (
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          syntaxPart.sourceCategory && syntaxPart.sourceCategory !== 'custom'
-                            ? 'bg-slate-600 text-slate-300'
-                            : 'bg-emerald-500/20 text-emerald-400'
-                        }`}>
+                        <span className={`text-xs px-2 py-1 rounded ${syntaxPart.sourceCategory && syntaxPart.sourceCategory !== 'custom'
+                          ? 'bg-slate-600 text-slate-300'
+                          : 'bg-emerald-500/20 text-emerald-400'
+                          }`}>
                           {syntaxPart.sourceCategory && syntaxPart.sourceCategory !== 'custom'
                             ? 'Matches setup'
                             : 'Will add term'}
@@ -4001,11 +3973,10 @@ function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupCo
               <button
                 key={template.id}
                 onClick={() => setSelectedTemplate(template.id)}
-                className={`flex-1 min-w-[140px] max-w-[200px] p-4 rounded-lg border-2 transition-all text-left ${
-                  selectedTemplate === template.id
-                    ? 'border-sky-500 bg-sky-500/10'
-                    : 'border-slate-600 bg-slate-800/50 hover:border-slate-500'
-                }`}
+                className={`flex-1 min-w-[140px] max-w-[200px] p-4 rounded-lg border-2 transition-all text-left ${selectedTemplate === template.id
+                  ? 'border-sky-500 bg-sky-500/10'
+                  : 'border-slate-600 bg-slate-800/50 hover:border-slate-500'
+                  }`}
               >
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-xl">{template.icon}</span>
@@ -4079,9 +4050,8 @@ function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupCo
               {currentSyntax.map((item, idx) => (
                 <div key={item.id} className="flex items-center gap-2">
                   {/* Component Card */}
-                  <div className={`flex-shrink-0 w-48 bg-slate-700/50 rounded-lg border overflow-hidden ${
-                    item.required ? 'border-amber-500/50' : 'border-slate-600'
-                  }`}>
+                  <div className={`flex-shrink-0 w-48 bg-slate-700/50 rounded-lg border overflow-hidden ${item.required ? 'border-amber-500/50' : 'border-slate-600'
+                    }`}>
                     {/* Header with number and controls */}
                     <div className="flex items-center justify-between px-3 py-2 bg-slate-600/50 border-b border-slate-600">
                       <div className="flex items-center gap-2">
@@ -4431,11 +4401,10 @@ function CustomSyntaxTermsTab({ phase, syntaxPart, termLibrary, syntax, onUpdate
           <div className="mt-1.5 flex items-center gap-1.5">
             <button
               onClick={() => setEditingSignalsTerm(term)}
-              className={`text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 ${
-                signalCount > 0
-                  ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
-                  : 'bg-slate-600 text-slate-400 hover:bg-slate-500 opacity-0 group-hover:opacity-100'
-              }`}
+              className={`text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 ${signalCount > 0
+                ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
+                : 'bg-slate-600 text-slate-400 hover:bg-slate-500 opacity-0 group-hover:opacity-100'
+                }`}
             >
               {signalCount > 0 ? (
                 <>Signals {signalCount} field{signalCount > 1 ? 's' : ''}</>
@@ -5177,11 +5146,10 @@ function SegmentTypesTab({ segmentTypes, onUpdate }) {
           <button
             key={p.id}
             onClick={() => setActivePhase(p.id)}
-            className={`flex-1 px-4 py-2 rounded-md text-sm font-semibold transition-colors ${
-              activePhase === p.id
-                ? `${p.color} text-white`
-                : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
-            }`}
+            className={`flex-1 px-4 py-2 rounded-md text-sm font-semibold transition-colors ${activePhase === p.id
+              ? `${p.color} text-white`
+              : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+              }`}
           >
             {p.label}
           </button>
@@ -5407,11 +5375,10 @@ function SegmentFocusTab({
               <button
                 key={source.id}
                 onClick={() => setActiveSource(source.id)}
-                className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${
-                  activeSource === source.id
-                    ? 'bg-sky-600 text-white'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${activeSource === source.id
+                  ? 'bg-sky-600 text-white'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                  }`}
               >
                 <Icon size={14} />
                 {source.label}
@@ -5464,11 +5431,10 @@ function SegmentFocusTab({
                       key={item.id}
                       onClick={() => !added && addFocusItem(item)}
                       disabled={added}
-                      className={`px-3 py-1.5 rounded text-sm transition-colors ${
-                        added
-                          ? 'bg-emerald-500/20 text-emerald-400 cursor-default'
-                          : 'bg-slate-700 text-white hover:bg-slate-600'
-                      }`}
+                      className={`px-3 py-1.5 rounded text-sm transition-colors ${added
+                        ? 'bg-emerald-500/20 text-emerald-400 cursor-default'
+                        : 'bg-slate-700 text-white hover:bg-slate-600'
+                        }`}
                     >
                       {added && <Check size={12} className="inline mr-1" />}
                       {item.name}
@@ -5976,11 +5942,10 @@ function SeasonPhasesTab({ seasonPhases, onUpdate, isLight = false }) {
   return (
     <div className="space-y-6">
       {/* Info Box */}
-      <div className={`p-4 rounded-lg border ${
-        isLight
-          ? 'bg-sky-50 border-sky-300'
-          : 'bg-sky-500/10 border-sky-500/30'
-      }`}>
+      <div className={`p-4 rounded-lg border ${isLight
+        ? 'bg-sky-50 border-sky-300'
+        : 'bg-sky-500/10 border-sky-500/30'
+        }`}>
         <p className={`text-sm ${isLight ? 'text-sky-700' : 'text-sky-300'}`}>
           <strong>Season Phases:</strong> Define the phases of your season with start dates.
           When you set a start date, weeks in that phase auto-calculate (Week 1 starts on start date, Week 2 is 7 days later, etc.)
@@ -5996,11 +5961,10 @@ function SeasonPhasesTab({ seasonPhases, onUpdate, isLight = false }) {
           return (
             <div
               key={phase.id}
-              className={`rounded-lg border overflow-hidden ${
-                isLight
-                  ? 'bg-white border-gray-300'
-                  : 'bg-slate-700/50 border-slate-600'
-              }`}
+              className={`rounded-lg border overflow-hidden ${isLight
+                ? 'bg-white border-gray-300'
+                : 'bg-slate-700/50 border-slate-600'
+                }`}
             >
               {/* Phase Header */}
               <div className={`flex items-center gap-3 px-4 py-3 ${colorClass}`}>
@@ -6042,11 +6006,10 @@ function SeasonPhasesTab({ seasonPhases, onUpdate, isLight = false }) {
                   <select
                     value={phase.color}
                     onChange={e => updatePhase(phase.id, { color: e.target.value })}
-                    className={`w-full px-3 py-2 border rounded text-sm ${
-                      isLight
-                        ? 'bg-white border-gray-300 text-gray-900'
-                        : 'bg-slate-600 border-slate-500 text-white'
-                    }`}
+                    className={`w-full px-3 py-2 border rounded text-sm ${isLight
+                      ? 'bg-white border-gray-300 text-gray-900'
+                      : 'bg-slate-600 border-slate-500 text-white'
+                      }`}
                   >
                     {PHASE_COLORS.map(c => (
                       <option key={c.id} value={c.id}>{c.label}</option>
@@ -6061,11 +6024,10 @@ function SeasonPhasesTab({ seasonPhases, onUpdate, isLight = false }) {
                     type="date"
                     value={phase.startDate || ''}
                     onChange={e => updatePhase(phase.id, { startDate: e.target.value })}
-                    className={`w-full px-3 py-2 border rounded text-sm ${
-                      isLight
-                        ? 'bg-white border-gray-300 text-gray-900'
-                        : 'bg-slate-600 border-slate-500 text-white'
-                    }`}
+                    className={`w-full px-3 py-2 border rounded text-sm ${isLight
+                      ? 'bg-white border-gray-300 text-gray-900'
+                      : 'bg-slate-600 border-slate-500 text-white'
+                      }`}
                   />
                 </div>
 
@@ -6078,22 +6040,20 @@ function SeasonPhasesTab({ seasonPhases, onUpdate, isLight = false }) {
                     onChange={e => updatePhase(phase.id, { numWeeks: parseInt(e.target.value) || 0 })}
                     min="1"
                     max="52"
-                    className={`w-full px-3 py-2 border rounded text-sm ${
-                      isLight
-                        ? 'bg-white border-gray-300 text-gray-900'
-                        : 'bg-slate-600 border-slate-500 text-white'
-                    }`}
+                    className={`w-full px-3 py-2 border rounded text-sm ${isLight
+                      ? 'bg-white border-gray-300 text-gray-900'
+                      : 'bg-slate-600 border-slate-500 text-white'
+                      }`}
                   />
                 </div>
 
                 {/* Date Range Display */}
                 <div>
                   <label className={`block text-xs font-medium uppercase mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Date Range</label>
-                  <div className={`px-3 py-2 border rounded text-sm ${
-                    isLight
-                      ? 'bg-gray-100 border-gray-300'
-                      : 'bg-slate-800/50 border-slate-600'
-                  }`}>
+                  <div className={`px-3 py-2 border rounded text-sm ${isLight
+                    ? 'bg-gray-100 border-gray-300'
+                    : 'bg-slate-800/50 border-slate-600'
+                    }`}>
                     {phase.startDate ? (
                       <span className={isLight ? 'text-gray-900' : 'text-white'}>
                         {formatDate(phase.startDate)} — {endDate ? formatDate(endDate) : '...'}

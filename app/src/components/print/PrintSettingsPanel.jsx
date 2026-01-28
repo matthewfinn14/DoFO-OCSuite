@@ -107,7 +107,7 @@ function WristbandSettings({ settings, onChange, weekData, layout }) {
           value={settings.format || 'player'}
           onChange={(e) => onChange('format', e.target.value)}
         >
-          <option value="player">Player (4 per page, 5" x 2.8")</option>
+          <option value="player">Player (4 per page, 4.75" x 2.8")</option>
           <option value="coach">Coach (2 per page, 7.5" x 4")</option>
         </select>
       </SettingsField>
@@ -697,8 +697,8 @@ function SettingsCheckbox({ checked, onChange, label, layout }) {
   if (layout === 'horizontal') {
     return (
       <label className={`flex items-center gap-1.5 cursor-pointer select-none px-3 py-1.5 rounded transition-colors border ${checked
-          ? 'bg-sky-50 border-sky-200 text-sky-700'
-          : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+        ? 'bg-sky-50 border-sky-200 text-sky-700'
+        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
         }`}>
         <input
           type="checkbox"

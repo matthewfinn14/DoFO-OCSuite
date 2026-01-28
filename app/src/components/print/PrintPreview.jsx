@@ -117,7 +117,7 @@ export default function PrintPreview({
         <div className="flex justify-center">
           <div
             style={paperStyle}
-            className="bg-white shadow-xl border border-gray-300 print:shadow-none print:border-0 print:transform-none"
+            className="bg-white shadow-xl border border-gray-300 print:shadow-none print:border-0 print:!transform-none print:!w-full print:!h-auto print:!m-0 print:!rounded-none"
           >
             {children}
           </div>
