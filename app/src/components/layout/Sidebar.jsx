@@ -289,12 +289,6 @@ export default function Sidebar() {
                     label="X&O Quality Control"
                     isLight={isLight}
                   />
-                  <WeeklyToolItem
-                    to={`/week/${currentWeekId}/report`}
-                    icon={FileBarChart}
-                    label="Weekly Report"
-                    isLight={isLight}
-                  />
                 </div>
               </>
             )}

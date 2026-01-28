@@ -1,6 +1,5 @@
 import { NavLink } from 'react-router-dom';
 import {
-  FileBarChart,
   Target,
   Calendar,
   FileText,
@@ -56,7 +55,6 @@ const SEASON_MENU = [
   { to: (weekId) => `/week/${weekId}/game-plan`, icon: Clipboard, label: 'Game Planner', usesWeekId: true },
   { to: (weekId) => `/week/${weekId}/pregame`, icon: Clock, label: 'Pre-Game Timeline', usesWeekId: true },
   { to: (weekId) => `/week/${weekId}/quality-control`, icon: ClipboardCheck, label: 'X&O Quality Control', usesWeekId: true },
-  { to: (weekId) => `/week/${weekId}/report`, icon: FileBarChart, label: 'Weekly Report', usesWeekId: true },
 ];
 
 export default function WeeklyToolsMenu({ weekId, isOffseason = false }) {
