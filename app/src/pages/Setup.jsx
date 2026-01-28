@@ -42,23 +42,39 @@ import PlayDiagramEditor from '../components/diagrams/PlayDiagramEditor';
 import DiagramPreview from '../components/diagrams/DiagramPreview';
 
 // Collapsible Help Section component
-function HelpSection({ title, children, defaultOpen = false }) {
+function HelpSection({ title, children, defaultOpen = false, isLight = false }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="mb-4 bg-slate-700/30 border border-slate-600 rounded-lg overflow-hidden">
+    <div className={`mb-4 rounded-lg overflow-hidden border ${
+      isLight
+        ? 'bg-gray-100 border-gray-300'
+        : 'bg-slate-700/30 border-slate-600'
+    }`}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-slate-700/50 transition-colors"
+        className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors ${
+          isLight
+            ? 'hover:bg-gray-200'
+            : 'hover:bg-slate-700/50'
+        }`}
       >
         <div className="flex items-center gap-2">
-          <HelpCircle size={18} className="text-sky-400" />
-          <span className="text-sm font-medium text-slate-300">{title}</span>
+          <HelpCircle size={18} className="text-sky-500" />
+          <span className={`text-sm font-medium ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>{title}</span>
         </div>
-        {isOpen ? <ChevronUp size={18} className="text-slate-400" /> : <ChevronDown size={18} className="text-slate-400" />}
+        {isOpen ? (
+          <ChevronUp size={18} className={isLight ? 'text-gray-500' : 'text-slate-400'} />
+        ) : (
+          <ChevronDown size={18} className={isLight ? 'text-gray-500' : 'text-slate-400'} />
+        )}
       </button>
       {isOpen && (
-        <div className="px-4 pb-4 text-sm text-slate-400 leading-relaxed border-t border-slate-600">
+        <div className={`px-4 pb-4 text-sm leading-relaxed border-t ${
+          isLight
+            ? 'text-gray-600 border-gray-300'
+            : 'text-slate-400 border-slate-600'
+        }`}>
           {children}
         </div>
       )}
@@ -487,8 +503,12 @@ const PHASES = [
 ];
 
 export default function Setup() {
-  const { school, staff, setupConfig, updateSetupConfig, weeks, activeYear, updateWeeks, playsArray } = useSchool();
+  const { school, staff, setupConfig, updateSetupConfig, weeks, activeYear, updateWeeks, playsArray, settings } = useSchool();
   const { isHeadCoach, isTeamAdmin, isSiteAdmin } = useAuth();
+
+  // Theme detection
+  const theme = settings?.theme || school?.settings?.theme || 'dark';
+  const isLight = theme === 'light';
   const { phase: urlPhase, tab: urlTab } = useParams();
   const navigate = useNavigate();
 
@@ -920,10 +940,10 @@ export default function Setup() {
       )}
 
       {/* Main Help Section */}
-      <HelpSection title="What is System Setup?">
+      <HelpSection title="What is System Setup?" isLight={isLight}>
         <div className="pt-3 space-y-3">
           <div>
-            <h4 className="text-white font-medium mb-1">Purpose</h4>
+            <h4 className={`font-medium mb-1 ${isLight ? 'text-gray-900' : 'text-white'}`}>Purpose</h4>
             <p>
               System Setup is where you configure the foundational elements of your football program in DoFO.
               This includes positions, formations, play categories, terminology, and practice structures.
@@ -931,7 +951,7 @@ export default function Setup() {
             </p>
           </div>
           <div>
-            <h4 className="text-white font-medium mb-1">The Four Phases</h4>
+            <h4 className={`font-medium mb-1 ${isLight ? 'text-gray-900' : 'text-white'}`}>The Four Phases</h4>
             <ul className="list-disc list-inside space-y-1">
               <li><strong>Offense:</strong> Set up offensive positions, formations, personnel groupings, play buckets, and OL schemes</li>
               <li><strong>Defense:</strong> Configure defensive positions, fronts, coverages, and blitz categories</li>
@@ -940,7 +960,7 @@ export default function Setup() {
             </ul>
           </div>
           <div>
-            <h4 className="text-white font-medium mb-1">Why Set This Up First?</h4>
+            <h4 className={`font-medium mb-1 ${isLight ? 'text-gray-900' : 'text-white'}`}>Why Set This Up First?</h4>
             <p>
               Taking time to configure System Setup properly pays dividends all season. Every play you enter,
               practice you plan, and wristband you build will use these settings. Investing 30-60 minutes here
@@ -959,7 +979,9 @@ export default function Setup() {
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
               phase === p.id
                 ? 'bg-sky-600 text-white'
-                : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                : isLight
+                  ? 'bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-300'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
             }`}
           >
             {p.label}
@@ -994,7 +1016,9 @@ export default function Setup() {
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                     (localConfig.setupMode?.[phase] || 'standard') === 'basic'
                       ? 'bg-slate-500 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      : isLight
+                        ? 'bg-gray-200 text-gray-600 hover:bg-gray-300 border border-gray-300'
+                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                   }`}
                 >
                   Basic
@@ -1004,7 +1028,9 @@ export default function Setup() {
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                     (localConfig.setupMode?.[phase] || 'standard') === 'standard'
                       ? 'bg-green-600 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      : isLight
+                        ? 'bg-gray-200 text-gray-600 hover:bg-gray-300 border border-gray-300'
+                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                   }`}
                 >
                   Standard
@@ -1014,7 +1040,9 @@ export default function Setup() {
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                     (localConfig.setupMode?.[phase] || 'standard') === 'advanced'
                       ? 'bg-purple-600 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      : isLight
+                        ? 'bg-gray-200 text-gray-600 hover:bg-gray-300 border border-gray-300'
+                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                   }`}
                 >
                   Advanced
@@ -1027,11 +1055,15 @@ export default function Setup() {
               {/* Basic Mode Card */}
               <div className={`p-3 rounded-lg border transition-all ${
                 (localConfig.setupMode?.[phase] || 'standard') === 'basic'
-                  ? 'bg-slate-700/40 border-slate-500/50'
-                  : 'bg-slate-800/30 border-slate-700/50 opacity-60'
+                  ? isLight
+                    ? 'bg-gray-200 border-gray-400'
+                    : 'bg-slate-700/40 border-slate-500/50'
+                  : isLight
+                    ? 'bg-gray-100 border-gray-300 opacity-70'
+                    : 'bg-slate-800/30 border-slate-700/50 opacity-60'
               }`}>
-                <h4 className="text-slate-300 font-medium text-sm mb-2">Basic Mode</h4>
-                <ul className="text-xs text-slate-400 space-y-1">
+                <h4 className={`font-medium text-sm mb-2 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>Basic Mode</h4>
+                <ul className={`text-xs space-y-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
                   <li>• Type entire play call in one field</li>
                   <li>• No syntax parsing or breakdown</li>
                   <li>• Practice scripts and game plans work</li>
@@ -1042,11 +1074,15 @@ export default function Setup() {
               {/* Standard Mode Card */}
               <div className={`p-3 rounded-lg border transition-all ${
                 (localConfig.setupMode?.[phase] || 'standard') === 'standard'
-                  ? 'bg-green-900/20 border-green-600/50'
-                  : 'bg-slate-800/30 border-slate-700/50 opacity-60'
+                  ? isLight
+                    ? 'bg-green-100 border-green-500'
+                    : 'bg-green-900/20 border-green-600/50'
+                  : isLight
+                    ? 'bg-gray-100 border-gray-300 opacity-70'
+                    : 'bg-slate-800/30 border-slate-700/50 opacity-60'
               }`}>
-                <h4 className="text-green-400 font-medium text-sm mb-2">Standard Mode</h4>
-                <ul className="text-xs text-slate-400 space-y-1">
+                <h4 className={`font-medium text-sm mb-2 ${isLight ? 'text-green-700' : 'text-green-400'}`}>Standard Mode</h4>
+                <ul className={`text-xs space-y-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
                   <li>• Formation + Motion + Play structure</li>
                   <li>• Filter by formation, motion, bucket</li>
                   <li>• Great for JV or getting started</li>
@@ -1057,11 +1093,15 @@ export default function Setup() {
               {/* Advanced Mode Card */}
               <div className={`p-3 rounded-lg border transition-all ${
                 (localConfig.setupMode?.[phase] || 'standard') === 'advanced'
-                  ? 'bg-purple-900/20 border-purple-600/50'
-                  : 'bg-slate-800/30 border-slate-700/50 opacity-60'
+                  ? isLight
+                    ? 'bg-purple-100 border-purple-500'
+                    : 'bg-purple-900/20 border-purple-600/50'
+                  : isLight
+                    ? 'bg-gray-100 border-gray-300 opacity-70'
+                    : 'bg-slate-800/30 border-slate-700/50 opacity-60'
               }`}>
-                <h4 className="text-purple-400 font-medium text-sm mb-2">Advanced Mode</h4>
-                <ul className="text-xs text-slate-400 space-y-1">
+                <h4 className={`font-medium text-sm mb-2 ${isLight ? 'text-purple-700' : 'text-purple-400'}`}>Advanced Mode</h4>
+                <ul className={`text-xs space-y-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
                   <li>• Custom syntax per play bucket</li>
                   <li>• Term signals auto-fill fields</li>
                   <li>• Deep filtering for self-scout</li>
@@ -1071,7 +1111,7 @@ export default function Setup() {
             </div>
 
             {/* Info note */}
-            <p className="text-xs text-slate-500 italic">
+            <p className={`text-xs italic ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
               You can switch modes anytime. Your data is preserved when switching - just different entry/filtering options.
             </p>
           </div>
@@ -1080,21 +1120,21 @@ export default function Setup() {
 
       {/* Offense Setup Overview */}
       {phase === 'OFFENSE' && !isPractice && !isProgram && (
-        <HelpSection title="How Offense Setup Works" defaultOpen={false}>
+        <HelpSection title="How Offense Setup Works" defaultOpen={false} isLight={isLight}>
           <div className="pt-3 space-y-4">
-            <p className="text-slate-300">
+            <p className={isLight ? 'text-gray-700' : 'text-slate-300'}>
               Offense Setup builds the foundation for your entire playbook. The items you define here become the
               dropdowns, filters, and categories used throughout the app when creating plays, building wristbands,
               and planning game weeks.
             </p>
 
             <div className="grid md:grid-cols-2 gap-4">
-              <div className="bg-slate-700/30 rounded-lg p-3">
-                <h4 className="text-white font-medium mb-2 flex items-center gap-2">
+              <div className={`rounded-lg p-3 ${isLight ? 'bg-gray-200' : 'bg-slate-700/30'}`}>
+                <h4 className={`font-medium mb-2 flex items-center gap-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
                   <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs flex items-center justify-center">1</span>
                   Define Your Building Blocks
                 </h4>
-                <p className="text-sm text-slate-400">
+                <p className={`text-sm ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
                   Start with the top section: <strong>Name Positions</strong> to customize position labels,
                   <strong> Personnel Groupings</strong> for your packages (11, 12, 21, etc.),
                   <strong> Situations</strong> for down/distance and field zones, and
@@ -1102,36 +1142,36 @@ export default function Setup() {
                 </p>
               </div>
 
-              <div className="bg-slate-700/30 rounded-lg p-3">
-                <h4 className="text-white font-medium mb-2 flex items-center gap-2">
+              <div className={`rounded-lg p-3 ${isLight ? 'bg-gray-200' : 'bg-slate-700/30'}`}>
+                <h4 className={`font-medium mb-2 flex items-center gap-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
                   <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs flex items-center justify-center">2</span>
                   Build Your Play Call Syntax
                 </h4>
-                <p className="text-sm text-slate-400">
+                <p className={`text-sm ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
                   The <strong>Play Call Chain</strong> defines how your plays are called. Each part of the call
                   (formation, motion, protection, play name, tag) can pull from the categories you've defined,
                   ensuring consistency across your staff.
                 </p>
               </div>
 
-              <div className="bg-slate-700/30 rounded-lg p-3">
-                <h4 className="text-white font-medium mb-2 flex items-center gap-2">
+              <div className={`rounded-lg p-3 ${isLight ? 'bg-gray-200' : 'bg-slate-700/30'}`}>
+                <h4 className={`font-medium mb-2 flex items-center gap-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
                   <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs flex items-center justify-center">3</span>
                   Customize the Middle Section
                 </h4>
-                <p className="text-sm text-slate-400">
+                <p className={`text-sm ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
                   The tabs below the line are ordered by your play call syntax. Define your <strong>Formations</strong>,
                   <strong> Shifts/Motions</strong>, <strong>Concepts</strong>, and other elements. These become
                   the options available when building plays.
                 </p>
               </div>
 
-              <div className="bg-slate-700/30 rounded-lg p-3">
-                <h4 className="text-white font-medium mb-2 flex items-center gap-2">
+              <div className={`rounded-lg p-3 ${isLight ? 'bg-gray-200' : 'bg-slate-700/30'}`}>
+                <h4 className={`font-medium mb-2 flex items-center gap-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
                   <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs flex items-center justify-center">4</span>
                   Why This Matters
                 </h4>
-                <p className="text-sm text-slate-400">
+                <p className={`text-sm ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
                   When you add a play, you'll select from these defined options instead of typing freeform.
                   This means consistent naming, powerful filtering, and the ability to quickly build
                   wristbands and game plans by situation, formation family, or concept.
@@ -1139,7 +1179,7 @@ export default function Setup() {
               </div>
             </div>
 
-            <p className="text-sm text-slate-500 italic">
+            <p className={`text-sm italic ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
               Tip: Start with the defaults and customize as you go. You can always come back and add more options later.
             </p>
           </div>
@@ -1150,18 +1190,22 @@ export default function Setup() {
       <div className="flex gap-6">
         {/* Tab Navigation */}
         <div className="w-56 flex-shrink-0">
-          <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-2">
+          <div className={`rounded-lg border p-2 ${isLight ? 'bg-gray-100 border-gray-300' : 'bg-slate-800/50 border-slate-700'}`}>
             {getTabs().map((tab, idx) => (
               tab.divider ? (
-                <div key={`divider-${idx}`} className="my-2 mx-2 border-t border-slate-600" />
+                <div key={`divider-${idx}`} className={`my-2 mx-2 border-t ${isLight ? 'border-gray-300' : 'border-slate-600'}`} />
               ) : (
                 <button
                   key={tab.id}
                   onClick={() => handleTabChange(tab.id)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left text-sm transition-colors ${
                     activeTab === tab.id
-                      ? 'bg-sky-500/20 text-sky-400'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                      ? isLight
+                        ? 'bg-sky-100 text-sky-700 font-medium'
+                        : 'bg-sky-500/20 text-sky-400'
+                      : isLight
+                        ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
                   }`}
                 >
                   <tab.icon size={16} />
@@ -1173,10 +1217,10 @@ export default function Setup() {
         </div>
 
         {/* Content Panel */}
-        <div className="flex-1 bg-slate-800/50 rounded-lg border border-slate-700 p-6">
+        <div className={`flex-1 rounded-lg border p-6 ${isLight ? 'bg-white border-gray-300' : 'bg-slate-800/50 border-slate-700'}`}>
           {/* Tab-specific Help */}
           {TAB_HELP[activeTab] && (
-            <HelpSection title={TAB_HELP[activeTab].title}>
+            <HelpSection title={TAB_HELP[activeTab].title} isLight={isLight}>
               {TAB_HELP[activeTab].content}
             </HelpSection>
           )}
