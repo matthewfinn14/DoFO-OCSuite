@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSchool } from '../../context/SchoolContext';
 import { usePlayDetailsModal } from '../PlayDetailsModal';
+import { usePlayBank } from '../../context/PlayBankContext';
 import { getWristbandDisplay } from '../../utils/wristband';
 import {
   ChevronLeft,
@@ -16,7 +17,8 @@ import {
   Star,
   CheckSquare,
   Square,
-  X
+  X,
+  MousePointer
 } from 'lucide-react';
 
 export default function PlayBankSidebar({
@@ -40,6 +42,14 @@ export default function PlayBankSidebar({
     updateWeek,
     setupConfig
   } = useSchool();
+
+  // Get single select mode from context (for wristband assignment)
+  const {
+    singleSelectMode,
+    selectedPlayId: contextSelectedPlayId,
+    selectPlayForAssign,
+    clearSelectedPlay
+  } = usePlayBank();
 
   // Local state
   const [activeTab, setActiveTab] = useState('install'); // install, gameplan, usage
@@ -463,33 +473,56 @@ export default function PlayBankSidebar({
       ? `${play.formation} ${play.name}`
       : play.name;
 
-    const isSelected = selectedPlayIds.has(play.id);
+    const isBatchSelected = selectedPlayIds.has(play.id);
+    const isSingleSelected = singleSelectMode && contextSelectedPlayId === play.id;
     const wristbandSlot = getWristbandDisplay(play);
+
+    // Determine click behavior
+    const handleClick = () => {
+      if (isInBatchMode) {
+        togglePlaySelection(play.id);
+      } else if (singleSelectMode) {
+        selectPlayForAssign(play.id);
+      }
+    };
+
+    // Determine if clickable (batch or single select mode)
+    const isClickable = isInBatchMode || singleSelectMode;
 
     return (
       <div
         key={play.id}
         className={`flex items-center py-1.5 px-2 border-b border-slate-100 text-sm hover:bg-slate-50 ${
-          isInBatchMode ? 'cursor-pointer' : 'cursor-grab'
-        } ${isSelected ? 'bg-sky-50 border-sky-200' : ''}`}
-        draggable={!isInBatchMode}
-        onDragStart={(e) => !isInBatchMode && handleDragStart(e, play)}
-        onClick={() => isInBatchMode && togglePlaySelection(play.id)}
-        onDoubleClick={() => !isInBatchMode && openPlayDetails(play.id)}
-        title={isInBatchMode ? 'Click to select' : 'Double-click to view details'}
+          isClickable ? 'cursor-pointer' : 'cursor-grab'
+        } ${isBatchSelected ? 'bg-sky-50 border-sky-200' : ''} ${isSingleSelected ? 'bg-emerald-50 border-emerald-300 border-2' : ''}`}
+        draggable={!isClickable}
+        onDragStart={(e) => !isClickable && handleDragStart(e, play)}
+        onClick={handleClick}
+        onDoubleClick={() => !isClickable && openPlayDetails(play.id)}
+        title={isInBatchMode ? 'Click to select' : (singleSelectMode ? 'Click to select for wristband' : 'Double-click to view details')}
       >
         {/* Checkbox for batch mode */}
         {isInBatchMode && (
           <div className="mr-2 flex-shrink-0">
-            {isSelected ? (
+            {isBatchSelected ? (
               <CheckSquare size={16} className="text-sky-500" />
             ) : (
               <Square size={16} className="text-slate-400" />
             )}
           </div>
         )}
+        {/* Pointer icon for single select mode */}
+        {singleSelectMode && !isInBatchMode && (
+          <div className="mr-2 flex-shrink-0">
+            {isSingleSelected ? (
+              <MousePointer size={14} className="text-emerald-500" />
+            ) : (
+              <div className="w-[14px]" />
+            )}
+          </div>
+        )}
         <div className="flex-1 min-w-0">
-          <div className={`font-medium truncate ${isSelected ? 'text-sky-700' : 'text-slate-800'}`}>
+          <div className={`font-medium truncate ${isBatchSelected ? 'text-sky-700' : (isSingleSelected ? 'text-emerald-700' : 'text-slate-800')}`}>
             {playCall}
           </div>
         </div>
@@ -504,7 +537,7 @@ export default function PlayBankSidebar({
         )}
       </div>
     );
-  }, [handleDragStart, openPlayDetails, isInBatchMode, selectedPlayIds, togglePlaySelection]);
+  }, [handleDragStart, openPlayDetails, isInBatchMode, selectedPlayIds, togglePlaySelection, singleSelectMode, contextSelectedPlayId, selectPlayForAssign]);
 
   // Render bucket with concept families
   const renderBucket = useCallback((bucket) => {
@@ -671,6 +704,32 @@ export default function PlayBankSidebar({
               {internalBatchMode
                 ? 'Click plays to select them, then click "Add to Install" below'
                 : `Click plays to select them, then click "${batchSelectLabel}" below`
+              }
+            </p>
+          </div>
+        )}
+
+        {/* Single Select Mode Banner (for wristband assignment) */}
+        {singleSelectMode && !isInBatchMode && (
+          <div className="px-3 py-2 bg-emerald-500 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MousePointer size={16} />
+                <span className="text-sm font-semibold">
+                  {contextSelectedPlayId ? 'Play Selected' : 'Click a Play'}
+                </span>
+              </div>
+              <button
+                onClick={clearSelectedPlay}
+                className="text-xs font-medium underline hover:no-underline"
+              >
+                Clear
+              </button>
+            </div>
+            <p className="text-xs opacity-80 mt-1">
+              {contextSelectedPlayId
+                ? 'Now click an empty wristband slot to assign'
+                : 'Click a play, then click an empty wristband slot'
               }
             </p>
           </div>

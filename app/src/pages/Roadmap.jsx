@@ -116,7 +116,46 @@ export default function Roadmap() {
 
   return (
     <div className="p-4 md:p-8 max-w-[900px] mx-auto">
-      {/* Header */}
+      {/* About DOFO Box */}
+      <div
+        className={`rounded-xl p-6 mb-6 ${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800/80'}`}
+        style={{
+          background: isLight
+            ? 'linear-gradient(135deg, #fdf4ff 0%, #faf5ff 50%, #f5f3ff 100%)'
+            : 'linear-gradient(135deg, rgba(88, 28, 135, 0.15) 0%, rgba(67, 56, 202, 0.1) 50%, rgba(30, 41, 59, 0.8) 100%)',
+          borderLeft: '4px solid #8b5cf6'
+        }}
+      >
+        <h2 className={`text-xl font-bold flex items-center gap-3 mb-4 ${isLight ? 'text-gray-900' : 'text-white'}`}>
+          <Heart size={24} className="text-purple-500" />
+          About DOFO
+        </h2>
+        <div className={`space-y-4 ${isLight ? 'text-gray-600' : 'text-slate-300'}`}>
+          <p>
+            Most football programs don't have a Director of Football Operations.
+          </p>
+          <p>
+            What they have instead is a head coach or coordinator juggling spreadsheets, Google Docs, text threads, playbooks, personnel notes, practice plans, and staff communication (usually late at night, usually alone, and usually with tools that weren't built for football).
+          </p>
+          <p className="font-medium" style={{ color: isLight ? '#6b21a8' : '#a78bfa' }}>
+            DOFO was created out of that reality.
+          </p>
+          <p>
+            After years of piecing together systems that were hard to maintain, hard to share, and hard for an entire staff to actually use... especially those coaches outside the building or coaches who didn't live in spreadsheets... we decided to build something better.
+          </p>
+          <p>
+            DOFO is a planning and execution system designed to organize the operational side of your program so you can spend more time doing what actually matters: coaching football, developing players, and leading your staff.
+          </p>
+          <p>
+            This platform started as a solution to real problems inside a real program, and it will continue to evolve as those needs grow.
+          </p>
+          <p className="font-semibold" style={{ color: isLight ? '#6b21a8' : '#a78bfa' }}>
+            Welcome to DOFO.
+          </p>
+        </div>
+      </div>
+
+      {/* Under Construction Header */}
       <div
         className={`rounded-xl p-6 mb-6 ${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800/80'}`}
         style={{

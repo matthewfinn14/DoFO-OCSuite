@@ -7,6 +7,10 @@ export function PlayBankProvider({ children }) {
   const [batchSelectCallback, setBatchSelectCallback] = useState(null);
   const [batchSelectLabel, setBatchSelectLabel] = useState('Add Selected');
 
+  // Single select mode for wristband assignment
+  const [singleSelectMode, setSingleSelectMode] = useState(false);
+  const [selectedPlayId, setSelectedPlayId] = useState(null);
+
   // Start batch selection mode
   const startBatchSelect = useCallback((callback, label = 'Add Selected') => {
     setBatchSelectCallback(() => callback);
@@ -31,6 +35,28 @@ export function PlayBankProvider({ children }) {
     setBatchSelectLabel('Add Selected');
   }, []);
 
+  // Start single select mode (for wristband assignment)
+  const startSingleSelect = useCallback(() => {
+    setSingleSelectMode(true);
+    setSelectedPlayId(null);
+  }, []);
+
+  // Select a play for assignment
+  const selectPlayForAssign = useCallback((playId) => {
+    setSelectedPlayId(prev => prev === playId ? null : playId); // Toggle if same play clicked
+  }, []);
+
+  // Clear selected play
+  const clearSelectedPlay = useCallback(() => {
+    setSelectedPlayId(null);
+  }, []);
+
+  // Stop single select mode
+  const stopSingleSelect = useCallback(() => {
+    setSingleSelectMode(false);
+    setSelectedPlayId(null);
+  }, []);
+
   return (
     <PlayBankContext.Provider
       value={{
@@ -38,7 +64,14 @@ export function PlayBankProvider({ children }) {
         batchSelectLabel,
         startBatchSelect,
         handleBatchSelect,
-        cancelBatchSelect
+        cancelBatchSelect,
+        // Single select for wristband
+        singleSelectMode,
+        selectedPlayId,
+        startSingleSelect,
+        selectPlayForAssign,
+        clearSelectedPlay,
+        stopSingleSelect
       }}
     >
       {children}

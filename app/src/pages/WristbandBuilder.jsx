@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
 import { usePlayBank } from '../context/PlayBankContext';
@@ -95,7 +95,14 @@ export default function WristbandBuilder() {
     offensePositions
   } = useSchool();
 
-  const { startBatchSelect } = usePlayBank();
+  const {
+    startBatchSelect,
+    singleSelectMode,
+    selectedPlayId: contextSelectedPlayId,
+    startSingleSelect,
+    clearSelectedPlay,
+    stopSingleSelect
+  } = usePlayBank();
 
   // State
   const [activeCardId, setActiveCardId] = useState('card100');
@@ -104,7 +111,15 @@ export default function WristbandBuilder() {
   // WIZ editing state
   const [editingSkillPlay, setEditingSkillPlay] = useState(null);
   const [showOLLibraryForPlay, setShowOLLibraryForPlay] = useState(null);
-  const [selectedPlayId, setSelectedPlayId] = useState(null);
+
+  // Use context's selectedPlayId for wristband assignment
+  const selectedPlayId = contextSelectedPlayId;
+
+  // Start single select mode when component mounts
+  useEffect(() => {
+    startSingleSelect();
+    return () => stopSingleSelect();
+  }, [startSingleSelect, stopSingleSelect]);
 
   // Get current week
   const currentWeek = useMemo(() => {
@@ -199,7 +214,7 @@ export default function WristbandBuilder() {
       wristbandType: wristbandType
     });
 
-    setSelectedPlayId(null);
+    clearSelectedPlay();
   };
 
   // Clear slot
@@ -482,6 +497,7 @@ export default function WristbandBuilder() {
                   onClear={handleClearSlot}
                   onEditDiagram={handleEditSkillDiagram}
                   selectedPlayId={selectedPlayId}
+                  updatePlay={updatePlay}
                 />
               </div>
               {/* OLINE Card */}
@@ -496,6 +512,7 @@ export default function WristbandBuilder() {
                   onSelectOLScheme={handleSelectOLScheme}
                   olSchemes={olSchemes}
                   selectedPlayId={selectedPlayId}
+                  updatePlay={updatePlay}
                 />
               </div>
             </div>
@@ -520,6 +537,7 @@ export default function WristbandBuilder() {
                   onRemoveRow={handleRemoveRow}
                   onMoveRow={handleMoveRow}
                   onAddRow={handleAddRow}
+                  updatePlay={updatePlay}
                 />
               </div>
               {/* Preview Section */}
@@ -764,7 +782,7 @@ function SpreadsheetTable({ slots, title, cardLabel, cardColor, getPlayForSlot, 
                     overflow: 'hidden'
                   }}
                 >
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 'bold' }}>
                     {play ? (play.formation ? `${play.formation} ${play.name}` : play.name) : ''}
                   </span>
                   {play && (
@@ -804,47 +822,99 @@ function SpreadsheetTable({ slots, title, cardLabel, cardColor, getPlayForSlot, 
 }
 
 // WIZ Grid Component
-function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, onEditDiagram, onSelectOLScheme, olSchemes, selectedPlayId }) {
+function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, onEditDiagram, onSelectOLScheme, olSchemes, selectedPlayId, updatePlay }) {
+  const [editingSlot, setEditingSlot] = useState(null);
+  const [editValue, setEditValue] = useState('');
+
   const rows = [];
   for (let i = 0; i < slots.length; i += 4) {
     rows.push(slots.slice(i, i + 4));
   }
 
+  // Handle double-click to edit WIZ abbreviation
+  const handleDoubleClick = (slot, play) => {
+    if (!play || viewType !== 'skill') return;
+
+    // Get full play call for reference
+    const fullPlayCall = play.formation
+      ? `${play.formation} ${play.name}`
+      : (play.name || '');
+
+    // Start editing with current abbreviation or full name
+    setEditingSlot(slot);
+    setEditValue(play.wizAbbreviation || fullPlayCall);
+  };
+
+  // Save the WIZ abbreviation
+  const handleSaveAbbreviation = (play) => {
+    if (!play) return;
+
+    const fullPlayCall = play.formation
+      ? `${play.formation} ${play.name}`
+      : (play.name || '');
+
+    // If edit value matches full name, clear the abbreviation (reset)
+    // Otherwise save the new abbreviation
+    if (editValue.trim() === fullPlayCall || editValue.trim() === '') {
+      updatePlay(play.id, { wizAbbreviation: null });
+    } else {
+      updatePlay(play.id, { wizAbbreviation: editValue.trim() });
+    }
+
+    setEditingSlot(null);
+    setEditValue('');
+  };
+
+  // Handle key press in edit input
+  const handleKeyDown = (e, play) => {
+    if (e.key === 'Enter') {
+      handleSaveAbbreviation(play);
+    } else if (e.key === 'Escape') {
+      setEditingSlot(null);
+      setEditValue('');
+    }
+  };
+
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', border: '2px solid black', background: 'white' }}>
-      {/* Header */}
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', border: '2px solid black', background: 'white', overflow: 'hidden' }}>
+      {/* Header - compact */}
       <div style={{
         background: '#dc2626',
         color: 'white',
         fontWeight: 'bold',
-        fontSize: '10pt',
-        padding: '2px 8px',
+        fontSize: '8pt',
+        padding: '1px 6px',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        flexShrink: 0,
+        height: '16px',
+        minHeight: '16px'
       }}>
         <span style={{ textTransform: 'uppercase' }}>{viewType === 'skill' ? 'SKILL' : 'OLINE'}</span>
         <span>{title}</span>
       </div>
-      {/* Grid */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      {/* Grid - fixed layout */}
+      <div style={{ flex: 1, display: 'grid', gridTemplateRows: 'repeat(4, 1fr)', overflow: 'hidden' }}>
         {rows.map((rowSlots, rIndex) => (
           <div key={rIndex} style={{
-            flex: 1,
-            display: 'flex',
-            borderBottom: rIndex < rows.length - 1 ? '1px solid black' : 'none'
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            borderBottom: rIndex < rows.length - 1 ? '1px solid black' : 'none',
+            minHeight: 0
           }}>
             {rowSlots.map((slot, cIndex) => {
               const play = getPlayForSlot(slot);
               const isClickable = selectedPlayId && !play;
+              const isEditing = editingSlot === slot;
 
-              // For SKILL view: show full play call (formation + name)
+              // For SKILL view: show wizAbbreviation if exists, otherwise full play call
               // For OLINE view: show OL WIZ card name (wizOlineRef.name), empty if none assigned
               const fullPlayCall = play?.formation
                 ? `${play.formation} ${play.name}`
                 : (play?.name || '');
               const displayName = viewType === 'skill'
-                ? fullPlayCall
+                ? (play?.wizAbbreviation || fullPlayCall)
                 : (play?.wizOlineRef?.name || '');
 
               // Get diagram data for preview
@@ -860,16 +930,18 @@ function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, on
                   key={slot}
                   onClick={() => isClickable && onAssign(slot)}
                   style={{
-                    flex: 1,
                     borderRight: cIndex < 3 ? '1px solid black' : 'none',
                     display: 'flex',
                     flexDirection: 'column',
                     cursor: isClickable ? 'pointer' : 'default',
                     background: isClickable ? 'rgba(56, 189, 248, 0.2)' : 'white',
-                    position: 'relative'
+                    position: 'relative',
+                    overflow: 'hidden',
+                    minWidth: 0,
+                    minHeight: 0
                   }}
                 >
-                  {/* Diagram area */}
+                  {/* Diagram area - constrained to cell */}
                   <div
                     onClick={(e) => {
                       if (viewType === 'skill' && play && onEditDiagram) {
@@ -879,52 +951,87 @@ function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, on
                     }}
                     style={{
                       flex: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
+                      position: 'relative',
                       background: '#f9fafb',
                       cursor: viewType === 'skill' && play ? 'pointer' : 'default',
-                      overflow: 'hidden'
+                      overflow: 'hidden',
+                      minHeight: 0
                     }}
                   >
                     {diagramData?.length > 0 ? (
-                      <DiagramPreview elements={diagramData} width={80} height={50} />
+                      <div style={{ position: 'absolute', inset: 0 }}>
+                        <DiagramPreview elements={diagramData} fillContainer={true} mode="wiz-skill" />
+                      </div>
                     ) : viewType === 'skill' && play ? (
-                      <span style={{ fontSize: '16px', opacity: 0.5 }} title="Click to edit diagram">✏️</span>
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: '16px', opacity: 0.5 }} title="Click to edit diagram">✏️</span>
+                      </div>
                     ) : null}
                   </div>
-                  {/* Bottom row: slot number + play/scheme name or selector */}
+                  {/* Bottom row: slot number + play/scheme name - compact */}
                   <div style={{
                     display: 'flex',
                     borderTop: '1px solid black',
-                    height: '16px',
-                    background: 'white'
+                    height: '12px',
+                    minHeight: '12px',
+                    maxHeight: '12px',
+                    background: 'white',
+                    flexShrink: 0
                   }}>
                     <div style={{
-                      width: '28px',
+                      width: '22px',
+                      minWidth: '22px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '8pt',
+                      fontSize: '6pt',
                       fontWeight: 'bold',
                       color: '#000',
-                      borderRight: '1px solid black'
+                      borderRight: '1px solid black',
+                      flexShrink: 0
                     }}>
                       {slot}
                     </div>
-                    <div style={{
-                      flex: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      fontSize: '6pt',
-                      fontWeight: 'bold',
-                      padding: '0 3px',
-                      overflow: 'hidden',
-                      whiteSpace: 'nowrap',
-                      textOverflow: 'ellipsis',
-                      color: '#000'
-                    }}>
-                      {showOLSelector ? (
+                    <div
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        handleDoubleClick(slot, play);
+                      }}
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        fontSize: '6pt',
+                        fontWeight: 'bold',
+                        padding: '0 2px',
+                        overflow: 'hidden',
+                        color: '#000',
+                        minWidth: 0,
+                        cursor: play && viewType === 'skill' ? 'pointer' : 'default'
+                      }}
+                      title={viewType === 'skill' && play ? `Double-click to ${play.wizAbbreviation ? 'edit' : 'set'} abbreviation` : ''}
+                    >
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onBlur={() => handleSaveAbbreviation(play)}
+                          onKeyDown={(e) => handleKeyDown(e, play)}
+                          autoFocus
+                          style={{
+                            width: '100%',
+                            height: '10px',
+                            fontSize: '6pt',
+                            fontWeight: 'bold',
+                            border: '1px solid #3b82f6',
+                            borderRadius: '1px',
+                            padding: '0 1px',
+                            outline: 'none',
+                            background: '#eff6ff'
+                          }}
+                        />
+                      ) : showOLSelector ? (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -936,34 +1043,25 @@ function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, on
                             background: 'none',
                             border: 'none',
                             cursor: 'pointer',
-                            padding: 0
+                            padding: 0,
+                            whiteSpace: 'nowrap'
                           }}
                         >
                           + Select OL Scheme
                         </button>
-                      ) : displayName}
+                      ) : (
+                        <span style={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          display: 'block',
+                          width: '100%'
+                        }}>
+                          {displayName}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  {/* Clear button */}
-                  {play && viewType === 'skill' && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onClear(slot); }}
-                      style={{
-                        position: 'absolute',
-                        top: '2px',
-                        right: '2px',
-                        fontSize: '10px',
-                        background: 'rgba(255,255,255,0.9)',
-                        border: '1px solid #ccc',
-                        borderRadius: '2px',
-                        cursor: 'pointer',
-                        padding: '0 4px',
-                        lineHeight: '14px'
-                      }}
-                    >
-                      ×
-                    </button>
-                  )}
                 </div>
               );
             })}
@@ -975,12 +1073,69 @@ function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, on
 }
 
 // Mini-Script Editor Component
-function MiniScriptEditor({ rows, plays, startCoord, onUpdateRow, onRemoveRow, onMoveRow, onAddRow }) {
-  let currentCoord = startCoord;
+function MiniScriptEditor({ rows, plays, startCoord, onUpdateRow, onRemoveRow, onMoveRow, onAddRow, updatePlay }) {
+  // Calculate coordinates for each play-row (excluding headers)
+  const getRowCoordinates = () => {
+    let coord = startCoord;
+    const coords = {};
+    rows.forEach((row) => {
+      if (row.type !== 'header') {
+        coords[row.id] = coord++;
+      }
+    });
+    return coords;
+  };
+
+  const rowCoords = getRowCoordinates();
+
+  // Handle play column change - update play's wristband properties
+  const handlePlayChange = (rowId, column, value) => {
+    const coord = rowCoords[rowId];
+    const colKey = column === 'A' ? 'col1' : 'col3';
+    const colIdKey = column === 'A' ? 'col1Id' : 'col3Id';
+
+    // Find matching play by name
+    const matchedPlay = plays.find(p => p.phase === 'offense' && p.name === value);
+
+    if (matchedPlay) {
+      // Update the play's wristband properties
+      updatePlay(matchedPlay.id, {
+        wristbandSlot: coord,
+        wristbandType: 'mini',
+        wristbandColumn: column
+      });
+      onUpdateRow(rowId, { [colKey]: value, [colIdKey]: matchedPlay.id });
+    } else {
+      // Just update the text value
+      onUpdateRow(rowId, { [colKey]: value, [colIdKey]: '' });
+    }
+  };
+
+  // Handle blur - attempt to match play when user finishes typing
+  const handlePlayBlur = (rowId, column, value) => {
+    if (!value) return;
+    const coord = rowCoords[rowId];
+    const colIdKey = column === 'A' ? 'col1Id' : 'col3Id';
+    const row = rows.find(r => r.id === rowId);
+
+    // If we already have a matched play ID, skip
+    if (row && row[colIdKey]) return;
+
+    // Try to match by name
+    const matchedPlay = plays.find(p => p.phase === 'offense' && p.name === value);
+    if (matchedPlay) {
+      updatePlay(matchedPlay.id, {
+        wristbandSlot: coord,
+        wristbandType: 'mini',
+        wristbandColumn: column
+      });
+      onUpdateRow(rowId, { [colIdKey]: matchedPlay.id });
+    }
+  };
 
   return (
     <div className="space-y-2">
-      {rows.map((row, index) => {
+      {rows.map((row) => {
         if (row.type === 'header') {
           return (
             <div key={row.id} className="flex items-center gap-2 p-2 bg-slate-800 rounded border border-slate-700">
@@ -1013,7 +1168,7 @@ function MiniScriptEditor({ rows, plays, startCoord, onUpdateRow, onRemoveRow, o
             </div>
           );
         } else {
-          const coord = currentCoord++;
+          const coord = rowCoords[row.id];
           return (
             <div key={row.id} className="grid grid-cols-[50px_80px_1fr_80px_1fr_60px] gap-2 items-center p-2 bg-slate-800 rounded border border-slate-700">
               <div className="text-center text-white font-bold text-sm">{coord}</div>
@@ -1025,7 +1180,8 @@ function MiniScriptEditor({ rows, plays, startCoord, onUpdateRow, onRemoveRow, o
               />
               <input
                 value={row.col1 || ''}
-                onChange={(e) => onUpdateRow(row.id, { col1: e.target.value })}
+                onChange={(e) => handlePlayChange(row.id, 'A', e.target.value)}
+                onBlur={(e) => handlePlayBlur(row.id, 'A', e.target.value)}
                 className="px-2 py-1 bg-slate-900 border border-slate-600 rounded text-white text-sm"
                 placeholder="Play A"
                 list={`plays-a-${row.id}`}
@@ -1043,7 +1199,8 @@ function MiniScriptEditor({ rows, plays, startCoord, onUpdateRow, onRemoveRow, o
               />
               <input
                 value={row.col3 || ''}
-                onChange={(e) => onUpdateRow(row.id, { col3: e.target.value })}
+                onChange={(e) => handlePlayChange(row.id, 'B', e.target.value)}
+                onBlur={(e) => handlePlayBlur(row.id, 'B', e.target.value)}
                 className="px-2 py-1 bg-slate-900 border border-slate-600 rounded text-white text-sm"
                 placeholder="Play B"
                 list={`plays-b-${row.id}`}

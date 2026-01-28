@@ -93,15 +93,56 @@ export default function DiagramPreview({
   width = 150,
   height = 100,
   mode = 'wiz-oline',
-  onClick
+  onClick,
+  fillContainer = false, // When true, fills parent container without borders
+  showBackground = true
 }) {
   // Generate unique ID for this preview instance
   const previewId = useMemo(() => `preview-${Math.random().toString(36).substr(2, 9)}`, []);
 
   const isWizSkill = mode === 'wiz-skill';
-  const viewBox = isWizSkill ? '0 0 754 445' : '0 0 900 600';
+
+  // Calculate bounds of actual content for better fitting
+  const bounds = useMemo(() => {
+    if (!elements || elements.length === 0) return null;
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+    elements.forEach(el => {
+      if (!el.points) return;
+      el.points.forEach(p => {
+        // Add padding for player circles/text
+        const padding = el.type === 'player' ? (el.shape === 'text-only' ? (el.fontSize || 30) / 2 : 20) : 5;
+        minX = Math.min(minX, p.x - padding);
+        minY = Math.min(minY, p.y - padding);
+        maxX = Math.max(maxX, p.x + padding);
+        maxY = Math.max(maxY, p.y + padding);
+      });
+    });
+
+    // Add some margin
+    const margin = 10;
+    return {
+      x: minX - margin,
+      y: minY - margin,
+      width: (maxX - minX) + margin * 2,
+      height: (maxY - minY) + margin * 2
+    };
+  }, [elements]);
+
+  // Use content-fitted viewBox or default
+  // For wiz-skill with fillContainer (wristband cells), use fixed viewBox with side padding
+  // The padding ensures players don't get cut off when paper is trimmed
+  const viewBox = (isWizSkill && fillContainer)
+    ? '-10 0 920 320'  // 10px padding on each side (920 = 900 + 20)
+    : (bounds
+      ? `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`
+      : (isWizSkill ? '0 0 900 320' : '0 0 900 600'));
 
   if (!elements || elements.length === 0) {
+    if (fillContainer) {
+      return null;
+    }
     return (
       <div
         onClick={onClick}
@@ -187,7 +228,7 @@ export default function DiagramPreview({
         const dx = end.x - prev.x;
         const dy = end.y - prev.y;
         const len = Math.hypot(dx, dy) || 1;
-        const sWidth = parseInt(el.strokeWidth || 4);
+        const sWidth = parseInt(el.strokeWidth || 9);
         const perpX = (-dy / len) * 15;
         const perpY = (dx / len) * 15;
 
@@ -207,7 +248,7 @@ export default function DiagramPreview({
         endMarker = renderArrowHead(el.points, color);
       }
 
-      const strokeWidth = el.strokeWidth || 4;
+      const strokeWidth = el.strokeWidth || 9;
 
       // Generate path for all points
       const segStyles = el.segmentStyles || [];
@@ -251,6 +292,23 @@ export default function DiagramPreview({
     }
   };
 
+  // Fill container mode - no wrapper div, just SVG
+  if (fillContainer) {
+    return (
+      <svg
+        width="100%"
+        height="100%"
+        viewBox={viewBox}
+        preserveAspectRatio="xMidYMid meet"
+        xmlns="http://www.w3.org/2000/svg"
+        style={{ display: 'block' }}
+      >
+        {/* Render elements */}
+        {elements.map((el, idx) => renderElement(el, idx))}
+      </svg>
+    );
+  }
+
   return (
     <div
       onClick={onClick}
@@ -270,7 +328,7 @@ export default function DiagramPreview({
         xmlns="http://www.w3.org/2000/svg"
       >
         {/* Background */}
-        {isWizSkill ? (
+        {showBackground && (isWizSkill ? (
           <image
             href="/WIZ Background.jpg"
             x="0"
@@ -281,7 +339,7 @@ export default function DiagramPreview({
           />
         ) : (
           <rect width="100%" height="100%" fill="#ffffff" />
-        )}
+        ))}
 
         {/* Render elements */}
         {elements.map((el, idx) => renderElement(el, idx))}

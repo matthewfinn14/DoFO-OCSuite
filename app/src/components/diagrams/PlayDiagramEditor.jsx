@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { MousePointer, Minus, Trash, RotateCcw, RotateCw, Save, X, RefreshCw, Users, Plus } from 'lucide-react';
+import { MousePointer, Minus, Trash, RotateCcw, RotateCw, Save, X, RefreshCw, Users, Plus, Group, Ungroup } from 'lucide-react';
 
 // Zigzag path generator
 const getZigZagPath = (points) => {
@@ -85,42 +85,44 @@ const getDefaultWizOLFormation = () => {
 // Default skill positions for 11 personnel (no personnel grouping selected)
 const DEFAULT_SKILL_POSITIONS = ['QB', 'RB', 'X', 'Z', 'Y', 'A'];
 
-// Default position placements on the canvas (wiz-card viewBox 754x445)
+// Default position placements on the canvas (wiz-card viewBox 900x320 - wider aspect ratio)
+// LOS is around y=210, backfield around y=250-290
 const SKILL_POSITION_PLACEMENTS = {
-  'QB': { x: 377, y: 360 },     // Center behind OL
-  'RB': { x: 317, y: 360 },     // Left of QB
-  'FB': { x: 377, y: 355 },     // Behind QB (fullback)
-  'X': { x: 80, y: 310 },       // Wide left
-  'Z': { x: 674, y: 310 },      // Wide right
-  'Y': { x: 497, y: 310 },      // Slot right (near TE)
-  'A': { x: 170, y: 325 },      // Slot left
-  'H': { x: 584, y: 315 },      // H-back (wing right)
-  'F': { x: 437, y: 355 },      // F-back (right of QB)
-  'B': { x: 257, y: 360 },      // Extra back
-  'TE': { x: 457, y: 315 },     // Tight end
-  'WR': { x: 80, y: 310 },      // Wide receiver (default to X spot)
+  'QB': { x: 485, y: 275 },     // Backfield, center
+  'RB': { x: 400, y: 285 },     // Backfield, left of QB
+  'FB': { x: 485, y: 250 },     // Behind QB (fullback)
+  'X': { x: 105, y: 210 },      // Wide left on LOS
+  'Z': { x: 680, y: 245 },      // Off ball, slot right
+  'Y': { x: 795, y: 210 },      // Wide right on LOS
+  'A': { x: 320, y: 250 },      // Off ball, slot left
+  'H': { x: 720, y: 250 },      // H-back (wing right)
+  'F': { x: 560, y: 275 },      // F-back (right of QB)
+  'B': { x: 340, y: 285 },      // Extra back
+  'TE': { x: 600, y: 215 },     // Tight end (on LOS)
+  'WR': { x: 105, y: 210 },     // Wide receiver (default to X spot)
 };
 
 // Generate WIZ Skill Formation based on personnel grouping
 const getWizSkillFormation = (positionColors = {}, positionNames = {}, skillPositions = DEFAULT_SKILL_POSITIONS) => {
   const getColor = (pos, fallback) => positionColors[pos] || DEFAULT_POSITION_COLORS[pos] || fallback;
 
-  const wizCenter = 377; // 754/2 for wiz-card viewBox
-  const wizLos = 300;
-  const initialSize = 24; // Smaller for skill OL
-  const spacing = 40;
-  const olY = wizLos + 15;
+  const wizCenter = 450; // 900/2 for wiz-card viewBox
+  const wizLos = 210;    // LOS position
+  const initialSize = 32; // OL text size
+  const spacing = 75;    // OL spacing
+  const olY = wizLos;    // OL on the LOS
 
   const cOL = '#64748b';
   const baseTime = Date.now();
+  const olGroupId = `ol-group-${baseTime}`; // Group ID for OL
 
-  // Always include 5 OL
+  // Always include 5 OL (grouped by default)
   const elements = [
-    { id: baseTime + 1, type: 'player', points: [{ x: wizCenter, y: olY }], color: getColor('C', cOL), label: 'C', shape: 'text-only', variant: 'filled', fontSize: initialSize },
-    { id: baseTime + 2, type: 'player', points: [{ x: wizCenter - spacing, y: olY }], color: getColor('LG', cOL), label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize },
-    { id: baseTime + 3, type: 'player', points: [{ x: wizCenter + spacing, y: olY }], color: getColor('RG', cOL), label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize },
-    { id: baseTime + 4, type: 'player', points: [{ x: wizCenter - (spacing * 2), y: olY }], color: getColor('LT', cOL), label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize },
-    { id: baseTime + 5, type: 'player', points: [{ x: wizCenter + (spacing * 2), y: olY }], color: getColor('RT', cOL), label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize },
+    { id: baseTime + 1, type: 'player', points: [{ x: wizCenter, y: olY }], color: getColor('C', cOL), label: 'C', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId },
+    { id: baseTime + 2, type: 'player', points: [{ x: wizCenter - spacing, y: olY }], color: getColor('LG', cOL), label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId },
+    { id: baseTime + 3, type: 'player', points: [{ x: wizCenter + spacing, y: olY }], color: getColor('RG', cOL), label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId },
+    { id: baseTime + 4, type: 'player', points: [{ x: wizCenter - (spacing * 2), y: olY }], color: getColor('LT', cOL), label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId },
+    { id: baseTime + 5, type: 'player', points: [{ x: wizCenter + (spacing * 2), y: olY }], color: getColor('RT', cOL), label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId },
   ];
 
   // Add skill players based on the provided positions
@@ -158,9 +160,9 @@ export default function PlayDiagramEditor({
   const isWizSkill = mode === 'wiz-skill';
   const isWizOline = mode === 'wiz-oline';
 
-  // ViewBox settings based on mode
-  const viewBox = isWizSkill ? '0 0 754 445' : '0 0 900 600';
-  const aspectRatio = isWizSkill ? '754 / 445' : '900 / 600';
+  // ViewBox settings based on mode (wiz-skill uses wider aspect ratio to fit wristband cells)
+  const viewBox = isWizSkill ? '0 0 900 320' : '0 0 900 600';
+  const aspectRatio = isWizSkill ? '900 / 320' : '900 / 600';
 
   // Get available skill positions from positionNames (non-OL positions)
   const OL_POSITIONS = ['LT', 'LG', 'C', 'RG', 'RT'];
@@ -196,7 +198,7 @@ export default function PlayDiagramEditor({
   const [selectedTool, setSelectedTool] = useState('select');
   const [color, setColor] = useState('#000000');
   const [lineStyle, setLineStyle] = useState('solid');
-  const [lineWidth, setLineWidth] = useState(4);
+  const [lineWidth, setLineWidth] = useState(9);
   const [endType, setEndType] = useState(isWizOline ? 't' : 'arrow'); // T-block for OL, arrow for skill
 
   // Text Size State for Wiz OL
@@ -214,6 +216,8 @@ export default function PlayDiagramEditor({
   // Selection state
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [selectionBox, setSelectionBox] = useState(null);
+  // Segment-level selection: { elementId, segmentIndex } or null
+  const [selectedSegment, setSelectedSegment] = useState(null);
 
   // Drawing state
   const [isDrawing, setIsDrawing] = useState(false);
@@ -288,9 +292,9 @@ export default function PlayDiagramEditor({
     };
 
     formation.positions.forEach((pos, idx) => {
-      // Convert percentage (0-100) to pixel coordinates for wiz-card viewBox (754x445)
-      const x = (pos.x / 100) * 754;
-      const y = (pos.y / 100) * 445;
+      // Convert percentage (0-100) to pixel coordinates for wiz-card viewBox (900x320)
+      const x = (pos.x / 100) * 900;
+      const y = (pos.y / 100) * 320;
 
       const config = positionConfig[pos.label] || { shape: 'circle', variant: 'filled' };
 
@@ -401,6 +405,39 @@ export default function PlayDiagramEditor({
     };
   };
 
+  // Group selected elements
+  const handleGroup = () => {
+    if (selectedIds.size < 2) return;
+    const groupId = `group-${Date.now()}`;
+    const newElements = elements.map(el =>
+      selectedIds.has(el.id) ? { ...el, groupId } : el
+    );
+    updateElements(newElements);
+  };
+
+  // Ungroup selected elements
+  const handleUngroup = () => {
+    if (selectedIds.size === 0) return;
+    // Find all groupIds in selected elements
+    const selectedGroupIds = new Set();
+    elements.forEach(el => {
+      if (selectedIds.has(el.id) && el.groupId) {
+        selectedGroupIds.add(el.groupId);
+      }
+    });
+    if (selectedGroupIds.size === 0) return;
+
+    // Remove groupId from all elements in those groups
+    const newElements = elements.map(el =>
+      el.groupId && selectedGroupIds.has(el.groupId) ? { ...el, groupId: undefined } : el
+    );
+    updateElements(newElements);
+  };
+
+  // Check if selected elements can be grouped/ungrouped
+  const canGroup = selectedIds.size >= 2;
+  const canUngroup = elements.some(el => selectedIds.has(el.id) && el.groupId);
+
   const handleMouseDown = (e) => {
     if (readOnly) return;
     if (isDraggingElements) return;
@@ -410,7 +447,10 @@ export default function PlayDiagramEditor({
 
     // Selection Box Logic
     if (selectedTool === 'select') {
-      if (!e.shiftKey) setSelectedIds(new Set());
+      if (!e.shiftKey) {
+        setSelectedIds(new Set());
+        setSelectedSegment(null);
+      }
       setSelectionBox({ start: point, current: point });
       return;
     }
@@ -460,14 +500,45 @@ export default function PlayDiagramEditor({
     e.stopPropagation();
     if (selectedTool === 'delete') return;
 
+    // Clear segment selection when clicking on elements
+    setSelectedSegment(null);
+
+    // Find the clicked element and check if it's in a group
+    const clickedEl = elements.find(el => el.id === elId);
+    const groupId = clickedEl?.groupId;
+
     const newSelected = new Set(selectedIds);
     if (e.shiftKey) {
-      if (newSelected.has(elId)) newSelected.delete(elId);
-      else newSelected.add(elId);
+      if (newSelected.has(elId)) {
+        // If shift-clicking a grouped element, remove all group members
+        if (groupId) {
+          elements.forEach(el => {
+            if (el.groupId === groupId) newSelected.delete(el.id);
+          });
+        } else {
+          newSelected.delete(elId);
+        }
+      } else {
+        // Add element (and all group members if grouped)
+        if (groupId) {
+          elements.forEach(el => {
+            if (el.groupId === groupId) newSelected.add(el.id);
+          });
+        } else {
+          newSelected.add(elId);
+        }
+      }
     } else {
       if (!newSelected.has(elId)) {
         newSelected.clear();
-        newSelected.add(elId);
+        // Select all elements in the same group
+        if (groupId) {
+          elements.forEach(el => {
+            if (el.groupId === groupId) newSelected.add(el.id);
+          });
+        } else {
+          newSelected.add(elId);
+        }
       }
     }
     setSelectedIds(newSelected);
@@ -580,7 +651,7 @@ export default function PlayDiagramEditor({
 
   // Flip formation
   const flipFormation = () => {
-    const canvasWidth = isWizSkill ? 754 : 900;
+    const canvasWidth = 900; // Both modes use 900 width now
     const flippedElements = elements.map(el => {
       if (el.type === 'player' || el.type === 'poly' || el.type === 'free') {
         return {
@@ -637,10 +708,20 @@ export default function PlayDiagramEditor({
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedIds.size > 0) {
+        // If a segment is selected, delete the whole line it belongs to
+        if (selectedSegment) {
+          updateElements(elements.filter(el => el.id !== selectedSegment.elementId));
+          setSelectedSegment(null);
+        } else if (selectedIds.size > 0) {
           updateElements(elements.filter(el => !selectedIds.has(el.id)));
           setSelectedIds(new Set());
         }
+      }
+
+      // Escape to clear selection
+      if (e.key === 'Escape') {
+        setSelectedIds(new Set());
+        setSelectedSegment(null);
       }
 
       if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
@@ -654,7 +735,7 @@ export default function PlayDiagramEditor({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedIds, elements, history, historyIndex]);
+  }, [selectedIds, selectedSegment, elements, history, historyIndex]);
 
   // Render element
   const renderElement = (el, isPreview = false) => {
@@ -793,7 +874,7 @@ export default function PlayDiagramEditor({
     }
 
     const isSelected = selectedIds.has(el.id);
-    const strokeWidth = el.strokeWidth || 4;
+    const strokeWidth = el.strokeWidth || 9;
     const isInteractionTool = selectedTool === 'select' || selectedTool === 'delete';
 
     // Generate segments with per-segment styles
@@ -806,6 +887,7 @@ export default function PlayDiagramEditor({
       const p2 = el.points[i + 1];
       const segStyle = segStyles[i] || defaultStyle;
       const isLastSegment = i === el.points.length - 2;
+      const isSegmentSelected = selectedSegment?.elementId === el.id && selectedSegment?.segmentIndex === i;
 
       let segD = '';
       if (segStyle === 'zigzag') {
@@ -814,16 +896,53 @@ export default function PlayDiagramEditor({
         segD = `M ${p1.x},${p1.y} L ${p2.x},${p2.y}`;
       }
 
+      // Determine stroke color and width based on selection state
+      const segStroke = isSegmentSelected ? '#f59e0b' : (isSelected ? '#2563eb' : el.color);
+      const segStrokeWidth = (isSegmentSelected || isSelected) ? strokeWidth + 2 : strokeWidth;
+      const segFilter = isSegmentSelected ? 'drop-shadow(0 0 3px #f59e0b)' : (isSelected ? 'drop-shadow(0 0 2px #2563eb)' : 'none');
+
       segments.push(
         <path
           key={i}
           d={segD}
-          stroke={isSelected ? '#2563eb' : el.color}
-          strokeWidth={isSelected ? strokeWidth + 2 : strokeWidth}
+          stroke={segStroke}
+          strokeWidth={segStrokeWidth}
           fill="none"
           strokeDasharray={segStyle === 'dashed' ? '10,5' : 'none'}
           markerEnd={isLastSegment ? markerEnd : undefined}
-          filter={isSelected ? 'drop-shadow(0 0 2px #2563eb)' : 'none'}
+          filter={segFilter}
+          style={{ cursor: isInteractionTool ? 'pointer' : 'default', pointerEvents: isInteractionTool ? 'all' : 'none' }}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (selectedTool === 'delete') {
+              handleClickElement(el.id);
+            } else if (selectedTool === 'select') {
+              // Single click selects just this segment
+              setSelectedSegment({ elementId: el.id, segmentIndex: i });
+              setSelectedIds(new Set()); // Clear whole-element selection
+            }
+          }}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            if (selectedTool === 'select') {
+              // Double click selects the whole line
+              setSelectedSegment(null);
+              setSelectedIds(new Set([el.id]));
+            }
+          }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            if (selectedTool === 'select' && (isSelected || isSegmentSelected)) {
+              // Allow dragging if selected
+              setIsDraggingElements(true);
+              setLastMousePos(getPoint(e));
+              // Select the whole element for dragging
+              if (!isSelected) {
+                setSelectedIds(new Set([el.id]));
+                setSelectedSegment(null);
+              }
+            }
+          }}
         />
       );
     }
@@ -831,12 +950,8 @@ export default function PlayDiagramEditor({
     return (
       <g
         key={el.id || 'current'}
-        onMouseDown={(e) => handleElementMouseDown(e, el.id)}
-        onClick={(e) => { e.stopPropagation(); handleClickElement(el.id); }}
         style={{
-          cursor: selectedTool === 'delete' ? 'pointer' : 'default',
-          opacity: isPreview ? 0.6 : 1,
-          pointerEvents: isInteractionTool ? 'all' : 'none'
+          opacity: isPreview ? 0.6 : 1
         }}
       >
         {segments}
@@ -1008,13 +1123,31 @@ export default function PlayDiagramEditor({
           {/* Select Button */}
           <div className="flex flex-col items-center">
             <span className="text-[10px] text-slate-300 font-medium mb-1">Tool</span>
-            <button
-              onClick={() => setSelectedTool('select')}
-              className={`px-3 py-1.5 rounded flex items-center gap-1 ${selectedTool === 'select' ? 'bg-sky-600 text-white' : 'bg-slate-600 text-slate-200 hover:bg-slate-500'}`}
-              title="Select / Move"
-            >
-              <MousePointer size={16} /> <span className="text-sm">Select</span>
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setSelectedTool('select')}
+                className={`px-3 py-1.5 rounded flex items-center gap-1 ${selectedTool === 'select' ? 'bg-sky-600 text-white' : 'bg-slate-600 text-slate-200 hover:bg-slate-500'}`}
+                title="Select / Move"
+              >
+                <MousePointer size={16} /> <span className="text-sm">Select</span>
+              </button>
+              <button
+                onClick={handleGroup}
+                disabled={!canGroup}
+                className={`px-2 py-1.5 rounded flex items-center gap-1 ${canGroup ? 'bg-slate-600 text-slate-200 hover:bg-slate-500' : 'bg-slate-700 text-slate-500 cursor-not-allowed'}`}
+                title="Group selected elements"
+              >
+                <Group size={16} />
+              </button>
+              <button
+                onClick={handleUngroup}
+                disabled={!canUngroup}
+                className={`px-2 py-1.5 rounded flex items-center gap-1 ${canUngroup ? 'bg-slate-600 text-slate-200 hover:bg-slate-500' : 'bg-slate-700 text-slate-500 cursor-not-allowed'}`}
+                title="Ungroup selected elements"
+              >
+                <Ungroup size={16} />
+              </button>
+            </div>
           </div>
 
           <div className="w-px h-10 bg-slate-600" />
@@ -1024,29 +1157,51 @@ export default function PlayDiagramEditor({
             <span className="text-[10px] text-slate-300 font-medium mb-1">Line Drawing</span>
             <div className="flex items-center gap-1 bg-slate-700 px-2 py-1 rounded border border-slate-500">
               <span className="text-xs text-amber-400 font-bold mr-1">STYLE</span>
-              <button
-                onClick={() => { setSelectedTool('line'); setLineStyle('solid'); }}
-                className={`px-2 py-1 text-xs rounded ${selectedTool === 'line' && lineStyle === 'solid' ? 'bg-amber-500 text-white' : 'bg-slate-600 text-slate-200'}`}
-                title="Solid Line"
-              >
-                <span className="inline-block w-4 border-b-2 border-current" />
-              </button>
-              <button
-                onClick={() => { setSelectedTool('line'); setLineStyle('dashed'); }}
-                className={`px-2 py-1 text-xs rounded ${selectedTool === 'line' && lineStyle === 'dashed' ? 'bg-amber-500 text-white' : 'bg-slate-600 text-slate-200'}`}
-                title="Dashed Line"
-              >
-                <span className="inline-block w-4 border-b-2 border-dashed border-current" />
-              </button>
-              <button
-                onClick={() => { setSelectedTool('line'); setLineStyle('zigzag'); }}
-                className={`px-2 py-1 text-xs rounded ${selectedTool === 'line' && lineStyle === 'zigzag' ? 'bg-amber-500 text-white' : 'bg-slate-600 text-slate-200'}`}
-                title="Zigzag Line"
-              >
-                <svg width="16" height="8" viewBox="0 0 16 8" className="inline-block">
-                  <path d="M0,4 L3,1 L6,7 L10,1 L13,7 L16,4" stroke="currentColor" strokeWidth="1.5" fill="none" />
-                </svg>
-              </button>
+              {[
+                { id: 'solid', title: 'Solid Line', content: <span className="inline-block w-4 border-b-2 border-current" /> },
+                { id: 'dashed', title: 'Dashed Line', content: <span className="inline-block w-4 border-b-2 border-dashed border-current" /> },
+                { id: 'zigzag', title: 'Zigzag Line', content: <svg width="16" height="8" viewBox="0 0 16 8" className="inline-block"><path d="M0,4 L3,1 L6,7 L10,1 L13,7 L16,4" stroke="currentColor" strokeWidth="1.5" fill="none" /></svg> }
+              ].map(style => (
+                <button
+                  key={style.id}
+                  onClick={() => {
+                    setLineStyle(style.id);
+                    // If a single segment is selected, update just that segment
+                    if (selectedSegment) {
+                      updateElements(elements.map(el => {
+                        if (el.id === selectedSegment.elementId && el.type === 'poly') {
+                          const newSegStyles = [...(el.segmentStyles || [])];
+                          // Ensure array is long enough
+                          while (newSegStyles.length <= selectedSegment.segmentIndex) {
+                            newSegStyles.push(el.style || 'solid');
+                          }
+                          newSegStyles[selectedSegment.segmentIndex] = style.id;
+                          return { ...el, segmentStyles: newSegStyles };
+                        }
+                        return el;
+                      }));
+                    } else if (selectedIds.size > 0) {
+                      // If whole lines are selected, update all their segments
+                      const hasSelectedLines = elements.some(el => selectedIds.has(el.id) && el.type === 'poly');
+                      if (hasSelectedLines) {
+                        updateElements(elements.map(el =>
+                          selectedIds.has(el.id) && el.type === 'poly'
+                            ? { ...el, style: style.id, segmentStyles: (el.segmentStyles || []).map(() => style.id) }
+                            : el
+                        ));
+                      } else {
+                        setSelectedTool('line');
+                      }
+                    } else {
+                      setSelectedTool('line');
+                    }
+                  }}
+                  className={`px-2 py-1 text-xs rounded ${lineStyle === style.id ? 'bg-amber-500 text-white' : 'bg-slate-600 text-slate-200'}`}
+                  title={style.title}
+                >
+                  {style.content}
+                </button>
+              ))}
               <div className="w-px h-4 bg-slate-500 mx-1" />
               <span className="text-xs text-amber-400 font-bold mr-1">END</span>
               {[
@@ -1057,8 +1212,32 @@ export default function PlayDiagramEditor({
               ].map(opt => (
                 <button
                   key={opt.id}
-                  onClick={() => { setSelectedTool('line'); setEndType(opt.id); }}
-                  className={`px-2 py-1 text-xs rounded ${selectedTool === 'line' && endType === opt.id ? 'bg-amber-500 text-white' : 'bg-slate-600 text-slate-200'}`}
+                  onClick={() => {
+                    setEndType(opt.id);
+                    // End type applies to whole line (segment selection or line selection)
+                    if (selectedSegment) {
+                      // Update the line that contains this segment
+                      updateElements(elements.map(el =>
+                        el.id === selectedSegment.elementId && el.type === 'poly'
+                          ? { ...el, endType: opt.id }
+                          : el
+                      ));
+                    } else if (selectedIds.size > 0) {
+                      const hasSelectedLines = elements.some(el => selectedIds.has(el.id) && el.type === 'poly');
+                      if (hasSelectedLines) {
+                        updateElements(elements.map(el =>
+                          selectedIds.has(el.id) && el.type === 'poly'
+                            ? { ...el, endType: opt.id }
+                            : el
+                        ));
+                      } else {
+                        setSelectedTool('line');
+                      }
+                    } else {
+                      setSelectedTool('line');
+                    }
+                  }}
+                  className={`px-2 py-1 text-xs rounded ${endType === opt.id ? 'bg-amber-500 text-white' : 'bg-slate-600 text-slate-200'}`}
                   title={opt.title}
                 >
                   {opt.label}
@@ -1206,11 +1385,17 @@ export default function PlayDiagramEditor({
             onMouseLeave={handleMouseUp}
             style={{
               cursor: selectedTool === 'delete' ? 'not-allowed' : (selectedTool === 'line' ? 'crosshair' : 'default'),
-              aspectRatio: isWizSkill ? '15.07 / 8.89' : undefined
+              aspectRatio: isWizSkill ? '900 / 320' : undefined
             }}
           >
             <defs>
-              {COLORS.map(c => (
+              {/* Create arrow markers for all colors: toolbar colors + element colors + position colors */}
+              {[...new Set([
+                ...COLORS,
+                ...elements.map(el => el.color).filter(Boolean),
+                ...Object.values(DEFAULT_POSITION_COLORS),
+                ...Object.values(positionColors)
+              ])].map(c => (
                 <marker key={c} id={`arrowhead-${c}`} markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
                   <polygon points="0 0, 6 2, 0 4" fill={c} />
                 </marker>
