@@ -148,6 +148,7 @@ export default function PlayDiagramEditor({
   onSave,
   onSaveAs,
   onCancel,
+  onSaveFormation, // Callback to save a new formation template
   mode = 'wiz-oline',
   readOnly = false,
   formations = [],
@@ -263,6 +264,67 @@ export default function PlayDiagramEditor({
     }
   };
 
+  // Define Formation - Save current player positions as a formation template
+  // State for formation definition modal
+  const [showDefineFormationModal, setShowDefineFormationModal] = useState(false);
+  const [newFormationName, setNewFormationName] = useState('');
+  const [newFormationPersonnel, setNewFormationPersonnel] = useState('');
+
+  const openDefineFormationModal = () => {
+    // Extract player positions from current elements
+    const playerElements = elements.filter(el => el.type === 'player');
+    if (playerElements.length === 0) {
+      alert('No players on the diagram to save as a formation.');
+      return;
+    }
+    setNewFormationName('');
+    setNewFormationPersonnel(selectedPersonnelId || '');
+    setShowDefineFormationModal(true);
+  };
+
+  const saveFormationTemplate = () => {
+    if (!newFormationName.trim()) return;
+
+    // Extract player positions from current elements
+    const playerElements = elements.filter(el => el.type === 'player');
+
+    // Convert pixel coordinates to percentages (0-100) for portability
+    // ViewBox is 900x320 for wiz-skill
+    const positions = playerElements.map(el => {
+      const point = el.points[0];
+      return {
+        label: el.label,
+        x: Math.round((point.x / 900) * 100 * 10) / 10, // Round to 1 decimal
+        y: Math.round((point.y / 320) * 100 * 10) / 10,
+        shape: el.shape,
+        variant: el.variant,
+        fontSize: el.fontSize,
+        groupId: el.groupId ? 'grouped' : undefined // Mark as grouped but don't preserve specific ID
+      };
+    });
+
+    // Get personnel code from selected grouping
+    const personnelGrouping = personnelGroupings.find(g => g.id === newFormationPersonnel);
+    const personnelCode = personnelGrouping?.code || '';
+
+    const newFormation = {
+      id: `formation-${Date.now()}`,
+      name: newFormationName.trim().toUpperCase(),
+      phase: 'OFFENSE',
+      personnelGroupingId: newFormationPersonnel || null,
+      personnelCode: personnelCode,
+      positions
+    };
+
+    if (onSaveFormation) {
+      onSaveFormation(newFormation);
+    }
+
+    setShowDefineFormationModal(false);
+    setNewFormationName('');
+    setNewFormationPersonnel('');
+  };
+
   // Load Formation from Library (for wiz-skill mode)
   const loadFormation = (formationId) => {
     const formation = formations.find(f => f.id === formationId);
@@ -270,43 +332,41 @@ export default function PlayDiagramEditor({
 
     const newElements = [];
     const getColor = (label) => positionColors[label] || DEFAULT_POSITION_COLORS[label] || '#3b82f6';
+    const baseTime = Date.now();
 
+    // Default config for positions that don't have saved shape/variant
     const positionConfig = {
-      'C': { shape: 'text-only', fontSize: 24 },
-      'G': { shape: 'text-only', fontSize: 24 },
-      'T': { shape: 'text-only', fontSize: 24 },
-      'LT': { shape: 'text-only', fontSize: 24 },
-      'LG': { shape: 'text-only', fontSize: 24 },
-      'RG': { shape: 'text-only', fontSize: 24 },
-      'RT': { shape: 'text-only', fontSize: 24 },
-      'QB': { shape: 'circle', variant: 'filled', label: 'Q' },
-      'Q': { shape: 'circle', variant: 'filled' },
-      'RB': { shape: 'circle', variant: 'filled', label: 'B' },
-      'B': { shape: 'circle', variant: 'filled' },
-      'X': { shape: 'circle', variant: 'filled' },
-      'Z': { shape: 'circle', variant: 'filled' },
-      'Y': { shape: 'circle', variant: 'filled' },
-      'A': { shape: 'circle', variant: 'filled' },
-      'F': { shape: 'circle', variant: 'filled' },
-      'H': { shape: 'circle', variant: 'filled' }
+      'C': { shape: 'text-only', fontSize: 32 },
+      'G': { shape: 'text-only', fontSize: 32 },
+      'T': { shape: 'text-only', fontSize: 32 },
+      'LT': { shape: 'text-only', fontSize: 32 },
+      'LG': { shape: 'text-only', fontSize: 32 },
+      'RG': { shape: 'text-only', fontSize: 32 },
+      'RT': { shape: 'text-only', fontSize: 32 },
     };
+
+    // Check if any positions have groupId (for OL grouping)
+    const hasOLGroup = formation.positions.some(p => p.groupId);
+    const olGroupId = hasOLGroup ? `ol-group-${baseTime}` : null;
 
     formation.positions.forEach((pos, idx) => {
       // Convert percentage (0-100) to pixel coordinates for wiz-card viewBox (900x320)
       const x = (pos.x / 100) * 900;
       const y = (pos.y / 100) * 320;
 
-      const config = positionConfig[pos.label] || { shape: 'circle', variant: 'filled' };
+      const defaultConfig = positionConfig[pos.label] || { shape: 'circle', variant: 'filled' };
+      const isOL = ['C', 'G', 'T', 'LT', 'LG', 'RG', 'RT'].includes(pos.label);
 
       newElements.push({
-        id: Date.now() + idx,
+        id: baseTime + idx,
         type: 'player',
         points: [{ x, y }],
         color: getColor(pos.label),
-        label: positionNames[pos.label] || config.label || pos.label,
-        shape: config.shape || 'circle',
-        variant: config.variant || 'filled',
-        fontSize: config.fontSize
+        label: positionNames[pos.label] || pos.label,
+        shape: pos.shape || defaultConfig.shape || 'circle',
+        variant: pos.variant || defaultConfig.variant || 'filled',
+        fontSize: pos.fontSize || defaultConfig.fontSize,
+        groupId: isOL && olGroupId ? olGroupId : pos.groupId // Group OL together
       });
     });
 
@@ -969,18 +1029,18 @@ export default function PlayDiagramEditor({
     <div className="flex flex-col h-full">
       {/* Toolbar */}
       {!readOnly && (
-        <div className="flex items-center gap-3 p-3 bg-slate-800 border-b border-slate-600 flex-wrap">
+        <div className="flex items-center gap-2 px-2 py-1.5 bg-slate-800 border-b border-slate-600">
 
           {/* Play Name Display */}
           {playName && (
             <>
               <div className="flex flex-col items-center">
-                <span className="text-[10px] text-slate-300 font-medium mb-1">Play</span>
-                <div className="px-3 py-1.5 text-sm bg-sky-600 border border-sky-500 rounded text-white font-bold shadow-sm">
+                <span className="text-[9px] text-slate-400 font-medium">Play</span>
+                <div className="px-2 py-0.5 text-xs bg-sky-600 border border-sky-500 rounded text-white font-bold shadow-sm truncate max-w-[140px]">
                   {playName}
                 </div>
               </div>
-              <div className="w-px h-10 bg-slate-600" />
+              <div className="w-px h-8 bg-slate-600" />
             </>
           )}
 
@@ -988,7 +1048,7 @@ export default function PlayDiagramEditor({
           {isWizSkill && personnelGroupings.length > 0 && (
             <>
               <div className="flex flex-col items-center">
-                <span className="text-[10px] text-slate-300 font-medium mb-1">Personnel</span>
+                <span className="text-[9px] text-slate-400 font-medium">Personnel</span>
                 <select
                   value={selectedPersonnelId}
                   onChange={(e) => {
@@ -1002,7 +1062,7 @@ export default function PlayDiagramEditor({
                       updateHistory(newElements);
                     }
                   }}
-                  className="px-3 py-1.5 text-sm bg-purple-600 border border-purple-500 rounded text-white font-medium"
+                  className="px-2 py-1 text-xs bg-purple-600 border border-purple-500 rounded text-white font-medium"
                 >
                   <option value="">Default (11)</option>
                   {personnelGroupings.map(g => (
@@ -1012,31 +1072,44 @@ export default function PlayDiagramEditor({
                   ))}
                 </select>
               </div>
-              <div className="w-px h-10 bg-slate-600" />
+              <div className="w-px h-8 bg-slate-600" />
             </>
           )}
 
-          {/* WIZ Skill: Formation Selector */}
-          {isWizSkill && formations.length > 0 && (
+          {/* WIZ Skill: Formation Selector & Define */}
+          {isWizSkill && (
             <>
               <div className="flex flex-col items-center">
-                <span className="text-[10px] text-slate-300 font-medium mb-1">Formation</span>
+                <span className="text-[9px] text-slate-400 font-medium">Formation</span>
                 <div className="flex items-center gap-1">
-                  <select
-                    value={selectedFormationId}
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        loadFormation(e.target.value);
-                        setSelectedFormationId(e.target.value);
-                      }
-                    }}
-                    className="px-2 py-1 text-xs bg-slate-600 border border-slate-500 rounded text-white"
-                  >
-                    <option value="">Load Formation...</option>
-                    {formations.map(f => (
-                      <option key={f.id} value={f.id}>{f.name}</option>
-                    ))}
-                  </select>
+                  {formations.length > 0 && (
+                    <select
+                      value={selectedFormationId}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          loadFormation(e.target.value);
+                          setSelectedFormationId(e.target.value);
+                        }
+                      }}
+                      className="px-2 py-1 text-xs bg-slate-600 border border-slate-500 rounded text-white"
+                    >
+                      <option value="">Load...</option>
+                      {formations.map(f => (
+                        <option key={f.id} value={f.id}>
+                          {f.personnelCode ? `${f.personnelCode} ` : ''}{f.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {onSaveFormation && (
+                    <button
+                      onClick={openDefineFormationModal}
+                      className="px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-500"
+                      title="Save current positions as a formation template"
+                    >
+                      Define
+                    </button>
+                  )}
                   <button
                     onClick={resetFormation}
                     className="px-2 py-1 text-xs bg-slate-600 text-slate-200 rounded hover:bg-slate-500"
@@ -1046,7 +1119,7 @@ export default function PlayDiagramEditor({
                   </button>
                 </div>
               </div>
-              <div className="w-px h-10 bg-slate-600" />
+              <div className="w-px h-8 bg-slate-600" />
             </>
           )}
 
@@ -1054,10 +1127,10 @@ export default function PlayDiagramEditor({
           {isWizSkill && (
             <>
               <div className="flex flex-col items-center relative">
-                <span className="text-[10px] text-slate-300 font-medium mb-1">Add Player</span>
+                <span className="text-[9px] text-slate-400 font-medium">Add Player</span>
                 <button
                   onClick={() => setShowAddPlayer(!showAddPlayer)}
-                  className="px-3 py-1.5 text-sm bg-emerald-600 text-white rounded hover:bg-emerald-500 flex items-center gap-1"
+                  className="px-2 py-1 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-500 flex items-center gap-1"
                 >
                   <Plus size={14} /> Player
                 </button>
@@ -1079,7 +1152,7 @@ export default function PlayDiagramEditor({
                   </div>
                 )}
               </div>
-              <div className="w-px h-10 bg-slate-600" />
+              <div className="w-px h-8 bg-slate-600" />
             </>
           )}
 
@@ -1087,7 +1160,7 @@ export default function PlayDiagramEditor({
           {isWizOline && (
             <>
               <div className="flex flex-col items-center">
-                <span className="text-[10px] text-slate-300 font-medium mb-1">Add Blocker</span>
+                <span className="text-[9px] text-slate-400 font-medium">Add Blocker</span>
                 <div className="flex items-center gap-1 bg-sky-900/50 px-2 py-1 rounded border border-sky-700">
                   <input
                     type="text"
@@ -1116,45 +1189,45 @@ export default function PlayDiagramEditor({
                   >+</button>
                 </div>
               </div>
-              <div className="w-px h-10 bg-slate-600" />
+              <div className="w-px h-8 bg-slate-600" />
             </>
           )}
 
           {/* Select Button */}
           <div className="flex flex-col items-center">
-            <span className="text-[10px] text-slate-300 font-medium mb-1">Tool</span>
+            <span className="text-[9px] text-slate-400 font-medium">Tool</span>
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setSelectedTool('select')}
-                className={`px-3 py-1.5 rounded flex items-center gap-1 ${selectedTool === 'select' ? 'bg-sky-600 text-white' : 'bg-slate-600 text-slate-200 hover:bg-slate-500'}`}
+                className={`px-2 py-1 rounded flex items-center gap-1 text-xs ${selectedTool === 'select' ? 'bg-sky-600 text-white' : 'bg-slate-600 text-slate-200 hover:bg-slate-500'}`}
                 title="Select / Move"
               >
-                <MousePointer size={16} /> <span className="text-sm">Select</span>
+                <MousePointer size={14} /> Select
               </button>
               <button
                 onClick={handleGroup}
                 disabled={!canGroup}
-                className={`px-2 py-1.5 rounded flex items-center gap-1 ${canGroup ? 'bg-slate-600 text-slate-200 hover:bg-slate-500' : 'bg-slate-700 text-slate-500 cursor-not-allowed'}`}
+                className={`p-1 rounded ${canGroup ? 'bg-slate-600 text-slate-200 hover:bg-slate-500' : 'bg-slate-700 text-slate-500 cursor-not-allowed'}`}
                 title="Group selected elements"
               >
-                <Group size={16} />
+                <Group size={14} />
               </button>
               <button
                 onClick={handleUngroup}
                 disabled={!canUngroup}
-                className={`px-2 py-1.5 rounded flex items-center gap-1 ${canUngroup ? 'bg-slate-600 text-slate-200 hover:bg-slate-500' : 'bg-slate-700 text-slate-500 cursor-not-allowed'}`}
+                className={`p-1 rounded ${canUngroup ? 'bg-slate-600 text-slate-200 hover:bg-slate-500' : 'bg-slate-700 text-slate-500 cursor-not-allowed'}`}
                 title="Ungroup selected elements"
               >
-                <Ungroup size={16} />
+                <Ungroup size={14} />
               </button>
             </div>
           </div>
 
-          <div className="w-px h-10 bg-slate-600" />
+          <div className="w-px h-8 bg-slate-600" />
 
           {/* Line Style + End Type */}
           <div className="flex flex-col items-center">
-            <span className="text-[10px] text-slate-300 font-medium mb-1">Line Drawing</span>
+            <span className="text-[9px] text-slate-400 font-medium">Line Drawing</span>
             <div className="flex items-center gap-1 bg-slate-700 px-2 py-1 rounded border border-slate-500">
               <span className="text-xs text-amber-400 font-bold mr-1">STYLE</span>
               {[
@@ -1246,45 +1319,48 @@ export default function PlayDiagramEditor({
             </div>
           </div>
 
-          <div className="w-px h-10 bg-slate-600" />
+          <div className="w-px h-8 bg-slate-600" />
 
-          {/* Colors */}
+          {/* Colors - Dropdown */}
           <div className="flex flex-col items-center">
-            <span className="text-[10px] text-slate-300 font-medium mb-1">Line Color</span>
-            <div className="flex items-center gap-1">
-              {COLORS.map(c => (
-                <button
-                  key={c}
-                  onClick={() => { setColor(c); if (selectedIds.size > 0) updateElements(elements.map(el => selectedIds.has(el.id) ? { ...el, color: c } : el)); }}
-                  className="w-5 h-5 rounded-full border-2"
-                  title={c}
-                  style={{
-                    backgroundColor: c,
-                    borderColor: color === c ? '#fff' : 'transparent',
-                    boxShadow: color === c ? '0 0 0 2px #3b82f6' : 'none'
-                  }}
-                />
-              ))}
+            <span className="text-[9px] text-slate-400 font-medium">Color</span>
+            <div className="relative">
+              <select
+                value={color}
+                onChange={(e) => { setColor(e.target.value); if (selectedIds.size > 0) updateElements(elements.map(el => selectedIds.has(el.id) ? { ...el, color: e.target.value } : el)); }}
+                className="appearance-none pl-6 pr-4 py-1 text-xs bg-slate-600 border border-slate-500 rounded text-white cursor-pointer"
+                style={{ minWidth: '70px' }}
+              >
+                {COLORS.map(c => (
+                  <option key={c} value={c} style={{ backgroundColor: c }}>
+                    {c === '#000000' ? 'Black' : c === '#ef4444' ? 'Red' : c === '#3b82f6' ? 'Blue' : c === '#22c55e' ? 'Green' : c === '#f97316' ? 'Orange' : c === '#facc15' ? 'Yellow' : c === '#8b5cf6' ? 'Purple' : c === '#ec4899' ? 'Pink' : c === '#06b6d4' ? 'Cyan' : c}
+                  </option>
+                ))}
+              </select>
+              <div
+                className="absolute left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full pointer-events-none"
+                style={{ backgroundColor: color }}
+              />
             </div>
           </div>
 
-          <div className="w-px h-10 bg-slate-600" />
+          <div className="w-px h-8 bg-slate-600" />
 
           {/* Flip */}
           <div className="flex flex-col items-center">
-            <span className="text-[10px] text-slate-300 font-medium mb-1">Mirror</span>
+            <span className="text-[9px] text-slate-400 font-medium">Mirror</span>
             <button
               onClick={flipFormation}
-              className="px-3 py-1.5 rounded bg-slate-600 text-slate-200 hover:bg-slate-500 flex items-center gap-1"
+              className="px-2 py-1 rounded bg-slate-600 text-slate-200 hover:bg-slate-500 flex items-center gap-1"
               title="Flip Left/Right"
             >
-              <RefreshCw size={14} /> <span className="text-sm">Flip</span>
+              <RefreshCw size={12} /> <span className="text-xs">Flip</span>
             </button>
           </div>
 
           {/* Undo/Redo/Delete */}
           <div className="flex flex-col items-center">
-            <span className="text-[10px] text-slate-300 font-medium mb-1">History</span>
+            <span className="text-[9px] text-slate-400 font-medium">History</span>
             <div className="flex items-center gap-1">
               <button
                 onClick={undo}
@@ -1313,12 +1389,10 @@ export default function PlayDiagramEditor({
           </div>
 
           {/* Cancel, Save As & Save */}
-          <div className="flex flex-col items-end ml-auto">
-            <span className="text-[10px] text-slate-300 font-medium mb-1">Actions</span>
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 ml-auto">
               <button
                 onClick={onCancel}
-                className="px-3 py-1.5 text-sm bg-slate-600 text-slate-200 rounded hover:bg-slate-500"
+                className="px-2 py-1 text-xs bg-slate-600 text-slate-200 rounded hover:bg-slate-500"
                 title="Cancel and close"
               >
                 Cancel
@@ -1331,7 +1405,7 @@ export default function PlayDiagramEditor({
                       onSaveAs({ elements, name: name.trim().toUpperCase() });
                     }
                   }}
-                  className="px-3 py-1.5 text-sm bg-purple-600 text-white rounded hover:bg-purple-500 flex items-center gap-1"
+                  className="px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-500 flex items-center gap-1"
                   title="Save as new protection/scheme"
                 >
                   <Save size={14} /> Save As
@@ -1339,12 +1413,11 @@ export default function PlayDiagramEditor({
               )}
               <button
                 onClick={() => onSave({ elements })}
-                className="px-3 py-1.5 text-sm bg-green-600 text-white rounded hover:bg-green-500 flex items-center gap-1 font-semibold"
+                className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-500 flex items-center gap-1 font-semibold"
                 title="Save changes"
               >
                 <Save size={14} /> Save
               </button>
-            </div>
           </div>
         </div>
       )}
@@ -1438,6 +1511,62 @@ export default function PlayDiagramEditor({
           </svg>
         </div>
       </div>
+
+      {/* Define Formation Modal */}
+      {showDefineFormationModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-slate-800 rounded-lg shadow-xl w-80 overflow-hidden">
+            <div className="p-4 border-b border-slate-700">
+              <h3 className="text-lg font-semibold text-white">Define Formation</h3>
+              <p className="text-xs text-slate-400 mt-1">Save current player positions as a reusable formation template</p>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Formation Name</label>
+                <input
+                  type="text"
+                  value={newFormationName}
+                  onChange={(e) => setNewFormationName(e.target.value)}
+                  placeholder="e.g., TRIPS RT, BUNCH LT..."
+                  className="w-full px-3 py-2 text-sm bg-slate-700 border border-slate-600 rounded text-white placeholder-slate-500"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1">Personnel Grouping</label>
+                <select
+                  value={newFormationPersonnel}
+                  onChange={(e) => setNewFormationPersonnel(e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-slate-700 border border-slate-600 rounded text-white"
+                >
+                  <option value="">Default (11 Personnel)</option>
+                  {personnelGroupings.map(g => (
+                    <option key={g.id} value={g.id}>
+                      {g.code ? `${g.code} - ${g.name}` : g.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-500 mt-1">Which personnel grouping uses this formation?</p>
+              </div>
+            </div>
+            <div className="flex gap-2 p-4 border-t border-slate-700">
+              <button
+                onClick={() => setShowDefineFormationModal(false)}
+                className="flex-1 px-3 py-2 text-sm bg-slate-600 text-slate-200 rounded hover:bg-slate-500"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveFormationTemplate}
+                disabled={!newFormationName.trim()}
+                className="flex-1 px-3 py-2 text-sm bg-purple-600 text-white rounded hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                Save Formation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

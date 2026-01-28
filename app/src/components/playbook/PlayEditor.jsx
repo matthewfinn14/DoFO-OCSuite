@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { X, Save, Trash2, Upload, ChevronDown, ChevronRight, Edit3, Library, GripVertical, Handshake, Link2, MapPin, Hash, AlertTriangle, Eye, Layers } from 'lucide-react';
+import { X, Save, Trash2, Upload, ChevronDown, ChevronRight, Edit3, Library, GripVertical, Handshake, Link2, MapPin, Hash, AlertTriangle, Eye, Layers, History, Calendar, ClipboardList, Trophy } from 'lucide-react';
 import { useSchool } from '../../context/SchoolContext';
 import PlayDiagramEditor from '../diagrams/PlayDiagramEditor';
 import DiagramPreview from '../diagrams/DiagramPreview';
@@ -23,7 +23,7 @@ export default function PlayEditor({
   phase = 'OFFENSE',
   availablePlays = []
 }) {
-  const { setupConfig, updateSetupConfig } = useSchool();
+  const { setupConfig, updateSetupConfig, weeks } = useSchool();
   const isEditing = !!play;
 
   // Get OL schemes from setup config for library selection
@@ -38,6 +38,13 @@ export default function PlayEditor({
   const positionNames = useMemo(() => setupConfig?.positionNames || {}, [setupConfig?.positionNames]);
   const personnelGroupings = useMemo(() => setupConfig?.personnelGroupings || [], [setupConfig?.personnelGroupings]);
 
+  // Handler to save a new formation template
+  const handleSaveFormation = useCallback((newFormation) => {
+    const existingFormations = setupConfig?.formations || [];
+    const updatedFormations = [...existingFormations, newFormation];
+    updateSetupConfig('formations', updatedFormations);
+  }, [setupConfig?.formations, updateSetupConfig]);
+
   // Get offense positions (non-OL) from setup config for WIZ Skill editor
   const offensePositions = useMemo(() => {
     const hidden = setupConfig?.hiddenPositions?.OFFENSE || [];
@@ -47,6 +54,77 @@ export default function PlayEditor({
     const customKeys = custom.map(p => p.key).filter(Boolean);
     return [...visible, ...customKeys];
   }, [setupConfig?.hiddenPositions?.OFFENSE, setupConfig?.customPositions?.OFFENSE]);
+
+  // Calculate play history - finds all practice script instances and game calls for this play
+  const playHistory = useMemo(() => {
+    if (!play?.id || !weeks) return { practiceInstances: [], gameInstances: [] };
+
+    const practiceInstances = [];
+    const gameInstances = [];
+
+    // Search through all weeks for practice script instances
+    (weeks || []).forEach(week => {
+      // Check practice plans
+      (week.practicePlans || []).forEach(plan => {
+        (plan.segments || []).forEach(segment => {
+          (segment.script || []).forEach((row, rowIndex) => {
+            if (row.playId === play.id) {
+              practiceInstances.push({
+                type: 'practice',
+                weekId: week.id,
+                weekName: week.name || `Week ${week.weekNumber || ''}`,
+                opponent: week.opponent,
+                date: plan.date,
+                planName: plan.name || 'Practice',
+                segmentName: segment.name || segment.title || 'Segment',
+                rowIndex: rowIndex + 1,
+                hash: row.hash,
+                tempo: row.tempo,
+                notes: row.notes
+              });
+            }
+          });
+        });
+      });
+
+      // Check game call log (if exists) - placeholder for future feature
+      (week.gameCallLog || []).forEach(call => {
+        if (call.playId === play.id) {
+          gameInstances.push({
+            type: 'game',
+            weekId: week.id,
+            weekName: week.name || `Week ${week.weekNumber || ''}`,
+            opponent: week.opponent,
+            date: week.gameDate,
+            quarter: call.quarter,
+            down: call.down,
+            distance: call.distance,
+            fieldPosition: call.fieldPosition,
+            result: call.result,
+            yards: call.yards,
+            notes: call.notes
+          });
+        }
+      });
+    });
+
+    // Sort by date (most recent first)
+    practiceInstances.sort((a, b) => {
+      if (!a.date && !b.date) return 0;
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return new Date(b.date) - new Date(a.date);
+    });
+
+    gameInstances.sort((a, b) => {
+      if (!a.date && !b.date) return 0;
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return new Date(b.date) - new Date(a.date);
+    });
+
+    return { practiceInstances, gameInstances };
+  }, [play?.id, weeks]);
 
   // Play type options for offense
   const PLAY_TYPES = [
@@ -184,7 +262,8 @@ export default function PlayEditor({
     diagrams: true,
     complementary: false,
     levels: false,
-    advanced: false
+    advanced: false,
+    history: false
   });
 
   // Series creation prompt state
@@ -1677,6 +1756,130 @@ export default function PlayEditor({
             </Section>
           )}
 
+          {/* Play History Section - Only show when editing existing play */}
+          {isEditing && (
+            <Section
+              title={
+                <span className="flex items-center gap-2">
+                  <History size={16} className="text-sky-400" />
+                  Play History
+                  {(playHistory.practiceInstances.length + playHistory.gameInstances.length) > 0 && (
+                    <span className="px-1.5 py-0.5 bg-sky-500/20 text-sky-400 text-xs rounded">
+                      {playHistory.practiceInstances.length + playHistory.gameInstances.length}
+                    </span>
+                  )}
+                </span>
+              }
+              isOpen={expandedSections.history}
+              onToggle={() => toggleSection('history')}
+            >
+              <div className="space-y-4">
+                {/* Practice Instances */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <ClipboardList size={14} className="text-emerald-400" />
+                    <span className="text-sm font-medium text-slate-300">Practice Scripts</span>
+                    <span className="text-xs text-slate-500">({playHistory.practiceInstances.length})</span>
+                  </div>
+                  {playHistory.practiceInstances.length > 0 ? (
+                    <div className="space-y-1 max-h-48 overflow-y-auto">
+                      {playHistory.practiceInstances.map((instance, idx) => (
+                        <div
+                          key={`practice-${idx}`}
+                          className="flex items-center justify-between px-3 py-2 bg-slate-800/50 rounded border border-slate-700/50 text-xs"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Calendar size={12} className="text-slate-500" />
+                            <span className="text-slate-300">{instance.date || 'No date'}</span>
+                            <span className="text-slate-500">•</span>
+                            <span className="text-slate-400">{instance.weekName}</span>
+                            {instance.opponent && (
+                              <>
+                                <span className="text-slate-500">vs</span>
+                                <span className="text-amber-400">{instance.opponent}</span>
+                              </>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-slate-500">{instance.segmentName}</span>
+                            {instance.hash && (
+                              <span className="px-1.5 py-0.5 bg-slate-700 text-slate-400 rounded">
+                                {instance.hash}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-500 italic">No practice script instances found</p>
+                  )}
+                </div>
+
+                {/* Game Instances */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Trophy size={14} className="text-amber-400" />
+                    <span className="text-sm font-medium text-slate-300">Game Calls</span>
+                    <span className="text-xs text-slate-500">({playHistory.gameInstances.length})</span>
+                  </div>
+                  {playHistory.gameInstances.length > 0 ? (
+                    <div className="space-y-1 max-h-48 overflow-y-auto">
+                      {playHistory.gameInstances.map((instance, idx) => (
+                        <div
+                          key={`game-${idx}`}
+                          className="flex items-center justify-between px-3 py-2 bg-slate-800/50 rounded border border-slate-700/50 text-xs"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Calendar size={12} className="text-slate-500" />
+                            <span className="text-slate-300">{instance.date || 'No date'}</span>
+                            {instance.opponent && (
+                              <>
+                                <span className="text-slate-500">vs</span>
+                                <span className="text-amber-400">{instance.opponent}</span>
+                              </>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-slate-400">
+                            {instance.quarter && <span>Q{instance.quarter}</span>}
+                            {instance.down && instance.distance && (
+                              <span>{instance.down}&{instance.distance}</span>
+                            )}
+                            {instance.result && (
+                              <span className={`px-1.5 py-0.5 rounded ${
+                                instance.result === 'positive' ? 'bg-emerald-500/20 text-emerald-400' :
+                                instance.result === 'negative' ? 'bg-red-500/20 text-red-400' :
+                                'bg-slate-700 text-slate-400'
+                              }`}>
+                                {instance.yards !== undefined ? `${instance.yards > 0 ? '+' : ''}${instance.yards} yds` : instance.result}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-500 italic">No game call data yet - Post-game summaries will appear here</p>
+                  )}
+                </div>
+
+                {/* Summary stats placeholder */}
+                {(playHistory.practiceInstances.length + playHistory.gameInstances.length) > 0 && (
+                  <div className="pt-3 border-t border-slate-700">
+                    <div className="flex items-center gap-4 text-xs text-slate-400">
+                      <span>
+                        <strong className="text-emerald-400">{playHistory.practiceInstances.length}</strong> practice reps
+                      </span>
+                      <span>
+                        <strong className="text-amber-400">{playHistory.gameInstances.length}</strong> game calls
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Section>
+          )}
+
           {/* Mark as incomplete checkbox */}
           <div className="flex items-center gap-2">
             <input
@@ -1737,6 +1940,7 @@ export default function PlayEditor({
               positionColors={positionColors}
               positionNames={positionNames}
               playName={formData.formation ? `${formData.formation} ${formData.name}` : formData.name}
+              onSaveFormation={handleSaveFormation}
               onSave={(data) => {
                 setFormData(prev => ({ ...prev, wizSkillData: data.elements }));
                 setShowSkillEditor(false);

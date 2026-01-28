@@ -90,6 +90,7 @@ export default function WristbandBuilder() {
     activeLevelId,
     setActiveLevelId,
     setupConfig,
+    updateSetupConfig,
     formations,
     personnelGroupings,
     offensePositions
@@ -120,6 +121,13 @@ export default function WristbandBuilder() {
     startSingleSelect();
     return () => stopSingleSelect();
   }, [startSingleSelect, stopSingleSelect]);
+
+  // Handler to save a new formation template
+  const handleSaveFormation = useCallback((newFormation) => {
+    const existingFormations = setupConfig?.formations || [];
+    const updatedFormations = [...existingFormations, newFormation];
+    updateSetupConfig('formations', updatedFormations);
+  }, [setupConfig?.formations, updateSetupConfig]);
 
   // Get current week
   const currentWeek = useMemo(() => {
@@ -597,6 +605,7 @@ export default function WristbandBuilder() {
               positionColors={positionColors}
               positionNames={positionNames}
               playName={editingSkillPlay.formation ? `${editingSkillPlay.formation} ${editingSkillPlay.name}` : editingSkillPlay.name}
+              onSaveFormation={handleSaveFormation}
               onSave={handleSaveSkillDiagram}
               onCancel={() => setEditingSkillPlay(null)}
             />

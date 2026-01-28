@@ -238,7 +238,46 @@ export default function PlayCard({
 function PlayDiagramPreview({ elements, mode = 'standard' }) {
   const colors = ['#000000', '#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
   const isWizSkill = mode === 'wiz-skill';
-  const viewBox = isWizSkill ? '0 0 754 445' : '0 60 800 460';
+
+  // Calculate bounds from elements for better framing
+  const calculateBounds = () => {
+    if (!elements || elements.length === 0) {
+      return isWizSkill ? { x: 0, y: 0, width: 900, height: 320 } : { x: 0, y: 60, width: 800, height: 460 };
+    }
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+    elements.forEach(el => {
+      if (el.points) {
+        el.points.forEach(p => {
+          minX = Math.min(minX, p.x);
+          minY = Math.min(minY, p.y);
+          maxX = Math.max(maxX, p.x);
+          maxY = Math.max(maxY, p.y);
+        });
+      }
+    });
+
+    // Add padding around the content
+    const padding = 40;
+    minX = Math.max(0, minX - padding);
+    minY = Math.max(0, minY - padding);
+    maxX = maxX + padding;
+    maxY = maxY + padding;
+
+    return {
+      x: minX,
+      y: minY,
+      width: Math.max(maxX - minX, 200),
+      height: Math.max(maxY - minY, 150)
+    };
+  };
+
+  const bounds = calculateBounds();
+  // For wiz-skill, use fixed viewBox for consistency; for standard, use calculated bounds
+  const viewBox = isWizSkill
+    ? '0 0 900 320'
+    : `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`;
 
   return (
     <svg
@@ -251,14 +290,14 @@ function PlayDiagramPreview({ elements, mode = 'standard' }) {
         {colors.map(c => (
           <marker
             key={c}
-            id={`arrow-${c.replace('#', '')}`}
-            markerWidth="6"
-            markerHeight="4"
-            refX="5"
-            refY="2"
+            id={`card-arrow-${c.replace('#', '')}`}
+            markerWidth="8"
+            markerHeight="6"
+            refX="7"
+            refY="3"
             orient="auto"
           >
-            <polygon points="0 0, 6 2, 0 4" fill={c} />
+            <polygon points="0 0, 8 3, 0 6" fill={c} />
           </marker>
         ))}
       </defs>
@@ -269,8 +308,8 @@ function PlayDiagramPreview({ elements, mode = 'standard' }) {
           href="/WIZ Background.jpg"
           x="0"
           y="0"
-          width="100%"
-          height="100%"
+          width="900"
+          height="320"
           preserveAspectRatio="none"
         />
       ) : (
@@ -289,7 +328,7 @@ function PlayDiagramPreview({ elements, mode = 'standard' }) {
         if (el.type === 'player' && el.points?.[0]) {
           const { x, y } = el.points[0];
           const isTextOnly = el.shape === 'text-only';
-          const fontSize = el.fontSize || 14;
+          const fontSize = el.fontSize || 16;
 
           if (isTextOnly) {
             return (
@@ -308,7 +347,7 @@ function PlayDiagramPreview({ elements, mode = 'standard' }) {
             );
           }
 
-          const size = 14;
+          const size = 18;
           const isRect = el.shape === 'square';
 
           return (
@@ -321,7 +360,7 @@ function PlayDiagramPreview({ elements, mode = 'standard' }) {
                   height={size * 2}
                   fill="white"
                   stroke={el.color || '#000'}
-                  strokeWidth="2"
+                  strokeWidth="3"
                 />
               ) : (
                 <circle
@@ -330,7 +369,7 @@ function PlayDiagramPreview({ elements, mode = 'standard' }) {
                   r={size}
                   fill="white"
                   stroke={el.color || '#000'}
-                  strokeWidth="2"
+                  strokeWidth="3"
                 />
               )}
               <text
@@ -338,7 +377,7 @@ function PlayDiagramPreview({ elements, mode = 'standard' }) {
                 y={y + 1}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                fontSize="10"
+                fontSize="12"
                 fontWeight="bold"
                 fill={el.color || '#000'}
               >
@@ -353,7 +392,7 @@ function PlayDiagramPreview({ elements, mode = 'standard' }) {
 
         const d = `M ${el.points.map(p => `${p.x},${p.y}`).join(' L ')}`;
         const color = el.color || '#000';
-        const markerId = `arrow-${color.replace('#', '')}`;
+        const markerId = `card-arrow-${color.replace('#', '')}`;
 
         let markerEnd = undefined;
         let endMarker = null;
@@ -366,8 +405,8 @@ function PlayDiagramPreview({ elements, mode = 'standard' }) {
           const dx = end.x - prev.x;
           const dy = end.y - prev.y;
           const len = Math.hypot(dx, dy) || 1;
-          const perpX = (-dy / len) * 12;
-          const perpY = (dx / len) * 12;
+          const perpX = (-dy / len) * 14;
+          const perpY = (dx / len) * 14;
           endMarker = (
             <line
               x1={end.x - perpX}
@@ -375,12 +414,12 @@ function PlayDiagramPreview({ elements, mode = 'standard' }) {
               x2={end.x + perpX}
               y2={end.y + perpY}
               stroke={color}
-              strokeWidth="3"
+              strokeWidth="5"
             />
           );
         } else if (el.endType === 'dot') {
           const end = el.points[el.points.length - 1];
-          endMarker = <circle cx={end.x} cy={end.y} r="5" fill={color} />;
+          endMarker = <circle cx={end.x} cy={end.y} r="6" fill={color} />;
         }
 
         return (
@@ -388,9 +427,9 @@ function PlayDiagramPreview({ elements, mode = 'standard' }) {
             <path
               d={d}
               stroke={color}
-              strokeWidth="3"
+              strokeWidth={el.lineWidth || 6}
               fill="none"
-              strokeDasharray={el.style === 'dashed' ? '8,4' : 'none'}
+              strokeDasharray={el.style === 'dashed' ? '10,5' : 'none'}
               markerEnd={markerEnd}
             />
             {endMarker}
