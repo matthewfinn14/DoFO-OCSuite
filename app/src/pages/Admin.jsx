@@ -183,7 +183,8 @@ export default function Admin() {
           id: `staff_${Date.now()}`,
           email: newSchool.adminEmail.toLowerCase(),
           name: '',
-          role: 'head_coach',
+          role: 'Head Coach',
+          roles: ['Head Coach', 'Team Admin'],
           permissionLevel: 'admin',
           isSchoolAdmin: true
         }],
