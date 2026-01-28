@@ -398,7 +398,46 @@ export function AuthProvider({ children }) {
 
   // Compute current user permissions based on roles
   const currentPermissions = useMemo(() => {
-    const roles = userProfile?.roles || [];
+    // Get roles from userProfile OR from school's staff array
+    let roles = userProfile?.roles || [];
+
+    // Also check if user is in the current school's staff array
+    if (currentSchool?.staff && user?.email) {
+      const staffEntry = currentSchool.staff.find(
+        s => s.email?.toLowerCase() === user.email.toLowerCase()
+      );
+      if (staffEntry) {
+        // Use roles from staff entry if available
+        if (staffEntry.roles && staffEntry.roles.length > 0) {
+          roles = [...new Set([...roles, ...staffEntry.roles])];
+        } else if (staffEntry.role) {
+          // Handle single role field (convert to proper format)
+          const roleMap = {
+            'head_coach': 'Head Coach',
+            'team_admin': 'Team Admin',
+            'offensive_coordinator': 'Offensive Coordinator',
+            'position_coach': 'Position Coach'
+          };
+          const mappedRole = roleMap[staffEntry.role] || staffEntry.role;
+          if (!roles.includes(mappedRole)) {
+            roles = [...roles, mappedRole];
+          }
+        }
+        // School admin gets Team Admin role
+        if (staffEntry.isSchoolAdmin && !roles.includes('Team Admin')) {
+          roles = [...roles, 'Team Admin'];
+        }
+      }
+    }
+
+    // Check if user is the schoolAdminEmail - they get Team Admin role
+    if (currentSchool?.schoolAdminEmail && user?.email) {
+      if (currentSchool.schoolAdminEmail.toLowerCase() === user.email.toLowerCase()) {
+        if (!roles.includes('Team Admin')) {
+          roles = [...roles, 'Team Admin'];
+        }
+      }
+    }
 
     // Start with default permissions
     let permissions = JSON.parse(JSON.stringify(DEFAULT_PERMISSIONS));
@@ -431,8 +470,32 @@ export function AuthProvider({ children }) {
   }, [userProfile?.roles, user?.email]);
 
   // Helper booleans for common permission checks
-  const isHeadCoach = userProfile?.roles?.includes('Head Coach') || false;
-  const isTeamAdmin = userProfile?.roles?.includes('Team Admin') || false;
+  // Check both userProfile.roles AND school staff/admin
+  const computedRoles = useMemo(() => {
+    let roles = userProfile?.roles || [];
+    if (currentSchool?.staff && user?.email) {
+      const staffEntry = currentSchool.staff.find(
+        s => s.email?.toLowerCase() === user.email.toLowerCase()
+      );
+      if (staffEntry?.roles) {
+        roles = [...new Set([...roles, ...staffEntry.roles])];
+      } else if (staffEntry?.role) {
+        const roleMap = { 'head_coach': 'Head Coach', 'team_admin': 'Team Admin' };
+        const mapped = roleMap[staffEntry.role] || staffEntry.role;
+        if (!roles.includes(mapped)) roles = [...roles, mapped];
+      }
+      if (staffEntry?.isSchoolAdmin && !roles.includes('Team Admin')) {
+        roles = [...roles, 'Team Admin'];
+      }
+    }
+    if (currentSchool?.schoolAdminEmail?.toLowerCase() === user?.email?.toLowerCase()) {
+      if (!roles.includes('Team Admin')) roles = [...roles, 'Team Admin'];
+    }
+    return roles;
+  }, [userProfile?.roles, currentSchool, user?.email]);
+
+  const isHeadCoach = computedRoles.includes('Head Coach');
+  const isTeamAdmin = computedRoles.includes('Team Admin');
 
   const value = {
     // State
