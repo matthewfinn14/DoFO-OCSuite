@@ -603,11 +603,15 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
             size: letter landscape;
             margin: 0.25in;
           }
+          .formation-view-container {
+            margin: 0 !important;
+          }
         }
 
         .formation-view-container {
           width: 10.5in;
           height: 8in;
+          margin: 0.25in auto;
           background: white;
           display: flex;
           flex-direction: column;
@@ -659,11 +663,11 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
 
         .formation-half-top {
           border-bottom: none;
-          background: linear-gradient(to bottom, #fef3c7 0%, #fde68a 100%);
+          background: white;
         }
 
         .formation-half-bottom {
-          background: linear-gradient(to bottom, #e0f2fe 0%, #bae6fd 100%);
+          background: white;
         }
 
         .formation-half-label {

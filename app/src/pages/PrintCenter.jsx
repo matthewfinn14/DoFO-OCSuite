@@ -199,6 +199,7 @@ export default function PrintCenter() {
     const templateParam = searchParams.get('template');
     const weekParam = searchParams.get('week');
     const formatParam = searchParams.get('format');
+    const viewModeParam = searchParams.get('viewMode');
 
     if (templateParam) {
       const template = PRINT_TEMPLATES.find(t => t.id === templateParam);
@@ -206,7 +207,8 @@ export default function PrintCenter() {
         setSelectedTemplateId(templateParam);
         setPrintSettings({
           ...template.defaultSettings,
-          ...(formatParam ? { format: formatParam } : {})
+          ...(formatParam ? { format: formatParam } : {}),
+          ...(viewModeParam ? { viewMode: viewModeParam } : {})
         });
       }
     }
@@ -223,9 +225,10 @@ export default function PrintCenter() {
       params.set('template', selectedTemplateId);
       if (selectedWeekId) params.set('week', selectedWeekId);
       if (printSettings.format) params.set('format', printSettings.format);
+      if (printSettings.viewMode) params.set('viewMode', printSettings.viewMode);
       setSearchParams(params, { replace: true });
     }
-  }, [selectedTemplateId, selectedWeekId, printSettings.format]);
+  }, [selectedTemplateId, selectedWeekId, printSettings.format, printSettings.viewMode]);
 
   // Get selected template
   const selectedTemplate = useMemo(() => {
@@ -268,9 +271,13 @@ export default function PrintCenter() {
       // Player format = landscape, Coach format = portrait
       return printSettings.format === 'coach' ? 'portrait' : 'landscape';
     }
+    // For depth charts, formation view is landscape
+    if (selectedTemplate?.id === 'depth_chart') {
+      return printSettings.viewMode === 'formation' ? 'landscape' : 'portrait';
+    }
     if (printSettings.orientation) return printSettings.orientation;
     return selectedTemplate?.orientation || 'portrait';
-  }, [printSettings.orientation, printSettings.format, selectedTemplate]);
+  }, [printSettings.orientation, printSettings.format, printSettings.viewMode, selectedTemplate]);
 
   // Render the print template
   const renderTemplate = () => {
@@ -316,11 +323,10 @@ export default function PrintCenter() {
               <button
                 key={cat.id}
                 onClick={() => setFilterCategory(cat.id)}
-                className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                  filterCategory === cat.id
-                    ? 'bg-sky-500 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+                className={`px-3 py-1 rounded-full text-sm transition-colors ${filterCategory === cat.id
+                  ? 'bg-sky-500 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
               >
                 {cat.label}
               </button>
@@ -338,29 +344,25 @@ export default function PrintCenter() {
               <button
                 key={template.id}
                 onClick={() => handleSelectTemplate(template)}
-                className={`w-full p-3 rounded-lg text-left transition-all ${
-                  selectedTemplateId === template.id
-                    ? 'bg-sky-50 border-2 border-sky-500'
-                    : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'
-                }`}
+                className={`w-full p-3 rounded-lg text-left transition-all ${selectedTemplateId === template.id
+                  ? 'bg-sky-50 border-2 border-sky-500'
+                  : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'
+                  }`}
               >
                 <div className="flex items-start gap-3">
-                  <div className={`p-2 rounded-lg ${
-                    selectedTemplateId === template.id ? 'bg-sky-500 text-white' : 'bg-gray-200 text-gray-600'
-                  }`}>
+                  <div className={`p-2 rounded-lg ${selectedTemplateId === template.id ? 'bg-sky-500 text-white' : 'bg-gray-200 text-gray-600'
+                    }`}>
                     <template.icon size={20} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className={`font-semibold text-sm ${
-                      selectedTemplateId === template.id ? 'text-sky-700' : 'text-gray-900'
-                    }`}>
+                    <h3 className={`font-semibold text-sm ${selectedTemplateId === template.id ? 'text-sky-700' : 'text-gray-900'
+                      }`}>
                       {template.name}
                     </h3>
                     <p className="text-xs text-gray-500 mt-0.5">{template.description}</p>
                   </div>
-                  <ChevronRight size={16} className={`mt-1 ${
-                    selectedTemplateId === template.id ? 'text-sky-500' : 'text-gray-400'
-                  }`} />
+                  <ChevronRight size={16} className={`mt-1 ${selectedTemplateId === template.id ? 'text-sky-500' : 'text-gray-400'
+                    }`} />
                 </div>
               </button>
             ))}
