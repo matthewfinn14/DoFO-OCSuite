@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
 import {
   Printer,
@@ -9,406 +10,427 @@ import {
   Watch,
   Calendar,
   ClipboardList,
-  Settings,
-  Download,
-  ChevronDown,
-  ChevronRight
+  Clock,
+  BookOpen,
+  ChevronRight,
+  ExternalLink
 } from 'lucide-react';
 
-// Print templates
+// Import print components
+import PrintPreview from '../components/print/PrintPreview';
+import WeekSelector from '../components/print/WeekSelector';
+import PrintSettingsPanel from '../components/print/PrintSettingsPanel';
+
+// Import print templates
+import WristbandPrint from '../components/print/templates/WristbandPrint';
+import CoachWristbandPrint from '../components/print/templates/CoachWristbandPrint';
+import DepthChartPrint from '../components/print/templates/DepthChartPrint';
+import PracticePlanPrint from '../components/print/templates/PracticePlanPrint';
+import GamePlanPrint from '../components/print/templates/GamePlanPrint';
+import PreGamePrint from '../components/print/templates/PreGamePrint';
+import RosterPrint from '../components/print/templates/RosterPrint';
+import PlaybookPrint from '../components/print/templates/PlaybookPrint';
+
+// Import styles
+import '../styles/print-center.css';
+
+// Template definitions
 const PRINT_TEMPLATES = [
   {
-    id: 'playbook_cards',
-    name: 'Playbook Cards',
-    description: 'Print play cards for study or distribution',
-    icon: Grid,
-    category: 'playbook'
-  },
-  {
-    id: 'playbook_list',
-    name: 'Play List',
-    description: 'Print a list view of all plays',
-    icon: List,
-    category: 'playbook'
-  },
-  {
     id: 'wristband',
-    name: 'Wristband',
-    description: 'Print wristband cards for game day',
+    name: 'Wristbands',
+    description: 'Player or coach wristband cards',
     icon: Watch,
-    category: 'gameday'
+    category: 'gameday',
+    component: WristbandPrint,
+    defaultSettings: {
+      format: 'player',
+      cardSelection: ['card100'],
+      showSlotNumbers: true,
+      showFormation: true,
+      wizType: 'both'
+    },
+    orientation: 'landscape'
   },
   {
-    id: 'call_sheet',
-    name: 'Call Sheet',
-    description: 'Print game plan call sheet',
+    id: 'coach_wristband',
+    name: "Coach's Play Sheet",
+    description: 'Consolidated mega-card with all plays',
     icon: ClipboardList,
-    category: 'gameday'
+    category: 'gameday',
+    component: CoachWristbandPrint,
+    defaultSettings: {
+      cardSelection: ['card100', 'card200', 'card300', 'card400'],
+      consolidationMode: 'byCard',
+      fontSize: 'medium',
+      showColorCoding: true
+    },
+    orientation: 'landscape'
   },
   {
     id: 'depth_chart',
-    name: 'Depth Chart',
-    description: 'Print depth charts by position',
+    name: 'Depth Charts',
+    description: 'Position depth charts (full or half-sheet)',
     icon: Users,
-    category: 'roster'
+    category: 'roster',
+    component: DepthChartPrint,
+    defaultSettings: {
+      viewMode: 'full',
+      chartTypes: ['offense', 'defense'],
+      depthLevels: 2,
+      showBackups: true
+    },
+    orientation: 'portrait'
+  },
+  {
+    id: 'practice_plan',
+    name: 'Practice Plan',
+    description: 'Daily practice schedules with scripts',
+    icon: Calendar,
+    category: 'practice',
+    component: PracticePlanPrint,
+    defaultSettings: {
+      coachView: false,
+      days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+      includeScripts: true,
+      orientation: 'landscape',
+      showNotes: true,
+      showContactLevel: true
+    },
+    orientation: 'landscape'
+  },
+  {
+    id: 'game_plan',
+    name: 'Game Plan',
+    description: 'Call sheets and game strategy',
+    icon: ClipboardList,
+    category: 'gameday',
+    component: GamePlanPrint,
+    defaultSettings: {
+      viewType: 'sheet',
+      orientation: 'landscape',
+      includeLogo: true,
+      includeOpponent: true,
+      fontSize: 'medium'
+    },
+    orientation: 'landscape'
+  },
+  {
+    id: 'pregame',
+    name: 'Pre-Game Timeline',
+    description: 'Game day schedule checklist',
+    icon: Clock,
+    category: 'gameday',
+    component: PreGamePrint,
+    defaultSettings: {
+      gameTime: '19:00',
+      timeFormat: 'both',
+      includeCheckboxes: true,
+      showNotes: true,
+      orientation: 'portrait'
+    },
+    orientation: 'portrait'
   },
   {
     id: 'roster',
-    name: 'Roster List',
-    description: 'Print full roster with details',
+    name: 'Roster / Attendance',
+    description: 'Team roster with attendance checkboxes',
     icon: Users,
-    category: 'roster'
+    category: 'roster',
+    component: RosterPrint,
+    defaultSettings: {
+      sortBy: 'number',
+      columns: ['number', 'name', 'position', 'year'],
+      checkboxColumn: true,
+      checkboxSize: 'medium',
+      title: 'Attendance Sheet'
+    },
+    orientation: 'portrait'
   },
   {
-    id: 'practice_script',
-    name: 'Practice Script',
-    description: 'Print practice plan with plays',
-    icon: Calendar,
-    category: 'practice'
+    id: 'playbook',
+    name: 'Playbook',
+    description: 'Play cards or list view',
+    icon: BookOpen,
+    category: 'playbook',
+    component: PlaybookPrint,
+    defaultSettings: {
+      viewMode: 'cards',
+      cardsPerPage: 4,
+      showDiagrams: true,
+      showFormation: true,
+      showTags: false
+    },
+    orientation: 'portrait'
   }
 ];
 
-// Paper sizes
-const PAPER_SIZES = [
-  { id: 'letter', label: 'Letter (8.5" x 11")' },
-  { id: 'legal', label: 'Legal (8.5" x 14")' },
-  { id: 'a4', label: 'A4' },
-  { id: 'wristband', label: 'Wristband (3" x 5")' }
-];
-
-// Categories
+// Categories for filtering
 const CATEGORIES = [
   { id: 'all', label: 'All Templates' },
-  { id: 'playbook', label: 'Playbook' },
   { id: 'gameday', label: 'Game Day' },
+  { id: 'practice', label: 'Practice' },
   { id: 'roster', label: 'Roster' },
-  { id: 'practice', label: 'Practice' }
+  { id: 'playbook', label: 'Playbook' }
 ];
 
 export default function PrintCenter() {
-  const { plays, roster, depthCharts, wristbands, weeks } = useSchool();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const {
+    playsArray,
+    roster,
+    weeks,
+    currentWeekId,
+    activeLevelId,
+    staff,
+    settings
+  } = useSchool();
 
-  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  // State
+  const [selectedTemplateId, setSelectedTemplateId] = useState(null);
+  const [selectedWeekId, setSelectedWeekId] = useState(currentWeekId);
+  const [selectedLevelId, setSelectedLevelId] = useState(activeLevelId);
   const [filterCategory, setFilterCategory] = useState('all');
-  const [printSettings, setPrintSettings] = useState({
-    paperSize: 'letter',
-    orientation: 'portrait',
-    showDiagrams: true,
-    showFormation: true,
-    showTags: false,
-    cardsPerPage: 4
-  });
+  const [printSettings, setPrintSettings] = useState({});
+  const [previewScale, setPreviewScale] = useState(0.5);
 
-  // Filter templates
+  // Handle URL deep linking
+  useEffect(() => {
+    const templateParam = searchParams.get('template');
+    const weekParam = searchParams.get('week');
+    const formatParam = searchParams.get('format');
+
+    if (templateParam) {
+      const template = PRINT_TEMPLATES.find(t => t.id === templateParam);
+      if (template) {
+        setSelectedTemplateId(templateParam);
+        setPrintSettings({
+          ...template.defaultSettings,
+          ...(formatParam ? { format: formatParam } : {})
+        });
+      }
+    }
+
+    if (weekParam) {
+      setSelectedWeekId(weekParam);
+    }
+  }, [searchParams]);
+
+  // Update URL when selections change
+  useEffect(() => {
+    if (selectedTemplateId) {
+      const params = new URLSearchParams();
+      params.set('template', selectedTemplateId);
+      if (selectedWeekId) params.set('week', selectedWeekId);
+      if (printSettings.format) params.set('format', printSettings.format);
+      setSearchParams(params, { replace: true });
+    }
+  }, [selectedTemplateId, selectedWeekId, printSettings.format]);
+
+  // Get selected template
+  const selectedTemplate = useMemo(() => {
+    return PRINT_TEMPLATES.find(t => t.id === selectedTemplateId);
+  }, [selectedTemplateId]);
+
+  // Get current week data
+  const weekData = useMemo(() => {
+    return weeks.find(w => w.id === selectedWeekId);
+  }, [weeks, selectedWeekId]);
+
+  // Filter templates by category
   const filteredTemplates = useMemo(() => {
     if (filterCategory === 'all') return PRINT_TEMPLATES;
     return PRINT_TEMPLATES.filter(t => t.category === filterCategory);
   }, [filterCategory]);
 
-  // Get play stats
-  const playStats = useMemo(() => {
-    const offense = plays.filter(p => p.phase === 'offense').length;
-    const defense = plays.filter(p => p.phase === 'defense').length;
-    const special = plays.filter(p => p.phase === 'special_teams').length;
-    return { offense, defense, special, total: plays.length };
-  }, [plays]);
+  // Handle template selection
+  const handleSelectTemplate = (template) => {
+    setSelectedTemplateId(template.id);
+    setPrintSettings(template.defaultSettings || {});
+  };
 
   // Handle print
   const handlePrint = () => {
     window.print();
   };
 
-  // Render print preview based on template
-  const renderPreview = () => {
-    if (!selectedTemplate) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full text-slate-500">
-          <FileText size={48} className="mb-4 text-slate-600" />
-          <p>Select a template to preview</p>
-        </div>
-      );
+  // Get play/roster stats
+  const stats = useMemo(() => ({
+    plays: playsArray.length,
+    players: roster.length,
+    weeks: weeks.length
+  }), [playsArray.length, roster.length, weeks.length]);
+
+  // Determine orientation for preview
+  const previewOrientation = useMemo(() => {
+    // For wristbands, orientation depends on format
+    if (selectedTemplate?.id === 'wristband') {
+      // Player format = landscape, Coach format = portrait
+      return printSettings.format === 'coach' ? 'portrait' : 'landscape';
     }
+    if (printSettings.orientation) return printSettings.orientation;
+    return selectedTemplate?.orientation || 'portrait';
+  }, [printSettings.orientation, printSettings.format, selectedTemplate]);
 
-    switch (selectedTemplate.id) {
-      case 'playbook_cards':
-        return (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              {plays.slice(0, 4).map(play => (
-                <div key={play.id} className="bg-white text-black p-4 rounded-lg border">
-                  <h3 className="font-bold text-lg">{play.name}</h3>
-                  <p className="text-sm text-gray-600">{play.formation}</p>
-                  <div className="h-32 bg-gray-100 rounded mt-2 flex items-center justify-center text-gray-400">
-                    [Diagram]
-                  </div>
-                </div>
-              ))}
-            </div>
-            {plays.length > 4 && (
-              <p className="text-slate-400 text-sm text-center">
-                + {plays.length - 4} more plays
-              </p>
-            )}
-          </div>
-        );
+  // Render the print template
+  const renderTemplate = () => {
+    if (!selectedTemplate) return null;
 
-      case 'playbook_list':
-        return (
-          <div className="bg-white text-black rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="px-3 py-2 text-left">Play</th>
-                  <th className="px-3 py-2 text-left">Formation</th>
-                  <th className="px-3 py-2 text-left">Category</th>
-                </tr>
-              </thead>
-              <tbody>
-                {plays.slice(0, 8).map((play, idx) => (
-                  <tr key={play.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-3 py-2 font-medium">{play.name}</td>
-                    <td className="px-3 py-2">{play.formation || '-'}</td>
-                    <td className="px-3 py-2">{play.bucket || '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        );
+    const TemplateComponent = selectedTemplate.component;
+    const templateProps = {
+      ...printSettings,
+      weekId: selectedWeekId,
+      levelId: selectedLevelId
+    };
 
-      case 'depth_chart':
-        return (
-          <div className="bg-white text-black p-4 rounded-lg">
-            <h3 className="font-bold text-lg mb-4">Depth Chart - Offense</h3>
-            <table className="w-full text-sm">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="px-3 py-2 text-left">Pos</th>
-                  <th className="px-3 py-2 text-left">1st</th>
-                  <th className="px-3 py-2 text-left">2nd</th>
-                </tr>
-              </thead>
-              <tbody>
-                {['QB', 'RB', 'WR', 'TE', 'LT', 'LG', 'C', 'RG', 'RT'].map((pos, idx) => (
-                  <tr key={pos} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-3 py-2 font-bold">{pos}</td>
-                    <td className="px-3 py-2">-</td>
-                    <td className="px-3 py-2">-</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        );
-
-      case 'roster':
-        return (
-          <div className="bg-white text-black p-4 rounded-lg">
-            <h3 className="font-bold text-lg mb-4">Team Roster</h3>
-            <table className="w-full text-sm">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="px-3 py-2 text-left">#</th>
-                  <th className="px-3 py-2 text-left">Name</th>
-                  <th className="px-3 py-2 text-left">Pos</th>
-                  <th className="px-3 py-2 text-left">Year</th>
-                </tr>
-              </thead>
-              <tbody>
-                {roster.slice(0, 10).map((player, idx) => (
-                  <tr key={player.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-3 py-2 font-bold">{player.number || '-'}</td>
-                    <td className="px-3 py-2">{player.name}</td>
-                    <td className="px-3 py-2">{player.position || '-'}</td>
-                    <td className="px-3 py-2">{player.year || '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        );
-
-      case 'wristband':
-        return (
-          <div className="bg-white text-black p-4 rounded-lg">
-            <div className="grid grid-cols-3 gap-2">
-              {Array.from({ length: 12 }).map((_, idx) => (
-                <div
-                  key={idx}
-                  className="aspect-[3/2] border-2 rounded flex items-center justify-center text-sm font-bold"
-                  style={{
-                    backgroundColor: ['#ef4444', '#3b82f6', '#22c55e', '#eab308'][Math.floor(idx / 3)]
-                  }}
-                >
-                  <span className={Math.floor(idx / 3) === 3 ? 'text-black' : 'text-white'}>
-                    {idx + 1}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
-      default:
-        return (
-          <div className="text-center py-8 text-slate-500">
-            <p>Preview not available for this template</p>
-          </div>
-        );
-    }
+    return <TemplateComponent {...templateProps} />;
   };
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-1">Print Center</h1>
-          <p className="text-slate-400">
-            {playStats.total} plays • {roster.length} players
+    <div className="flex h-[calc(100vh-64px)] bg-gray-50 print:block print:h-auto print:bg-white">
+      {/* Sidebar - Template Selection & Settings */}
+      <div className="w-96 bg-white border-r border-gray-200 overflow-y-auto print:hidden">
+        {/* Header */}
+        <div className="p-4 border-b border-gray-200">
+          <h1 className="text-xl font-bold text-gray-900">Print Center</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            {stats.plays} plays · {stats.players} players
           </p>
         </div>
-        {selectedTemplate && (
-          <button
-            onClick={handlePrint}
-            className="flex items-center gap-2 px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600"
-          >
-            <Printer size={18} />
-            Print
-          </button>
-        )}
-      </div>
 
-      <div className="flex gap-6">
-        {/* Template List */}
-        <div className="w-80 flex-shrink-0">
-          {/* Category Filter */}
-          <div className="mb-4">
-            <div className="flex flex-wrap gap-2">
-              {CATEGORIES.map(cat => (
-                <button
-                  key={cat.id}
-                  onClick={() => setFilterCategory(cat.id)}
-                  className={`px-3 py-1 rounded-full text-sm ${
-                    filterCategory === cat.id
-                      ? 'bg-sky-500 text-white'
-                      : 'bg-slate-800 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
-            </div>
+        {/* Week Selector */}
+        <WeekSelector
+          selectedWeekId={selectedWeekId}
+          onWeekChange={setSelectedWeekId}
+          selectedLevelId={selectedLevelId}
+          onLevelChange={setSelectedLevelId}
+        />
+
+        {/* Category Filter */}
+        <div className="p-4 border-b border-gray-200">
+          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+            Template Category
           </div>
+          <div className="flex flex-wrap gap-2">
+            {CATEGORIES.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => setFilterCategory(cat.id)}
+                className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                  filterCategory === cat.id
+                    ? 'bg-sky-500 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-          {/* Templates */}
+        {/* Template List */}
+        <div className="p-4 border-b border-gray-200">
+          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+            Templates
+          </div>
           <div className="space-y-2">
             {filteredTemplates.map(template => (
               <button
                 key={template.id}
-                onClick={() => setSelectedTemplate(template)}
-                className={`w-full p-4 rounded-lg text-left ${
-                  selectedTemplate?.id === template.id
-                    ? 'bg-sky-500/20 border border-sky-500'
-                    : 'bg-slate-900 border border-slate-800 hover:border-slate-700'
+                onClick={() => handleSelectTemplate(template)}
+                className={`w-full p-3 rounded-lg text-left transition-all ${
+                  selectedTemplateId === template.id
+                    ? 'bg-sky-50 border-2 border-sky-500'
+                    : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'
                 }`}
               >
                 <div className="flex items-start gap-3">
                   <div className={`p-2 rounded-lg ${
-                    selectedTemplate?.id === template.id ? 'bg-sky-500' : 'bg-slate-800'
+                    selectedTemplateId === template.id ? 'bg-sky-500 text-white' : 'bg-gray-200 text-gray-600'
                   }`}>
-                    <template.icon size={20} className="text-white" />
+                    <template.icon size={20} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-white">{template.name}</h3>
-                    <p className="text-sm text-slate-400 mt-0.5">{template.description}</p>
+                    <h3 className={`font-semibold text-sm ${
+                      selectedTemplateId === template.id ? 'text-sky-700' : 'text-gray-900'
+                    }`}>
+                      {template.name}
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-0.5">{template.description}</p>
                   </div>
+                  <ChevronRight size={16} className={`mt-1 ${
+                    selectedTemplateId === template.id ? 'text-sky-500' : 'text-gray-400'
+                  }`} />
                 </div>
               </button>
             ))}
           </div>
         </div>
 
-        {/* Preview & Settings */}
-        <div className="flex-1">
-          {/* Settings Bar */}
-          {selectedTemplate && (
-            <div className="bg-slate-900 rounded-lg border border-slate-800 p-4 mb-4">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-400 text-sm">Paper:</span>
-                  <select
-                    value={printSettings.paperSize}
-                    onChange={e => setPrintSettings({ ...printSettings, paperSize: e.target.value })}
-                    className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-sm"
-                  >
-                    {PAPER_SIZES.map(size => (
-                      <option key={size.id} value={size.id}>{size.label}</option>
-                    ))}
-                  </select>
-                </div>
+        {/* Template-Specific Settings */}
+        {selectedTemplate && (
+          <PrintSettingsPanel
+            template={selectedTemplate}
+            settings={printSettings}
+            onChange={setPrintSettings}
+            weekData={weekData}
+            roster={roster}
+            staff={staff}
+          />
+        )}
+      </div>
 
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-400 text-sm">Orientation:</span>
-                  <select
-                    value={printSettings.orientation}
-                    onChange={e => setPrintSettings({ ...printSettings, orientation: e.target.value })}
-                    className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-sm"
-                  >
-                    <option value="portrait">Portrait</option>
-                    <option value="landscape">Landscape</option>
-                  </select>
-                </div>
+      {/* Main Content - Preview */}
+      <div className="flex-1 flex flex-col bg-gray-100 print:p-0 print:bg-white">
+        {/* Toolbar */}
+        <div className="p-4 bg-white border-b border-gray-200 flex justify-between items-center print:hidden">
+          <div className="flex items-center gap-4">
+            {selectedTemplate ? (
+              <h2 className="text-lg font-semibold text-gray-900">
+                {selectedTemplate.name}
+              </h2>
+            ) : (
+              <h2 className="text-lg font-semibold text-gray-400">
+                Select a template
+              </h2>
+            )}
+          </div>
 
-                {selectedTemplate.id === 'playbook_cards' && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-400 text-sm">Cards/Page:</span>
-                    <select
-                      value={printSettings.cardsPerPage}
-                      onChange={e => setPrintSettings({ ...printSettings, cardsPerPage: parseInt(e.target.value) })}
-                      className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-sm"
-                    >
-                      <option value="1">1</option>
-                      <option value="2">2</option>
-                      <option value="4">4</option>
-                      <option value="6">6</option>
-                      <option value="9">9</option>
-                    </select>
-                  </div>
-                )}
+          <div className="flex items-center gap-3">
+            {selectedTemplate && (
+              <button
+                onClick={handlePrint}
+                className="flex items-center gap-2 px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors"
+              >
+                <Printer size={18} />
+                Print
+              </button>
+            )}
+          </div>
+        </div>
 
-                <label className="flex items-center gap-2 text-sm text-slate-400">
-                  <input
-                    type="checkbox"
-                    checked={printSettings.showDiagrams}
-                    onChange={e => setPrintSettings({ ...printSettings, showDiagrams: e.target.checked })}
-                    className="w-4 h-4 rounded bg-slate-700 border-slate-600 text-sky-500"
-                  />
-                  Show Diagrams
-                </label>
-              </div>
+        {/* Preview Area */}
+        <div className="flex-1 overflow-auto p-6 print:p-0">
+          {selectedTemplate ? (
+            <PrintPreview
+              orientation={previewOrientation}
+              scale={previewScale}
+              onScaleChange={setPreviewScale}
+            >
+              {renderTemplate()}
+            </PrintPreview>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-gray-400">
+              <FileText size={64} className="mb-4 text-gray-300" />
+              <p className="text-lg text-gray-500">Select a template to preview</p>
+              <p className="text-sm mt-2">Choose from the sidebar to get started</p>
             </div>
           )}
-
-          {/* Preview */}
-          <div className="bg-slate-900 rounded-lg border border-slate-800 p-6 min-h-[500px]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-white">
-                {selectedTemplate ? `Preview: ${selectedTemplate.name}` : 'Print Preview'}
-              </h3>
-              {selectedTemplate && (
-                <span className="text-sm text-slate-400">
-                  Scaled preview - actual print may differ
-                </span>
-              )}
-            </div>
-
-            <div className="bg-slate-800/50 rounded-lg p-6 min-h-[400px]">
-              {renderPreview()}
-            </div>
-          </div>
         </div>
       </div>
     </div>
   );
 }
+
+// Export templates for use by other components
+export { PRINT_TEMPLATES };

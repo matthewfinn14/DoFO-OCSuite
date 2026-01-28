@@ -24,7 +24,8 @@ import {
   StickyNote,
   Layers,
   Link2,
-  CheckSquare
+  CheckSquare,
+  ExternalLink
 } from 'lucide-react';
 
 // Days of the week
@@ -661,6 +662,17 @@ function PrintSettingsModal({ staff, positionGroups, practicePlans, weekName, on
               )}
             </p>
           </div>
+        </div>
+
+        {/* Print Center Link */}
+        <div className="px-6 pb-2">
+          <Link
+            to="/print?template=practice_plan"
+            className="flex items-center gap-2 text-sky-400 hover:text-sky-300 text-sm"
+          >
+            <ExternalLink size={14} />
+            Open in Print Center for more options
+          </Link>
         </div>
 
         {/* Footer */}

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
 import { getWristbandDisplay } from '../utils/wristband';
 import SheetView from '../components/gameplan/SheetView';
@@ -22,7 +23,8 @@ import {
   MapPin,
   Zap,
   Package,
-  Users
+  Users,
+  ExternalLink
 } from 'lucide-react';
 import '../styles/gameplan.css';
 
@@ -839,13 +841,22 @@ export default function GamePlan() {
             </button>
 
             {/* Print Button */}
-            <button
-              onClick={handlePrint}
-              className="flex items-center gap-2 px-3 py-2 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 border border-slate-700"
-            >
-              <Printer size={16} />
-              <span className="text-sm">Print</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePrint}
+                className="flex items-center gap-2 px-3 py-2 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 border border-slate-700"
+              >
+                <Printer size={16} />
+                <span className="text-sm">Print</span>
+              </button>
+              <Link
+                to="/print?template=game_plan"
+                className="p-2 text-slate-400 hover:text-sky-400 rounded-lg hover:bg-slate-800"
+                title="Open in Print Center"
+              >
+                <ExternalLink size={16} />
+              </Link>
+            </div>
           </div>
         </div>
 

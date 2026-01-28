@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
 import {
   Users,
@@ -14,7 +15,8 @@ import {
   ZoomIn,
   ZoomOut,
   Minus,
-  ChevronDown
+  ChevronDown,
+  ExternalLink
 } from 'lucide-react';
 
 // Depth chart types
@@ -897,13 +899,22 @@ export default function DepthCharts() {
             </div>
           )}
 
-          <button
-            onClick={() => window.print()}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700"
-          >
-            <Printer size={18} />
-            Print
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700"
+            >
+              <Printer size={18} />
+              Print
+            </button>
+            <Link
+              to="/print?template=depth_chart"
+              className="p-2 text-slate-400 hover:text-sky-400 rounded-lg hover:bg-slate-800"
+              title="Open in Print Center"
+            >
+              <ExternalLink size={18} />
+            </Link>
+          </div>
         </div>
       </div>
 

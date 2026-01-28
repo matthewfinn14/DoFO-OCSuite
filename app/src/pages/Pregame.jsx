@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
 import {
   Clock,
@@ -16,7 +17,9 @@ import {
   Save,
   Download,
   LayoutTemplate,
-  FolderOpen
+  FolderOpen,
+  Printer,
+  ExternalLink
 } from 'lucide-react';
 
 // Default pregame schedule template
@@ -847,6 +850,25 @@ export default function Pregame() {
             <Save size={16} />
             Save as Template
           </button>
+          <div className="w-px h-8 bg-slate-700" />
+          {/* Print Button */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-2 px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600"
+              title="Print schedule"
+            >
+              <Printer size={16} />
+              Print
+            </button>
+            <Link
+              to="/print?template=pregame"
+              className="p-2 text-slate-400 hover:text-sky-400 rounded-lg hover:bg-slate-700"
+              title="Open in Print Center"
+            >
+              <ExternalLink size={16} />
+            </Link>
+          </div>
           <div className="w-px h-8 bg-slate-700" />
           <div className="flex items-center gap-2">
             <span className="text-slate-400">Kickoff:</span>

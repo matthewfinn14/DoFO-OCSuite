@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Layers, Calendar } from 'lucide-react';
 import { useSchool } from '../../context/SchoolContext';
 import { useAuth } from '../../context/AuthContext';
@@ -143,6 +143,13 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
       }))
       .filter(phase => phase.weeks.length > 0);
   }, [allWeeks, seasonPhases]);
+
+  // Auto-set currentWeekId if not set but a week is auto-selected
+  useEffect(() => {
+    if (!currentWeekId && currentWeek?.id && allWeeks.length > 0) {
+      setCurrentWeekId(currentWeek.id);
+    }
+  }, [currentWeekId, currentWeek?.id, allWeeks.length, setCurrentWeekId]);
 
   // Determine which levels the current user can access
   const accessibleLevels = levels.filter(level => {

@@ -1,0 +1,835 @@
+/* Print Center - Unified Print Styles
+ * Centralized CSS for all print templates
+ * Based on existing wristband-print.css and gameplan.css proportions
+ */
+
+/* ============================================
+   PRINT MEDIA QUERIES - GLOBAL
+   ============================================ */
+
+@media print {
+  /* Hide app chrome */
+  .print-hide,
+  header,
+  nav,
+  aside,
+  .sidebar,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Show print elements */
+  .print-show {
+    display: block !important;
+  }
+
+  /* Base page setup */
+  @page {
+    margin: 0.25in;
+  }
+
+  @page landscape {
+    size: letter landscape;
+  }
+
+  @page portrait {
+    size: letter portrait;
+  }
+
+  /* Ensure colors print correctly */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+}
+
+/* ============================================
+   PRINT HEADER (Common across templates)
+   ============================================ */
+
+.print-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  border-bottom: 2px solid black;
+  background: white;
+  margin-bottom: 0.5rem;
+}
+
+.print-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.print-header-logo {
+  height: 50px;
+  width: auto;
+  object-fit: contain;
+}
+
+.print-header-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.print-header-title {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: black;
+}
+
+.print-header-subtitle {
+  font-size: 0.85rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.print-header-right {
+  text-align: right;
+}
+
+.print-header-date {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.print-header-opponent {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #1e293b;
+}
+
+/* ============================================
+   WRISTBAND PRINT STYLES
+   ============================================ */
+
+/* Player format: 4 cards per page (2x2 grid), 3.5" x 4.5" each */
+@media print {
+  .wristband-print-player {
+    display: grid !important;
+    grid-template-columns: repeat(2, 3.5in);
+    grid-auto-rows: 4.5in;
+    gap: 0.25in;
+    justify-content: center;
+    padding: 0.25in;
+    background: white !important;
+  }
+
+  .wristband-print-player .wristband-card {
+    width: 3.5in !important;
+    height: 4.5in !important;
+    font-size: 8px !important;
+    line-height: 1.2 !important;
+    padding: 0.125in !important;
+    border-radius: 4px !important;
+    overflow: hidden !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .wristband-print-player .wristband-card .slot-number {
+    font-size: 7px !important;
+    font-weight: bold !important;
+  }
+
+  .wristband-print-player .wristband-card .play-name {
+    font-size: 7px !important;
+    line-height: 1.1 !important;
+  }
+
+  /* Force page breaks between pages of 4 cards */
+  .wristband-print-player .wristband-card:nth-child(4n + 1) {
+    break-before: page;
+  }
+
+  .wristband-print-player .wristband-card:nth-child(-n + 4) {
+    break-before: avoid;
+  }
+}
+
+/* Coach format: 2 cards per page (enlarged), 7.5" x 4.5" each */
+@media print {
+  .wristband-print-coach {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 0.5in;
+    padding: 0.5in;
+    background: white !important;
+  }
+
+  .wristband-print-coach .wristband-card {
+    width: 7.5in !important;
+    height: 4.5in !important;
+    font-size: 12px !important;
+    line-height: 1.3 !important;
+    padding: 0.25in !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  .wristband-print-coach .wristband-card .slot-number {
+    font-size: 11px !important;
+    font-weight: bold !important;
+  }
+
+  .wristband-print-coach .wristband-card .play-name {
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+  }
+
+  /* Force page breaks between pages of 2 cards */
+  .wristband-print-coach .wristband-card:nth-child(2n + 1) {
+    break-before: page;
+  }
+
+  .wristband-print-coach .wristband-card:nth-child(-n + 2) {
+    break-before: avoid;
+  }
+}
+
+/* Wristband card common styles */
+.wristband-card {
+  border: 2px solid #333;
+  background: white;
+  color: black;
+}
+
+.wristband-card .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid currentColor;
+  font-weight: bold;
+}
+
+.wristband-card .card-title {
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.wristband-card .card-opponent {
+  font-size: 8px;
+}
+
+/* Standard layout (2-column, odd/even) */
+.wristband-card.layout-standard .slot-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 8px;
+}
+
+.wristband-card.layout-standard .slot-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 12px;
+}
+
+/* WIZ layout (4x4 grid) */
+.wristband-card.layout-wiz .slot-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+}
+
+.wristband-card.layout-wiz .slot-cell {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  padding: 2px;
+  text-align: center;
+}
+
+/* Mini-scripts layout (5-column table) */
+.wristband-card.layout-mini-scripts .script-grid {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.wristband-card.layout-mini-scripts .script-row {
+  display: table-row;
+}
+
+.wristband-card.layout-mini-scripts .script-cell {
+  display: table-cell;
+  padding: 2px 4px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.wristband-card.layout-mini-scripts .script-header {
+  font-weight: bold;
+  padding: 4px;
+  border-radius: 2px;
+  text-align: center;
+}
+
+/* ============================================
+   COACH'S CONSOLIDATED WRISTBAND (NEW)
+   ============================================ */
+
+.coach-megacard {
+  width: 10in;
+  height: 7.5in;
+  border: 2px solid black;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  font-size: 10pt;
+  padding: 0.25in;
+  background: white;
+}
+
+.coach-megacard-header {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.125in;
+  margin-bottom: 0.125in;
+  border-bottom: 2px solid black;
+}
+
+.coach-megacard-section {
+  border-right: 1px solid #ccc;
+  padding: 0.125in;
+}
+
+.coach-megacard-section:last-child {
+  border-right: none;
+}
+
+.coach-megacard-section-title {
+  font-weight: bold;
+  font-size: 12pt;
+  text-align: center;
+  padding: 4px;
+  background: #f1f5f9;
+  margin-bottom: 4px;
+}
+
+.coach-megacard-slot {
+  display: flex;
+  gap: 4px;
+  padding: 2px 0;
+  border-bottom: 1px dotted #ddd;
+  font-size: 9pt;
+}
+
+.coach-megacard-slot-number {
+  font-weight: bold;
+  min-width: 24px;
+}
+
+@media print {
+  .coach-megacard-print {
+    page-break-inside: avoid;
+  }
+
+  @page coach-megacard {
+    size: letter landscape;
+    margin: 0.25in;
+  }
+}
+
+/* ============================================
+   DEPTH CHART PRINT STYLES
+   ============================================ */
+
+/* Full page depth chart */
+.depth-chart-print {
+  padding: 0.5in;
+  background: white;
+}
+
+.depth-chart-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11pt;
+}
+
+.depth-chart-table th,
+.depth-chart-table td {
+  border: 1px solid #cbd5e1;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.depth-chart-table th {
+  background: #1e293b;
+  color: white;
+  font-weight: bold;
+}
+
+.depth-chart-table tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.depth-chart-position-cell {
+  font-weight: bold;
+  background: #f1f5f9;
+  width: 60px;
+}
+
+/* Half-sheet depth chart (2 per page) */
+.depth-chart-halfsheet {
+  width: 5.5in;
+  height: 4.25in;
+  padding: 0.25in;
+  border: 1px solid #333;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  background: white;
+}
+
+.depth-chart-halfsheet-pair {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  height: 8.5in;
+  width: 11in;
+  gap: 0;
+}
+
+.depth-chart-halfsheet .depth-chart-table {
+  font-size: 9pt;
+}
+
+.depth-chart-halfsheet .depth-chart-table th,
+.depth-chart-halfsheet .depth-chart-table td {
+  padding: 3px 6px;
+}
+
+@media print {
+  .depth-chart-halfsheet-container {
+    page-break-after: always;
+  }
+
+  @page depth-chart-landscape {
+    size: letter landscape;
+    margin: 0;
+  }
+}
+
+/* ============================================
+   PRACTICE PLAN PRINT STYLES
+   ============================================ */
+
+.practice-plan-print {
+  padding: 0.5in;
+  background: white;
+  font-size: 11pt;
+}
+
+.practice-plan-day {
+  margin-bottom: 1rem;
+  break-inside: avoid;
+}
+
+.practice-plan-day-header {
+  background: #1e293b;
+  color: white;
+  padding: 8px 12px;
+  font-weight: bold;
+  font-size: 14pt;
+}
+
+.practice-plan-segments {
+  border: 1px solid #cbd5e1;
+  border-top: none;
+}
+
+.practice-plan-segment {
+  display: grid;
+  grid-template-columns: 80px 120px 1fr 100px;
+  border-bottom: 1px solid #e2e8f0;
+  align-items: stretch;
+}
+
+.practice-plan-segment:last-child {
+  border-bottom: none;
+}
+
+.practice-plan-segment-time {
+  padding: 6px 8px;
+  background: #f1f5f9;
+  font-weight: 600;
+  border-right: 1px solid #e2e8f0;
+}
+
+.practice-plan-segment-type {
+  padding: 6px 8px;
+  font-weight: 600;
+  border-right: 1px solid #e2e8f0;
+}
+
+.practice-plan-segment-content {
+  padding: 6px 8px;
+  border-right: 1px solid #e2e8f0;
+}
+
+.practice-plan-segment-group {
+  padding: 6px 8px;
+  font-style: italic;
+  color: #64748b;
+}
+
+/* Coach-specific view with scripts */
+.practice-plan-script {
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: #eff6ff;
+  border-radius: 4px;
+  font-size: 10pt;
+}
+
+.practice-plan-script-header {
+  font-weight: bold;
+  color: #1e40af;
+  margin-bottom: 2px;
+}
+
+.practice-plan-script-plays {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 2px 8px;
+}
+
+@media print {
+  .practice-plan-print {
+    font-size: 10pt;
+  }
+
+  .practice-plan-day {
+    page-break-inside: avoid;
+  }
+}
+
+/* ============================================
+   GAME PLAN PRINT STYLES
+   ============================================ */
+
+/* Inherits from gameplan.css - additional styles here */
+.gameplan-print-portrait {
+  padding: 0.5in;
+}
+
+@media print {
+  .gameplan-print-portrait {
+    @page {
+      size: letter portrait;
+      margin: 0.5in;
+    }
+  }
+}
+
+/* ============================================
+   PRE-GAME TIMELINE PRINT STYLES (NEW)
+   ============================================ */
+
+.pregame-print {
+  padding: 0.5in;
+  background: white;
+}
+
+.pregame-timeline {
+  border: 1px solid #333;
+}
+
+.pregame-item {
+  display: grid;
+  grid-template-columns: 30px 80px 60px 1fr 100px;
+  border-bottom: 1px solid #ccc;
+  padding: 6px 0;
+  align-items: center;
+}
+
+.pregame-item:last-child {
+  border-bottom: none;
+}
+
+.pregame-item.header {
+  background: #1e293b;
+  color: white;
+  font-weight: bold;
+  padding: 8px 0;
+}
+
+.pregame-checkbox {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #333;
+  margin: 0 auto;
+}
+
+.pregame-time {
+  font-weight: bold;
+  padding: 0 8px;
+}
+
+.pregame-relative-time {
+  color: #64748b;
+  font-size: 0.9em;
+}
+
+.pregame-description {
+  padding: 0 8px;
+}
+
+.pregame-owner {
+  font-style: italic;
+  color: #64748b;
+  padding: 0 8px;
+}
+
+.pregame-notes {
+  font-size: 0.85em;
+  color: #475569;
+  padding-left: 110px;
+  padding-bottom: 4px;
+}
+
+@media print {
+  .pregame-print {
+    font-size: 11pt;
+  }
+
+  .pregame-item {
+    break-inside: avoid;
+  }
+}
+
+/* ============================================
+   ROSTER/ATTENDANCE PRINT STYLES (NEW)
+   ============================================ */
+
+.roster-print {
+  padding: 0.5in;
+  background: white;
+}
+
+.attendance-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11pt;
+}
+
+.attendance-table th,
+.attendance-table td {
+  border: 1px solid #cbd5e1;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.attendance-table th {
+  background: #1e293b;
+  color: white;
+  font-weight: bold;
+}
+
+.attendance-table tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.attendance-row {
+  display: grid;
+  grid-template-columns: 30px repeat(auto-fit, minmax(80px, 1fr));
+  border-bottom: 1px solid #ddd;
+  padding: 4px 0;
+}
+
+.attendance-checkbox {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #333;
+}
+
+.attendance-checkbox.small {
+  width: 14px;
+  height: 14px;
+}
+
+.attendance-checkbox.large {
+  width: 22px;
+  height: 22px;
+}
+
+.attendance-checkbox-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media print {
+  .roster-print {
+    font-size: 10pt;
+  }
+
+  .attendance-table tr {
+    break-inside: avoid;
+  }
+}
+
+/* ============================================
+   PLAYBOOK PRINT STYLES
+   ============================================ */
+
+.playbook-print-cards {
+  display: grid;
+  gap: 0.5in;
+  padding: 0.5in;
+  background: white;
+}
+
+.playbook-print-cards.cards-per-page-1 {
+  grid-template-columns: 1fr;
+}
+
+.playbook-print-cards.cards-per-page-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.playbook-print-cards.cards-per-page-4 {
+  grid-template-columns: repeat(2, 1fr);
+  grid-auto-rows: calc((11in - 1.5in) / 2);
+}
+
+.playbook-print-cards.cards-per-page-6 {
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: calc((11in - 1.5in) / 2);
+}
+
+.playbook-print-cards.cards-per-page-9 {
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: calc((11in - 2in) / 3);
+}
+
+.playbook-card {
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 0.25in;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  background: white;
+}
+
+.playbook-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 4px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+
+.playbook-card-name {
+  font-weight: bold;
+  font-size: 12pt;
+}
+
+.playbook-card-formation {
+  font-size: 10pt;
+  color: #64748b;
+}
+
+.playbook-card-diagram {
+  aspect-ratio: 4/3;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.playbook-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.playbook-card-tag {
+  font-size: 8pt;
+  padding: 2px 6px;
+  background: #e2e8f0;
+  border-radius: 4px;
+}
+
+/* Playbook list view */
+.playbook-print-list {
+  padding: 0.5in;
+  background: white;
+}
+
+.playbook-list-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10pt;
+}
+
+.playbook-list-table th,
+.playbook-list-table td {
+  border: 1px solid #cbd5e1;
+  padding: 4px 8px;
+  text-align: left;
+}
+
+.playbook-list-table th {
+  background: #1e293b;
+  color: white;
+  font-weight: bold;
+}
+
+.playbook-list-table tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+@media print {
+  .playbook-print-cards .playbook-card:nth-child(4n + 1) {
+    break-before: page;
+  }
+
+  .playbook-print-cards .playbook-card:nth-child(-n + 4) {
+    break-before: avoid;
+  }
+}
+
+/* ============================================
+   PRINT PAGE SETUP CLASSES
+   ============================================ */
+
+@media print {
+  .print-page-portrait {
+    @page { size: letter portrait; }
+  }
+
+  .print-page-landscape {
+    @page { size: letter landscape; }
+  }
+
+  .print-page-break {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  .print-no-break {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}

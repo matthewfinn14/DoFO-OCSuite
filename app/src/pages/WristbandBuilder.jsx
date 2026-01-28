@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
 import { usePlayBank } from '../context/PlayBankContext';
 import PlayDiagramEditor from '../components/diagrams/PlayDiagramEditor';
@@ -13,7 +13,8 @@ import {
   ChevronDown,
   ChevronUp,
   CheckSquare,
-  Library
+  Library,
+  ExternalLink
 } from 'lucide-react';
 
 // Card tab definitions
@@ -494,8 +495,8 @@ export default function WristbandBuilder() {
         <div className="flex justify-center">
           {currentCard.type === 'wiz' ? (
             <div className="flex flex-col gap-4">
-              {/* SKILL Card */}
-              <div style={{ aspectRatio: '5 / 3', width: '500px' }}>
+              {/* SKILL Card - WIZ dimensions: 12cm x 8cm (4.7" x 3.15"), aspect ratio ~3:2 */}
+              <div style={{ width: '470px', height: '315px' }}>
                 <WizGrid
                   slots={slots}
                   title={`${currentCard.opponent || 'OPPONENT'} ${currentCard.iteration || '1'}`}
@@ -508,8 +509,8 @@ export default function WristbandBuilder() {
                   updatePlay={updatePlay}
                 />
               </div>
-              {/* OLINE Card */}
-              <div style={{ aspectRatio: '5 / 3', width: '500px' }}>
+              {/* OLINE Card - WIZ dimensions: 12cm x 8cm (4.7" x 3.15"), aspect ratio ~3:2 */}
+              <div style={{ width: '470px', height: '315px' }}>
                 <WizGrid
                   slots={slots}
                   title={`${currentCard.opponent || 'OPPONENT'} ${currentCard.iteration || '1'}`}
@@ -548,10 +549,10 @@ export default function WristbandBuilder() {
                   updatePlay={updatePlay}
                 />
               </div>
-              {/* Preview Section */}
+              {/* Preview Section - Standard dimensions: 5" x 2.8", aspect ratio 25:14 */}
               <div className="mt-6">
                 <span className="text-white font-medium block mb-2">Preview</span>
-                <div style={{ width: '500px', aspectRatio: '5 / 3' }}>
+                <div style={{ width: '500px', height: '280px' }}>
                   <MiniScriptPreview
                     rows={currentCard.rows || []}
                     plays={playsArray}
@@ -563,8 +564,8 @@ export default function WristbandBuilder() {
               </div>
             </div>
           ) : (
-            /* Standard Layout - landscape wristband card */
-            <div style={{ width: '600px', aspectRatio: '5 / 3' }}>
+            /* Standard Layout - landscape wristband card: 5" x 2.8", aspect ratio 25:14 */
+            <div style={{ width: '500px', height: '280px' }}>
               <SpreadsheetTable
                 slots={slots}
                 title={`${currentCard.opponent || 'OPPONENT'} ${currentCard.iteration || '1'}`}
@@ -886,19 +887,19 @@ function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, on
 
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', border: '2px solid black', background: 'white', overflow: 'hidden' }}>
-      {/* Header - compact */}
+      {/* Header - compact to match print proportions */}
       <div style={{
         background: '#dc2626',
         color: 'white',
         fontWeight: 'bold',
-        fontSize: '8pt',
-        padding: '1px 6px',
+        fontSize: '6pt',
+        padding: '1px 4px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         flexShrink: 0,
-        height: '16px',
-        minHeight: '16px'
+        height: '10px',
+        minHeight: '10px'
       }}>
         <span style={{ textTransform: 'uppercase' }}>{viewType === 'skill' ? 'SKILL' : 'OLINE'}</span>
         <span>{title}</span>
@@ -977,23 +978,23 @@ function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, on
                       </div>
                     ) : null}
                   </div>
-                  {/* Bottom row: slot number + play/scheme name - compact */}
+                  {/* Bottom row: slot number + play/scheme name - matches print proportions */}
                   <div style={{
                     display: 'flex',
                     borderTop: '1px solid black',
-                    height: '12px',
-                    minHeight: '12px',
-                    maxHeight: '12px',
+                    height: '11px',
+                    minHeight: '11px',
+                    maxHeight: '11px',
                     background: 'white',
                     flexShrink: 0
                   }}>
                     <div style={{
-                      width: '22px',
-                      minWidth: '22px',
+                      width: '18px',
+                      minWidth: '18px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '6pt',
+                      fontSize: '5pt',
                       fontWeight: 'bold',
                       color: '#000',
                       borderRight: '1px solid black',
@@ -1010,7 +1011,7 @@ function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, on
                         flex: 1,
                         display: 'flex',
                         alignItems: 'center',
-                        fontSize: '6pt',
+                        fontSize: '5pt',
                         fontWeight: 'bold',
                         padding: '0 2px',
                         overflow: 'hidden',
@@ -1030,8 +1031,8 @@ function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, on
                           autoFocus
                           style={{
                             width: '100%',
-                            height: '10px',
-                            fontSize: '6pt',
+                            height: '9px',
+                            fontSize: '5pt',
                             fontWeight: 'bold',
                             border: '1px solid #3b82f6',
                             borderRadius: '1px',
@@ -1047,7 +1048,7 @@ function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, on
                             onSelectOLScheme && onSelectOLScheme(play);
                           }}
                           style={{
-                            fontSize: '6pt',
+                            fontSize: '5pt',
                             color: '#3b82f6',
                             background: 'none',
                             border: 'none',
@@ -1360,6 +1361,13 @@ function PrintModal({ wristbandSettings, activeCardId, playsArray, slotMap, getP
           <p className="text-slate-500 text-sm mb-4">
             Print will include the currently selected card ({tab?.label}). Use browser print dialog for best results.
           </p>
+          <Link
+            to={`/print?template=wristband&format=${printType}`}
+            className="flex items-center gap-2 text-sky-400 hover:text-sky-300 text-sm"
+          >
+            <ExternalLink size={14} />
+            Open in Print Center for more options
+          </Link>
         </div>
         <div className="flex justify-end gap-3 p-4 border-t border-slate-800">
           <button onClick={onClose} className="px-4 py-2 bg-slate-800 text-white rounded hover:bg-slate-700">
