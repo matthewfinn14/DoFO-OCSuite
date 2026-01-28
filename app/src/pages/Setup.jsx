@@ -1237,6 +1237,7 @@ export default function Setup() {
               hiddenPositions={localConfig.hiddenPositions || {}}
               customPositions={localConfig.customPositions || {}}
               onUpdate={updateLocal}
+              isLight={isLight}
             />
           )}
 
@@ -1429,6 +1430,7 @@ export default function Setup() {
             <SeasonPhasesTab
               seasonPhases={localConfig.seasonPhases || []}
               onUpdate={updateLocal}
+              isLight={isLight}
             />
           )}
 
@@ -1471,7 +1473,7 @@ const DEFAULT_POSITION_TYPES = {
 };
 
 // Positions Tab Component
-function PositionsTab({ phase, positions, positionNames, positionColors, positionDescriptions, positionTypes, hiddenPositions, customPositions, onUpdate }) {
+function PositionsTab({ phase, positions, positionNames, positionColors, positionDescriptions, positionTypes, hiddenPositions, customPositions, onUpdate, isLight = false }) {
   const addPosition = () => {
     const key = prompt('Enter Position Key (1-3 letters, e.g., "F" or "S2"):');
     if (!key) return;
@@ -1532,14 +1534,18 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
 
   return (
     <div>
-      <h3 className="text-lg font-semibold text-white mb-4">Position Names</h3>
+      <h3 className={`text-lg font-semibold mb-4 ${isLight ? 'text-gray-900' : 'text-white'}`}>Position Names</h3>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
         {positions.map(pos => (
-          <div key={pos.key} className="bg-slate-700/50 p-4 rounded-lg border border-slate-600 relative overflow-hidden group">
+          <div key={pos.key} className={`p-4 rounded-lg border relative overflow-hidden group ${
+            isLight
+              ? 'bg-white border-gray-300'
+              : 'bg-slate-700/50 border-slate-600'
+          }`}>
             <div className="flex justify-between items-center mb-2">
               <div className="flex items-center gap-1">
-                <span className="text-xs font-bold text-slate-400">
+                <span className={`text-xs font-bold ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
                   {positionNames[pos.key] || pos.default}
                 </span>
                 <button
@@ -1555,7 +1561,9 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
                 value={positionDescriptions[pos.key] ?? pos.description}
                 onChange={(e) => updatePositionDesc(pos.key, e.target.value)}
                 placeholder={pos.description}
-                className="text-xs text-right bg-transparent border-none text-slate-300 w-24 focus:outline-none"
+                className={`text-xs text-right bg-transparent border-none w-24 focus:outline-none ${
+                  isLight ? 'text-gray-600' : 'text-slate-300'
+                }`}
               />
             </div>
 
@@ -5906,7 +5914,7 @@ function generateDefaultWeeks(phases, activeYear) {
 }
 
 // Season Phases Tab Component - Define and configure season phases
-function SeasonPhasesTab({ seasonPhases, onUpdate }) {
+function SeasonPhasesTab({ seasonPhases, onUpdate, isLight = false }) {
   const phases = seasonPhases.length > 0 ? seasonPhases : DEFAULT_PHASES;
 
   const addPhase = () => {
@@ -5964,8 +5972,12 @@ function SeasonPhasesTab({ seasonPhases, onUpdate }) {
   return (
     <div className="space-y-6">
       {/* Info Box */}
-      <div className="p-4 bg-sky-500/10 border border-sky-500/30 rounded-lg">
-        <p className="text-sm text-sky-300">
+      <div className={`p-4 rounded-lg border ${
+        isLight
+          ? 'bg-sky-50 border-sky-300'
+          : 'bg-sky-500/10 border-sky-500/30'
+      }`}>
+        <p className={`text-sm ${isLight ? 'text-sky-700' : 'text-sky-300'}`}>
           <strong>Season Phases:</strong> Define the phases of your season with start dates.
           When you set a start date, weeks in that phase auto-calculate (Week 1 starts on start date, Week 2 is 7 days later, etc.)
         </p>
@@ -5980,7 +5992,11 @@ function SeasonPhasesTab({ seasonPhases, onUpdate }) {
           return (
             <div
               key={phase.id}
-              className="bg-slate-700/50 rounded-lg border border-slate-600 overflow-hidden"
+              className={`rounded-lg border overflow-hidden ${
+                isLight
+                  ? 'bg-white border-gray-300'
+                  : 'bg-slate-700/50 border-slate-600'
+              }`}
             >
               {/* Phase Header */}
               <div className={`flex items-center gap-3 px-4 py-3 ${colorClass}`}>
@@ -6018,11 +6034,15 @@ function SeasonPhasesTab({ seasonPhases, onUpdate }) {
               <div className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
                 {/* Color */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 uppercase mb-1">Color</label>
+                  <label className={`block text-xs font-medium uppercase mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Color</label>
                   <select
                     value={phase.color}
                     onChange={e => updatePhase(phase.id, { color: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded text-white text-sm"
+                    className={`w-full px-3 py-2 border rounded text-sm ${
+                      isLight
+                        ? 'bg-white border-gray-300 text-gray-900'
+                        : 'bg-slate-600 border-slate-500 text-white'
+                    }`}
                   >
                     {PHASE_COLORS.map(c => (
                       <option key={c.id} value={c.id}>{c.label}</option>
@@ -6032,38 +6052,50 @@ function SeasonPhasesTab({ seasonPhases, onUpdate }) {
 
                 {/* Start Date */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 uppercase mb-1">Start Date</label>
+                  <label className={`block text-xs font-medium uppercase mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Start Date</label>
                   <input
                     type="date"
                     value={phase.startDate || ''}
                     onChange={e => updatePhase(phase.id, { startDate: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded text-white text-sm"
+                    className={`w-full px-3 py-2 border rounded text-sm ${
+                      isLight
+                        ? 'bg-white border-gray-300 text-gray-900'
+                        : 'bg-slate-600 border-slate-500 text-white'
+                    }`}
                   />
                 </div>
 
                 {/* Number of Weeks */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 uppercase mb-1">Number of Weeks</label>
+                  <label className={`block text-xs font-medium uppercase mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Number of Weeks</label>
                   <input
                     type="number"
                     value={phase.numWeeks || ''}
                     onChange={e => updatePhase(phase.id, { numWeeks: parseInt(e.target.value) || 0 })}
                     min="1"
                     max="52"
-                    className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded text-white text-sm"
+                    className={`w-full px-3 py-2 border rounded text-sm ${
+                      isLight
+                        ? 'bg-white border-gray-300 text-gray-900'
+                        : 'bg-slate-600 border-slate-500 text-white'
+                    }`}
                   />
                 </div>
 
                 {/* Date Range Display */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 uppercase mb-1">Date Range</label>
-                  <div className="px-3 py-2 bg-slate-800/50 border border-slate-600 rounded text-sm">
+                  <label className={`block text-xs font-medium uppercase mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Date Range</label>
+                  <div className={`px-3 py-2 border rounded text-sm ${
+                    isLight
+                      ? 'bg-gray-100 border-gray-300'
+                      : 'bg-slate-800/50 border-slate-600'
+                  }`}>
                     {phase.startDate ? (
-                      <span className="text-white">
+                      <span className={isLight ? 'text-gray-900' : 'text-white'}>
                         {formatDate(phase.startDate)} — {endDate ? formatDate(endDate) : '...'}
                       </span>
                     ) : (
-                      <span className="text-slate-500">Set start date</span>
+                      <span className={isLight ? 'text-gray-500' : 'text-slate-500'}>Set start date</span>
                     )}
                   </div>
                 </div>
