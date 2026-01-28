@@ -48,7 +48,7 @@ function HelpSection({ title, children, defaultOpen = false, isLight = false }) 
   return (
     <div className={`mb-4 rounded-lg overflow-hidden border ${
       isLight
-        ? 'bg-gray-100 border-gray-300'
+        ? 'bg-white border-gray-200 shadow-sm'
         : 'bg-slate-700/30 border-slate-600'
     }`}>
       <button
@@ -991,16 +991,20 @@ export default function Setup() {
 
       {/* Setup Mode Selector - Offense/Defense/ST */}
       {(isOffense || isDefense || isST) && (
-        <div className="mb-6 p-4 bg-slate-800/50 rounded-lg border border-slate-700">
+        <div className={`mb-6 p-4 rounded-lg border ${
+          isLight
+            ? 'bg-white border-gray-200 shadow-sm'
+            : 'bg-slate-800/50 border-slate-700'
+        }`}>
           <div className="flex flex-col gap-4">
             {/* Header with mode buttons */}
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-white font-medium flex items-center gap-2">
+                <h3 className={`font-medium flex items-center gap-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
                   Setup Mode
                   <span className={`text-xs px-2 py-0.5 rounded ${
                     (localConfig.setupMode?.[phase] || 'standard') === 'basic'
-                      ? 'bg-slate-600/30 text-slate-300'
+                      ? isLight ? 'bg-gray-200 text-gray-600' : 'bg-slate-600/30 text-slate-300'
                       : (localConfig.setupMode?.[phase] || 'standard') === 'standard'
                       ? 'bg-green-600/30 text-green-400'
                       : 'bg-purple-600/30 text-purple-400'
@@ -1056,14 +1060,14 @@ export default function Setup() {
               <div className={`p-3 rounded-lg border transition-all ${
                 (localConfig.setupMode?.[phase] || 'standard') === 'basic'
                   ? isLight
-                    ? 'bg-gray-200 border-gray-400'
+                    ? 'bg-gray-50 border-gray-400 shadow-sm'
                     : 'bg-slate-700/40 border-slate-500/50'
                   : isLight
-                    ? 'bg-gray-100 border-gray-300 opacity-70'
+                    ? 'bg-white border-gray-200 opacity-60'
                     : 'bg-slate-800/30 border-slate-700/50 opacity-60'
               }`}>
                 <h4 className={`font-medium text-sm mb-2 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>Basic Mode</h4>
-                <ul className={`text-xs space-y-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                <ul className={`text-xs space-y-1 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
                   <li>• Type entire play call in one field</li>
                   <li>• No syntax parsing or breakdown</li>
                   <li>• Practice scripts and game plans work</li>
@@ -1075,14 +1079,14 @@ export default function Setup() {
               <div className={`p-3 rounded-lg border transition-all ${
                 (localConfig.setupMode?.[phase] || 'standard') === 'standard'
                   ? isLight
-                    ? 'bg-green-100 border-green-500'
+                    ? 'bg-green-50 border-green-400 shadow-sm'
                     : 'bg-green-900/20 border-green-600/50'
                   : isLight
-                    ? 'bg-gray-100 border-gray-300 opacity-70'
+                    ? 'bg-white border-gray-200 opacity-60'
                     : 'bg-slate-800/30 border-slate-700/50 opacity-60'
               }`}>
                 <h4 className={`font-medium text-sm mb-2 ${isLight ? 'text-green-700' : 'text-green-400'}`}>Standard Mode</h4>
-                <ul className={`text-xs space-y-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                <ul className={`text-xs space-y-1 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
                   <li>• Formation + Motion + Play structure</li>
                   <li>• Filter by formation, motion, bucket</li>
                   <li>• Great for JV or getting started</li>
@@ -1094,14 +1098,14 @@ export default function Setup() {
               <div className={`p-3 rounded-lg border transition-all ${
                 (localConfig.setupMode?.[phase] || 'standard') === 'advanced'
                   ? isLight
-                    ? 'bg-purple-100 border-purple-500'
+                    ? 'bg-purple-50 border-purple-400 shadow-sm'
                     : 'bg-purple-900/20 border-purple-600/50'
                   : isLight
-                    ? 'bg-gray-100 border-gray-300 opacity-70'
+                    ? 'bg-white border-gray-200 opacity-60'
                     : 'bg-slate-800/30 border-slate-700/50 opacity-60'
               }`}>
                 <h4 className={`font-medium text-sm mb-2 ${isLight ? 'text-purple-700' : 'text-purple-400'}`}>Advanced Mode</h4>
-                <ul className={`text-xs space-y-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                <ul className={`text-xs space-y-1 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
                   <li>• Custom syntax per play bucket</li>
                   <li>• Term signals auto-fill fields</li>
                   <li>• Deep filtering for self-scout</li>
@@ -1129,7 +1133,7 @@ export default function Setup() {
             </p>
 
             <div className="grid md:grid-cols-2 gap-4">
-              <div className={`rounded-lg p-3 ${isLight ? 'bg-gray-200' : 'bg-slate-700/30'}`}>
+              <div className={`rounded-lg p-3 ${isLight ? 'bg-white border border-gray-200 shadow-sm' : 'bg-slate-700/30'}`}>
                 <h4 className={`font-medium mb-2 flex items-center gap-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
                   <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs flex items-center justify-center">1</span>
                   Define Your Building Blocks
@@ -1142,7 +1146,7 @@ export default function Setup() {
                 </p>
               </div>
 
-              <div className={`rounded-lg p-3 ${isLight ? 'bg-gray-200' : 'bg-slate-700/30'}`}>
+              <div className={`rounded-lg p-3 ${isLight ? 'bg-white border border-gray-200 shadow-sm' : 'bg-slate-700/30'}`}>
                 <h4 className={`font-medium mb-2 flex items-center gap-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
                   <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs flex items-center justify-center">2</span>
                   Build Your Play Call Syntax
@@ -1154,7 +1158,7 @@ export default function Setup() {
                 </p>
               </div>
 
-              <div className={`rounded-lg p-3 ${isLight ? 'bg-gray-200' : 'bg-slate-700/30'}`}>
+              <div className={`rounded-lg p-3 ${isLight ? 'bg-white border border-gray-200 shadow-sm' : 'bg-slate-700/30'}`}>
                 <h4 className={`font-medium mb-2 flex items-center gap-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
                   <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs flex items-center justify-center">3</span>
                   Customize the Middle Section
@@ -1166,7 +1170,7 @@ export default function Setup() {
                 </p>
               </div>
 
-              <div className={`rounded-lg p-3 ${isLight ? 'bg-gray-200' : 'bg-slate-700/30'}`}>
+              <div className={`rounded-lg p-3 ${isLight ? 'bg-white border border-gray-200 shadow-sm' : 'bg-slate-700/30'}`}>
                 <h4 className={`font-medium mb-2 flex items-center gap-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
                   <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs flex items-center justify-center">4</span>
                   Why This Matters
@@ -1190,7 +1194,7 @@ export default function Setup() {
       <div className="flex gap-6">
         {/* Tab Navigation */}
         <div className="w-56 flex-shrink-0">
-          <div className={`rounded-lg border p-2 ${isLight ? 'bg-gray-100 border-gray-300' : 'bg-slate-800/50 border-slate-700'}`}>
+          <div className={`rounded-lg border p-2 ${isLight ? 'bg-white border-gray-200 shadow-sm' : 'bg-slate-800/50 border-slate-700'}`}>
             {getTabs().map((tab, idx) => (
               tab.divider ? (
                 <div key={`divider-${idx}`} className={`my-2 mx-2 border-t ${isLight ? 'border-gray-300' : 'border-slate-600'}`} />
@@ -1540,7 +1544,7 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
         {positions.map(pos => (
           <div key={pos.key} className={`p-4 rounded-lg border relative overflow-hidden group ${
             isLight
-              ? 'bg-white border-gray-300'
+              ? 'bg-white border-gray-200 shadow-sm'
               : 'bg-slate-700/50 border-slate-600'
           }`}>
             <div className="flex justify-between items-center mb-2">
