@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
 import { usePlayBank } from '../context/PlayBankContext';
+import { getWristbandDisplay } from '../utils/wristband';
 import {
   ArrowLeft,
   Plus,
@@ -266,7 +267,14 @@ function PlayCallAutocomplete({ value, playId, plays, onSelectPlay, onChangeText
                 idx === focusedIndex ? 'bg-slate-700' : ''
               }`}
             >
-              <div className="text-white font-medium">{play.name}</div>
+              <div className="flex items-center gap-2">
+                <span className="text-white font-medium">{play.name}</span>
+                {getWristbandDisplay(play) && (
+                  <span className="text-xs font-bold text-sky-300 bg-sky-900/50 px-1 py-0.5 rounded">
+                    {getWristbandDisplay(play)}
+                  </span>
+                )}
+              </div>
               {play.formation && (
                 <div className="text-slate-400 text-xs">{play.formation}</div>
               )}
@@ -2758,7 +2766,14 @@ export default function PracticePlans() {
                       onClick={() => selectPlayForRow(play)}
                       className="p-3 bg-slate-800 rounded-lg hover:bg-slate-700 text-left transition-colors"
                     >
-                      <div className="font-medium text-white">{play.name}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-white">{play.name}</span>
+                        {getWristbandDisplay(play) && (
+                          <span className="text-xs font-bold text-sky-300 bg-sky-900/50 px-1 py-0.5 rounded">
+                            {getWristbandDisplay(play)}
+                          </span>
+                        )}
+                      </div>
                       <div className="text-sm text-slate-500 mt-1">
                         {play.formation && <span>{play.formation}</span>}
                         {play.bucket && <span> • {play.bucket}</span>}

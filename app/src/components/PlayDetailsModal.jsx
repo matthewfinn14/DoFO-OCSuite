@@ -1,5 +1,6 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { X, Star, Zap, FileText, Handshake, Link2, MapPin, Hash, AlertTriangle, Eye, Layers, Target, Crosshair, Edit3 } from 'lucide-react';
+import { getWristbandDisplay } from '../utils/wristband';
 
 // Context for opening PlayDetailsModal from anywhere
 const PlayDetailsModalContext = createContext({
@@ -333,13 +334,13 @@ export default function PlayDetailsModal({
           {/* Wristband Slot */}
           <div className="flex items-center gap-1.5">
             <label className="text-sm font-semibold text-slate-500">WB:</label>
-            <input
-              type="text"
-              value={play.wristbandSlot || ''}
-              onChange={(e) => handleWristbandChange(e.target.value)}
-              className="w-14 px-2 py-1.5 text-sm font-semibold text-center border border-slate-300 rounded"
-              placeholder="--"
-            />
+            <span className={`w-14 px-2 py-1.5 text-sm font-semibold text-center border rounded ${
+              play.wristbandSlot
+                ? 'border-sky-300 bg-sky-50 text-sky-700'
+                : 'border-slate-300 text-slate-400'
+            }`}>
+              {getWristbandDisplay(play) || '--'}
+            </span>
           </div>
         </div>
 

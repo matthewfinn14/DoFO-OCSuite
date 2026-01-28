@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSchool } from '../../context/SchoolContext';
 import { usePlayDetailsModal } from '../PlayDetailsModal';
+import { getWristbandDisplay } from '../../utils/wristband';
 import {
   ChevronLeft,
   ChevronRight,
@@ -463,6 +464,7 @@ export default function PlayBankSidebar({
       : play.name;
 
     const isSelected = selectedPlayIds.has(play.id);
+    const wristbandSlot = getWristbandDisplay(play);
 
     return (
       <div
@@ -491,6 +493,12 @@ export default function PlayBankSidebar({
             {playCall}
           </div>
         </div>
+        {/* Wristband slot indicator */}
+        {wristbandSlot && (
+          <span className="text-xs font-bold text-sky-600 bg-sky-100 px-1.5 py-0.5 rounded flex-shrink-0 ml-1">
+            {wristbandSlot}
+          </span>
+        )}
         {play.priority && (
           <Star size={12} className="text-amber-500 fill-amber-500 flex-shrink-0 ml-1" />
         )}

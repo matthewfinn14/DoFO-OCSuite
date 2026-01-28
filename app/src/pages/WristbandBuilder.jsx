@@ -188,14 +188,28 @@ export default function WristbandBuilder() {
     const play = playsArray.find(p => p.id === selectedPlayId);
     if (!play) return;
 
-    // For now, store in wristbandSettings slots
+    // Store in wristbandSettings slots
     const newSlots = { ...(currentCard.slots || {}), [slot]: { playId: play.id } };
     updateCardSettings({ slots: newSlots });
+
+    // Also update the play object with wristband info
+    const wristbandType = currentCard.type === 'wiz' ? 'wiz' : currentCard.type === 'mini-scripts' ? 'mini' : 'standard';
+    updatePlay(play.id, {
+      wristbandSlot: slot,
+      wristbandType: wristbandType
+    });
+
     setSelectedPlayId(null);
   };
 
   // Clear slot
   const handleClearSlot = (slot) => {
+    // Get the play that was in this slot to clear its wristband info
+    const play = getPlayForSlot(slot);
+    if (play) {
+      updatePlay(play.id, { wristbandSlot: null, wristbandType: null });
+    }
+
     const newSlots = { ...(currentCard.slots || {}) };
     delete newSlots[slot];
     updateCardSettings({ slots: newSlots });
@@ -253,16 +267,26 @@ export default function WristbandBuilder() {
       const currentSlots = { ...(currentCard.slots || {}) };
       const emptySlots = slots.filter(slot => !currentSlots[slot]?.playId && !slotMap[slot]);
 
+      // Determine wristband type
+      const wristbandType = currentCard.type === 'wiz' ? 'wiz' : currentCard.type === 'mini-scripts' ? 'mini' : 'standard';
+
       // Assign plays to empty slots in order
       playIds.forEach((playId, index) => {
         if (index < emptySlots.length) {
-          currentSlots[emptySlots[index]] = { playId };
+          const slot = emptySlots[index];
+          currentSlots[slot] = { playId };
+
+          // Also update the play object with wristband info
+          updatePlay(playId, {
+            wristbandSlot: slot,
+            wristbandType: wristbandType
+          });
         }
       });
 
       updateCardSettings({ slots: currentSlots });
     }, 'Add to Wristband');
-  }, [slots, currentCard.slots, slotMap, startBatchSelect, updateCardSettings]);
+  }, [slots, currentCard.slots, currentCard.type, slotMap, startBatchSelect, updateCardSettings, updatePlay]);
 
   // Get row color
   const getRowColor = (rowIndex, cardColor) => {
@@ -741,7 +765,7 @@ function SpreadsheetTable({ slots, title, cardLabel, cardColor, getPlayForSlot, 
                   }}
                 >
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {play?.name || ''}
+                    {play ? (play.formation ? `${play.formation} ${play.name}` : play.name) : ''}
                   </span>
                   {play && (
                     <button

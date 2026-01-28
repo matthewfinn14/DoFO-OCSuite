@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useSchool } from '../context/SchoolContext';
+import { getWristbandDisplay } from '../utils/wristband';
 import SheetView from '../components/gameplan/SheetView';
 import FZDnDView from '../components/gameplan/FZDnDView';
 import MatrixView from '../components/gameplan/MatrixView';
@@ -778,10 +779,9 @@ export default function GamePlan() {
     setDraggedCell(null);
   }, [draggedCell, gamePlanLayouts, handleAddPlayToSet, handleUpdateLayouts, isSheetEditing]);
 
-  // Get wristband label for a play
+  // Get wristband label for a play (with type suffix: W for WIZ, M for mini)
   const getWristbandLabel = useCallback((play) => {
-    if (!play?.wristbandSlot) return null;
-    return play.wristbandSlot;
+    return getWristbandDisplay(play) || null;
   }, []);
 
   // Get play display name
