@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 // Play Card Component for split view
-function PlayCard({ play, isNew, isPriority, onToggleNew, onRemove }) {
+function PlayCard({ play, isNew, isPriority, onToggleNew, onRemove, isLight }) {
   return (
     <div
       className={`relative p-2.5 rounded-lg border transition-colors ${
@@ -22,6 +22,8 @@ function PlayCard({ play, isNew, isPriority, onToggleNew, onRemove }) {
           ? 'bg-amber-500/10 border-amber-500/30'
           : isNew
           ? 'bg-emerald-500/10 border-emerald-500/30'
+          : isLight
+          ? 'bg-gray-100 border-gray-300 hover:border-gray-400'
           : 'bg-slate-800 border-slate-700 hover:border-slate-600'
       }`}
     >
@@ -35,13 +37,13 @@ function PlayCard({ play, isNew, isPriority, onToggleNew, onRemove }) {
       )}
 
       {/* Play Call (Formation + Name) */}
-      <div className="text-sm font-medium text-white truncate pr-5">
+      <div className={`text-sm font-medium truncate pr-5 ${isLight ? 'text-gray-900' : 'text-white'}`}>
         {play.formation ? `${play.formation} ${play.name}` : play.name}
       </div>
 
       {/* Bucket/Category info */}
       {play.bucketLabel && (
-        <div className="text-xs text-slate-500 truncate mt-0.5">
+        <div className={`text-xs truncate mt-0.5 ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
           {play.bucketLabel}
           {play.conceptFamily && ` • ${play.conceptFamily}`}
         </div>
@@ -54,6 +56,8 @@ function PlayCard({ play, isNew, isPriority, onToggleNew, onRemove }) {
           className={`p-1.5 rounded text-xs transition-colors ${
             isNew
               ? 'bg-emerald-500/30 text-emerald-400 hover:bg-emerald-500/40'
+              : isLight
+              ? 'bg-gray-200 text-gray-500 hover:text-emerald-500 hover:bg-gray-300'
               : 'bg-slate-700 text-slate-400 hover:text-emerald-400 hover:bg-slate-600'
           }`}
           title={isNew ? 'Move to Review' : 'Mark as New'}
@@ -62,7 +66,11 @@ function PlayCard({ play, isNew, isPriority, onToggleNew, onRemove }) {
         </button>
         <button
           onClick={onRemove}
-          className="p-1.5 rounded bg-slate-700 text-slate-400 hover:text-red-400 hover:bg-red-500/20 transition-colors"
+          className={`p-1.5 rounded transition-colors ${
+            isLight
+              ? 'bg-gray-200 text-gray-500 hover:text-red-500 hover:bg-red-100'
+              : 'bg-slate-700 text-slate-400 hover:text-red-400 hover:bg-red-500/20'
+          }`}
           title="Remove from install"
         >
           <Minus size={12} />
@@ -79,8 +87,13 @@ export default function InstallManager() {
     weeks,
     updateWeek,
     settings,
-    setupConfig
+    setupConfig,
+    school
   } = useSchool();
+
+  // Theme detection
+  const theme = settings?.theme || school?.settings?.theme || 'dark';
+  const isLight = theme === 'light';
 
   // Get current week
   const currentWeek = weeks.find(w => w.id === weekId);
@@ -266,11 +279,11 @@ export default function InstallManager() {
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-4 py-3 border-b border-slate-800 bg-slate-900/50">
+        <div className={`px-4 py-3 border-b ${isLight ? 'border-gray-200 bg-white' : 'border-slate-800 bg-slate-900/50'}`}>
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h1 className="text-xl font-bold text-white">Install Manager</h1>
-              <p className="text-sm text-slate-400">
+              <h1 className={`text-xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>Install Manager</h1>
+              <p className={`text-sm ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
                 {currentWeek.name || currentWeek.opponent || `Week ${currentWeek.weekNumber || ''}`}
                 {currentWeek.opponent && ` vs ${currentWeek.opponent}`}
               </p>
@@ -278,14 +291,22 @@ export default function InstallManager() {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleCopyFromPreviousWeek}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-slate-700 text-slate-300 rounded hover:bg-slate-600"
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded ${
+                  isLight
+                    ? 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
               >
                 <Copy size={14} />
                 Copy from Previous
               </button>
               <button
                 onClick={handleClearAll}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-red-500/20 text-red-400 rounded hover:bg-red-500/30"
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded ${
+                  isLight
+                    ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
+                    : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                }`}
               >
                 <Trash2 size={14} />
                 Clear All
@@ -303,6 +324,8 @@ export default function InstallManager() {
                   className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
                     activePhase === phase
                       ? 'bg-sky-500 text-white'
+                      : isLight
+                      ? 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200 hover:text-gray-900'
                       : 'bg-slate-800 text-slate-400 hover:text-white'
                   }`}
                 >
@@ -311,19 +334,19 @@ export default function InstallManager() {
               ))}
             </div>
 
-            <div className="h-5 w-px bg-slate-700" />
+            <div className={`h-5 w-px ${isLight ? 'bg-gray-300' : 'bg-slate-700'}`} />
 
             {/* Stats */}
             <div className="flex items-center gap-4 text-sm">
               <div className="flex items-center gap-1.5">
-                <span className="text-slate-400">Installed:</span>
-                <span className="font-bold text-white">{stats.total}</span>
+                <span className={isLight ? 'text-gray-600' : 'text-slate-400'}>Installed:</span>
+                <span className={`font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>{stats.total}</span>
               </div>
-              <div className="flex items-center gap-1.5 text-amber-400">
-                <Star size={12} className="fill-amber-400" />
+              <div className="flex items-center gap-1.5 text-amber-500">
+                <Star size={12} className="fill-amber-500" />
                 <span>{stats.priority}</span>
               </div>
-              <div className="flex items-center gap-1.5 text-emerald-400">
+              <div className="flex items-center gap-1.5 text-emerald-500">
                 <Sparkles size={12} />
                 <span>{stats.new} new</span>
               </div>

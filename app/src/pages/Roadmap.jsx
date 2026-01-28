@@ -1,5 +1,20 @@
 import { Link } from 'react-router-dom';
-import { Construction, ArrowLeft, CheckCircle, Clock, Circle } from 'lucide-react';
+import {
+  Construction, ArrowLeft, CheckCircle, Clock, Circle,
+  Book, Clipboard, FileText, Grid3X3, Users, Layers, Target, Settings,
+  Package, Calendar, CheckSquare, UserCheck, Dumbbell, Shield, Star,
+  Tablet, Zap, Monitor, Brain,
+  Smartphone, Video, Scale, Activity, Heart, ThermometerSun, MessageCircle, Award
+} from 'lucide-react';
+import { useSchool } from '../context/SchoolContext';
+
+// Icon mapping for features
+const ICONS = {
+  Book, Clipboard, FileText, Grid3X3, Users, Layers, Target, Settings,
+  Package, Calendar, CheckSquare, UserCheck, Dumbbell, Shield, Star,
+  Tablet, Zap, Monitor, Brain,
+  Smartphone, Video, Scale, Activity, Heart, ThermometerSun, MessageCircle, Award
+};
 
 // Product Development Phases
 const PRODUCT_PHASES = [
@@ -9,17 +24,18 @@ const PRODUCT_PHASES = [
     subtitle: 'Current Build',
     description: 'The Offensive Coordinator Suite provides comprehensive tools for game planning and play management.',
     status: 'current',
-    color: 'emerald',
+    color: '#22c55e', // emerald-500
+    opacity: 1,
     features: [
-      { name: 'Master Playbook', desc: 'Organize all plays' },
-      { name: 'Game Planner', desc: 'Situational call sheets' },
-      { name: 'Practice Scripts', desc: 'Daily practice plans' },
-      { name: 'Wristband Builder', desc: 'Print play cards' },
-      { name: 'Depth Charts', desc: 'Manage rotations' },
-      { name: 'Install Manager', desc: 'Weekly installs' },
-      { name: 'Program Alignment', desc: 'Mission & philosophy' },
-      { name: 'Formation Builder', desc: 'Visual diagrams' },
-      { name: 'Program Levels', desc: 'JV/Freshman management' }
+      { icon: 'Book', name: 'Master Playbook', desc: 'Organize all plays' },
+      { icon: 'Clipboard', name: 'Game Planner', desc: 'Situational call sheets' },
+      { icon: 'FileText', name: 'Practice Scripts', desc: 'Daily practice plans' },
+      { icon: 'Grid3X3', name: 'Wristband Builder', desc: 'Print play cards' },
+      { icon: 'Users', name: 'Depth Charts', desc: 'Manage rotations' },
+      { icon: 'Layers', name: 'Install Manager', desc: 'Weekly installs' },
+      { icon: 'Target', name: 'Program Alignment', desc: 'Mission & philosophy' },
+      { icon: 'Settings', name: 'Formation Builder', desc: 'Visual diagrams' },
+      { icon: 'Layers', name: 'Program Levels', desc: 'JV/Freshman management' }
     ]
   },
   {
@@ -28,16 +44,17 @@ const PRODUCT_PHASES = [
     subtitle: 'Coming Next',
     description: 'Head Coach tools for program-wide management and coordination.',
     status: 'next',
-    color: 'amber',
+    color: '#f59e0b', // amber-500
+    opacity: 0.7,
     features: [
-      { name: 'Inventory Management', desc: 'Equipment tracking' },
-      { name: 'Annual Calendar', desc: 'Year-round planning' },
-      { name: 'Staff Tasks', desc: 'Assign & track duties' },
-      { name: 'Attendance App', desc: 'Track participation' },
-      { name: 'Drill Library', desc: 'Practice resources' },
-      { name: 'Defense Prep Tools', desc: 'DC game planning suite' },
-      { name: 'Special Teams Prep', desc: 'ST coordinator tools' },
-      { name: 'Sideline Signal Library', desc: 'Visual signal management' }
+      { icon: 'Package', name: 'Inventory Management', desc: 'Equipment tracking' },
+      { icon: 'Calendar', name: 'Annual Calendar', desc: 'Year-round planning' },
+      { icon: 'CheckSquare', name: 'Staff Tasks', desc: 'Assign & track duties' },
+      { icon: 'UserCheck', name: 'Attendance App', desc: 'Track participation' },
+      { icon: 'Dumbbell', name: 'Drill Library', desc: 'Practice resources' },
+      { icon: 'Shield', name: 'Defense Prep Tools', desc: 'DC game planning suite' },
+      { icon: 'Star', name: 'Special Teams Prep', desc: 'ST coordinator tools' },
+      { icon: 'MessageCircle', name: 'Sideline Signal Library', desc: 'Visual signal management' }
     ]
   },
   {
@@ -46,13 +63,14 @@ const PRODUCT_PHASES = [
     subtitle: 'Coach Tools',
     description: 'Tablet and mobile apps for coaches on the practice field, sideline, and pressbox.',
     status: 'planned',
-    color: 'sky',
+    color: '#3b82f6', // blue-500
+    opacity: 0.6,
     features: [
-      { name: 'Practice App', desc: 'Field-side practice tools' },
-      { name: 'In-Game App', desc: 'Sideline play calling' },
-      { name: 'Pressbox Tracker', desc: 'Live game tracking' },
-      { name: 'Smart Call Sheet', desc: 'Situational recommendations' },
-      { name: 'Play Call Simulator', desc: 'Practice decision-making' }
+      { icon: 'Clipboard', name: 'Practice App', desc: 'Field-side practice tools' },
+      { icon: 'Zap', name: 'In-Game App', desc: 'Sideline play calling' },
+      { icon: 'Monitor', name: 'Pressbox Tracker', desc: 'Live game tracking' },
+      { icon: 'Brain', name: 'Smart Call Sheet', desc: 'Situational recommendations' },
+      { icon: 'Target', name: 'Play Call Simulator', desc: 'Practice decision-making' }
     ]
   },
   {
@@ -61,95 +79,123 @@ const PRODUCT_PHASES = [
     subtitle: 'Final Phase',
     description: 'Mobile app for players to access playbook, track progress, and connect with the program.',
     status: 'planned',
-    color: 'purple',
+    color: '#8b5cf6', // purple-500
+    opacity: 0.5,
     features: [
-      { name: 'Digital Playbook', desc: 'Access plays & formations' },
-      { name: 'Install Quizzes', desc: 'Test playbook knowledge' },
-      { name: 'Valhalla Points', desc: 'Gamified accountability system' },
-      { name: 'Weight Tracking', desc: 'Log daily weigh-ins' },
-      { name: 'Testing Records', desc: 'View personal bests' },
-      { name: 'Impact Player Rating', desc: 'Performance metrics' },
-      { name: 'Depth Chart View', desc: 'See current rotations' },
-      { name: 'Cultural Calibration', desc: 'Team culture check-ins' },
-      { name: 'Wellness Feedback', desc: 'Daily wellness check-ins' },
-      { name: 'Daily Connections', desc: 'Coach-player communication' },
-      { name: 'Schedule & Attendance', desc: 'View schedule, check in' }
+      { icon: 'Book', name: 'Digital Playbook', desc: 'Access plays & formations' },
+      { icon: 'CheckSquare', name: 'Install Quizzes', desc: 'Test playbook knowledge' },
+      { icon: 'Award', name: 'Valhalla Points', desc: 'Gamified accountability system' },
+      { icon: 'Scale', name: 'Weight Tracking', desc: 'Log daily weigh-ins' },
+      { icon: 'Activity', name: 'Testing Records', desc: 'View personal bests' },
+      { icon: 'Star', name: 'Impact Player Rating', desc: 'Performance metrics' },
+      { icon: 'Users', name: 'Depth Chart View', desc: 'See current rotations' },
+      { icon: 'Heart', name: 'Cultural Calibration', desc: 'Team culture check-ins' },
+      { icon: 'ThermometerSun', name: 'Wellness Feedback', desc: 'Daily wellness check-ins' },
+      { icon: 'MessageCircle', name: 'Daily Connections', desc: 'Coach-player communication' },
+      { icon: 'Calendar', name: 'Schedule & Attendance', desc: 'View schedule, check in' }
     ]
   }
 ];
 
 
 export default function Roadmap() {
+  const { school, settings } = useSchool();
+  const theme = settings?.theme || school?.settings?.theme || 'dark';
+  const isLight = theme === 'light';
+
   const getPhaseIcon = (status) => {
     switch (status) {
       case 'current':
-        return <CheckCircle size={24} className="text-emerald-400" />;
+        return CheckCircle;
       case 'next':
-        return <Clock size={24} className="text-amber-400" />;
+        return Clock;
       default:
-        return <Circle size={24} className="text-slate-500" />;
+        return Circle;
     }
   };
 
-  const getPhaseColors = (color) => {
-    const colors = {
-      emerald: { border: 'border-l-emerald-500', text: 'text-emerald-400', bg: 'bg-slate-800/80' },
-      amber: { border: 'border-l-amber-500', text: 'text-amber-400', bg: 'bg-slate-800/60' },
-      sky: { border: 'border-l-sky-500', text: 'text-sky-400', bg: 'bg-slate-800/40' },
-      purple: { border: 'border-l-purple-500', text: 'text-purple-400', bg: 'bg-slate-800/40' }
-    };
-    return colors[color] || colors.sky;
-  };
-
   return (
-    <div className="p-8 max-w-4xl mx-auto">
+    <div className="p-4 md:p-8 max-w-[900px] mx-auto">
       {/* Header */}
-      <div className="bg-slate-800/50 rounded-xl p-6 mb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <Construction size={32} className="text-amber-400" />
-          <h1 className="text-2xl font-bold text-white">Under Construction</h1>
-        </div>
-        <p className="text-slate-400">
+      <div
+        className={`rounded-xl p-6 mb-6 ${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800/80'}`}
+        style={{
+          background: isLight
+            ? 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)'
+            : 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(51, 65, 85, 0.5) 100%)',
+          borderLeft: '4px solid #f59e0b'
+        }}
+      >
+        <h1 className={`text-2xl font-bold flex items-center gap-3 mb-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
+          <Construction size={32} className="text-amber-500" />
+          Under Construction
+        </h1>
+        <p className={`text-lg ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
           The DoFO Suite is being built in phases. Here's what's available now and what's coming next.
         </p>
       </div>
 
       {/* Product Phases */}
-      <div className="space-y-6">
+      <div className="space-y-4">
         {PRODUCT_PHASES.map((phase) => {
-          const colors = getPhaseColors(phase.color);
+          const PhaseIcon = getPhaseIcon(phase.status);
           return (
             <div
               key={phase.phase}
-              className={`rounded-xl ${colors.bg} border-l-4 ${colors.border} overflow-hidden`}
+              className={`rounded-xl p-6 ${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800/80'}`}
+              style={{ borderLeft: `4px solid ${phase.color}` }}
             >
               {/* Phase Header */}
-              <div className="p-5">
-                <div className="flex items-center gap-3 mb-1">
-                  {getPhaseIcon(phase.status)}
-                  <div>
-                    <h2 className={`text-xl font-bold ${colors.text}`}>
-                      Phase {phase.phase}: {phase.title}
-                    </h2>
-                    <p className="text-sm text-slate-500">{phase.subtitle}</p>
-                  </div>
+              <div className="flex items-center gap-3 mb-4">
+                <div
+                  className="p-2 rounded-lg"
+                  style={{ backgroundColor: phase.color }}
+                >
+                  <PhaseIcon size={24} color="white" />
                 </div>
-                <p className="text-slate-400 mt-3 ml-9">{phase.description}</p>
+                <div>
+                  <h2 className="text-xl font-bold m-0" style={{ color: phase.color }}>
+                    Phase {phase.phase}: {phase.title}
+                  </h2>
+                  <span className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
+                    {phase.subtitle}
+                  </span>
+                </div>
               </div>
 
+              <p className={`mb-4 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                {phase.description}
+              </p>
+
               {/* Features Grid */}
-              <div className="px-5 pb-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 ml-9">
-                  {phase.features.map((feature, idx) => (
+              <div
+                className="grid gap-3"
+                style={{
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                  opacity: phase.opacity
+                }}
+              >
+                {phase.features.map((feature, idx) => {
+                  const FeatureIcon = ICONS[feature.icon] || Circle;
+                  return (
                     <div
                       key={idx}
-                      className="bg-slate-700/50 rounded-lg p-3"
+                      className={`flex items-center gap-2 p-2 rounded-lg ${
+                        isLight ? 'bg-gray-100' : 'bg-slate-700/50'
+                      }`}
                     >
-                      <div className="font-medium text-slate-200 text-sm">{feature.name}</div>
-                      <div className="text-xs text-slate-500">{feature.desc}</div>
+                      <FeatureIcon size={16} style={{ color: phase.color, flexShrink: 0 }} />
+                      <div className="min-w-0">
+                        <div className={`text-sm font-semibold ${isLight ? 'text-gray-800' : 'text-slate-200'}`}>
+                          {feature.name}
+                        </div>
+                        <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
+                          {feature.desc}
+                        </div>
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
             </div>
           );
@@ -159,7 +205,11 @@ export default function Roadmap() {
       <div className="text-center mt-8">
         <Link
           to="/dashboard"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700"
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            isLight
+              ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              : 'bg-slate-800 text-white hover:bg-slate-700'
+          }`}
         >
           <ArrowLeft size={18} />
           Back to Dashboard

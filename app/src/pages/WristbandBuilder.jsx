@@ -9,12 +9,9 @@ import {
   Plus,
   Printer,
   X,
-  Search,
   Trash2,
   ChevronDown,
   ChevronUp,
-  PanelRightOpen,
-  PanelRightClose,
   CheckSquare,
   Library
 } from 'lucide-react';
@@ -102,9 +99,6 @@ export default function WristbandBuilder() {
 
   // State
   const [activeCardId, setActiveCardId] = useState('card100');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterBucket, setFilterBucket] = useState('all');
-  const [showPlayBank, setShowPlayBank] = useState(true);
   const [showPrintModal, setShowPrintModal] = useState(false);
 
   // WIZ editing state
@@ -163,26 +157,6 @@ export default function WristbandBuilder() {
     const count = isWiz ? 16 : 48;
     return Array.from({ length: count }, (_, i) => activeTab.startSlot + i);
   }, [activeCardId, activeTab, currentCard.type]);
-
-  // Filter plays for sidebar
-  const filteredPlays = useMemo(() => {
-    const offensivePlays = playsArray.filter(p => p.phase === 'offense');
-    if (!searchTerm && filterBucket === 'all') return offensivePlays;
-
-    return offensivePlays.filter(play => {
-      const matchesSearch = !searchTerm ||
-        play.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        play.formation?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesBucket = filterBucket === 'all' || play.bucket === filterBucket;
-      return matchesSearch && matchesBucket;
-    });
-  }, [playsArray, searchTerm, filterBucket]);
-
-  // Get unique buckets
-  const buckets = useMemo(() => {
-    const cats = new Set(playsArray.filter(p => p.phase === 'offense').map(p => p.bucket).filter(Boolean));
-    return ['all', ...Array.from(cats)];
-  }, [playsArray]);
 
   // Get OL schemes with diagrams for library selection
   const olSchemes = useMemo(() => {
@@ -349,56 +323,14 @@ export default function WristbandBuilder() {
 
   return (
     <div className="flex h-full">
-      {/* Play Bank Sidebar */}
-      {showPlayBank && (
-        <div className="w-64 border-r border-slate-800 bg-slate-900 flex flex-col flex-shrink-0">
-          <div className="p-3 border-b border-slate-800">
-            <div className="relative">
-              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search plays..."
-                className="w-full pl-8 pr-3 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-sm placeholder-slate-500"
-              />
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto p-2">
-            {filteredPlays.slice(0, 100).map(play => (
-              <div
-                key={play.id}
-                onClick={() => setSelectedPlayId(selectedPlayId === play.id ? null : play.id)}
-                className={`p-2 rounded cursor-pointer mb-1 ${
-                  selectedPlayId === play.id
-                    ? 'bg-sky-500/30 border border-sky-500'
-                    : 'bg-slate-800 hover:bg-slate-700'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-white text-sm truncate">{play.name}</span>
-                  {play.wristbandSlot && (
-                    <span className="text-xs text-sky-400 font-bold ml-2">{play.wristbandSlot}</span>
-                  )}
-                </div>
-                <div className="text-xs text-slate-500 truncate">{play.formation || 'No formation'}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-4">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => setShowPlayBank(!showPlayBank)}
-              className={`p-2 rounded ${showPlayBank ? 'bg-sky-500 text-white' : 'bg-slate-800 text-slate-400'}`}
-            >
-              {showPlayBank ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
-            </button>
+            <div className="p-2.5 bg-sky-500/20 rounded-lg">
+              <Watch size={20} className="text-sky-400" />
+            </div>
             <div>
               <h1 className="text-xl font-bold text-white">Wristband Builder</h1>
               <p className="text-slate-400 text-sm">{currentWeek.name}</p>
