@@ -1,170 +1,162 @@
 import { Link } from 'react-router-dom';
-import { Construction, ArrowLeft, CheckCircle, Clock, Circle, Target } from 'lucide-react';
+import { Construction, ArrowLeft, CheckCircle, Clock, Circle } from 'lucide-react';
 
 // Product Development Phases
 const PRODUCT_PHASES = [
   {
     phase: 1,
     title: 'OC Suite',
-    subtitle: 'Offensive Coordinator Tools',
-    status: 'in-progress',
+    subtitle: 'Current Build',
+    description: 'The Offensive Coordinator Suite provides comprehensive tools for game planning and play management.',
+    status: 'current',
+    color: 'emerald',
     features: [
-      'Master Playbook Management',
-      'Game Planning & Play Calling',
-      'Wristband Builder',
-      'Practice Script Generator',
-      'Install Manager',
-      'Formation & Personnel Management'
+      { name: 'Master Playbook', desc: 'Organize all plays' },
+      { name: 'Game Planner', desc: 'Situational call sheets' },
+      { name: 'Practice Scripts', desc: 'Daily practice plans' },
+      { name: 'Wristband Builder', desc: 'Print play cards' },
+      { name: 'Depth Charts', desc: 'Manage rotations' },
+      { name: 'Install Manager', desc: 'Weekly installs' },
+      { name: 'Program Alignment', desc: 'Mission & philosophy' },
+      { name: 'Formation Builder', desc: 'Visual diagrams' },
+      { name: 'Program Levels', desc: 'JV/Freshman management' }
     ]
   },
   {
     phase: 2,
     title: 'HC Suite',
-    subtitle: 'Head Coach Tools',
-    status: 'planned',
+    subtitle: 'Coming Next',
+    description: 'Head Coach tools for program-wide management and coordination.',
+    status: 'next',
+    color: 'amber',
     features: [
-      'Program-Wide Dashboard',
-      'Staff Management & Permissions',
-      'Multi-Level Program Support (Varsity, JV, Freshman)',
-      'Season Calendar & Scheduling',
-      'Meeting & Practice Planning',
-      'Player Development Tracking'
+      { name: 'Inventory Management', desc: 'Equipment tracking' },
+      { name: 'Annual Calendar', desc: 'Year-round planning' },
+      { name: 'Staff Tasks', desc: 'Assign & track duties' },
+      { name: 'Attendance App', desc: 'Track participation' },
+      { name: 'Drill Library', desc: 'Practice resources' },
+      { name: 'Defense Prep Tools', desc: 'DC game planning suite' },
+      { name: 'Special Teams Prep', desc: 'ST coordinator tools' },
+      { name: 'Sideline Signal Library', desc: 'Visual signal management' }
     ]
   },
   {
     phase: 3,
-    title: 'Program Suite',
-    subtitle: 'Full Program Management',
+    title: 'Field Apps',
+    subtitle: 'Coach Tools',
+    description: 'Tablet and mobile apps for coaches on the practice field, sideline, and pressbox.',
     status: 'planned',
+    color: 'sky',
     features: [
-      'Recruiting Pipeline',
-      'Off-Season Workout Tracking',
-      'Video Integration',
-      'Analytics Dashboard',
-      'Mobile App (iOS/Android)',
-      'Parent & Player Portals'
+      { name: 'Practice App', desc: 'Field-side practice tools' },
+      { name: 'In-Game App', desc: 'Sideline play calling' },
+      { name: 'Pressbox Tracker', desc: 'Live game tracking' },
+      { name: 'Smart Call Sheet', desc: 'Situational recommendations' },
+      { name: 'Play Call Simulator', desc: 'Practice decision-making' }
+    ]
+  },
+  {
+    phase: 4,
+    title: 'Player App',
+    subtitle: 'Final Phase',
+    description: 'Mobile app for players to access playbook, track progress, and connect with the program.',
+    status: 'planned',
+    color: 'purple',
+    features: [
+      { name: 'Digital Playbook', desc: 'Access plays & formations' },
+      { name: 'Install Quizzes', desc: 'Test playbook knowledge' },
+      { name: 'Valhalla Points', desc: 'Gamified accountability system' },
+      { name: 'Weight Tracking', desc: 'Log daily weigh-ins' },
+      { name: 'Testing Records', desc: 'View personal bests' },
+      { name: 'Impact Player Rating', desc: 'Performance metrics' },
+      { name: 'Depth Chart View', desc: 'See current rotations' },
+      { name: 'Cultural Calibration', desc: 'Team culture check-ins' },
+      { name: 'Wellness Feedback', desc: 'Daily wellness check-ins' },
+      { name: 'Daily Connections', desc: 'Coach-player communication' },
+      { name: 'Schedule & Attendance', desc: 'View schedule, check in' }
     ]
   }
 ];
 
-// Technical Development Items
-const ROADMAP_ITEMS = [
-  { status: 'done', label: 'Core Authentication & User Management' },
-  { status: 'done', label: 'School Setup & Configuration' },
-  { status: 'done', label: 'Master Playbook Management' },
-  { status: 'done', label: 'Basic Sidebar Navigation' },
-  { status: 'in-progress', label: 'Advanced Sidebar with Weekly Tools' },
-  { status: 'in-progress', label: 'Program Levels (JV, Freshman, etc.)' },
-  { status: 'planned', label: 'Game Planning Tools' },
-  { status: 'planned', label: 'Wristband Builder' },
-  { status: 'planned', label: 'Practice Script Generator' },
-  { status: 'planned', label: 'Depth Chart Management' },
-  { status: 'planned', label: 'Pre-Game Timeline' },
-  { status: 'planned', label: 'Mobile App (iOS/Android)' },
-  { status: 'planned', label: 'Video Integration' },
-  { status: 'planned', label: 'Analytics Dashboard' },
-];
-
-function StatusIcon({ status }) {
-  switch (status) {
-    case 'done':
-      return <CheckCircle size={18} className="text-emerald-400" />;
-    case 'in-progress':
-      return <Clock size={18} className="text-amber-400" />;
-    default:
-      return <Circle size={18} className="text-slate-500" />;
-  }
-}
 
 export default function Roadmap() {
+  const getPhaseIcon = (status) => {
+    switch (status) {
+      case 'current':
+        return <CheckCircle size={24} className="text-emerald-400" />;
+      case 'next':
+        return <Clock size={24} className="text-amber-400" />;
+      default:
+        return <Circle size={24} className="text-slate-500" />;
+    }
+  };
+
+  const getPhaseColors = (color) => {
+    const colors = {
+      emerald: { border: 'border-l-emerald-500', text: 'text-emerald-400', bg: 'bg-slate-800/80' },
+      amber: { border: 'border-l-amber-500', text: 'text-amber-400', bg: 'bg-slate-800/60' },
+      sky: { border: 'border-l-sky-500', text: 'text-sky-400', bg: 'bg-slate-800/40' },
+      purple: { border: 'border-l-purple-500', text: 'text-purple-400', bg: 'bg-slate-800/40' }
+    };
+    return colors[color] || colors.sky;
+  };
+
   return (
     <div className="p-8 max-w-4xl mx-auto">
-      <div className="text-center mb-8">
-        <Construction size={48} className="text-amber-400 mx-auto mb-4" />
-        <h1 className="text-2xl font-bold text-white mb-2">Product Roadmap</h1>
+      {/* Header */}
+      <div className="bg-slate-800/50 rounded-xl p-6 mb-6">
+        <div className="flex items-center gap-3 mb-2">
+          <Construction size={32} className="text-amber-400" />
+          <h1 className="text-2xl font-bold text-white">Under Construction</h1>
+        </div>
         <p className="text-slate-400">
-          Building the complete football program management platform
+          The DoFO Suite is being built in phases. Here's what's available now and what's coming next.
         </p>
       </div>
 
       {/* Product Phases */}
-      <div className="grid md:grid-cols-3 gap-4 mb-10">
-        {PRODUCT_PHASES.map((phase) => (
-          <div
-            key={phase.phase}
-            className={`rounded-xl p-5 border ${
-              phase.status === 'in-progress'
-                ? 'bg-sky-500/10 border-sky-500/50'
-                : 'bg-slate-800/50 border-slate-700'
-            }`}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                phase.status === 'in-progress'
-                  ? 'bg-sky-500 text-white'
-                  : 'bg-slate-700 text-slate-400'
-              }`}>
-                PHASE {phase.phase}
-              </span>
-              {phase.status === 'in-progress' && (
-                <span className="text-xs text-sky-400">Current</span>
-              )}
+      <div className="space-y-6">
+        {PRODUCT_PHASES.map((phase) => {
+          const colors = getPhaseColors(phase.color);
+          return (
+            <div
+              key={phase.phase}
+              className={`rounded-xl ${colors.bg} border-l-4 ${colors.border} overflow-hidden`}
+            >
+              {/* Phase Header */}
+              <div className="p-5">
+                <div className="flex items-center gap-3 mb-1">
+                  {getPhaseIcon(phase.status)}
+                  <div>
+                    <h2 className={`text-xl font-bold ${colors.text}`}>
+                      Phase {phase.phase}: {phase.title}
+                    </h2>
+                    <p className="text-sm text-slate-500">{phase.subtitle}</p>
+                  </div>
+                </div>
+                <p className="text-slate-400 mt-3 ml-9">{phase.description}</p>
+              </div>
+
+              {/* Features Grid */}
+              <div className="px-5 pb-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 ml-9">
+                  {phase.features.map((feature, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-slate-700/50 rounded-lg p-3"
+                    >
+                      <div className="font-medium text-slate-200 text-sm">{feature.name}</div>
+                      <div className="text-xs text-slate-500">{feature.desc}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-            <h3 className="text-xl font-bold text-white mb-1">{phase.title}</h3>
-            <p className="text-sm text-slate-400 mb-4">{phase.subtitle}</p>
-            <ul className="space-y-2">
-              {phase.features.map((feature, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-sm">
-                  <Target size={14} className={`mt-0.5 flex-shrink-0 ${
-                    phase.status === 'in-progress' ? 'text-sky-400' : 'text-slate-600'
-                  }`} />
-                  <span className={phase.status === 'in-progress' ? 'text-slate-300' : 'text-slate-500'}>
-                    {feature}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* Technical Progress */}
-      <div className="bg-slate-800/50 rounded-lg p-6 mb-6">
-        <h2 className="text-lg font-semibold text-white mb-4">Development Progress</h2>
-        <div className="flex items-center gap-6 mb-6 text-sm">
-          <div className="flex items-center gap-2">
-            <CheckCircle size={16} className="text-emerald-400" />
-            <span className="text-slate-400">Complete</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Clock size={16} className="text-amber-400" />
-            <span className="text-slate-400">In Progress</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Circle size={16} className="text-slate-500" />
-            <span className="text-slate-400">Planned</span>
-          </div>
-        </div>
-
-        <ul className="space-y-3">
-          {ROADMAP_ITEMS.map((item, index) => (
-            <li key={index} className="flex items-center gap-3">
-              <StatusIcon status={item.status} />
-              <span className={`${
-                item.status === 'done'
-                  ? 'text-slate-400 line-through'
-                  : item.status === 'in-progress'
-                    ? 'text-white'
-                    : 'text-slate-400'
-              }`}>
-                {item.label}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="text-center">
+      <div className="text-center mt-8">
         <Link
           to="/dashboard"
           className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700"
