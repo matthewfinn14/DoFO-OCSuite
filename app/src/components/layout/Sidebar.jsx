@@ -29,7 +29,8 @@ import {
   Calendar,
   Lightbulb,
   UserPlus,
-  BarChart3
+  BarChart3,
+  ClipboardCheck
 } from 'lucide-react';
 
 // Enhanced collapsible category component
@@ -280,6 +281,12 @@ export default function Sidebar() {
                     to={`/week/${currentWeekId}/pregame`}
                     icon={Clock}
                     label="Pre-Game Timeline"
+                    isLight={isLight}
+                  />
+                  <WeeklyToolItem
+                    to={`/week/${currentWeekId}/quality-control`}
+                    icon={ClipboardCheck}
+                    label="X&O Quality Control"
                     isLight={isLight}
                   />
                   <WeeklyToolItem

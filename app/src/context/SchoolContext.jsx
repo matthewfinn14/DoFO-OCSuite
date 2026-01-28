@@ -149,6 +149,10 @@ export function SchoolProvider({ children }) {
   // Meeting notes by week (weekly coaches notes)
   const [meetingNotes, setMeetingNotes] = useState({});
 
+  // Quality Control grading data
+  const [practiceGrades, setPracticeGrades] = useState([]);
+  const [gameGrades, setGameGrades] = useState([]);
+
   // Setup configuration data
   const [setupConfig, setSetupConfig] = useState({
     // Setup Mode: 'standard' (simple) or 'advanced' (bucket-specific syntax, signals, etc.)
@@ -231,7 +235,33 @@ export function SchoolProvider({ children }) {
 
     // OL Schemes
     passProtections: [],
-    runBlocking: []
+    runBlocking: [],
+
+    // Quality Control Definitions
+    qualityControlDefinitions: {
+      playPurposes: [
+        { id: 'base', name: 'Base', color: '#3b82f6' },
+        { id: 'convert', name: 'Convert', color: '#22c55e' },
+        { id: 'shot', name: 'Shot', color: '#f59e0b' },
+        { id: 'gadget', name: 'Gadget', color: '#ef4444' }
+      ],
+      efficiencyThresholds: {
+        '1st': { run: 4, pass: 4, screen: 4, default: 4 },
+        '2nd': { run: 50, pass: 50, screen: 50, default: 50 },
+        '3rd': { run: 100, pass: 100, screen: 100, default: 100 },
+        '4th': { run: 100, pass: 100, screen: 100, default: 100 }
+      },
+      explosiveThresholds: {
+        run: 12,
+        pass: 15,
+        screen: 10,
+        default: 12
+      },
+      minimumVolume: {
+        practice: 3,
+        game: 2
+      }
+    }
   });
 
   /**
@@ -296,6 +326,8 @@ export function SchoolProvider({ children }) {
             setSetupConfig(prev => ({ ...prev, ...config }));
           }
           if (data.meetingNotes) setMeetingNotes(data.meetingNotes);
+          if (data.practiceGrades) setPracticeGrades(data.practiceGrades);
+          if (data.gameGrades) setGameGrades(data.gameGrades);
         } else {
           // Set default dev school
           setSchool({ id: 'dev-school-123', name: 'Development High School', mascot: 'Developers' });
@@ -374,6 +406,8 @@ export function SchoolProvider({ children }) {
             setSetupConfig(prev => ({ ...prev, ...config }));
           }
           if (data.meetingNotes) setMeetingNotes(data.meetingNotes);
+          if (data.practiceGrades) setPracticeGrades(data.practiceGrades);
+          if (data.gameGrades) setGameGrades(data.gameGrades);
         }
         setLoading(false);
       },
@@ -467,6 +501,8 @@ export function SchoolProvider({ children }) {
         if (updates.culture) setCulture(prev => ({ ...prev, ...updates.culture }));
         if (updates.setupConfig) setSetupConfig(prev => ({ ...prev, ...updates.setupConfig }));
         if (updates.meetingNotes) setMeetingNotes(updates.meetingNotes);
+        if (updates.practiceGrades) setPracticeGrades(updates.practiceGrades);
+        if (updates.gameGrades) setGameGrades(updates.gameGrades);
       } catch (err) {
         console.error('Error saving dev data:', err);
         setError(err.message);
@@ -608,6 +644,50 @@ export function SchoolProvider({ children }) {
   }, [updateSchool, meetingNotes]);
 
   /**
+   * Update practice grades
+   */
+  const updatePracticeGrades = useCallback(async (newPracticeGrades) => {
+    await updateSchool({ practiceGrades: newPracticeGrades });
+  }, [updateSchool]);
+
+  /**
+   * Add or update a practice grading session
+   */
+  const savePracticeGradeSession = useCallback(async (session) => {
+    const existingIndex = practiceGrades.findIndex(g => g.id === session.id);
+    let newGrades;
+    if (existingIndex >= 0) {
+      newGrades = [...practiceGrades];
+      newGrades[existingIndex] = { ...session, updatedAt: new Date().toISOString() };
+    } else {
+      newGrades = [...practiceGrades, { ...session, createdAt: new Date().toISOString() }];
+    }
+    await updatePracticeGrades(newGrades);
+  }, [practiceGrades, updatePracticeGrades]);
+
+  /**
+   * Update game grades
+   */
+  const updateGameGrades = useCallback(async (newGameGrades) => {
+    await updateSchool({ gameGrades: newGameGrades });
+  }, [updateSchool]);
+
+  /**
+   * Add or update a game grading session
+   */
+  const saveGameGradeSession = useCallback(async (session) => {
+    const existingIndex = gameGrades.findIndex(g => g.id === session.id);
+    let newGrades;
+    if (existingIndex >= 0) {
+      newGrades = [...gameGrades];
+      newGrades[existingIndex] = { ...session, updatedAt: new Date().toISOString() };
+    } else {
+      newGrades = [...gameGrades, { ...session, createdAt: new Date().toISOString() }];
+    }
+    await updateGameGrades(newGrades);
+  }, [gameGrades, updateGameGrades]);
+
+  /**
    * Get current week object
    */
   const currentWeek = weeks.find(w => w.id === currentWeekId) || null;
@@ -645,6 +725,8 @@ export function SchoolProvider({ children }) {
     culture,
     setupConfig,
     meetingNotes,
+    practiceGrades,
+    gameGrades,
 
     // State
     loading,
@@ -666,6 +748,10 @@ export function SchoolProvider({ children }) {
     updateCulture,
     updateSetupConfig,
     updateMeetingNotes,
+    updatePracticeGrades,
+    savePracticeGradeSession,
+    updateGameGrades,
+    saveGameGradeSession,
     setCurrentWeekId,
     setActiveLevelId,
   };

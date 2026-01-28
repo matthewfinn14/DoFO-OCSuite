@@ -27,6 +27,7 @@ export { default as OffseasonResearch } from './OffseasonResearch';
 // Week-specific pages
 export { default as CoachesNotes } from './CoachesNotes';
 export { default as PracticePlans } from './PracticePlans';
+export { default as QualityControl } from './QualityControl';
 
 // Sub-level pages
 export { default as SubLevelView } from './SubLevelView';

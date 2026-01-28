@@ -35,7 +35,8 @@ import {
   Eye,
   Copy,
   Target,
-  ArrowRightLeft
+  ArrowRightLeft,
+  ClipboardCheck
 } from 'lucide-react';
 import PlayDiagramEditor from '../components/diagrams/PlayDiagramEditor';
 import DiagramPreview from '../components/diagrams/DiagramPreview';
@@ -316,6 +317,29 @@ const TAB_HELP = {
         <p>
           <strong className="text-white">Why set this up?</strong> Custom situations let you match your program's terminology
           and game-planning approach. Tag plays with situations to quickly filter what to call in specific game scenarios.
+        </p>
+      </div>
+    )
+  },
+  'quality-control': {
+    title: "About Quality Control Definitions",
+    content: (
+      <div className="pt-3 space-y-3">
+        <p>
+          <strong className="text-white">Purpose:</strong> Define the parameters used by the X&O Quality Control tool
+          to analyze your install, practice scripts, practice performance, game plan, and post-game results.
+        </p>
+        <p>
+          <strong className="text-white">Play Purposes:</strong> Categorize plays by their role in your offense—
+          Base (foundational plays), Convert (situational first-down plays), Shot (explosive opportunities), and Gadget (trick plays).
+        </p>
+        <p>
+          <strong className="text-white">Thresholds:</strong> Set what counts as an "efficient" or "explosive" play
+          based on down, distance, and play type. These are used to grade practice reps and game performance.
+        </p>
+        <p>
+          <strong className="text-white">Minimum Volume:</strong> How many reps or calls are needed before play-level
+          statistics become meaningful for analysis.
         </p>
       </div>
     )
@@ -698,7 +722,8 @@ export default function Setup() {
       tabs.push(
         { id: 'personnel', label: 'Personnel Groupings', icon: UserCheck },
         { id: 'situations', label: 'Define Situations', icon: Target },
-        { id: 'play-buckets', label: 'Define Play Buckets', icon: Tag }
+        { id: 'play-buckets', label: 'Define Play Buckets', icon: Tag },
+        { id: 'quality-control', label: 'Quality Control Definitions', icon: ClipboardCheck }
       );
     }
     // Hide Play Call Chain in Basic mode
@@ -1311,6 +1336,14 @@ export default function Setup() {
             <OLSchemesTab
               passProtections={localConfig.passProtections || []}
               runBlocking={localConfig.runBlocking || []}
+              onUpdate={updateLocal}
+            />
+          )}
+
+          {/* Quality Control Definitions Tab */}
+          {activeTab === 'quality-control' && isOffense && (
+            <QualityControlDefinitionsTab
+              qualityControlDefinitions={localConfig.qualityControlDefinitions || {}}
               onUpdate={updateLocal}
             />
           )}
@@ -6852,6 +6885,289 @@ function EventEditModal({ event, onSave, onClose }) {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// Quality Control Definitions Tab
+function QualityControlDefinitionsTab({ qualityControlDefinitions, onUpdate }) {
+  const defaults = {
+    playPurposes: [
+      { id: 'base', name: 'Base', color: '#3b82f6' },
+      { id: 'convert', name: 'Convert', color: '#22c55e' },
+      { id: 'shot', name: 'Shot', color: '#f59e0b' },
+      { id: 'gadget', name: 'Gadget', color: '#ef4444' }
+    ],
+    efficiencyThresholds: {
+      '1st': { run: 4, pass: 4, screen: 4, default: 4 },
+      '2nd': { run: 50, pass: 50, screen: 50, default: 50 },
+      '3rd': { run: 100, pass: 100, screen: 100, default: 100 },
+      '4th': { run: 100, pass: 100, screen: 100, default: 100 }
+    },
+    explosiveThresholds: {
+      run: 12,
+      pass: 15,
+      screen: 10,
+      default: 12
+    },
+    minimumVolume: {
+      practice: 3,
+      game: 2
+    }
+  };
+
+  const config = { ...defaults, ...qualityControlDefinitions };
+
+  const updateQCConfig = (key, value) => {
+    onUpdate('qualityControlDefinitions', {
+      ...qualityControlDefinitions,
+      [key]: value
+    });
+  };
+
+  // Play Purposes CRUD
+  const addPurpose = () => {
+    const name = prompt('Enter purpose name (e.g., "Base", "Convert"):');
+    if (!name?.trim()) return;
+
+    const id = name.toLowerCase().trim().replace(/\s+/g, '-');
+    const existing = config.playPurposes || [];
+    if (existing.some(p => p.id === id)) {
+      alert('A purpose with that name already exists');
+      return;
+    }
+
+    updateQCConfig('playPurposes', [
+      ...existing,
+      { id, name: name.trim(), color: '#6b7280' }
+    ]);
+  };
+
+  const updatePurpose = (id, field, value) => {
+    const updated = (config.playPurposes || []).map(p =>
+      p.id === id ? { ...p, [field]: value } : p
+    );
+    updateQCConfig('playPurposes', updated);
+  };
+
+  const deletePurpose = (id, name) => {
+    if (!confirm(`Delete purpose "${name}"?`)) return;
+    const updated = (config.playPurposes || []).filter(p => p.id !== id);
+    updateQCConfig('playPurposes', updated);
+  };
+
+  // Efficiency threshold update
+  const updateEfficiencyThreshold = (down, bucket, value) => {
+    const current = config.efficiencyThresholds || {};
+    updateQCConfig('efficiencyThresholds', {
+      ...current,
+      [down]: {
+        ...(current[down] || {}),
+        [bucket]: parseInt(value) || 0
+      }
+    });
+  };
+
+  // Explosive threshold update
+  const updateExplosiveThreshold = (bucket, value) => {
+    const current = config.explosiveThresholds || {};
+    updateQCConfig('explosiveThresholds', {
+      ...current,
+      [bucket]: parseInt(value) || 0
+    });
+  };
+
+  // Minimum volume update
+  const updateMinimumVolume = (type, value) => {
+    const current = config.minimumVolume || {};
+    updateQCConfig('minimumVolume', {
+      ...current,
+      [type]: parseInt(value) || 1
+    });
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Help Section */}
+      <HelpSection title="What are Quality Control Definitions?">
+        <div className="pt-3 space-y-3">
+          <p>
+            These settings power the <strong className="text-white">X&O Quality Control</strong> tool in your Weekly Tools.
+            They define how plays are categorized by purpose, and what constitutes "efficient" or "explosive" performance.
+          </p>
+          <p>
+            <strong className="text-white">Play Purposes</strong> categorize plays by their strategic role. Use these to
+            ensure your install and game plan have the right balance of foundational vs explosive plays.
+          </p>
+          <p>
+            <strong className="text-white">Efficiency Thresholds</strong> define success by down. 1st down typically needs
+            4+ yards, while 2nd/3rd need a percentage of remaining distance.
+          </p>
+        </div>
+      </HelpSection>
+
+      {/* Play Purposes Section */}
+      <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
+          <div>
+            <h3 className="text-white font-medium">Play Purposes</h3>
+            <p className="text-xs text-slate-400">Categorize plays by their strategic role</p>
+          </div>
+          <button
+            onClick={addPurpose}
+            className="flex items-center gap-1 px-3 py-1.5 bg-sky-600 text-white text-sm rounded hover:bg-sky-700"
+          >
+            <Plus size={16} />
+            Add Purpose
+          </button>
+        </div>
+        <div className="p-4">
+          {(config.playPurposes || []).length === 0 ? (
+            <div className="text-center py-8 text-slate-500">
+              No purposes defined. Add purposes to categorize your plays.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {(config.playPurposes || []).map(purpose => (
+                <div
+                  key={purpose.id}
+                  className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={purpose.color}
+                      onChange={(e) => updatePurpose(purpose.id, 'color', e.target.value)}
+                      className="w-8 h-8 rounded cursor-pointer border-0"
+                    />
+                    <input
+                      type="text"
+                      value={purpose.name}
+                      onChange={(e) => updatePurpose(purpose.id, 'name', e.target.value)}
+                      className="px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white text-sm w-32"
+                    />
+                    <span className="text-xs text-slate-500">ID: {purpose.id}</span>
+                  </div>
+                  <button
+                    onClick={() => deletePurpose(purpose.id, purpose.name)}
+                    className="p-1.5 text-red-400 hover:text-red-300 hover:bg-slate-600 rounded"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Efficiency Thresholds Section */}
+      <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-700">
+          <h3 className="text-white font-medium">Efficiency Thresholds</h3>
+          <p className="text-xs text-slate-400">
+            Define what counts as an efficient play by down. 1st down = yards needed, 2nd-4th = % of distance.
+          </p>
+        </div>
+        <div className="p-4 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left">
+                <th className="px-3 py-2 text-slate-400 font-medium">Down</th>
+                <th className="px-3 py-2 text-slate-400 font-medium">Run</th>
+                <th className="px-3 py-2 text-slate-400 font-medium">Pass</th>
+                <th className="px-3 py-2 text-slate-400 font-medium">Screen</th>
+                <th className="px-3 py-2 text-slate-400 font-medium">Default</th>
+              </tr>
+            </thead>
+            <tbody>
+              {['1st', '2nd', '3rd', '4th'].map(down => (
+                <tr key={down} className="border-t border-slate-700">
+                  <td className="px-3 py-2 text-white font-medium">
+                    {down}
+                    <span className="text-xs text-slate-500 ml-2">
+                      {down === '1st' ? '(yards)' : '(% of dist)'}
+                    </span>
+                  </td>
+                  {['run', 'pass', 'screen', 'default'].map(bucket => (
+                    <td key={bucket} className="px-3 py-2">
+                      <input
+                        type="number"
+                        min="0"
+                        max={down === '1st' ? 20 : 100}
+                        value={config.efficiencyThresholds?.[down]?.[bucket] ?? defaults.efficiencyThresholds[down][bucket]}
+                        onChange={(e) => updateEfficiencyThreshold(down, bucket, e.target.value)}
+                        className="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-center"
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Explosive Thresholds Section */}
+      <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-700">
+          <h3 className="text-white font-medium">Explosive Thresholds</h3>
+          <p className="text-xs text-slate-400">Minimum yards for a play to count as "explosive"</p>
+        </div>
+        <div className="p-4">
+          <div className="grid grid-cols-4 gap-4">
+            {['run', 'pass', 'screen', 'default'].map(bucket => (
+              <div key={bucket}>
+                <label className="block text-xs text-slate-400 mb-1 capitalize">{bucket}</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    value={config.explosiveThresholds?.[bucket] ?? defaults.explosiveThresholds[bucket]}
+                    onChange={(e) => updateExplosiveThreshold(bucket, e.target.value)}
+                    className="w-20 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-center"
+                  />
+                  <span className="text-xs text-slate-500">yards</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Minimum Volume Section */}
+      <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-700">
+          <h3 className="text-white font-medium">Minimum Volume for Analysis</h3>
+          <p className="text-xs text-slate-400">
+            How many reps/calls before play-level stats are meaningful
+          </p>
+        </div>
+        <div className="p-4">
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm text-slate-300 mb-2">Practice (min reps)</label>
+              <input
+                type="number"
+                min="1"
+                value={config.minimumVolume?.practice ?? 3}
+                onChange={(e) => updateMinimumVolume('practice', e.target.value)}
+                className="w-24 px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-center"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-300 mb-2">Game (min calls)</label>
+              <input
+                type="number"
+                min="1"
+                value={config.minimumVolume?.game ?? 2}
+                onChange={(e) => updateMinimumVolume('game', e.target.value)}
+                className="w-24 px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-center"
+              />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

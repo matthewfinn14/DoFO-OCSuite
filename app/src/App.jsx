@@ -36,6 +36,7 @@ import {
   // Week-specific pages
   CoachesNotes,
   PracticePlans,
+  QualityControl,
   // Sub-level pages
   SubLevelView,
   SubLevelSchedule,
@@ -137,6 +138,7 @@ function AppRoutes() {
         <Route path="/:year/:phase/:week/wristband" element={<WristbandBuilder />} />
         <Route path="/:year/:phase/:week/practice-scripts" element={<PracticeScriptBuilder />} />
         <Route path="/:year/:phase/:week/pregame" element={<Pregame />} />
+        <Route path="/:year/:phase/:week/quality-control" element={<QualityControl />} />
 
         {/* Legacy week routes (for backwards compatibility) */}
         <Route path="/week/:weekId/notes" element={<CoachesNotes />} />
@@ -147,6 +149,7 @@ function AppRoutes() {
         <Route path="/week/:weekId/wristband" element={<WristbandBuilder />} />
         <Route path="/week/:weekId/practice-scripts" element={<PracticeScriptBuilder />} />
         <Route path="/week/:weekId/pregame" element={<Pregame />} />
+        <Route path="/week/:weekId/quality-control" element={<QualityControl />} />
 
         {/* Legacy weekly tools (non-week-specific) */}
         <Route path="/game-plan" element={<GamePlan />} />
