@@ -159,9 +159,9 @@ export default function PlayBankSidebar({
     const filteredMap = {};
     filteredPlays.forEach(p => {
       if (!searchTerm ||
-          p.name?.toLowerCase().includes(query) ||
-          p.formation?.toLowerCase().includes(query) ||
-          p.concept?.toLowerCase().includes(query)) {
+        p.name?.toLowerCase().includes(query) ||
+        p.formation?.toLowerCase().includes(query) ||
+        p.concept?.toLowerCase().includes(query)) {
         filteredMap[p.id] = p;
       }
     });
@@ -225,9 +225,9 @@ export default function PlayBankSidebar({
     const filteredMap = {};
     installedPlays.forEach(p => {
       if (!searchTerm ||
-          p.name?.toLowerCase().includes(query) ||
-          p.formation?.toLowerCase().includes(query) ||
-          p.concept?.toLowerCase().includes(query)) {
+        p.name?.toLowerCase().includes(query) ||
+        p.formation?.toLowerCase().includes(query) ||
+        p.concept?.toLowerCase().includes(query)) {
         filteredMap[p.id] = p;
       }
     });
@@ -492,9 +492,8 @@ export default function PlayBankSidebar({
     return (
       <div
         key={play.id}
-        className={`flex items-center py-1.5 px-2 border-b border-slate-100 text-sm hover:bg-slate-50 ${
-          isClickable ? 'cursor-pointer' : 'cursor-grab'
-        } ${isBatchSelected ? 'bg-sky-50 border-sky-200' : ''} ${isSingleSelected ? 'bg-emerald-50 border-emerald-300 border-2' : ''}`}
+        className={`flex items-center py-1.5 px-2 border-b border-slate-100 text-sm hover:bg-slate-50 ${isClickable ? 'cursor-pointer' : 'cursor-grab'
+          } ${isBatchSelected ? 'bg-sky-50 border-sky-200' : ''} ${isSingleSelected ? 'bg-emerald-50 border-emerald-300 border-2' : ''}`}
         draggable={!isClickable}
         onDragStart={(e) => !isClickable && handleDragStart(e, play)}
         onClick={handleClick}
@@ -610,8 +609,9 @@ export default function PlayBankSidebar({
 
   return (
     <div
-      className="fixed right-0 top-0 bottom-0 z-50 flex flex-col transition-all duration-300 ease-in-out"
+      className="fixed right-0 top-0 bottom-0 flex flex-col transition-all duration-300 ease-in-out"
       style={{
+        zIndex: 2005,
         width: isOpen ? '360px' : '40px',
         borderLeft: '1px solid #334155',
         background: isOpen ? '#ffffff' : '#1e293b'
@@ -765,11 +765,10 @@ export default function PlayBankSidebar({
             <div
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 text-center py-2 px-1 text-xs font-semibold cursor-pointer transition-colors ${
-                activeTab === tab.key
-                  ? 'text-slate-900 border-b-2 border-slate-900 bg-white'
-                  : 'text-slate-500 border-b-2 border-transparent bg-slate-50 hover:bg-slate-100'
-              }`}
+              className={`flex-1 text-center py-2 px-1 text-xs font-semibold cursor-pointer transition-colors ${activeTab === tab.key
+                ? 'text-slate-900 border-b-2 border-slate-900 bg-white'
+                : 'text-slate-500 border-b-2 border-transparent bg-slate-50 hover:bg-slate-100'
+                }`}
             >
               {tab.label}
             </div>
