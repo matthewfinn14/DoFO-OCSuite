@@ -28,7 +28,8 @@ export default function SheetView({
   setDraggedCell,
   playDragOverBox,
   setPlayDragOverBox,
-  onEditBox
+  onEditBox,
+  onBoxClick
 }) {
   const sections = layouts?.CALL_SHEET?.sections || [];
   const weekTitle = currentWeek?.name || `Week ${currentWeek?.weekNumber || ''}`;
@@ -40,9 +41,9 @@ export default function SheetView({
     const rowsCount = box.gridRows || 5;
     const totalSlots = cols * rowsCount;
 
-    // Get assigned plays from gamePlan
+    // Get assigned plays from gamePlan (or fallback to box data if only in layout)
     const set = gamePlan?.sets?.find(s => s.id === box.setId);
-    const assignedPlayIds = set?.assignedPlayIds || set?.playIds || [];
+    const assignedPlayIds = set?.assignedPlayIds || box.assignedPlayIds || [];
 
     const gridPlays = [];
     for (let i = 0; i < totalSlots; i++) {
@@ -640,7 +641,7 @@ export default function SheetView({
                             transition: 'background 0.15s, border 0.15s'
                           }}
                           onClick={() => {
-                            if (!isEditing) onEditBox({ box, sectionIdx: sIdx, boxIdx: bIdx });
+                            if (!isEditing) onBoxClick(box, sIdx, bIdx);
                           }}
                         >
                           {/* Box Header */}

@@ -1,6 +1,7 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
+import { usePlayBank } from '../context/PlayBankContext';
 import { getWristbandDisplay } from '../utils/wristband';
 import SheetView from '../components/gameplan/SheetView';
 import FZDnDView from '../components/gameplan/FZDnDView';
@@ -24,7 +25,8 @@ import {
   Zap,
   Package,
   Users,
-  ExternalLink
+  ExternalLink,
+  CheckSquare
 } from 'lucide-react';
 import '../styles/gameplan.css';
 
@@ -230,6 +232,9 @@ export default function GamePlan() {
     depthCharts
   } = useSchool();
 
+  // Theme check
+  const isLight = settings?.theme === 'light';
+
   // View state
   const [activeTab, setActiveTab] = useState('sheet'); // 'sheet', 'fzdnd', 'matrix'
   const [isLocked, setIsLocked] = useState(false);
@@ -248,6 +253,25 @@ export default function GamePlan() {
   // Drag state for Sheet view
   const [draggedCell, setDraggedCell] = useState(null);
   const [playDragOverBox, setPlayDragOverBox] = useState(null);
+
+  // Batch Add State
+  const { startBatchSelect, cancelBatchSelect, quickAddRequest } = usePlayBank();
+  const [isTargetingBox, setIsTargetingBox] = useState(false);
+  const [pendingBatchPlays, setPendingBatchPlays] = useState([]);
+
+  // Track last processed request to prevent duplicates/loops
+  const lastProcessedQuickAddRef = useRef(0);
+
+  // Handle Quick Add Request (when no modal is open)
+  useEffect(() => {
+    if (quickAddRequest && !editingBox && quickAddRequest.timestamp > lastProcessedQuickAddRef.current) {
+      lastProcessedQuickAddRef.current = quickAddRequest.timestamp;
+
+      // Enter targeting mode with this play
+      setPendingBatchPlays([quickAddRequest.playId]);
+      setIsTargetingBox(true);
+    }
+  }, [quickAddRequest, editingBox]);
 
   // Add Section modal state
   const [showAddSectionModal, setShowAddSectionModal] = useState(false);
@@ -723,27 +747,31 @@ export default function GamePlan() {
     handleUpdateLayouts(newLayouts);
   }, [gamePlanLayouts, handleUpdateLayouts]);
 
-  // Handle box drop (reordering)
-  const handleSheetBoxDrop = useCallback((e, targetSectionIdx, targetBoxIdx) => {
+  // Handle box drop (reordering or play drop)
+  const handleSheetBoxDrop = useCallback(async (e, targetSectionIdx, targetBoxIdx) => {
     e.preventDefault();
     e.stopPropagation();
 
-    // Check for play drop from Play Bank
-    try {
-      const data = JSON.parse(e.dataTransfer.getData('application/react-dnd'));
-      if (data && data.playId) {
-        // Find the box at target position
-        const section = gamePlanLayouts.CALL_SHEET.sections[targetSectionIdx];
-        const box = section?.boxes?.[targetBoxIdx];
-        if (box && box.setId) {
-          handleAddPlayToSet(box.setId, data.playId);
+    // Check for Play Drop from Sidebar
+    const playData = e.dataTransfer.getData('application/react-dnd');
+    if (playData) {
+      try {
+        const { playId } = JSON.parse(playData);
+        if (playId) {
+          const section = gamePlanLayouts.CALL_SHEET.sections[targetSectionIdx];
+          const box = section?.boxes?.[targetBoxIdx];
+          if (box && box.setId) {
+            await handleAddPlayToSet(box.setId, playId);
+          }
         }
-        setPlayDragOverBox(null);
-        return;
+      } catch (err) {
+        console.error('Error parsing drop data:', err);
       }
-    } catch (err) {
-      // Not a play drop, continue with box reordering
+      setPlayDragOverBox(null);
+      return;
     }
+
+
 
     // Handle box reordering
     if (!isSheetEditing || !draggedCell) {
@@ -786,7 +814,165 @@ export default function GamePlan() {
     return getWristbandDisplay(play) || null;
   }, []);
 
+  // Batch assign plays to a box
+  const batchAssignPlaysToBox = useCallback(async (boxId, newPlayIds) => {
+    if (!currentWeek || !newPlayIds.length) return;
+
+    // Find the box (search sets and mini-scripts)
+    let boxData = null;
+    let boxType = 'set'; // 'set' or 'miniscript'
+
+    // Check sets
+    const set = gamePlan.sets?.find(s => s.id === boxId);
+    if (set) {
+      boxData = set;
+      boxType = 'set';
+    } else {
+      // Check mini-scripts
+      const ms = gamePlan.miniScripts?.find(s => s.id === boxId);
+      if (ms) {
+        boxData = ms;
+        boxType = 'miniscript';
+      }
+    }
+
+    if (!boxData) return;
+
+    // Find the layout box to determine type and capacity
+    let layoutBox = null;
+    let sectionIdx = -1;
+    let boxIdx = -1;
+
+    // Search through layouts
+    Object.values(gamePlanLayouts).some(layout => {
+      return (layout.sections || []).some((section, sIdx) => {
+        return (section.boxes || []).some((box, bIdx) => {
+          if (box.setId === boxId) {
+            layoutBox = box;
+            sectionIdx = sIdx;
+            boxIdx = bIdx;
+            return true;
+          }
+          return false;
+        });
+      });
+    });
+
+    if (!layoutBox) return;
+
+    // Handle Grid Box
+    if (layoutBox.type === 'grid') {
+      const cols = layoutBox.gridColumns || 4;
+      const rows = layoutBox.gridRows || 5;
+      const totalSlots = cols * rows;
+
+      const currentAssigned = [...(boxData.assignedPlayIds || [])];
+
+      // Ensure array is big enough
+      while (currentAssigned.length < totalSlots) {
+        currentAssigned.push(null);
+      }
+
+      // Fill empty slots
+      let playIdx = 0;
+      for (let i = 0; i < totalSlots && playIdx < newPlayIds.length; i++) {
+        // If slot is empty or GAP
+        if (!currentAssigned[i] || currentAssigned[i] === 'GAP') {
+          currentAssigned[i] = newPlayIds[playIdx];
+          playIdx++;
+        }
+      }
+
+      // Update the set/miniscript
+      if (boxType === 'set') {
+        // For sets, we also need to update playIds if not using assignedPlayIds exclusively
+        // But for grid boxes we usually rely on assignedPlayIds for positioning
+        const updatedGamePlan = { ...gamePlan };
+        const updatedSet = updatedGamePlan.sets.find(s => s.id === boxId);
+        updatedSet.assignedPlayIds = currentAssigned;
+        // Also ensure plays are in playIds for general tracking
+        const allIds = new Set([...(updatedSet.playIds || []), ...newPlayIds]);
+        updatedSet.playIds = Array.from(allIds);
+
+        await handleUpdateGamePlan(updatedGamePlan);
+      }
+    }
+    // Handle Script Box
+    else if (layoutBox.type === 'script') {
+      // Scripts store data in layoutBox.rows, not in the set directly usually
+      // But we need to update the layout box rows
+      const scriptRows = [...(layoutBox.rows || [])];
+      const scriptColumns = layoutBox.scriptColumns || 2;
+
+      let playIdx = 0;
+
+      // Iterate rows to find empty slots
+      for (let r = 0; r < scriptRows.length && playIdx < newPlayIds.length; r++) {
+        // If row doesn't exist, create it
+        if (!scriptRows[r]) {
+          scriptRows[r] = { label: r + 1, content: null, contentRight: null };
+        }
+
+        // Fill left column if empty
+        if (!scriptRows[r].content) {
+          scriptRows[r] = { ...scriptRows[r], content: newPlayIds[playIdx] };
+          playIdx++;
+        }
+
+        // Fill right column if empty and using 2 columns
+        if (playIdx < newPlayIds.length && scriptColumns === 2 && !scriptRows[r].contentRight) {
+          scriptRows[r] = { ...scriptRows[r], contentRight: newPlayIds[playIdx] };
+          playIdx++;
+        }
+      }
+
+      // Update layout box
+      // We need to construct the full new layouts object
+      const newLayouts = { ...gamePlanLayouts };
+      // Find the specific layout key (e.g., CALL_SHEET)
+      const layoutKey = Object.keys(newLayouts).find(key =>
+        newLayouts[key].sections?.[sectionIdx]?.boxes?.[boxIdx]?.setId === boxId
+      );
+
+      if (layoutKey) {
+        newLayouts[layoutKey].sections[sectionIdx].boxes[boxIdx].rows = scriptRows;
+        await handleUpdateLayouts(newLayouts);
+      }
+    }
+
+    // Also add to quick list (set.playIds) for both types to ideally keep them in sync
+    if (boxType === 'set') {
+      const updatedGamePlan = { ...gamePlan };
+      const updatedSet = updatedGamePlan.sets.find(s => s.id === boxId);
+      if (updatedSet) {
+        const currentPlayIds = updatedSet.playIds || [];
+        const newIdsToAdd = newPlayIds.filter(id => !currentPlayIds.includes(id));
+        if (newIdsToAdd.length > 0) {
+          updatedSet.playIds = [...currentPlayIds, ...newIdsToAdd];
+          await handleUpdateGamePlan(updatedGamePlan);
+        }
+      }
+    }
+
+  }, [currentWeek, gamePlan, gamePlanLayouts, handleUpdateGamePlan, handleUpdateLayouts]);
+
+  // Handle Box Click (Intercept for Batch Add)
+  const handleBoxClick = useCallback(async (box, sectionIdx, boxIdx) => {
+    if (isTargetingBox && pendingBatchPlays.length > 0) {
+      await batchAssignPlaysToBox(box.setId, pendingBatchPlays);
+
+      // Reset state
+      setIsTargetingBox(false);
+      setPendingBatchPlays([]);
+      cancelBatchSelect();
+    } else {
+      // Normal edit behavior
+      setEditingBox({ box, sectionIdx, boxIdx });
+    }
+  }, [isTargetingBox, pendingBatchPlays, batchAssignPlaysToBox, cancelBatchSelect]);
+
   // Get play display name
+
   const getPlayDisplayName = useCallback((play) => {
     if (!play) return '';
     return play.name || play.playCall || '';
@@ -797,14 +983,17 @@ export default function GamePlan() {
     window.print();
   }, []);
 
+  // Load layout preferences from local storage on mount
+  // ... (existing code)
+
   // No week selected
   if (!currentWeek) {
     return (
       <div className="p-6">
-        <h1 className="text-3xl font-bold text-white mb-4">Game Plan</h1>
-        <div className="bg-slate-900 rounded-lg p-8 text-center">
+        <h1 className={`text-3xl font-bold mb-4 ${isLight ? 'text-slate-900' : 'text-white'}`}>Game Plan</h1>
+        <div className={`rounded-lg p-8 text-center ${isLight ? 'bg-white border border-slate-200' : 'bg-slate-900'}`}>
           <Book size={48} className="text-slate-600 mx-auto mb-4" />
-          <h3 className="text-xl font-medium text-white mb-2">No Week Selected</h3>
+          <h3 className={`text-xl font-medium mb-2 ${isLight ? 'text-slate-900' : 'text-white'}`}>No Week Selected</h3>
           <p className="text-slate-500">
             Select a week from the sidebar to build your game plan.
           </p>
@@ -816,24 +1005,52 @@ export default function GamePlan() {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="p-4 border-b border-slate-800 bg-slate-900/50">
+      <div className={`p-4 border-b ${isLight ? 'bg-white border-slate-200' : 'border-slate-800 bg-slate-900/50'}`}>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-white mb-1">Game Plan</h1>
-            <p className="text-slate-400 text-sm">
+            <h1 className={`text-2xl font-bold mb-1 ${isLight ? 'text-slate-900' : 'text-white'}`}>Game Plan</h1>
+            <p className={`text-sm ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
               {currentWeek.name}
               {currentWeek.opponent && ` vs. ${currentWeek.opponent}`}
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {/* Batch Add Button */}
+            <button
+              onClick={() => {
+                if (isTargetingBox) {
+                  // Cancel targeting mode
+                  setIsTargetingBox(false);
+                  setPendingBatchPlays([]);
+                  cancelBatchSelect();
+                } else {
+                  // Start batch select
+                  startBatchSelect((playIds) => {
+                    setPendingBatchPlays(playIds);
+                    setIsTargetingBox(true);
+                  }, 'Select Target Box');
+                }
+              }}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${isTargetingBox
+                ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/30'
+                : isLight
+                  ? 'bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200'
+                  : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
+                }`}
+            >
+              <CheckSquare size={16} />
+              <span className="text-sm">{isTargetingBox ? 'Select Target Box...' : 'Batch Add'}</span>
+            </button>
+
             {/* Lock Toggle */}
             <button
               onClick={() => setIsLocked(!isLocked)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
-                isLocked
-                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50'
-                  : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
-              }`}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${isLocked
+                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50'
+                : isLight
+                  ? 'bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200' // Light mode unlocked
+                  : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'     // Dark mode unlocked
+                }`}
               title={isLocked ? 'Unlock editing' : 'Lock editing'}
             >
               {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
@@ -844,14 +1061,20 @@ export default function GamePlan() {
             <div className="flex items-center gap-2">
               <button
                 onClick={handlePrint}
-                className="flex items-center gap-2 px-3 py-2 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 border border-slate-700"
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${isLight
+                  ? 'bg-white text-slate-700 hover:bg-slate-50 border-slate-200'
+                  : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border-slate-700'
+                  }`}
               >
                 <Printer size={16} />
                 <span className="text-sm">Print</span>
               </button>
               <Link
                 to="/print?template=game_plan"
-                className="p-2 text-slate-400 hover:text-sky-400 rounded-lg hover:bg-slate-800"
+                className={`p-2 rounded-lg ${isLight
+                  ? 'text-slate-400 hover:text-sky-600 hover:bg-slate-100'
+                  : 'text-slate-400 hover:text-sky-400 hover:bg-slate-800'
+                  }`}
                 title="Open in Print Center"
               >
                 <ExternalLink size={16} />
@@ -861,58 +1084,53 @@ export default function GamePlan() {
         </div>
 
         {/* Tabs */}
-        <div className="flex bg-slate-800 rounded-lg p-1">
+        <div className={`flex rounded-lg p-1 ${isLight ? 'bg-slate-100 border border-slate-200' : 'bg-slate-800'}`}>
           <button
             onClick={() => setActiveTab('sheet')}
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-colors ${
-              activeTab === 'sheet'
-                ? 'bg-sky-500 text-white'
-                : 'text-slate-400 hover:text-white hover:bg-slate-700'
-            }`}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-colors ${activeTab === 'sheet'
+              ? isLight ? 'bg-white text-sky-600 shadow-sm font-semibold' : 'bg-sky-500 text-white'
+              : isLight ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50' : 'text-slate-400 hover:text-white hover:bg-slate-700'
+              }`}
           >
             <List size={16} />
             <span className="text-sm font-medium">Situations & Scripts</span>
           </button>
           <button
             onClick={() => setActiveTab('fzdnd')}
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-colors ${
-              activeTab === 'fzdnd'
-                ? 'bg-sky-500 text-white'
-                : 'text-slate-400 hover:text-white hover:bg-slate-700'
-            }`}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-colors ${activeTab === 'fzdnd'
+              ? isLight ? 'bg-white text-sky-600 shadow-sm font-semibold' : 'bg-sky-500 text-white'
+              : isLight ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50' : 'text-slate-400 hover:text-white hover:bg-slate-700'
+              }`}
           >
             <Map size={16} />
             <span className="text-sm font-medium">FZDnD</span>
           </button>
           <button
             onClick={() => setActiveTab('matrix')}
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-colors ${
-              activeTab === 'matrix'
-                ? 'bg-sky-500 text-white'
-                : 'text-slate-400 hover:text-white hover:bg-slate-700'
-            }`}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-colors ${activeTab === 'matrix'
+              ? isLight ? 'bg-white text-sky-600 shadow-sm font-semibold' : 'bg-sky-500 text-white'
+              : isLight ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50' : 'text-slate-400 hover:text-white hover:bg-slate-700'
+              }`}
           >
             <Grid size={16} />
             <span className="text-sm font-medium">Matrix</span>
           </button>
           <button
             onClick={() => setActiveTab('byPlayType')}
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-colors ${
-              activeTab === 'byPlayType'
-                ? 'bg-sky-500 text-white'
-                : 'text-slate-400 hover:text-white hover:bg-slate-700'
-            }`}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-colors ${activeTab === 'byPlayType'
+              ? isLight ? 'bg-white text-sky-600 shadow-sm font-semibold' : 'bg-sky-500 text-white'
+              : isLight ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50' : 'text-slate-400 hover:text-white hover:bg-slate-700'
+              }`}
           >
             <Package size={16} />
             <span className="text-sm font-medium">By Play Type</span>
           </button>
           <button
             onClick={() => setActiveTab('byPlayer')}
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-colors ${
-              activeTab === 'byPlayer'
-                ? 'bg-sky-500 text-white'
-                : 'text-slate-400 hover:text-white hover:bg-slate-700'
-            }`}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-colors ${activeTab === 'byPlayer'
+              ? 'bg-sky-500 text-white'
+              : 'text-slate-400 hover:text-white hover:bg-slate-700'
+              }`}
           >
             <Users size={16} />
             <span className="text-sm font-medium">By Player</span>
@@ -940,6 +1158,7 @@ export default function GamePlan() {
             onDeleteBox={handleDeleteSheetBox}
             onUpdateBox={handleUpdateSheetBox}
             onBoxDrop={handleSheetBoxDrop}
+            onBoxClick={handleBoxClick}
             onAddPlayToSet={handleAddPlayToSet}
             onRemovePlayFromSet={handleRemovePlayFromSet}
             getPlaysForSet={getPlaysForSet}

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { X, Search, Trash2, GripVertical, ChevronUp, ChevronDown, ArrowRight, Plus, Hash, CheckSquare } from 'lucide-react';
 import { usePlayBank } from '../../context/PlayBankContext';
 
@@ -26,15 +26,98 @@ export default function BoxEditorModal({
   const [draggedQuickListIdx, setDraggedQuickListIdx] = useState(null);
   const [dragOverQuickListIdx, setDragOverQuickListIdx] = useState(null);
 
-  // Handle batch add from Play Bank
-  const handleBatchAdd = useCallback(() => {
+  // Quick Add Request Handling
+  const { quickAddRequest } = usePlayBank();
+  const lastProcessedQuickAddRef = useRef(0);
+
+  useEffect(() => {
+    if (quickAddRequest && quickAddRequest.timestamp > lastProcessedQuickAddRef.current) {
+      lastProcessedQuickAddRef.current = quickAddRequest.timestamp;
+
+      // Add play to local quick list
+      onAddPlayToQuickList(box.setId, quickAddRequest.playId);
+    }
+  }, [quickAddRequest, onAddPlayToQuickList, box.setId]);
+
+  // Handle batch add from Play Bank to QuickList
+  const handleBatchAddToQuickList = useCallback(() => {
     startBatchSelect((playIds) => {
       // Add all selected plays to the Quick List
       playIds.forEach(playId => {
         onAddPlayToQuickList(box.setId, playId);
       });
-    }, `Add to ${box.header || 'Box'}`);
+    }, `Add to Quick List (${box.header || 'Box'})`);
   }, [startBatchSelect, onAddPlayToQuickList, box.setId, box.header]);
+
+  // Handle batch add to Grid
+  const handleBatchAddToGrid = useCallback(() => {
+    startBatchSelect((playIds) => {
+      setLocalBox(prev => {
+        const next = { ...prev };
+        const cols = next.gridColumns || 4;
+        const rows = next.gridRows || 5;
+        const totalSlots = cols * rows;
+
+        const currentAssigned = [...(next.assignedPlayIds || [])];
+        while (currentAssigned.length < totalSlots) {
+          currentAssigned.push(null);
+        }
+
+        let playIdx = 0;
+        for (let i = 0; i < totalSlots && playIdx < playIds.length; i++) {
+          if (!currentAssigned[i] || currentAssigned[i] === 'GAP') {
+            currentAssigned[i] = playIds[playIdx];
+            // Also assign via parent prop to persist immediately? No, saving happens on Save button usually?
+            // Wait, this modal usually saves on close or changes propagate differently?
+            // The prop onAssignPlayToCell is used for individual assignment.
+            // But here we are updating localBox.
+            // We should probably trigger assignment props to ensure persistence outside the modal too
+            // OR relying on `onSave` to save `localBox`.
+            // Let's rely on localBox and ensure handleSave sends it up.
+            playIdx++;
+          }
+        }
+        next.assignedPlayIds = currentAssigned;
+        return next;
+      });
+
+      // Also add to quicklist - REMOVED to prevent duplication
+      // playIds.forEach(playId => onAddPlayToQuickList(box.setId, playId));
+
+    }, `Add to Grid (${box.header || 'Box'})`);
+  }, [startBatchSelect, box.header, box.setId, onAddPlayToQuickList]);
+
+  // Handle batch add to Script
+  const handleBatchAddToScript = useCallback(() => {
+    startBatchSelect((playIds) => {
+      setLocalBox(prev => {
+        const next = { ...prev };
+        const rows = [...(next.rows || [])];
+        const scriptColumns = next.scriptColumns || 2;
+
+        let playIdx = 0;
+        for (let r = 0; r < rows.length && playIdx < playIds.length; r++) {
+          if (!rows[r]) rows[r] = { label: r + 1, content: null, contentRight: null };
+
+          if (!rows[r].content) {
+            rows[r] = { ...rows[r], content: playIds[playIdx] };
+            playIdx++;
+          }
+
+          if (playIdx < playIds.length && scriptColumns === 2 && !rows[r].contentRight) {
+            rows[r] = { ...rows[r], contentRight: playIds[playIdx] };
+            playIdx++;
+          }
+        }
+        next.rows = rows;
+        return next;
+      });
+
+      // Also add to quicklist - REMOVED to prevent duplication
+      // playIds.forEach(playId => onAddPlayToQuickList(box.setId, playId));
+
+    }, `Add to Script (${box.header || 'Box'})`);
+  }, [startBatchSelect, box.header, box.setId, onAddPlayToQuickList]);
 
   // Get Quick List plays (assignedPlayIds)
   const quickListPlays = useMemo(() => {
@@ -57,11 +140,32 @@ export default function BoxEditorModal({
       }
     }
 
-    const assignedPlayIds = setData?.assignedPlayIds || [];
-    return assignedPlayIds
+    const getAssignedSetIds = () => {
+      const assigned = new Set();
+      // Check Grid assignments
+      if (localBox.assignedPlayIds) {
+        localBox.assignedPlayIds.forEach(id => id && id !== 'GAP' && assigned.add(id));
+      }
+      // Check Script assignments
+      if (localBox.rows) {
+        localBox.rows.forEach(row => {
+          if (row.content) assigned.add(row.content);
+          if (row.contentRight) assigned.add(row.contentRight);
+        });
+      }
+      return assigned;
+    };
+
+    const assignedInBox = getAssignedSetIds();
+
+    // Use playIds as the source of truth for "Available Plays" (Quick List)
+    // Fallback to assignedPlayIds if playIds is missing
+    const availablePlayIds = setData?.playIds || setData?.assignedPlayIds || [];
+
+    return availablePlayIds
       .map(playId => plays.find(p => p.id === playId))
-      .filter(Boolean);
-  }, [box.setId, gamePlan, plays]);
+      .filter(p => p && !assignedInBox.has(p.id));
+  }, [box.setId, gamePlan, plays, localBox.assignedPlayIds, localBox.rows]);
 
   // Filter available plays for search
   const filteredPlays = useMemo(() => {
@@ -97,7 +201,10 @@ export default function BoxEditorModal({
     if (isLocked) return;
     setDraggedQuickListIdx(idx);
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', idx.toString());
+    // Send Play ID for dropping into grid/script, and keep tracking index via state for reordering
+    if (quickListPlays[idx]) {
+      e.dataTransfer.setData('text/plain', quickListPlays[idx].id);
+    }
   };
 
   // Handle Quick List drag over
@@ -110,6 +217,21 @@ export default function BoxEditorModal({
   // Handle Quick List drop
   const handleQuickListDrop = (e, targetIdx) => {
     e.preventDefault();
+
+    // Check for Sidebar Play Drop
+    const playData = e.dataTransfer.getData('application/react-dnd');
+    if (playData) {
+      try {
+        const { playId } = JSON.parse(playData);
+        if (playId) {
+          onAddPlayToQuickList(box.setId, playId);
+        }
+      } catch (err) {
+        console.error('Error parsing drop data:', err);
+      }
+      return;
+    }
+
     if (isLocked || draggedQuickListIdx === null) return;
 
     if (draggedQuickListIdx !== targetIdx) {
@@ -140,24 +262,87 @@ export default function BoxEditorModal({
   // Assign play from Quick List to script row
   const handleAssignToScriptRow = (playId, rowIdx, column) => {
     if (isLocked) return;
+
+    // Update local state
+    setLocalBox(prev => {
+      const next = { ...prev };
+      const newRows = [...(next.rows || [])];
+      while (newRows.length <= rowIdx) {
+        newRows.push({ label: newRows.length + 1, content: null, contentRight: null });
+      }
+
+      if (column === 'left' || column === 'content') {
+        newRows[rowIdx] = { ...newRows[rowIdx], content: playId };
+      } else {
+        newRows[rowIdx] = { ...newRows[rowIdx], contentRight: playId };
+      }
+      next.rows = newRows;
+      return next;
+    });
+
     onAssignPlayToCell(box.setId, rowIdx, column, playId);
   };
 
   // Remove play from script row
   const handleRemoveFromScriptRow = (rowIdx, column) => {
     if (isLocked) return;
+
+    // Update local state
+    setLocalBox(prev => {
+      const next = { ...prev };
+      const newRows = [...(next.rows || [])];
+      if (newRows[rowIdx]) {
+        if (column === 'left' || column === 'content') {
+          newRows[rowIdx] = { ...newRows[rowIdx], content: null };
+        } else {
+          newRows[rowIdx] = { ...newRows[rowIdx], contentRight: null };
+        }
+        next.rows = newRows;
+      }
+      return next;
+    });
+
     onRemovePlayFromCell(box.setId, rowIdx, column);
   };
 
   // Assign play from Quick List to grid cell
   const handleAssignToGridCell = (playId, cellIdx) => {
     if (isLocked) return;
+
+    // Update local state
+    setLocalBox(prev => {
+      const next = { ...prev };
+      const cols = next.gridColumns || 4;
+      const rowsCount = next.gridRows || 5;
+      const totalSlots = cols * rowsCount;
+      const newAssigned = [...(next.assignedPlayIds || [])];
+
+      while (newAssigned.length < totalSlots) {
+        newAssigned.push('GAP');
+      }
+      newAssigned[cellIdx] = playId;
+      next.assignedPlayIds = newAssigned;
+      return next;
+    });
+
     onAssignPlayToCell(box.setId, cellIdx, null, playId);
   };
 
   // Remove play from grid cell
   const handleRemoveFromGridCell = (cellIdx) => {
     if (isLocked) return;
+
+    // Update local state
+    setLocalBox(prev => {
+      const next = { ...prev };
+      const newAssigned = [...(next.assignedPlayIds || [])];
+      if (newAssigned[cellIdx]) {
+        newAssigned[cellIdx] = 'GAP';
+        next.assignedPlayIds = newAssigned;
+      }
+      return next;
+    });
+
     onRemovePlayFromCell(box.setId, cellIdx, null);
   };
 
@@ -170,14 +355,16 @@ export default function BoxEditorModal({
     // Get assigned plays from box or gamePlan
     let assignedPlayIds = localBox.assignedPlayIds || [];
 
-    // Also check gamePlan sets
-    if (box.setId) {
+    // Also check gamePlan sets IF localBox is fresh/empty but backend has assignments
+    // Note: We use assignedPlayIds for GRID placement. 
+    // Do NOT use playIds (pool) for grid placement.
+    if (box.setId && (!assignedPlayIds || assignedPlayIds.length === 0)) {
       let setData = null;
       if (Array.isArray(gamePlan?.sets)) {
         setData = gamePlan.sets.find(s => s.id === box.setId);
       }
-      if (setData?.playIds) {
-        assignedPlayIds = setData.playIds;
+      if (setData?.assignedPlayIds) {
+        assignedPlayIds = setData.assignedPlayIds;
       }
     }
 
@@ -295,11 +482,12 @@ export default function BoxEditorModal({
           )}
         </div>
 
-        {/* Batch Add Button */}
+        {/* Batch Add Buttons */}
         {!isLocked && (
-          <div style={{ padding: '8px 12px', borderBottom: '1px solid #e2e8f0' }}>
+          <div style={{ padding: '8px 12px', borderBottom: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {/* Add to Grid/Script Button */}
             <button
-              onClick={handleBatchAdd}
+              onClick={box.type === 'script' ? handleBatchAddToScript : handleBatchAddToGrid}
               style={{
                 width: '100%',
                 display: 'flex',
@@ -307,19 +495,44 @@ export default function BoxEditorModal({
                 justifyContent: 'center',
                 gap: '6px',
                 padding: '8px 12px',
-                background: '#ecfdf5',
-                border: '1px solid #a7f3d0',
+                background: '#eff6ff',
+                border: '1px solid #bfdbfe',
                 borderRadius: '6px',
-                color: '#059669',
+                color: '#2563eb',
                 fontWeight: '600',
                 fontSize: '0.8rem',
                 cursor: 'pointer'
               }}
-              onMouseEnter={(e) => e.currentTarget.style.background = '#d1fae5'}
-              onMouseLeave={(e) => e.currentTarget.style.background = '#ecfdf5'}
+              onMouseEnter={(e) => e.currentTarget.style.background = '#dbeafe'}
+              onMouseLeave={(e) => e.currentTarget.style.background = '#eff6ff'}
             >
               <CheckSquare size={14} />
-              Batch Add from Play Bank
+              {box.type === 'script' ? 'Batch Add to Script' : 'Batch Add to Grid'}
+            </button>
+
+            {/* Add to Quick List Only Button */}
+            <button
+              onClick={handleBatchAddToQuickList}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                background: 'transparent',
+                border: '1px dashed #cbd5e1',
+                borderRadius: '6px',
+                color: '#64748b',
+                fontWeight: '500',
+                fontSize: '0.75rem',
+                cursor: 'pointer'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#94a3b8'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+            >
+              <Plus size={12} />
+              Add Selection to Quick List Only
             </button>
           </div>
         )}
@@ -669,7 +882,22 @@ export default function BoxEditorModal({
                     onDrop={(e) => {
                       e.preventDefault();
                       e.currentTarget.style.background = rightPlay?.priority ? '#fef9c3' : 'white';
-                      const playId = e.dataTransfer.getData('text/plain');
+
+                      let playId = e.dataTransfer.getData('text/plain');
+
+                      // Check for Sidebar Play Drop
+                      if (!playId) {
+                        const playData = e.dataTransfer.getData('application/react-dnd');
+                        if (playData) {
+                          try {
+                            const parsed = JSON.parse(playData);
+                            if (parsed.playId) playId = parsed.playId;
+                          } catch (err) {
+                            console.error('Error parsing drop data:', err);
+                          }
+                        }
+                      }
+
                       const play = plays.find(p => p.id === playId) || quickListPlays.find(p => p.id === playId);
                       if (play && !isLocked) {
                         handleAssignToScriptRow(play.id, rowIdx, 'right');
@@ -850,7 +1078,22 @@ export default function BoxEditorModal({
                     onDrop={(e) => {
                       e.preventDefault();
                       e.currentTarget.style.background = play?.priority ? '#fef9c3' : 'white';
-                      const playId = e.dataTransfer.getData('text/plain');
+
+                      let playId = e.dataTransfer.getData('text/plain');
+
+                      // Check for Sidebar Play Drop
+                      if (!playId) {
+                        const playData = e.dataTransfer.getData('application/react-dnd');
+                        if (playData) {
+                          try {
+                            const parsed = JSON.parse(playData);
+                            if (parsed.playId) playId = parsed.playId;
+                          } catch (err) {
+                            console.error('Error parsing drop data:', err);
+                          }
+                        }
+                      }
+
                       const droppedPlay = plays.find(p => p.id === playId) || quickListPlays.find(p => p.id === playId);
                       if (droppedPlay && !isLocked) {
                         handleAssignToGridCell(droppedPlay.id, cellIdx);

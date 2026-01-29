@@ -219,7 +219,7 @@ function PlayCallAutocomplete({ value, playId, plays, onSelectPlay, onChangeText
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target) &&
-          inputRef.current && !inputRef.current.contains(e.target)) {
+        inputRef.current && !inputRef.current.contains(e.target)) {
         setShowDropdown(false);
       }
     };
@@ -264,9 +264,8 @@ function PlayCallAutocomplete({ value, playId, plays, onSelectPlay, onChangeText
             <button
               key={play.id}
               onClick={() => handleSelect(play)}
-              className={`w-full px-3 py-2 text-left text-xs hover:bg-slate-700 ${
-                idx === focusedIndex ? 'bg-slate-700' : ''
-              }`}
+              className={`w-full px-3 py-2 text-left text-xs hover:bg-slate-700 ${idx === focusedIndex ? 'bg-slate-700' : ''
+                }`}
             >
               <div className="flex items-center gap-2">
                 <span className="text-white font-medium">{play.name}</span>
@@ -458,11 +457,10 @@ function SegmentNotesModal({ segment, staff, positionGroups, onUpdateNotes, onCl
                     onClick={() => insertMention(suggestion)}
                     className="w-full px-4 py-2 text-left hover:bg-slate-600 flex items-center justify-between"
                   >
-                    <span className={`font-medium ${
-                      suggestion.type === 'special' ? 'text-amber-400' :
+                    <span className={`font-medium ${suggestion.type === 'special' ? 'text-amber-400' :
                       suggestion.type === 'group' ? 'text-emerald-400' :
-                      'text-sky-400'
-                    }`}>
+                        'text-sky-400'
+                      }`}>
                       {suggestion.label}
                     </span>
                     <span className="text-xs text-slate-400">{suggestion.description}</span>
@@ -635,11 +633,10 @@ function PrintSettingsModal({ staff, positionGroups, practicePlans, weekName, on
                   <button
                     key={day}
                     onClick={() => toggleDay(day)}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      selectedDays[day]
-                        ? 'bg-sky-600 text-white'
-                        : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
-                    } ${!hasPlan ? 'opacity-50' : ''}`}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${selectedDays[day]
+                      ? 'bg-sky-600 text-white'
+                      : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                      } ${!hasPlan ? 'opacity-50' : ''}`}
                   >
                     {DAY_ABBREV[day]}
                     {hasPlan && <span className="block text-xs opacity-75">{practicePlans[day].segments.length} seg</span>}
@@ -900,11 +897,10 @@ function SegmentLevelsSelector({ segment, programLevels, onChange }) {
           e.stopPropagation();
           setIsOpen(!isOpen);
         }}
-        className={`flex items-center gap-1 px-2 py-1 text-xs rounded border transition-colors ${
-          isAllLevels
-            ? 'bg-slate-700/50 border-slate-600 text-slate-400'
-            : 'bg-purple-500/20 border-purple-500/30 text-purple-300'
-        }`}
+        className={`flex items-center gap-1 px-2 py-1 text-xs rounded border transition-colors ${isAllLevels
+          ? 'bg-slate-700/50 border-slate-600 text-slate-400'
+          : 'bg-purple-500/20 border-purple-500/30 text-purple-300'
+          }`}
         title="Select which levels practice this segment"
       >
         <Layers size={12} />
@@ -1244,11 +1240,10 @@ function ImportTemplateModal({ existingTemplates, onImport, onClose }) {
                     <button
                       key={template.id}
                       onClick={() => setSelectedTemplateId(template.id)}
-                      className={`w-full p-3 rounded-lg border text-left transition-colors ${
-                        selectedTemplateId === template.id
-                          ? 'bg-sky-500/20 border-sky-500 text-white'
-                          : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
-                      }`}
+                      className={`w-full p-3 rounded-lg border text-left transition-colors ${selectedTemplateId === template.id
+                        ? 'bg-sky-500/20 border-sky-500 text-white'
+                        : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600'
+                        }`}
                     >
                       <div className="font-medium">{template.name}</div>
                       <div className="text-xs text-slate-400 mt-1">
@@ -1306,6 +1301,10 @@ export default function PracticePlans() {
   const { weeks, updateWeek, setupConfig, updateSetupConfig, staff, settings, activeLevelId, playsArray, plays } = useSchool();
   const { startBatchSelect } = usePlayBank();
 
+  // Theme detection
+  const theme = settings?.theme || 'dark';
+  const isLight = theme === 'light';
+
   // Get program levels from setup config
   const programLevels = useMemo(() => {
     return setupConfig?.programLevels || [];
@@ -1329,8 +1328,8 @@ export default function PracticePlans() {
       const weekNum = w.weekNum ? `week-${w.weekNum}` : weekName;
 
       return weekYear === year &&
-             weekPhase === phase?.toLowerCase() &&
-             (weekNum === weekParam?.toLowerCase() || weekName === weekParam?.toLowerCase() || w.id === weekParam);
+        weekPhase === phase?.toLowerCase() &&
+        (weekNum === weekParam?.toLowerCase() || weekName === weekParam?.toLowerCase() || w.id === weekParam);
     });
   }, [weeks, year, phase, weekParam, legacyWeekId, settings]);
 
@@ -1845,21 +1844,24 @@ export default function PracticePlans() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-slate-900">
+    <div className={`h-full flex flex-col ${isLight ? 'bg-white' : 'bg-slate-900'}`}>
       {/* Header */}
-      <div className="flex-shrink-0 border-b border-slate-700 bg-slate-800">
+      <div className={`flex-shrink-0 border-b ${isLight ? 'border-gray-200 bg-white' : 'border-slate-700 bg-slate-800'}`}>
         <div className="px-6 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link
                 to="/dashboard"
-                className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                className={`p-2 rounded-lg transition-colors ${isLight
+                  ? 'hover:bg-gray-100'
+                  : 'hover:bg-slate-700'
+                  }`}
               >
-                <ArrowLeft size={20} className="text-slate-400" />
+                <ArrowLeft size={20} className={isLight ? 'text-gray-400' : 'text-slate-400'} />
               </Link>
               <div>
-                <h1 className="text-lg font-bold text-white">Practice Planner</h1>
-                <p className="text-xs text-slate-400">
+                <h1 className={`text-lg font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>Practice Planner</h1>
+                <p className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
                   {week.name}{week.opponent ? ` vs ${week.opponent}` : ''}
                 </p>
               </div>
@@ -1876,11 +1878,10 @@ export default function PracticePlans() {
                       <button
                         key={day}
                         onClick={() => navigateToDay(day)}
-                        className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
-                          selectedDay === day
-                            ? 'bg-sky-600 text-white'
-                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                        }`}
+                        className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 ${selectedDay === day
+                          ? 'bg-sky-600 text-white'
+                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                          }`}
                       >
                         {DAY_ABBREV[day]}
                         {hasSegments && (
@@ -1923,21 +1924,19 @@ export default function PracticePlans() {
                 <div className="h-8 flex items-center bg-slate-700 rounded-lg p-0.5">
                   <button
                     onClick={() => setMode('plan')}
-                    className={`h-7 px-3 text-sm font-medium rounded-md transition-colors ${
-                      mode === 'plan'
-                        ? 'bg-sky-600 text-white'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
+                    className={`h-7 px-3 text-sm font-medium rounded-md transition-colors ${mode === 'plan'
+                      ? 'bg-sky-600 text-white'
+                      : 'text-slate-400 hover:text-white'
+                      }`}
                   >
                     Plans
                   </button>
                   <button
                     onClick={() => setMode('script')}
-                    className={`h-7 px-3 text-sm font-medium rounded-md transition-colors ${
-                      mode === 'script'
-                        ? 'bg-sky-600 text-white'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
+                    className={`h-7 px-3 text-sm font-medium rounded-md transition-colors ${mode === 'script'
+                      ? 'bg-sky-600 text-white'
+                      : 'text-slate-400 hover:text-white'
+                      }`}
                   >
                     Scripts
                   </button>
@@ -2005,11 +2004,10 @@ export default function PracticePlans() {
                     <select
                       value={currentPlan.timerSource || 'own'}
                       onChange={e => updateCurrentPlan({ timerSource: e.target.value })}
-                      className={`h-8 px-2 border rounded text-sm ${
-                        currentPlan.timerSource && currentPlan.timerSource !== 'own'
-                          ? 'bg-purple-500/20 border-purple-500/30 text-purple-300'
-                          : 'bg-slate-700 border-slate-600 text-white'
-                      }`}
+                      className={`h-8 px-2 border rounded text-sm ${currentPlan.timerSource && currentPlan.timerSource !== 'own'
+                        ? 'bg-purple-500/20 border-purple-500/30 text-purple-300'
+                        : 'bg-slate-700 border-slate-600 text-white'
+                        }`}
                     >
                       <option value="own">Own Timer</option>
                       <option value="varsity">Sync with Varsity</option>
@@ -2156,9 +2154,8 @@ export default function PracticePlans() {
                   {/* Warmup Row (Period 0) */}
                   {currentPlan.showPeriodZero !== false && (
                     <tr
-                      className={`border-b border-slate-700 ${
-                        selectedSegmentId === 'WARMUP' ? 'bg-sky-500/10' : 'bg-slate-800/50'
-                      } cursor-pointer hover:bg-slate-700/50`}
+                      className={`border-b border-slate-700 ${selectedSegmentId === 'WARMUP' ? 'bg-sky-500/10' : 'bg-slate-800/50'
+                        } cursor-pointer hover:bg-slate-700/50`}
                       onClick={() => setSelectedSegmentId('WARMUP')}
                     >
                       <td className="px-3 py-3 text-center">
@@ -2264,11 +2261,10 @@ export default function PracticePlans() {
                             e.stopPropagation();
                             setNotesModalSegmentId('WARMUP');
                           }}
-                          className={`w-full px-2 py-1.5 text-left text-sm rounded border transition-colors truncate ${
-                            hasNotes(currentPlan.warmupNotes)
-                              ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
-                              : 'bg-slate-700/50 border-slate-600 text-slate-500 italic'
-                          }`}
+                          className={`w-full px-2 py-1.5 text-left text-sm rounded border transition-colors truncate ${hasNotes(currentPlan.warmupNotes)
+                            ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                            : 'bg-slate-700/50 border-slate-600 text-slate-500 italic'
+                            }`}
                         >
                           {hasNotes(currentPlan.warmupNotes)
                             ? getNotesPreview(currentPlan.warmupNotes) || 'View notes...'
@@ -2292,9 +2288,8 @@ export default function PracticePlans() {
                   {currentPlan.segments.map((seg, index) => (
                     <tr
                       key={seg.id}
-                      className={`border-b border-slate-700 ${
-                        selectedSegmentId === seg.id ? 'bg-sky-500/10' : ''
-                      } cursor-pointer hover:bg-slate-700/50`}
+                      className={`border-b border-slate-700 ${selectedSegmentId === seg.id ? 'bg-sky-500/10' : ''
+                        } cursor-pointer hover:bg-slate-700/50`}
                       onClick={() => setSelectedSegmentId(seg.id)}
                     >
                       <td className="px-3 py-3 text-center">
@@ -2420,11 +2415,10 @@ export default function PracticePlans() {
                             e.stopPropagation();
                             setNotesModalSegmentId(seg.id);
                           }}
-                          className={`w-full px-2 py-1.5 text-left text-sm rounded border transition-colors truncate ${
-                            hasNotes(seg.notes)
-                              ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
-                              : 'bg-slate-700/50 border-slate-600 text-slate-500 italic'
-                          }`}
+                          className={`w-full px-2 py-1.5 text-left text-sm rounded border transition-colors truncate ${hasNotes(seg.notes)
+                            ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                            : 'bg-slate-700/50 border-slate-600 text-slate-500 italic'
+                            }`}
                         >
                           {hasNotes(seg.notes)
                             ? getNotesPreview(seg.notes) || 'View notes...'

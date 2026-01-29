@@ -11,6 +11,16 @@ export function PlayBankProvider({ children }) {
   const [singleSelectMode, setSingleSelectMode] = useState(false);
   const [selectedPlayId, setSelectedPlayId] = useState(null);
 
+  // Quick Add Event (Event-based communication)
+  const [quickAddRequest, setQuickAddRequest] = useState(null);
+
+  const triggerQuickAdd = useCallback((playId) => {
+    setQuickAddRequest({
+      playId,
+      timestamp: Date.now()
+    });
+  }, []);
+
   // Start batch selection mode
   const startBatchSelect = useCallback((callback, label = 'Add Selected') => {
     setBatchSelectCallback(() => callback);
@@ -65,7 +75,10 @@ export function PlayBankProvider({ children }) {
         startBatchSelect,
         handleBatchSelect,
         cancelBatchSelect,
-        // Single select for wristband
+        // One-click Add Event
+        quickAddRequest,
+        triggerQuickAdd,
+
         singleSelectMode,
         selectedPlayId,
         startSingleSelect,

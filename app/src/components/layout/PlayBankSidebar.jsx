@@ -48,7 +48,8 @@ export default function PlayBankSidebar({
     singleSelectMode,
     selectedPlayId: contextSelectedPlayId,
     selectPlayForAssign,
-    clearSelectedPlay
+    clearSelectedPlay,
+    triggerQuickAdd
   } = usePlayBank();
 
   // Local state
@@ -520,10 +521,23 @@ export default function PlayBankSidebar({
             )}
           </div>
         )}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 flex items-center justify-between">
           <div className={`font-medium truncate ${isBatchSelected ? 'text-sky-700' : (isSingleSelected ? 'text-emerald-700' : 'text-slate-800')}`}>
             {playCall}
           </div>
+          {/* Quick Add Button */}
+          {!isInBatchMode && !singleSelectMode && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                triggerQuickAdd(play.id);
+              }}
+              className="p-1 rounded-full hover:bg-slate-200 text-slate-400 hover:text-sky-600 transition-colors opacity-0 group-hover:opacity-100"
+              title="Add to active target"
+            >
+              <Plus size={14} />
+            </button>
+          )}
         </div>
         {/* Wristband slot indicator */}
         {wristbandSlot && (
