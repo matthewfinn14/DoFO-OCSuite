@@ -242,7 +242,9 @@ function PlayCallAutocomplete({ value, playId, plays, onSelectPlay, onChangeText
         />
         {(inputValue || playId) && (
           <button
-            onClick={() => {
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
               setInputValue('');
               setShowDropdown(false);
               onClear();
@@ -1299,7 +1301,7 @@ export default function PracticePlans() {
   const viewParam = searchParams.get('view'); // 'script' or null
   const navigate = useNavigate();
   const { weeks, updateWeek, setupConfig, updateSetupConfig, staff, settings, activeLevelId, playsArray, plays } = useSchool();
-  const { startBatchSelect } = usePlayBank();
+  const { startBatchSelect, quickAddRequest } = usePlayBank();
 
   // Theme detection
   const theme = settings?.theme || 'dark';
@@ -1319,7 +1321,7 @@ export default function PracticePlans() {
       // Legacy URL format: /week/:weekId/practice
       return weeks.find(w => w.id === legacyWeekId);
     }
-    // New URL format: /:year/:phase/:week/practice/:day
+    // New URL format: /planner/:year/:phase/:week
     // Find week by matching year, phase, and week number/name
     return weeks.find(w => {
       const weekYear = w.year || settings?.activeYear || new Date().getFullYear().toString();
@@ -1378,7 +1380,32 @@ export default function PracticePlans() {
   const [playSearchTerm, setPlaySearchTerm] = useState('');
   const [playFilterPhase, setPlayFilterPhase] = useState('OFFENSE');
 
-  // Get weekId for updates
+  // Stamping Mode State
+  const [stagedPlay, setStagedPlay] = useState(null);
+  const lastQuickAddRef = useRef(0);
+
+  // Handle Quick Add Request -> Stamping Mode
+  useEffect(() => {
+    if (quickAddRequest && quickAddRequest.timestamp > lastQuickAddRef.current) {
+      lastQuickAddRef.current = quickAddRequest.timestamp;
+      if (mode === 'script' || selectedSegmentId) {
+        const play = plays?.[quickAddRequest.playId];
+        if (play) {
+          setStagedPlay(play);
+        }
+      }
+    }
+  }, [quickAddRequest, plays, mode, selectedSegmentId]);
+
+  // Clear staged play on Escape
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setStagedPlay(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const weekId = week?.id;
 
   // Get practice plans from week (with defaults)
@@ -1619,6 +1646,33 @@ export default function PracticePlans() {
     );
     updateSegment(segmentId, 'script', newScript);
   }, [currentPlan, updateSegment]);
+
+  // Update multiple fields in a script row atomically
+  const updateScriptRowFields = useCallback((segmentId, rowId, updates) => {
+    const segment = currentPlan.segments.find(s => s.id === segmentId);
+    if (!segment?.script) return;
+
+    const newScript = segment.script.map(row =>
+      row.id === rowId ? { ...row, ...updates } : row
+    );
+    updateSegment(segmentId, 'script', newScript);
+  }, [currentPlan, updateSegment]);
+
+  // Format Play Call string (Wristband Formation Name)
+  const formatPlayCall = useCallback((play) => {
+    if (!play) return '';
+
+    const parts = [];
+    const wb = getWristbandDisplay(play);
+    if (wb) parts.push(wb);
+
+    // Check multiple properties for formation
+    const formation = play.formation || play.formationId || play.front;
+    if (formation) parts.push(formation.toUpperCase());
+
+    parts.push(play.name);
+    return parts.join(' ');
+  }, []);
 
   // Add a script row to a segment
   const addScriptRow = useCallback((segmentId) => {
@@ -1971,6 +2025,29 @@ export default function PracticePlans() {
           </div>
         </div>
       </div>
+
+      {/* Stamping Mode Banner */}
+      {stagedPlay && (
+        <div className="bg-indigo-600 px-4 py-2 flex items-center justify-between text-white shadow-lg z-10 shrink-0 animate-in slide-in-from-top-2">
+          <div className="flex items-center gap-3">
+            <span className="font-bold px-2 py-0.5 bg-white text-indigo-700 rounded text-xs uppercase tracking-wide shadow-sm">Stamping Mode</span>
+            <span className="text-sm flex items-center gap-2">
+              Click any play call slot to assign
+              <span className="font-semibold bg-indigo-700 px-2 py-0.5 rounded border border-indigo-500 flex items-center gap-1">
+                {getWristbandDisplay && getWristbandDisplay(stagedPlay) ? (
+                  <span className="text-[0.65rem] bg-sky-400 text-sky-950 px-1 rounded font-bold">#{getWristbandDisplay(stagedPlay)}</span>
+                ) : null}
+                {stagedPlay.name}
+                {stagedPlay.formation && <span className="opacity-75 font-normal text-xs">({stagedPlay.formation})</span>}
+              </span>
+            </span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-xs opacity-75 hidden sm:inline">Press ESC to cancel</span>
+            <button onClick={() => setStagedPlay(null)} className="p-1 hover:bg-white/20 rounded-full transition-colors"><X size={16} /></button>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-6">
@@ -2603,23 +2680,76 @@ export default function PracticePlans() {
                                       className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs placeholder-slate-500"
                                     />
                                   </td>
-                                  <td className="px-2 py-2">
+                                  <td
+                                    className="px-2 py-2"
+                                    onDragOver={(e) => {
+                                      e.preventDefault();
+                                      e.currentTarget.style.background = '#334155';
+                                    }}
+                                    onDragLeave={(e) => {
+                                      e.currentTarget.style.background = 'transparent';
+                                    }}
+                                    onDrop={(e) => {
+                                      e.preventDefault();
+                                      e.currentTarget.style.background = 'transparent';
+
+                                      let playId = e.dataTransfer.getData('text/plain');
+                                      let play = null;
+
+                                      // Check for Sidebar Play Drop (application/react-dnd)
+                                      if (!playId) {
+                                        const playData = e.dataTransfer.getData('application/react-dnd');
+                                        if (playData) {
+                                          try {
+                                            const parsed = JSON.parse(playData);
+                                            if (parsed.playId) playId = parsed.playId;
+                                          } catch (err) {
+                                            console.error('Error parsing drop data:', err);
+                                          }
+                                        }
+                                      }
+
+                                      if (playId) play = getPlay(playId);
+
+                                      if (play) {
+                                        updateScriptRowFields(seg.id, row.id, {
+                                          playId: play.id,
+                                          playName: formatPlayCall(play)
+                                        });
+                                      }
+                                    }}
+                                    onClick={(e) => {
+                                      // Click-to-assign (Stamping)
+                                      if (stagedPlay) {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        updateScriptRowFields(seg.id, row.id, {
+                                          playId: stagedPlay.id,
+                                          playName: formatPlayCall(stagedPlay)
+                                        });
+                                      }
+                                    }}
+                                    style={{ cursor: stagedPlay ? 'copy' : 'text' }}
+                                  >
                                     <PlayCallAutocomplete
                                       value={row.playName || ''}
                                       playId={row.playId}
                                       plays={playsArray}
                                       onSelectPlay={(play) => {
-                                        updateScriptRow(seg.id, row.id, 'playId', play.id);
-                                        updateScriptRow(seg.id, row.id, 'playName', play.name);
+                                        updateScriptRowFields(seg.id, row.id, {
+                                          playId: play.id,
+                                          playName: formatPlayCall(play)
+                                        });
                                       }}
                                       onChangeText={(text) => {
-                                        updateScriptRow(seg.id, row.id, 'playName', text);
-                                        // Clear playId if typing custom text
-                                        if (row.playId) updateScriptRow(seg.id, row.id, 'playId', '');
+                                        if (row.playId) {
+                                          updateScriptRowFields(seg.id, row.id, { playName: text, playId: '' });
+                                        } else {
+                                          updateScriptRow(seg.id, row.id, 'playName', text);
+                                        }
                                       }}
                                       onClear={() => {
-                                        updateScriptRow(seg.id, row.id, 'playId', '');
-                                        updateScriptRow(seg.id, row.id, 'playName', '');
+                                        updateScriptRowFields(seg.id, row.id, { playId: '', playName: '' });
                                       }}
                                     />
                                   </td>
