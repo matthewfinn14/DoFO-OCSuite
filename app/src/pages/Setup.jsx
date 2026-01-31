@@ -1543,6 +1543,7 @@ export default function Setup() {
               qcPlayPurposes={localConfig.qcPlayPurposes || []}
               onUpdate={updateLocal}
               isLight={isLight}
+              segmentFocusMode={localConfig.segmentFocusMode || 'all'}
             />
           )}
 
@@ -5719,11 +5720,18 @@ function SegmentFocusTab({
   shiftMotions,
   qcPlayPurposes,
   onUpdate,
-  isLight = false
+  isLight = false,
+  segmentFocusMode = 'all' // 'all' or 'manual'
 }) {
   const [selectedPhase, setSelectedPhase] = useState('O');
   const [selectedTypeId, setSelectedTypeId] = useState(null);
   const [customName, setCustomName] = useState('');
+
+  // Toggle focus mode
+  const toggleFocusMode = () => {
+    const newMode = segmentFocusMode === 'all' ? 'manual' : 'all';
+    onUpdate('segmentFocusMode', newMode);
+  };
 
   // Get segment types for selected phase
   const phaseSegmentTypes = segmentTypes[selectedPhase] || [];
@@ -5850,14 +5858,58 @@ function SegmentFocusTab({
   return (
     <div>
       <div className="mb-4">
-        <h3 className={`text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>Segment Focus Items</h3>
-        <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
-          Configure focus options for each segment type. These appear as selectable focuses when building practice plans.
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className={`text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>Segment Focus Items</h3>
+            <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+              Configure focus options for each segment type. These appear as selectable focuses when building practice plans.
+            </p>
+          </div>
+
+          {/* Mode Toggle */}
+          <div className={`flex items-center gap-3 p-3 rounded-lg ${isLight ? 'bg-gray-50 border border-gray-200' : 'bg-slate-700/50'}`}>
+            <span className={`text-sm ${segmentFocusMode === 'all' ? (isLight ? 'text-gray-900 font-medium' : 'text-white font-medium') : (isLight ? 'text-gray-400' : 'text-slate-500')}`}>
+              All Available
+            </span>
+            <button
+              onClick={toggleFocusMode}
+              className={`relative w-12 h-6 rounded-full transition-colors ${
+                segmentFocusMode === 'manual'
+                  ? 'bg-sky-600'
+                  : isLight ? 'bg-gray-300' : 'bg-slate-600'
+              }`}
+            >
+              <span
+                className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                  segmentFocusMode === 'manual' ? 'translate-x-7' : 'translate-x-1'
+                }`}
+              />
+            </button>
+            <span className={`text-sm ${segmentFocusMode === 'manual' ? (isLight ? 'text-gray-900 font-medium' : 'text-white font-medium') : (isLight ? 'text-gray-400' : 'text-slate-500')}`}>
+              By Segment
+            </span>
+          </div>
+        </div>
       </div>
 
-      {/* Phase Selector */}
-      <div className="flex gap-2 mb-4">
+      {segmentFocusMode === 'all' ? (
+        /* All Options Mode */
+        <div className={`rounded-lg p-6 text-center ${isLight ? 'bg-emerald-50 border border-emerald-200' : 'bg-emerald-900/20 border border-emerald-800'}`}>
+          <Check size={48} className={`mx-auto mb-3 ${isLight ? 'text-emerald-500' : 'text-emerald-400'}`} />
+          <h4 className={`text-lg font-semibold mb-2 ${isLight ? 'text-emerald-700' : 'text-emerald-300'}`}>
+            All Focus Options Available
+          </h4>
+          <p className={`text-sm ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`}>
+            All defined situations, play buckets, concept groups, formations, and other items will be available as focus options when building practice plans for any segment type.
+          </p>
+          <p className={`text-xs mt-3 ${isLight ? 'text-emerald-500' : 'text-emerald-500'}`}>
+            Switch to "By Segment" mode to manually configure which focus options appear for each segment type.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Phase Selector */}
+          <div className="flex gap-2 mb-4">
         {PRACTICE_PHASES.map(phase => (
           <button
             key={phase.id}
@@ -6073,6 +6125,8 @@ function SegmentFocusTab({
           )}
         </div>
       </div>
+        </>
+      )}
     </div>
   );
 }
