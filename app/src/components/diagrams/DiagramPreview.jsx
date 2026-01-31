@@ -310,6 +310,23 @@ export default function DiagramPreview({
               fill={shapeColor}
             />
           );
+        } else if (el.shapeType === 'textbox') {
+          const text = el.text || 'Text';
+          const fontSize = 24;
+          shapeElement = (
+            <text
+              x={x}
+              y={y}
+              dy="0.35em"
+              textAnchor="middle"
+              fontSize={fontSize}
+              fontWeight="bold"
+              fill={shapeColor}
+              style={{ fontFamily: 'Arial, sans-serif' }}
+            >
+              {text}
+            </text>
+          );
         }
 
         return <g key={key}>{shapeElement}</g>;

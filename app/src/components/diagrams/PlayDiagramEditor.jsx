@@ -66,6 +66,7 @@ const SHAPES = [
   { id: 'arrow-right', label: 'Arrow Right', icon: '→' },
   { id: 'triangle-up', label: 'Triangle Up', icon: '▲' },
   { id: 'triangle-down', label: 'Triangle Down', icon: '▼' },
+  { id: 'textbox', label: 'Text Box', icon: 'T' },
 ];
 
 // Default position colors (fallback only - user's positionColors from setup take precedence)
@@ -686,16 +687,33 @@ export default function PlayDiagramEditor({
 
     // Shape placement
     if (selectedTool === 'shape') {
-      const newShape = {
-        id: Date.now(),
-        type: 'shape',
-        shapeType: selectedShape,
-        points: [point],
-        color: color
-      };
-      const newElements = [...elements, newShape];
-      setElements(newElements);
-      updateHistory(newElements);
+      // For textbox, prompt for text first
+      if (selectedShape === 'textbox') {
+        const text = prompt('Enter text:');
+        if (!text || !text.trim()) return;
+        const newShape = {
+          id: Date.now(),
+          type: 'shape',
+          shapeType: 'textbox',
+          points: [point],
+          color: color,
+          text: text.trim()
+        };
+        const newElements = [...elements, newShape];
+        setElements(newElements);
+        updateHistory(newElements);
+      } else {
+        const newShape = {
+          id: Date.now(),
+          type: 'shape',
+          shapeType: selectedShape,
+          points: [point],
+          color: color
+        };
+        const newElements = [...elements, newShape];
+        setElements(newElements);
+        updateHistory(newElements);
+      }
     }
   };
 
@@ -1240,6 +1258,24 @@ export default function PlayDiagramEditor({
             fill={shapeColor}
           />
         );
+      } else if (el.shapeType === 'textbox') {
+        // Text box with transparent background
+        const text = el.text || 'Text';
+        const fontSize = 24;
+        shapeElement = (
+          <text
+            x={x}
+            y={y}
+            dy="0.35em"
+            textAnchor="middle"
+            fontSize={fontSize}
+            fontWeight="bold"
+            fill={shapeColor}
+            style={{ fontFamily: 'Arial, sans-serif', pointerEvents: 'none', userSelect: 'none' }}
+          >
+            {text}
+          </text>
+        );
       }
 
       return (
@@ -1693,7 +1729,7 @@ export default function PlayDiagramEditor({
                       setSelectedTool('line');
                     }
                   }}
-                  className={`px-2 py-1 text-xs rounded ${lineStyle === style.id ? 'bg-amber-500 text-white' : 'bg-slate-600 text-slate-200'}`}
+                  className={`px-2 py-1 text-xs rounded ${(selectedTool === 'line' || selectedSegment || elements.some(el => selectedIds.has(el.id) && el.type === 'poly')) && lineStyle === style.id ? 'bg-amber-500 text-white' : 'bg-slate-600 text-slate-200'}`}
                   title={style.title}
                 >
                   {style.content}
@@ -1734,7 +1770,7 @@ export default function PlayDiagramEditor({
                       setSelectedTool('line');
                     }
                   }}
-                  className={`px-2 py-1 text-xs rounded ${endType === opt.id ? 'bg-amber-500 text-white' : 'bg-slate-600 text-slate-200'}`}
+                  className={`px-2 py-1 text-xs rounded ${(selectedTool === 'line' || selectedSegment || elements.some(el => selectedIds.has(el.id) && el.type === 'poly')) && endType === opt.id ? 'bg-amber-500 text-white' : 'bg-slate-600 text-slate-200'}`}
                   title={opt.title}
                 >
                   {opt.label}
