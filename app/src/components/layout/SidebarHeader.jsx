@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import SchoolSwitcher from './SchoolSwitcher';
 
 export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'dark' }) {
-  const { school, activeYear, globalWeekTemplates, weeks, currentWeekId, setCurrentWeekId, setupConfig, programLevels, activeLevelId, setActiveLevelId } = useSchool();
+  const { school, settings, activeYear, globalWeekTemplates, weeks, currentWeekId, setCurrentWeekId, setupConfig, programLevels, activeLevelId, setActiveLevelId } = useSchool();
   const { user, isHeadCoach, isTeamAdmin, isSiteAdmin } = useAuth();
 
   // Get program levels from setupConfig (they're stored there when edited in Setup)
@@ -201,9 +201,9 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
           {/* School Name and Logo */}
           {school?.name && (
             <div className="mb-2 flex items-center gap-2">
-              {school.settings?.teamLogo && (
+              {settings?.teamLogo && (
                 <img
-                  src={school.settings.teamLogo}
+                  src={settings.teamLogo}
                   alt="School Logo"
                   className="h-8 w-8 object-contain rounded"
                 />

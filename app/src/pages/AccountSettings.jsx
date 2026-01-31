@@ -165,13 +165,15 @@ export default function AccountSettings() {
     }
   };
 
+  const isLight = theme === 'light';
+
   return (
     <div className="p-8 max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-8">
-        <Settings size={32} className="text-sky-400" />
+        <Settings size={32} className="text-sky-500" />
         <div>
-          <h1 className="text-2xl font-bold text-white">Settings</h1>
-          <p className="text-slate-400 text-sm">Customize your experience</p>
+          <h1 className={`text-2xl font-bold ${isLight ? 'text-gray-800' : 'text-white'}`}>Settings</h1>
+          <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>Customize your experience</p>
         </div>
       </div>
 
@@ -191,21 +193,21 @@ export default function AccountSettings() {
       )}
 
       {/* Theme Section - Available to all users */}
-      <section className="bg-slate-800/50 rounded-lg p-6 mb-6">
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Palette size={20} className="text-slate-400" />
+      <section className={`rounded-lg p-6 mb-6 border ${isLight ? 'bg-white border-gray-200 shadow-sm' : 'bg-slate-800/50 border-slate-700'}`}>
+        <h2 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isLight ? 'text-gray-800' : 'text-white'}`}>
+          <Palette size={20} className={isLight ? 'text-gray-400' : 'text-slate-400'} />
           Display Theme
         </h2>
 
         <div className="mb-4">
-          <p className="text-slate-400 text-sm mb-4">Choose your preferred display mode.</p>
+          <p className={`text-sm mb-4 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>Choose your preferred display mode.</p>
           <div className="flex gap-3">
             <button
               onClick={() => setTheme('dark')}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
                 theme === 'dark'
                   ? 'bg-sky-600 text-white'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  : (isLight ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-slate-700 text-slate-300 hover:bg-slate-600')
               }`}
             >
               <Moon size={18} />
@@ -216,7 +218,7 @@ export default function AccountSettings() {
               className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
                 theme === 'light'
                   ? 'bg-sky-600 text-white'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  : (isLight ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-slate-700 text-slate-300 hover:bg-slate-600')
               }`}
             >
               <Sun size={18} />
@@ -236,15 +238,15 @@ export default function AccountSettings() {
 
       {/* Team Logo Section - Admin only */}
       {canEditAdvanced && (
-        <section className="bg-slate-800/50 rounded-lg p-6 mb-6">
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <ImageIcon size={20} className="text-slate-400" />
+        <section className={`rounded-lg p-6 mb-6 border ${isLight ? 'bg-white border-gray-200 shadow-sm' : 'bg-slate-800/50 border-slate-700'}`}>
+          <h2 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isLight ? 'text-gray-800' : 'text-white'}`}>
+            <ImageIcon size={20} className={isLight ? 'text-gray-400' : 'text-slate-400'} />
             Team Logo
           </h2>
 
           <div className="flex items-start gap-6">
             {/* Current logo preview */}
-            <div className="w-24 h-24 bg-slate-700 rounded-lg flex items-center justify-center overflow-hidden border-2 border-slate-600">
+            <div className={`w-24 h-24 rounded-lg flex items-center justify-center overflow-hidden border-2 ${isLight ? 'bg-gray-100 border-gray-300' : 'bg-slate-700 border-slate-600'}`}>
               {settings?.teamLogo ? (
                 <img
                   src={settings.teamLogo}
@@ -252,12 +254,12 @@ export default function AccountSettings() {
                   className="w-full h-full object-contain"
                 />
               ) : (
-                <ImageIcon size={32} className="text-slate-500" />
+                <ImageIcon size={32} className={isLight ? 'text-gray-400' : 'text-slate-500'} />
               )}
             </div>
 
             <div className="flex-1">
-              <p className="text-slate-400 text-sm mb-4">
+              <p className={`text-sm mb-4 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
                 Upload your team logo. It will appear in the sidebar and on printed materials.
                 Recommended size: 400x400px or larger. Max file size: 5MB.
               </p>
@@ -284,7 +286,7 @@ export default function AccountSettings() {
                   <button
                     onClick={handleRemoveLogo}
                     disabled={uploading}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-red-600 hover:text-white transition-colors disabled:opacity-50"
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-red-600 hover:text-white transition-colors disabled:opacity-50 ${isLight ? 'bg-gray-100 text-gray-600' : 'bg-slate-700 text-slate-300'}`}
                   >
                     <Trash2 size={18} />
                     <span>Remove</span>
@@ -298,14 +300,14 @@ export default function AccountSettings() {
 
       {/* Accent Color Section - Admin only */}
       {canEditAdvanced && (
-        <section className="bg-slate-800/50 rounded-lg p-6 mb-6">
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Palette size={20} className="text-slate-400" />
+        <section className={`rounded-lg p-6 mb-6 border ${isLight ? 'bg-white border-gray-200 shadow-sm' : 'bg-slate-800/50 border-slate-700'}`}>
+          <h2 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isLight ? 'text-gray-800' : 'text-white'}`}>
+            <Palette size={20} className={isLight ? 'text-gray-400' : 'text-slate-400'} />
             Accent Color
           </h2>
 
           <div className="mb-4">
-            <p className="text-slate-400 text-sm mb-4">
+            <p className={`text-sm mb-4 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
               Choose a custom accent color for your team's branding throughout the app.
             </p>
             <div className="flex items-center gap-4">
@@ -313,13 +315,13 @@ export default function AccountSettings() {
                 type="color"
                 value={accentColor}
                 onChange={(e) => setAccentColor(e.target.value)}
-                className="w-12 h-12 rounded-lg cursor-pointer border-2 border-slate-600"
+                className={`w-12 h-12 rounded-lg cursor-pointer border-2 ${isLight ? 'border-gray-300' : 'border-slate-600'}`}
               />
               <input
                 type="text"
                 value={accentColor}
                 onChange={(e) => setAccentColor(e.target.value)}
-                className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white font-mono text-sm w-32"
+                className={`px-3 py-2 border rounded-lg font-mono text-sm w-32 ${isLight ? 'bg-gray-100 border-gray-300 text-gray-800' : 'bg-slate-700 border-slate-600 text-white'}`}
                 placeholder="#0ea5e9"
               />
               <div
@@ -342,20 +344,20 @@ export default function AccountSettings() {
       )}
 
       {/* School Info (Read-only) */}
-      <section className="bg-slate-800/50 rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">School Information</h2>
+      <section className={`rounded-lg p-6 border ${isLight ? 'bg-white border-gray-200 shadow-sm' : 'bg-slate-800/50 border-slate-700'}`}>
+        <h2 className={`text-lg font-semibold mb-4 ${isLight ? 'text-gray-800' : 'text-white'}`}>School Information</h2>
         <dl className="space-y-3">
           <div>
-            <dt className="text-sm text-slate-400">School Name</dt>
-            <dd className="text-white">{school?.name || 'Not set'}</dd>
+            <dt className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>School Name</dt>
+            <dd className={isLight ? 'text-gray-800' : 'text-white'}>{school?.name || 'Not set'}</dd>
           </div>
           <div>
-            <dt className="text-sm text-slate-400">Mascot</dt>
-            <dd className="text-white">{school?.mascot || 'Not set'}</dd>
+            <dt className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>Mascot</dt>
+            <dd className={isLight ? 'text-gray-800' : 'text-white'}>{school?.mascot || 'Not set'}</dd>
           </div>
           <div>
-            <dt className="text-sm text-slate-400">School ID</dt>
-            <dd className="text-slate-500 font-mono text-sm">{currentSchool?.id}</dd>
+            <dt className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>School ID</dt>
+            <dd className={`font-mono text-sm ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>{currentSchool?.id}</dd>
           </div>
         </dl>
       </section>
