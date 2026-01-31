@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
 import { usePlayBank } from '../context/PlayBankContext';
 import { getWristbandDisplay } from '../utils/wristband';
+import { getPlayCall } from '../utils/playDisplay';
 import SheetView from '../components/gameplan/SheetView';
 import FZDnDView from '../components/gameplan/FZDnDView';
 import MatrixView from '../components/gameplan/MatrixView';
@@ -975,7 +976,8 @@ export default function GamePlan() {
 
   const getPlayDisplayName = useCallback((play) => {
     if (!play) return '';
-    return play.name || play.playCall || '';
+    // Always include formation with the play name
+    return getPlayCall(play);
   }, []);
 
   // Print handler

@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Trash2, Plus, GripVertical } from 'lucide-react';
+import { getPlayCall } from '../../utils/playDisplay';
 
 export default function SheetView({
   layouts,
@@ -153,7 +154,7 @@ export default function SheetView({
                     borderRight: cIdx < cols - 1 ? '1px solid #e2e8f0' : 'none',
                     borderBottom: '1px dotted #e2e8f0',
                     wordBreak: 'break-word'
-                  }} title={play ? play.name : ''}>
+                  }} title={play ? getPlayCall(play) : ''}>
                     {play ? (
                       <span style={{ display: 'inline', lineHeight: '1.2' }}>
                         <span style={{ fontWeight: '500' }}>{getPlayDisplayName(play)}</span>
@@ -229,7 +230,7 @@ export default function SheetView({
                     fontSize: '0.65rem',
                     wordBreak: 'break-word'
                   }}>
-                    {play.name}
+                    {getPlayCall(play)}
                     {getWristbandLabel(play) && (
                       <span style={{
                         marginLeft: '3px',
@@ -385,10 +386,7 @@ export default function SheetView({
             }}>
               {pIdx + 1}.
             </span>
-            <span style={{ fontWeight: '600', color: '#1e293b' }}>{p.name}</span>
-            {p.formation && (
-              <span style={{ color: '#64748b', fontSize: '0.65rem' }}>({p.formation})</span>
-            )}
+            <span style={{ fontWeight: '600', color: '#1e293b' }}>{getPlayCall(p)}</span>
           </div>
         ))}
       </div>

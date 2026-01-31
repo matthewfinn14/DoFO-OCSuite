@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useSchool } from '../context/SchoolContext';
 import { usePlayBank } from '../context/PlayBankContext';
 import { getWristbandDisplay } from '../utils/wristband';
+import { getPlayCall } from '../utils/playDisplay';
 import {
   ArrowLeft,
   Plus,
@@ -182,7 +183,7 @@ function PlayCallAutocomplete({ id, value, playId, plays, onSelectPlay, onChange
 
   // Handle play selection
   const handleSelect = (play) => {
-    setInputValue(play.name);
+    setInputValue(getPlayCall(play));
     setShowDropdown(false);
     onSelectPlay(play);
   };
@@ -209,7 +210,7 @@ function PlayCallAutocomplete({ id, value, playId, plays, onSelectPlay, onChange
   useEffect(() => {
     if (playId) {
       const play = plays.find(p => p.id === playId);
-      if (play) setInputValue(play.name);
+      if (play) setInputValue(getPlayCall(play));
     } else {
       setInputValue(value || '');
     }
@@ -272,16 +273,13 @@ function PlayCallAutocomplete({ id, value, playId, plays, onSelectPlay, onChange
                 }`}
             >
               <div className="flex items-center gap-2">
-                <span className="text-white font-medium">{play.name}</span>
+                <span className="text-white font-medium">{getPlayCall(play)}</span>
                 {getWristbandDisplay(play) && (
                   <span className="text-xs font-bold text-sky-300 bg-sky-900/50 px-1 py-0.5 rounded">
                     {getWristbandDisplay(play)}
                   </span>
                 )}
               </div>
-              {play.formation && (
-                <div className="text-slate-400 text-xs">{play.formation}</div>
-              )}
             </button>
           ))}
         </div>
@@ -1800,7 +1798,7 @@ export default function PracticePlans() {
 
     const newScript = segment.script.map(row =>
       row.id === activeScriptRowId
-        ? { ...row, playId: play.id, playName: play.name }
+        ? { ...row, playId: play.id, playName: getPlayCall(play) }
         : row
     );
     updateSegment(activeScriptSegmentId, 'script', newScript);
@@ -2982,17 +2980,18 @@ export default function PracticePlans() {
                       className="p-3 bg-slate-800 rounded-lg hover:bg-slate-700 text-left transition-colors"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-white">{play.name}</span>
+                        <span className="font-medium text-white">{getPlayCall(play)}</span>
                         {getWristbandDisplay(play) && (
                           <span className="text-xs font-bold text-sky-300 bg-sky-900/50 px-1 py-0.5 rounded">
                             {getWristbandDisplay(play)}
                           </span>
                         )}
                       </div>
-                      <div className="text-sm text-slate-500 mt-1">
-                        {play.formation && <span>{play.formation}</span>}
-                        {play.bucket && <span> • {play.bucket}</span>}
-                      </div>
+                      {play.bucket && (
+                        <div className="text-sm text-slate-500 mt-1">
+                          <span>{play.bucket}</span>
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>

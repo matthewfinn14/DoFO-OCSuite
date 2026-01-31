@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { ChevronDown, ChevronRight, GripVertical, Hash, User, X, Plus, Trash2 } from 'lucide-react';
+import { getPlayCall } from '../../utils/playDisplay';
 
 // Default positions for offense (used if no setupConfig)
 const DEFAULT_OFFENSE_POSITIONS = [
@@ -519,7 +520,7 @@ export default function PlayerView({
                                           <GripVertical size={12} className="text-slate-600 flex-shrink-0" />
                                         )}
                                         <span className="flex-1 truncate text-white">
-                                          {play.name}
+                                          {getPlayCall(play)}
                                         </span>
                                         {getWristbandLabel(play) && (
                                           <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-sky-500/20 text-sky-400 text-xs rounded flex-shrink-0">

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { getPlayCall } from '../../utils/playDisplay';
 
 // Default zone configuration
 const DEFAULT_ZONES = [
@@ -76,11 +77,16 @@ export default function FZDnDView({
     setAutocomplete({ zoneId: null, rowIdx: null, colIdx: null, query: '' });
   };
 
-  // Filter plays based on query
+  // Filter plays based on query (search both formation and name)
   const getFilteredPlays = (query) => {
     if (!query) return [];
+    const q = query.toLowerCase();
     return plays
-      .filter(p => p.name?.toLowerCase().includes(query.toLowerCase()))
+      .filter(p =>
+        p.name?.toLowerCase().includes(q) ||
+        p.formation?.toLowerCase().includes(q) ||
+        getPlayCall(p).toLowerCase().includes(q)
+      )
       .slice(0, 10);
   };
 
@@ -392,7 +398,7 @@ export default function FZDnDView({
                                         textOverflow: 'ellipsis',
                                         whiteSpace: 'nowrap'
                                       }}>
-                                        {play.name}
+                                        {getPlayCall(play)}
                                       </span>
                                       {getWristbandLabel(play) && (
                                         <span style={{
@@ -507,7 +513,7 @@ export default function FZDnDView({
                                             onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
                                             onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
                                           >
-                                            {p.name}
+                                            {getPlayCall(p)}
                                           </div>
                                         ))}
                                       </div>

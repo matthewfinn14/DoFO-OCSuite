@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { getPlayCall } from '../../utils/playDisplay';
 
 // Default matrix configuration
 const DEFAULT_MATRIX = {
@@ -79,11 +80,16 @@ export default function MatrixView({
     setAutocomplete({ setId: null, query: '' });
   };
 
-  // Filter plays based on query
+  // Filter plays based on query (search both formation and name)
   const getFilteredPlays = (query) => {
     if (!query) return [];
+    const q = query.toLowerCase();
     return plays
-      .filter(p => p.name?.toLowerCase().includes(query.toLowerCase()))
+      .filter(p =>
+        p.name?.toLowerCase().includes(q) ||
+        p.formation?.toLowerCase().includes(q) ||
+        getPlayCall(p).toLowerCase().includes(q)
+      )
       .slice(0, 10);
   };
 
@@ -114,7 +120,7 @@ export default function MatrixView({
               whiteSpace: 'nowrap',
               flex: 1
             }}>
-              {play.name}
+              {getPlayCall(play)}
             </span>
             {getWristbandLabel(play) && (
               <span style={{
@@ -207,7 +213,7 @@ export default function MatrixView({
                     onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
                     onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
                   >
-                    {p.name}
+                    {getPlayCall(p)}
                   </div>
                 ))}
               </div>

@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { ChevronDown, ChevronRight, GripVertical, Star, Hash } from 'lucide-react';
+import { getPlayCall } from '../../utils/playDisplay';
 
 export default function InstallView({
   currentWeek,
@@ -376,13 +377,8 @@ export default function InstallView({
                                   {/* Play Name */}
                                   <div className="flex-1 min-w-0">
                                     <div className="font-medium text-white truncate">
-                                      {play.name}
+                                      {getPlayCall(play)}
                                     </div>
-                                    {play.formation && (
-                                      <div className="text-xs text-slate-500 truncate">
-                                        {play.formation}
-                                      </div>
-                                    )}
                                   </div>
 
                                   {/* Wristband Slot */}

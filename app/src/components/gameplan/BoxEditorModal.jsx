@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { X, Search, Trash2, GripVertical, ChevronUp, ChevronDown, ArrowRight, Plus, Hash, CheckSquare } from 'lucide-react';
 import { usePlayBank } from '../../context/PlayBankContext';
+import { getPlayCall } from '../../utils/playDisplay';
 
 export default function BoxEditorModal({
   box,
@@ -450,13 +451,8 @@ export default function BoxEditorModal({
                 >
                   <div>
                     <div style={{ fontWeight: '500', color: '#1e293b', fontSize: '0.875rem' }}>
-                      {play.name}
+                      {getPlayCall(play)}
                     </div>
-                    {play.formation && (
-                      <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                        {play.formation}
-                      </div>
-                    )}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     {getWristbandLabel && getWristbandLabel(play) && (
@@ -616,13 +612,8 @@ export default function BoxEditorModal({
                         overflow: 'hidden',
                         textOverflow: 'ellipsis'
                       }}>
-                        {play.name}
+                        {getPlayCall(play)}
                       </div>
-                      {play.formation && (
-                        <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
-                          {play.formation}
-                        </div>
-                      )}
                     </div>
 
                     {getWristbandLabel && getWristbandLabel(play) && (
@@ -1117,7 +1108,7 @@ export default function BoxEditorModal({
                           overflow: 'hidden',
                           textOverflow: 'ellipsis'
                         }}>
-                          {play.name}
+                          {getPlayCall(play)}
                         </span>
                         {getWristbandLabel && getWristbandLabel(play) && (
                           <span style={{
