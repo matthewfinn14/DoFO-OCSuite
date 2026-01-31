@@ -484,20 +484,20 @@ export default function PlayDiagramEditor({
 
   // Add single player to diagram (for wiz-skill mode)
   const addSinglePlayer = (positionKey) => {
-    const wizCenter = 377;
-    const wizLos = 300;
+    const wizCenter = 475;
+    const wizLos = 390;
     const getColor = (label) => positionColors[label] || DEFAULT_POSITION_COLORS[label] || '#3b82f6';
 
     const isOL = ['C', 'LT', 'LG', 'RG', 'RT'].includes(positionKey);
     const newPlayer = {
       id: Date.now(),
       type: 'player',
-      points: [{ x: wizCenter, y: wizLos + (isOL ? 15 : 60) }],
+      points: [{ x: wizCenter, y: wizLos + (isOL ? 0 : 60) }],
       color: getColor(positionKey),
       label: positionNames[positionKey] || positionKey,
       shape: isOL ? 'text-only' : 'circle',
       variant: 'filled',
-      fontSize: isOL ? 24 : undefined
+      fontSize: isOL ? 50 : undefined
     };
 
     const newElements = [...elements, newPlayer];
@@ -797,8 +797,8 @@ export default function PlayDiagramEditor({
   // Snap all players to their default positions (keeps routes/lines intact)
   // Uses customDefaultPositions if set, otherwise falls back to SKILL_POSITION_PLACEMENTS
   const snapToDefaultPositions = () => {
-    const wizCenter = 450;
-    const wizLos = 210;
+    const wizCenter = 475;
+    const wizLos = 390;
     const olSpacing = 38;
 
     const newElements = elements.map(el => {
