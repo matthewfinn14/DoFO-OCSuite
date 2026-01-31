@@ -263,10 +263,10 @@ export default function DiagramPreview({
         } else if (el.shapeType === 'arrow-left') {
           const arrowLen = size * 3;
           const arrowHead = size * 0.8;
-          const strokeW = 3;
+          const strokeW = 5;
           shapeElement = (
             <g>
-              <line x1={x + arrowLen/2} y1={y} x2={x - arrowLen/2 + arrowHead} y2={y} stroke={shapeColor} strokeWidth="6" />
+              <line x1={x + arrowLen/2} y1={y} x2={x - arrowLen/2 + arrowHead} y2={y} stroke={shapeColor} strokeWidth="10" />
               <polygon
                 points={`${x - arrowLen/2},${y} ${x - arrowLen/2 + arrowHead},${y - arrowHead/2} ${x - arrowLen/2 + arrowHead},${y + arrowHead/2}`}
                 fill="none"
@@ -279,10 +279,10 @@ export default function DiagramPreview({
         } else if (el.shapeType === 'arrow-right') {
           const arrowLen = size * 3;
           const arrowHead = size * 0.8;
-          const strokeW = 3;
+          const strokeW = 5;
           shapeElement = (
             <g>
-              <line x1={x - arrowLen/2} y1={y} x2={x + arrowLen/2 - arrowHead} y2={y} stroke={shapeColor} strokeWidth="6" />
+              <line x1={x - arrowLen/2} y1={y} x2={x + arrowLen/2 - arrowHead} y2={y} stroke={shapeColor} strokeWidth="10" />
               <polygon
                 points={`${x + arrowLen/2},${y} ${x + arrowLen/2 - arrowHead},${y - arrowHead/2} ${x + arrowLen/2 - arrowHead},${y + arrowHead/2}`}
                 fill="none"
