@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useRef } f
 import { doc, onSnapshot, updateDoc, collection } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from './AuthContext';
+import { ensureMembership } from '../services/auth';
 
 const SchoolContext = createContext(null);
 
@@ -461,6 +462,39 @@ export function SchoolProvider({ children }) {
     return () => unsubscribe();
   }, [isAuthenticated, currentSchool?.id, devMode]);
 
+  // Track if we've already verified membership
+  const membershipVerifiedRef = useRef(false);
+
+  /**
+   * Ensure membership document exists for current user/school
+   * This fixes cases where users were added to staff/memberList
+   * but don't have a membership subcollection document
+   */
+  useEffect(() => {
+    // Skip in dev mode or if already verified
+    if (devMode || membershipVerifiedRef.current) return;
+
+    // Skip if not authenticated or no school
+    if (!isAuthenticated || !currentSchool?.id || !user?.uid) return;
+
+    // Skip if still loading school data
+    if (loading) return;
+
+    const verifyMembership = async () => {
+      try {
+        const wasCreated = await ensureMembership(user.uid, currentSchool.id, 'member');
+        if (wasCreated) {
+          console.log('✅ Membership document created for user in school:', currentSchool.id);
+        }
+        membershipVerifiedRef.current = true;
+      } catch (err) {
+        console.error('Error verifying membership:', err);
+      }
+    };
+
+    verifyMembership();
+  }, [isAuthenticated, currentSchool?.id, user?.uid, loading, devMode]);
+
   // Track if we've already auto-initialized weeks to prevent duplicate runs
   const weeksInitializedRef = useRef(false);
 
@@ -551,10 +585,16 @@ export function SchoolProvider({ children }) {
       return;
     }
 
-    if (!currentSchool?.id) return;
+    if (!currentSchool?.id) {
+      const error = new Error('Cannot update school: No school ID available');
+      console.error(error.message);
+      setError(error.message);
+      throw error;
+    }
 
     try {
       const schoolRef = doc(db, 'schools', currentSchool.id);
+      console.log(`Updating school ${currentSchool.id}:`, Object.keys(updates));
       await updateDoc(schoolRef, {
         ...updates,
         updatedAt: new Date().toISOString(),

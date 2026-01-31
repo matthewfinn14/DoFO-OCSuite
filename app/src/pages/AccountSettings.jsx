@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useSchool } from '../context/SchoolContext';
 import { useAuth } from '../context/AuthContext';
 import { uploadSchoolLogo, deleteSchoolLogo } from '../services/storage';
+import { ensureMembership } from '../services/auth';
 import {
   Settings,
   Upload,
@@ -17,7 +18,7 @@ import {
 
 export default function AccountSettings() {
   const { school, settings, updateSettings } = useSchool();
-  const { currentSchool, isHeadCoach, isTeamAdmin, isSiteAdmin } = useAuth();
+  const { user, currentSchool, isHeadCoach, isTeamAdmin, isSiteAdmin } = useAuth();
 
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
@@ -57,22 +58,54 @@ export default function AccountSettings() {
       return;
     }
 
+    // Validate that we have a user and school to upload to
+    if (!user?.uid) {
+      setError('Not logged in. Please refresh and try again.');
+      console.error('Upload failed: No user.uid available');
+      return;
+    }
+
+    if (!currentSchool?.id) {
+      setError('No school selected. Please refresh and try again.');
+      console.error('Upload failed: No currentSchool.id available');
+      return;
+    }
+
     setUploading(true);
     setError(null);
     setSuccess(null);
 
     try {
+      console.log(`Uploading logo for school: ${currentSchool.id} (${school?.name})`);
+
+      // Ensure membership document exists (required for Storage rules)
+      const wasRepaired = await ensureMembership(user.uid, currentSchool.id, 'member');
+      if (wasRepaired) {
+        console.log('Membership document was repaired');
+      }
+
       // Upload to Firebase Storage and get URL
       const logoUrl = await uploadSchoolLogo(currentSchool.id, file);
+      console.log('Logo uploaded to Storage:', logoUrl);
 
       // Save URL to Firestore
       await updateSettings({ teamLogo: logoUrl });
+      console.log('Logo URL saved to Firestore for school:', currentSchool.id);
 
       setSuccess('Logo uploaded successfully');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error('Error uploading logo:', err);
-      setError(err.message || 'Failed to upload logo');
+      // Provide more specific error messages
+      if (err.code === 'storage/unauthorized') {
+        setError('Permission denied. Please check your account permissions.');
+      } else if (err.code === 'storage/canceled') {
+        setError('Upload was cancelled.');
+      } else if (err.code === 'storage/unknown') {
+        setError('An unknown error occurred. Please try again.');
+      } else {
+        setError(err.message || 'Failed to upload logo');
+      }
     } finally {
       setUploading(false);
       // Reset file input
@@ -85,21 +118,33 @@ export default function AccountSettings() {
   const handleRemoveLogo = async () => {
     if (!confirm('Are you sure you want to remove the team logo?')) return;
 
+    if (!currentSchool?.id) {
+      setError('No school selected. Please refresh and try again.');
+      return;
+    }
+
     setUploading(true);
     setError(null);
 
     try {
+      console.log(`Removing logo for school: ${currentSchool.id}`);
+
       // Delete from Firebase Storage
       await deleteSchoolLogo(currentSchool.id);
 
       // Remove URL from Firestore
       await updateSettings({ teamLogo: null });
+      console.log('Logo removed from school:', currentSchool.id);
 
       setSuccess('Logo removed');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
       console.error('Error removing logo:', err);
-      setError(err.message || 'Failed to remove logo');
+      if (err.code === 'storage/unauthorized') {
+        setError('Permission denied. Please check your account permissions.');
+      } else {
+        setError(err.message || 'Failed to remove logo');
+      }
     } finally {
       setUploading(false);
     }

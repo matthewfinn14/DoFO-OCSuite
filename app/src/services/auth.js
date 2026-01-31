@@ -131,6 +131,26 @@ export const addSchoolMembership = async (userId, schoolId, role = 'member') => 
 };
 
 /**
+ * Ensure membership document exists for user (repair if missing)
+ */
+export const ensureMembership = async (userId, schoolId, role = 'member') => {
+  const membershipRef = doc(db, 'users', userId, 'memberships', schoolId);
+  const membershipDoc = await getDoc(membershipRef);
+
+  if (!membershipDoc.exists()) {
+    console.log(`Creating missing membership for user ${userId} in school ${schoolId}`);
+    await setDoc(membershipRef, {
+      role,
+      joinedAt: new Date().toISOString(),
+      status: 'active',
+      repairedAt: new Date().toISOString()
+    });
+    return true; // Created new membership
+  }
+  return false; // Membership already exists
+};
+
+/**
  * Get school by ID
  */
 export const getSchool = async (schoolId) => {
