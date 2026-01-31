@@ -571,11 +571,47 @@ export default function Setup() {
     return JSON.stringify(localConfig) !== JSON.stringify(initialConfigRef.current);
   }, [localConfig]);
 
+  // Default position groups
+  const DEFAULT_POSITION_GROUPS = {
+    OFFENSE: [
+      { id: 'grp_qb', name: 'Quarterbacks', abbrev: 'QB', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_rb', name: 'Running Backs', abbrev: 'RB', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_wr', name: 'Wide Receivers', abbrev: 'WR', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_te', name: 'Tight Ends', abbrev: 'TE', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_ol', name: 'Offensive Line', abbrev: 'OL', positions: [], coachId: '', big3: ['', '', ''] },
+    ],
+    DEFENSE: [
+      { id: 'grp_dl', name: 'Defensive Line', abbrev: 'DL', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_lb', name: 'Linebackers', abbrev: 'LB', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_db', name: 'Defensive Backs', abbrev: 'DB', positions: [], coachId: '', big3: ['', '', ''] },
+    ],
+    SPECIAL_TEAMS: [
+      { id: 'grp_ko', name: 'Kickoff', abbrev: 'KO', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_kor', name: 'Kickoff Return', abbrev: 'KOR', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_punt', name: 'Punt', abbrev: 'PUNT', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_pr', name: 'Punt Return', abbrev: 'PR', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_fg', name: 'FG / PAT', abbrev: 'FG', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_fgb', name: 'FG Block', abbrev: 'FGB', positions: [], coachId: '', big3: ['', '', ''] },
+    ]
+  };
+
   // Sync local config when setupConfig changes from Firebase
   useEffect(() => {
-    setLocalConfig(setupConfig);
-    initialConfigRef.current = setupConfig;
-    setSaveStatus('saved');
+    // Initialize position groups with defaults if empty
+    let configWithDefaults = setupConfig;
+    const posGroups = setupConfig?.positionGroups || {};
+    const needsDefaults = !posGroups.OFFENSE?.length && !posGroups.DEFENSE?.length && !posGroups.SPECIAL_TEAMS?.length;
+
+    if (needsDefaults) {
+      configWithDefaults = {
+        ...setupConfig,
+        positionGroups: DEFAULT_POSITION_GROUPS
+      };
+    }
+
+    setLocalConfig(configWithDefaults);
+    initialConfigRef.current = configWithDefaults;
+    setSaveStatus(needsDefaults ? 'unsaved' : 'saved');
   }, [setupConfig]);
 
   // Autosave with debounce (3 seconds after last change)
@@ -1636,6 +1672,43 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
 function PositionGroupsTab({ phase, positionGroups, staff, onUpdate }) {
   const groups = positionGroups[phase] || [];
 
+  // Default position groups by phase
+  const DEFAULT_GROUPS = {
+    OFFENSE: [
+      { id: 'grp_qb', name: 'Quarterbacks', abbrev: 'QB', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_rb', name: 'Running Backs', abbrev: 'RB', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_wr', name: 'Wide Receivers', abbrev: 'WR', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_te', name: 'Tight Ends', abbrev: 'TE', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_ol', name: 'Offensive Line', abbrev: 'OL', positions: [], coachId: '', big3: ['', '', ''] },
+    ],
+    DEFENSE: [
+      { id: 'grp_dl', name: 'Defensive Line', abbrev: 'DL', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_lb', name: 'Linebackers', abbrev: 'LB', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_db', name: 'Defensive Backs', abbrev: 'DB', positions: [], coachId: '', big3: ['', '', ''] },
+    ],
+    SPECIAL_TEAMS: [
+      { id: 'grp_ko', name: 'Kickoff', abbrev: 'KO', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_kor', name: 'Kickoff Return', abbrev: 'KOR', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_punt', name: 'Punt', abbrev: 'PUNT', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_pr', name: 'Punt Return', abbrev: 'PR', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_fg', name: 'FG / PAT', abbrev: 'FG', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_fgb', name: 'FG Block', abbrev: 'FGB', positions: [], coachId: '', big3: ['', '', ''] },
+    ]
+  };
+
+  const loadDefaults = () => {
+    const defaults = DEFAULT_GROUPS[phase] || [];
+    if (groups.length > 0 && !confirm('This will add default groups to your existing list. Continue?')) return;
+    // Only add groups that don't already exist (by abbrev)
+    const existingAbbrevs = groups.map(g => g.abbrev?.toUpperCase());
+    const newGroups = defaults.filter(d => !existingAbbrevs.includes(d.abbrev));
+    if (newGroups.length === 0) {
+      alert('All default groups already exist.');
+      return;
+    }
+    onUpdate('positionGroups', { ...positionGroups, [phase]: [...groups, ...newGroups] });
+  };
+
   const addGroup = () => {
     const name = prompt('New position group name:');
     if (!name) return;
@@ -1670,12 +1743,22 @@ function PositionGroupsTab({ phase, positionGroups, staff, onUpdate }) {
           <h3 className="text-lg font-semibold text-white">Position Groups</h3>
           <p className="text-slate-400 text-sm">Assign coaches and set Big 3 focus points for each group.</p>
         </div>
-        <button
-          onClick={addGroup}
-          className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700"
-        >
-          <Plus size={16} /> Add Group
-        </button>
+        <div className="flex items-center gap-2">
+          {groups.length === 0 && (
+            <button
+              onClick={loadDefaults}
+              className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+            >
+              Load Defaults
+            </button>
+          )}
+          <button
+            onClick={addGroup}
+            className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700"
+          >
+            <Plus size={16} /> Add Group
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1757,12 +1840,19 @@ function PositionGroupsTab({ phase, positionGroups, staff, onUpdate }) {
         ))}
       </div>
 
-      {groups.length === 0 && (
+      {groups.length === 0 ? (
         <div className="text-center py-12 text-slate-400">
           <Layers size={48} className="mx-auto mb-4 opacity-30" />
           <p>No position groups defined.</p>
-          <p className="text-sm">Click "Add Group" to create your first group.</p>
+          <p className="text-sm">Click "Load Defaults" to add standard groups or "Add Group" to create custom ones.</p>
         </div>
+      ) : (
+        <button
+          onClick={loadDefaults}
+          className="mt-4 text-xs text-amber-500 hover:text-amber-400 underline"
+        >
+          + Add more default groups
+        </button>
       )}
     </div>
   );
