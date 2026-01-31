@@ -669,44 +669,6 @@ export default function PlayDetailsModal({
             )}
           </div>
 
-          {/* How Do We Like It? */}
-          <div className="mb-3">
-            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 block">
-              How Do We Like It?
-            </label>
-            <div className="flex flex-wrap gap-1">
-              {[
-                { id: 'love', label: 'Love It', color: '#22c55e', emoji: '🔥' },
-                { id: 'like', label: 'Like It', color: '#3b82f6', emoji: '👍' },
-                { id: 'situational', label: 'Situational', color: '#f59e0b', emoji: '🎯' },
-                { id: 'developing', label: 'Developing', color: '#8b5cf6', emoji: '🔧' },
-              ].map(rating => {
-                const isSelected = play.playRating === rating.id;
-                return (
-                  <button
-                    key={rating.id}
-                    onClick={() => onUpdatePlay?.(playId, {
-                      playRating: isSelected ? '' : rating.id
-                    })}
-                    className={`px-2 py-1 rounded text-[10px] font-semibold transition-all flex items-center gap-1 ${
-                      isSelected
-                        ? 'ring-1 ring-offset-1'
-                        : 'opacity-50 hover:opacity-100'
-                    }`}
-                    style={{
-                      backgroundColor: isSelected ? rating.color : '#f1f5f9',
-                      color: isSelected ? '#fff' : '#64748b',
-                      ringColor: rating.color
-                    }}
-                  >
-                    <span>{rating.emoji}</span>
-                    {rating.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Play Objectives */}
           <div className="mb-3">
             <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 block">
