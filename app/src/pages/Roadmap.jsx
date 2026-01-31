@@ -4,7 +4,8 @@ import {
   Book, Clipboard, FileText, Grid3X3, Users, Layers, Target, Settings,
   Package, Calendar, CheckSquare, UserCheck, Dumbbell, Shield, Star,
   Tablet, Zap, Monitor, Brain,
-  Smartphone, Video, Scale, Activity, Heart, ThermometerSun, MessageCircle, Award
+  Smartphone, Video, Scale, Activity, Heart, ThermometerSun, MessageCircle, Award,
+  User, Hash, Trophy, Flame, Sparkles, Store, Share2
 } from 'lucide-react';
 import { useSchool } from '../context/SchoolContext';
 
@@ -13,7 +14,8 @@ const ICONS = {
   Book, Clipboard, FileText, Grid3X3, Users, Layers, Target, Settings,
   Package, Calendar, CheckSquare, UserCheck, Dumbbell, Shield, Star,
   Tablet, Zap, Monitor, Brain,
-  Smartphone, Video, Scale, Activity, Heart, ThermometerSun, MessageCircle, Award
+  Smartphone, Video, Scale, Activity, Heart, ThermometerSun, MessageCircle, Award,
+  User, Hash, Trophy, Flame, Sparkles, Store, Share2
 };
 
 // Product Development Phases
@@ -54,7 +56,8 @@ const PRODUCT_PHASES = [
       { icon: 'Dumbbell', name: 'Drill Library', desc: 'Practice resources' },
       { icon: 'Shield', name: 'Defense Prep Tools', desc: 'DC game planning suite' },
       { icon: 'Star', name: 'Special Teams Prep', desc: 'ST coordinator tools' },
-      { icon: 'MessageCircle', name: 'Sideline Signal Library', desc: 'Visual signal management' }
+      { icon: 'MessageCircle', name: 'Sideline Signal Library', desc: 'Visual signal management' },
+      { icon: 'Sparkles', name: 'AI DoFO', desc: 'AI-powered coaching assistant' }
     ]
   },
   {
@@ -92,7 +95,26 @@ const PRODUCT_PHASES = [
       { icon: 'Heart', name: 'Cultural Calibration', desc: 'Team culture check-ins' },
       { icon: 'ThermometerSun', name: 'Wellness Feedback', desc: 'Daily wellness check-ins' },
       { icon: 'MessageCircle', name: 'Daily Connections', desc: 'Coach-player communication' },
-      { icon: 'Calendar', name: 'Schedule & Attendance', desc: 'View schedule, check in' }
+      { icon: 'Calendar', name: 'Schedule & Attendance', desc: 'View schedule, check in' },
+      { icon: 'User', name: 'Player Profiles', desc: 'Personal player pages' },
+      { icon: 'Hash', name: 'Jersey # Lottery', desc: 'Fair number selection system' },
+      { icon: 'Trophy', name: 'Summer Competition', desc: 'Draft & points system' },
+      { icon: 'Flame', name: 'Iron Man Testing', desc: 'Track conditioning tests' }
+    ]
+  },
+  {
+    phase: 5,
+    title: 'DoFO Market',
+    subtitle: 'Community Sharing',
+    description: 'A marketplace for coaches to share and discover templates, resources, and systems from other programs.',
+    status: 'planned',
+    color: '#ec4899', // pink-500
+    opacity: 0.4,
+    features: [
+      { icon: 'Store', name: 'Template Marketplace', desc: 'Browse shared resources' },
+      { icon: 'Grid3X3', name: 'Call Sheet Templates', desc: 'Share & download call sheets' },
+      { icon: 'Clipboard', name: 'Practice Plan Templates', desc: 'Community practice plans' },
+      { icon: 'Share2', name: 'Program Sharing', desc: 'Share between programs' }
     ]
   }
 ];
