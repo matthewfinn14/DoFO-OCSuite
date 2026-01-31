@@ -2001,6 +2001,7 @@ export default function PlayEditor({
               initialData={formData.wizSkillData ? { elements: formData.wizSkillData } : null}
               formations={formations}
               personnelGroupings={personnelGroupings}
+              playBuckets={playBuckets}
               offensePositions={offensePositions}
               positionColors={positionColors}
               positionNames={positionNames}
@@ -2011,6 +2012,30 @@ export default function PlayEditor({
               onSave={(data) => {
                 setFormData(prev => ({ ...prev, wizSkillData: data.elements }));
                 setShowSkillEditor(false);
+              }}
+              onSaveAsNewPlay={async (newPlayData) => {
+                // Save current diagram to form, then create a new play
+                setFormData(prev => ({ ...prev, wizSkillData: newPlayData.wizSkillData }));
+                setShowSkillEditor(false);
+
+                // Create a new play with the provided data
+                const newPlay = {
+                  id: `play-${Date.now()}`,
+                  name: newPlayData.name,
+                  phase: phase,
+                  bucketId: newPlayData.bucketId,
+                  wizSkillData: newPlayData.wizSkillData,
+                  formation: formData.formation || '',
+                  createdAt: new Date().toISOString()
+                };
+
+                try {
+                  await onSave(newPlay);
+                  alert(`Play "${newPlayData.name}" saved to library!`);
+                } catch (err) {
+                  console.error('Error saving new play:', err);
+                  alert('Failed to save play: ' + err.message);
+                }
               }}
               onCancel={() => setShowSkillEditor(false)}
             />

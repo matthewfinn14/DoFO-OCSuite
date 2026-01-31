@@ -156,6 +156,7 @@ export default function PlayDiagramEditor({
   initialData,
   onSave,
   onSaveAs,
+  onSaveAsNewPlay, // Callback to save as a new play in the library
   onCancel,
   onSaveFormation, // Callback to save a new formation template
   onSaveDefaultPositions, // Callback to save custom default positions
@@ -163,6 +164,7 @@ export default function PlayDiagramEditor({
   readOnly = false,
   formations = [],
   personnelGroupings = [],
+  playBuckets = [], // Available play buckets for Save As
   offensePositions = [], // Available offense positions from setup
   positionColors = {},
   positionNames = {},
@@ -328,6 +330,57 @@ export default function PlayDiagramEditor({
   const [showDefineFormationModal, setShowDefineFormationModal] = useState(false);
   const [newFormationName, setNewFormationName] = useState('');
   const [newFormationPersonnel, setNewFormationPersonnel] = useState('');
+
+  // Save As New Play modal state
+  const [showSaveAsPlayModal, setShowSaveAsPlayModal] = useState(false);
+  const [saveAsStep, setSaveAsStep] = useState(1); // 1 = bucket selection, 2 = syntax fields
+  const [saveAsBucketId, setSaveAsBucketId] = useState('');
+  const [saveAsSyntaxValues, setSaveAsSyntaxValues] = useState({});
+  const [saveAsPlayName, setSaveAsPlayName] = useState('');
+
+  const openSaveAsPlayModal = () => {
+    setSaveAsStep(playBuckets.length > 0 ? 1 : 2);
+    setSaveAsBucketId('');
+    setSaveAsSyntaxValues({});
+    setSaveAsPlayName('');
+    setShowSaveAsPlayModal(true);
+  };
+
+  const getSelectedBucketSyntax = () => {
+    if (!saveAsBucketId) return [];
+    const bucket = playBuckets.find(b => b.id === saveAsBucketId);
+    return bucket?.syntax || [];
+  };
+
+  const handleSaveAsPlay = () => {
+    const syntax = getSelectedBucketSyntax();
+    let finalName = saveAsPlayName.trim().toUpperCase();
+
+    // If syntax is defined, build name from syntax values
+    if (syntax.length > 0) {
+      const nameParts = syntax.map(field => saveAsSyntaxValues[field.id] || '').filter(v => v);
+      finalName = nameParts.join(' ').toUpperCase();
+    }
+
+    if (!finalName) {
+      alert('Please enter a play name.');
+      return;
+    }
+
+    const selectedBucket = playBuckets.find(b => b.id === saveAsBucketId);
+
+    if (onSaveAsNewPlay) {
+      onSaveAsNewPlay({
+        name: finalName,
+        bucketId: saveAsBucketId || null,
+        bucketLabel: selectedBucket?.label || null,
+        wizSkillData: elements,
+        syntaxValues: saveAsSyntaxValues
+      });
+    }
+
+    setShowSaveAsPlayModal(false);
+  };
 
   const openDefineFormationModal = () => {
     // Extract player positions from current elements
@@ -1778,6 +1831,15 @@ export default function PlayDiagramEditor({
                   <Save size={14} /> Save As
                 </button>
               )}
+              {onSaveAsNewPlay && isWizSkill && (
+                <button
+                  onClick={openSaveAsPlayModal}
+                  className="px-2 py-1 text-xs bg-amber-600 text-white rounded hover:bg-amber-500 flex items-center gap-1"
+                  title="Save as a new play in the library"
+                >
+                  <Plus size={14} /> Save As New Play
+                </button>
+              )}
               <button
                 onClick={() => onSave({ elements })}
                 className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-500 flex items-center gap-1 font-semibold"
@@ -1939,6 +2001,127 @@ export default function PlayDiagramEditor({
               >
                 Save Formation
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Save As New Play Modal */}
+      {showSaveAsPlayModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-slate-800 rounded-lg shadow-xl w-96 overflow-hidden">
+            <div className="p-4 border-b border-slate-700">
+              <h3 className="text-lg font-semibold text-white">Save As New Play</h3>
+              <p className="text-sm text-slate-400 mt-1">
+                {saveAsStep === 1 ? 'Select a play bucket (optional)' : 'Enter play details'}
+              </p>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {/* Step 1: Bucket Selection */}
+              {saveAsStep === 1 && playBuckets.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-300 mb-2">Play Bucket</label>
+                  <select
+                    value={saveAsBucketId}
+                    onChange={(e) => setSaveAsBucketId(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+                  >
+                    <option value="">No Bucket (Simple Name)</option>
+                    {playBuckets.map(b => (
+                      <option key={b.id} value={b.id}>{b.label || b.name}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {saveAsBucketId ? 'Play will use bucket syntax for naming' : 'You will enter a simple play name'}
+                  </p>
+                </div>
+              )}
+
+              {/* Step 2: Syntax Fields or Simple Name */}
+              {saveAsStep === 2 && (
+                <>
+                  {getSelectedBucketSyntax().length > 0 ? (
+                    <div className="space-y-3">
+                      <p className="text-xs text-amber-400 font-medium">Fill in the syntax fields:</p>
+                      {getSelectedBucketSyntax().map((field, idx) => (
+                        <div key={field.id || idx}>
+                          <label className="block text-sm font-medium text-slate-300 mb-1">
+                            {field.label || field.name || `Field ${idx + 1}`}
+                          </label>
+                          {field.options && field.options.length > 0 ? (
+                            <select
+                              value={saveAsSyntaxValues[field.id] || ''}
+                              onChange={(e) => setSaveAsSyntaxValues(prev => ({ ...prev, [field.id]: e.target.value }))}
+                              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+                            >
+                              <option value="">Select...</option>
+                              {field.options.map((opt, i) => (
+                                <option key={i} value={typeof opt === 'string' ? opt : opt.value}>
+                                  {typeof opt === 'string' ? opt : opt.label}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              type="text"
+                              value={saveAsSyntaxValues[field.id] || ''}
+                              onChange={(e) => setSaveAsSyntaxValues(prev => ({ ...prev, [field.id]: e.target.value }))}
+                              placeholder={field.placeholder || `Enter ${field.label || 'value'}`}
+                              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+                            />
+                          )}
+                        </div>
+                      ))}
+                      <div className="mt-2 p-2 bg-slate-900 rounded">
+                        <span className="text-xs text-slate-400">Preview: </span>
+                        <span className="text-sm text-white font-medium">
+                          {getSelectedBucketSyntax().map(f => saveAsSyntaxValues[f.id] || '___').join(' ')}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">Play Name</label>
+                      <input
+                        type="text"
+                        value={saveAsPlayName}
+                        onChange={(e) => setSaveAsPlayName(e.target.value)}
+                        placeholder="Enter play name"
+                        className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+                        autoFocus
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="flex gap-2 p-4 border-t border-slate-700">
+              <button
+                onClick={() => setShowSaveAsPlayModal(false)}
+                className="flex-1 px-3 py-2 text-sm bg-slate-600 text-slate-200 rounded hover:bg-slate-500"
+              >
+                Cancel
+              </button>
+              {saveAsStep === 1 && playBuckets.length > 0 ? (
+                <button
+                  onClick={() => setSaveAsStep(2)}
+                  className="flex-1 px-3 py-2 text-sm bg-amber-600 text-white rounded hover:bg-amber-500 font-medium"
+                >
+                  Next
+                </button>
+              ) : (
+                <button
+                  onClick={handleSaveAsPlay}
+                  disabled={getSelectedBucketSyntax().length > 0
+                    ? !getSelectedBucketSyntax().some(f => saveAsSyntaxValues[f.id])
+                    : !saveAsPlayName.trim()}
+                  className="flex-1 px-3 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                >
+                  Save to Library
+                </button>
+              )}
             </div>
           </div>
         </div>
