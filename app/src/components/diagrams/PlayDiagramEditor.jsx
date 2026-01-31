@@ -401,13 +401,22 @@ export default function PlayDiagramEditor({
     const hasOLGroup = formation.positions.some(p => p.groupId);
     const olGroupId = hasOLGroup ? `ol-group-${baseTime}` : null;
 
+    const wizCenter = 475;
     formation.positions.forEach((pos, idx) => {
-      // Convert percentage (0-100) to pixel coordinates for wiz-card viewBox (900x600)
+      // Convert percentage (0-100) to pixel coordinates for wiz-card viewBox (950x600)
       const x = (pos.x / 100) * 950;
       const y = (pos.y / 100) * 600;
 
       const defaultConfig = positionConfig[pos.label] || { shape: 'circle', variant: 'filled' };
       const isOL = ['C', 'G', 'T', 'LT', 'LG', 'RG', 'RT'].includes(pos.label);
+
+      // Determine positionKey for OL (needed for Set Default to save uniquely)
+      let positionKey = pos.label;
+      if (pos.label === 'G') {
+        positionKey = x < wizCenter ? 'LG' : 'RG';
+      } else if (pos.label === 'T') {
+        positionKey = x < wizCenter ? 'LT' : 'RT';
+      }
 
       newElements.push({
         id: baseTime + idx,
@@ -418,7 +427,8 @@ export default function PlayDiagramEditor({
         shape: pos.shape || defaultConfig.shape || 'circle',
         variant: pos.variant || defaultConfig.variant || 'filled',
         fontSize: pos.fontSize || defaultConfig.fontSize,
-        groupId: isOL && olGroupId ? olGroupId : pos.groupId // Group OL together
+        groupId: isOL && olGroupId ? olGroupId : pos.groupId,
+        positionKey: isOL ? positionKey : pos.label // Unique key for OL
       });
     });
 
@@ -483,21 +493,24 @@ export default function PlayDiagramEditor({
   };
 
   // Add single player to diagram (for wiz-skill mode)
-  const addSinglePlayer = (positionKey) => {
+  const addSinglePlayer = (posKey) => {
     const wizCenter = 475;
     const wizLos = 390;
     const getColor = (label) => positionColors[label] || DEFAULT_POSITION_COLORS[label] || '#3b82f6';
 
-    const isOL = ['C', 'LT', 'LG', 'RG', 'RT'].includes(positionKey);
+    const isOL = ['C', 'LT', 'LG', 'RG', 'RT'].includes(posKey);
+    // For display, use short label (G instead of LG, T instead of LT)
+    const displayLabel = posKey === 'LG' || posKey === 'RG' ? 'G' : (posKey === 'LT' || posKey === 'RT' ? 'T' : posKey);
     const newPlayer = {
       id: Date.now(),
       type: 'player',
       points: [{ x: wizCenter, y: wizLos + (isOL ? 0 : 60) }],
-      color: getColor(positionKey),
-      label: positionNames[positionKey] || positionKey,
+      color: getColor(posKey),
+      label: positionNames[posKey] || displayLabel,
       shape: isOL ? 'text-only' : 'circle',
       variant: 'filled',
-      fontSize: isOL ? 50 : undefined
+      fontSize: isOL ? 50 : undefined,
+      positionKey: posKey
     };
 
     const newElements = [...elements, newPlayer];
