@@ -448,7 +448,7 @@ export default function PlayDetailsModal({
           </div>
         )}
 
-        {/* Read Type & Series */}
+        {/* Read Type, Series & Play Purpose */}
         <div className="p-4 border-b border-slate-200">
           <div className="grid grid-cols-2 gap-3">
             {/* Read Type */}
@@ -465,7 +465,7 @@ export default function PlayDetailsModal({
               >
                 <option value="">No Read</option>
                 {(setupConfig?.readTypes || []).map(rt => (
-                  <option key={rt.id} value={rt.id}>{rt.label || rt.name}</option>
+                  <option key={rt.id} value={rt.id}>{rt.name}</option>
                 ))}
               </select>
             </div>
@@ -489,6 +489,41 @@ export default function PlayDetailsModal({
               </select>
             </div>
           </div>
+
+          {/* Play Purpose - from Quality Control Definitions */}
+          {(setupConfig?.qualityControlDefinitions?.playPurposes?.length > 0) && (
+            <div className="mt-3">
+              <label htmlFor="play-details-purpose" className="flex items-center gap-1 text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">
+                <Target size={12} />
+                Play Purpose
+              </label>
+              <div className="flex flex-wrap gap-1">
+                {(setupConfig?.qualityControlDefinitions?.playPurposes || []).map(purpose => {
+                  const isSelected = play.playPurpose === purpose.id;
+                  return (
+                    <button
+                      key={purpose.id}
+                      onClick={() => onUpdatePlay?.(playId, {
+                        playPurpose: isSelected ? '' : purpose.id
+                      })}
+                      className={`px-2 py-1 rounded text-xs font-semibold transition-all ${
+                        isSelected
+                          ? 'ring-1 ring-offset-1'
+                          : 'opacity-50 hover:opacity-100'
+                      }`}
+                      style={{
+                        backgroundColor: isSelected ? purpose.color : '#f1f5f9',
+                        color: isSelected ? '#fff' : '#64748b',
+                        ringColor: purpose.color
+                      }}
+                    >
+                      {purpose.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Situations Section - only show if user has defined situations */}
