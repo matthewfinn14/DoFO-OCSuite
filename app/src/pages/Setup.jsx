@@ -1542,6 +1542,7 @@ export default function Setup() {
               shiftMotions={localConfig.shiftMotions || []}
               qcPlayPurposes={localConfig.qcPlayPurposes || []}
               onUpdate={updateLocal}
+              isLight={isLight}
             />
           )}
 
@@ -5717,7 +5718,8 @@ function SegmentFocusTab({
   specialSituations,
   shiftMotions,
   qcPlayPurposes,
-  onUpdate
+  onUpdate,
+  isLight = false
 }) {
   const [selectedPhase, setSelectedPhase] = useState('O');
   const [selectedTypeId, setSelectedTypeId] = useState(null);
@@ -5858,8 +5860,8 @@ function SegmentFocusTab({
   return (
     <div>
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-white">Segment Focus Items</h3>
-        <p className="text-slate-400 text-sm">
+        <h3 className={`text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>Segment Focus Items</h3>
+        <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
           Configure focus options for each segment type. These appear as selectable focuses when building practice plans.
         </p>
       </div>
@@ -5873,7 +5875,9 @@ function SegmentFocusTab({
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
               selectedPhase === phase.id
                 ? 'bg-sky-600 text-white'
-                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                : isLight
+                  ? 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
             }`}
           >
             {phase.label}
@@ -5883,12 +5887,12 @@ function SegmentFocusTab({
 
       <div className="grid grid-cols-12 gap-4">
         {/* Segment Types List */}
-        <div className="col-span-3 bg-slate-800/50 rounded-lg p-3">
-          <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
+        <div className={`col-span-3 rounded-lg p-3 ${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800/50'}`}>
+          <h4 className={`text-xs font-semibold uppercase tracking-wide mb-3 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
             Segment Types
           </h4>
           {phaseSegmentTypes.length === 0 ? (
-            <p className="text-sm text-slate-500 italic">
+            <p className={`text-sm italic ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
               No segment types defined. Add them in the Segment Types tab.
             </p>
           ) : (
@@ -5900,14 +5904,18 @@ function SegmentFocusTab({
                   className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
                     selectedTypeId === type.id
                       ? 'bg-sky-600 text-white'
-                      : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                      : isLight
+                        ? 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                        : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span>{type.name}</span>
                     {(type.focusItems?.length || 0) > 0 && (
                       <span className={`text-xs px-1.5 py-0.5 rounded ${
-                        selectedTypeId === type.id ? 'bg-sky-500' : 'bg-slate-600'
+                        selectedTypeId === type.id
+                          ? 'bg-sky-500'
+                          : isLight ? 'bg-gray-200 text-gray-600' : 'bg-slate-600'
                       }`}>
                         {type.focusItems.length}
                       </span>
@@ -5922,26 +5930,26 @@ function SegmentFocusTab({
         {/* Focus Items Configuration */}
         <div className="col-span-9">
           {!selectedType ? (
-            <div className="bg-slate-800/30 rounded-lg p-8 text-center text-slate-500">
+            <div className={`rounded-lg p-8 text-center ${isLight ? 'bg-gray-50 text-gray-400 border border-gray-200' : 'bg-slate-800/30 text-slate-500'}`}>
               <Target size={48} className="mx-auto mb-4 opacity-30" />
               <p>Select a segment type to configure its focus options</p>
             </div>
           ) : (
-            <div className="bg-slate-800/50 rounded-lg overflow-hidden">
+            <div className={`rounded-lg overflow-hidden ${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800/50'}`}>
               {/* Selected Type Header */}
-              <div className="px-4 py-3 bg-slate-700/50 border-b border-slate-600">
-                <h4 className="font-semibold text-white">
-                  Focus Options for: <span className="text-sky-400">{selectedType.name}</span>
+              <div className={`px-4 py-3 border-b ${isLight ? 'bg-gray-50 border-gray-200' : 'bg-slate-700/50 border-slate-600'}`}>
+                <h4 className={`font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                  Focus Options for: <span className="text-sky-500">{selectedType.name}</span>
                 </h4>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className={`text-xs mt-1 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
                   {currentFocusItems.length} focus item{currentFocusItems.length !== 1 ? 's' : ''} configured
                 </p>
               </div>
 
               {/* Current Focus Items */}
               {currentFocusItems.length > 0 && (
-                <div className="p-4 border-b border-slate-600">
-                  <h5 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
+                <div className={`p-4 border-b ${isLight ? 'border-gray-200' : 'border-slate-600'}`}>
+                  <h5 className={`text-xs font-semibold uppercase tracking-wide mb-3 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
                     Current Focus Items
                   </h5>
                   <div className="space-y-2">
@@ -5951,7 +5959,7 @@ function SegmentFocusTab({
                       const Icon = sourceInfo.icon;
                       return (
                         <div key={source} className="flex items-start gap-2">
-                          <div className="flex items-center gap-1 text-slate-500 min-w-[100px]">
+                          <div className={`flex items-center gap-1 min-w-[100px] ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
                             <Icon size={12} />
                             <span className="text-xs">{sourceInfo.label}</span>
                           </div>
@@ -5959,7 +5967,9 @@ function SegmentFocusTab({
                             {items.map(item => (
                               <div
                                 key={`${item.id}-${item.source}`}
-                                className="flex items-center gap-1 px-2 py-0.5 bg-slate-700 rounded text-xs text-white group"
+                                className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs group ${
+                                  isLight ? 'bg-sky-100 text-sky-700' : 'bg-slate-700 text-white'
+                                }`}
                               >
                                 <span>{item.name}</span>
                                 <button
@@ -5979,7 +5989,7 @@ function SegmentFocusTab({
               )}
 
               {/* Source Tabs */}
-              <div className="flex flex-wrap bg-slate-800/50 border-b border-slate-600">
+              <div className={`flex flex-wrap border-b ${isLight ? 'bg-gray-50 border-gray-200' : 'bg-slate-800/50 border-slate-600'}`}>
                 {availableSources.map(source => {
                   const Icon = source.icon;
                   const itemCount = source.id !== 'custom' ? getSourceItems(source.id).length : 0;
@@ -5990,14 +6000,18 @@ function SegmentFocusTab({
                       className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors ${
                         activeSource === source.id
                           ? 'bg-sky-600 text-white'
-                          : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                          : isLight
+                            ? 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                            : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
                       }`}
                     >
                       <Icon size={12} />
                       {source.label}
                       {itemCount > 0 && source.id !== 'custom' && (
                         <span className={`ml-1 px-1 py-0.5 rounded text-[10px] ${
-                          activeSource === source.id ? 'bg-sky-500' : 'bg-slate-600'
+                          activeSource === source.id
+                            ? 'bg-sky-500'
+                            : isLight ? 'bg-gray-200 text-gray-600' : 'bg-slate-600'
                         }`}>
                           {itemCount}
                         </span>
@@ -6011,7 +6025,7 @@ function SegmentFocusTab({
               <div className="p-4">
                 {activeSource === 'custom' ? (
                   <div>
-                    <label className="text-slate-400 text-sm mb-3 block">
+                    <label className={`text-sm mb-3 block ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
                       Add a custom focus item:
                     </label>
                     <div className="flex gap-2">
@@ -6021,7 +6035,11 @@ function SegmentFocusTab({
                         onChange={(e) => setCustomName(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && addCustomFocus()}
                         placeholder="e.g., Red Zone, 2-Min Drill, Goal Line..."
-                        className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-white placeholder-slate-500 text-sm"
+                        className={`flex-1 px-3 py-2 border rounded-md text-sm ${
+                          isLight
+                            ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                            : 'bg-slate-800 border-slate-600 text-white placeholder-slate-500'
+                        }`}
                       />
                       <button
                         onClick={addCustomFocus}
@@ -6035,13 +6053,17 @@ function SegmentFocusTab({
                 ) : sourceItems.length > 0 ? (
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-slate-400 text-sm">
+                      <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
                         Click items to add them as focus options:
                       </p>
                       <button
                         onClick={importAllFromSource}
                         disabled={sourceItems.every(item => isAdded(item.id, item.source))}
-                        className="text-xs px-2 py-1 bg-sky-500/20 text-sky-400 rounded hover:bg-sky-500/30 disabled:opacity-50"
+                        className={`text-xs px-2 py-1 rounded disabled:opacity-50 ${
+                          isLight
+                            ? 'bg-sky-100 text-sky-600 hover:bg-sky-200'
+                            : 'bg-sky-500/20 text-sky-400 hover:bg-sky-500/30'
+                        }`}
                       >
                         Import All
                       </button>
@@ -6056,8 +6078,12 @@ function SegmentFocusTab({
                             disabled={added}
                             className={`px-3 py-1.5 rounded text-sm transition-colors ${
                               added
-                                ? 'bg-emerald-500/20 text-emerald-400 cursor-default'
-                                : 'bg-slate-700 text-white hover:bg-slate-600'
+                                ? isLight
+                                  ? 'bg-emerald-100 text-emerald-600 cursor-default'
+                                  : 'bg-emerald-500/20 text-emerald-400 cursor-default'
+                                : isLight
+                                  ? 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                                  : 'bg-slate-700 text-white hover:bg-slate-600'
                             }`}
                           >
                             {added && <Check size={12} className="inline mr-1" />}
@@ -6068,7 +6094,7 @@ function SegmentFocusTab({
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-slate-500">
+                  <div className={`text-center py-8 ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
                     <p>No items defined in this category yet.</p>
                     <p className="text-sm mt-1">
                       {selectedPhase === 'O'
