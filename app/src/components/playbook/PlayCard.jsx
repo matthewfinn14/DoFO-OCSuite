@@ -165,10 +165,10 @@ export default function PlayCard({
           <img
             src={play.image}
             alt={play.name}
-            className="w-full h-44 object-cover"
+            className="w-full h-32 object-cover"
           />
         ) : (
-          <div className={`h-44 flex items-center justify-center ${elements ? (diagramMode === 'wiz-skill' ? 'bg-slate-900' : 'bg-white') : 'bg-slate-800'}`}>
+          <div className={`h-32 flex items-center justify-center ${elements ? (diagramMode === 'wiz-skill' ? 'bg-slate-900' : 'bg-white') : 'bg-slate-800'}`}>
             {elements ? (
               <DiagramPreview elements={elements} mode={diagramMode} width="100%" height="100%" />
             ) : (
@@ -182,10 +182,10 @@ export default function PlayCard({
       </div>
 
       {/* Content */}
-      <div className="p-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <h3 className="font-semibold text-white truncate">{getDisplayName()}</h3>
+      <div className="p-2">
+        <div className="flex items-start justify-between gap-1">
+          <div className="flex items-center gap-1 flex-1 min-w-0">
+            <h3 className="font-semibold text-white text-sm truncate">{getDisplayName()}</h3>
             {play.complementaryPlays?.length > 0 && (
               <Handshake size={14} className="flex-shrink-0 text-emerald-400" title="Has complementary plays" />
             )}
