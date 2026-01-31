@@ -252,7 +252,7 @@ export default function Admin() {
       setEditingSchool(null);
     } catch (err) {
       console.error('Error updating school:', err);
-      alert('Failed to update school');
+      alert('Failed to update school: ' + (err.message || err.code || 'Unknown error'));
     }
     setSaving(false);
   };
