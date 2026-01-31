@@ -42,6 +42,14 @@ export default function AccountSettings() {
   // Admins can edit logo and accent color
   const canEditAdvanced = isHeadCoach || isTeamAdmin || isSiteAdmin;
 
+  // Helper to add timeout to promises
+  const withTimeout = (promise, ms, message = 'Operation timed out') => {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms))
+    ]);
+  };
+
   const handleLogoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -78,18 +86,34 @@ export default function AccountSettings() {
     try {
       console.log(`Uploading logo for school: ${currentSchool.id} (${school?.name})`);
 
-      // Ensure membership document exists (required for Storage rules)
-      const wasRepaired = await ensureMembership(user.uid, currentSchool.id, 'member');
+      // Ensure membership document exists (required for Storage rules) - 10s timeout
+      console.log('Ensuring membership...');
+      const wasRepaired = await withTimeout(
+        ensureMembership(user.uid, currentSchool.id, 'member'),
+        10000,
+        'Membership check timed out. Please try again.'
+      );
       if (wasRepaired) {
         console.log('Membership document was repaired');
       }
+      console.log('Membership verified');
 
-      // Upload to Firebase Storage and get URL
-      const logoUrl = await uploadSchoolLogo(currentSchool.id, file);
+      // Upload to Firebase Storage and get URL - 30s timeout
+      console.log('Uploading to storage...');
+      const logoUrl = await withTimeout(
+        uploadSchoolLogo(currentSchool.id, file),
+        30000,
+        'Upload timed out. Please check your connection and try again.'
+      );
       console.log('Logo uploaded to Storage:', logoUrl);
 
-      // Save URL to Firestore
-      await updateSettings({ teamLogo: logoUrl });
+      // Save URL to Firestore - 10s timeout
+      console.log('Saving to Firestore...');
+      await withTimeout(
+        updateSettings({ teamLogo: logoUrl }),
+        10000,
+        'Failed to save logo. Please try again.'
+      );
       console.log('Logo URL saved to Firestore for school:', currentSchool.id);
 
       setSuccess('Logo uploaded successfully');
