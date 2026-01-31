@@ -1270,6 +1270,7 @@ export default function Setup() {
             <ReadTypesTab
               readTypes={localConfig.readTypes || []}
               onUpdate={updateLocal}
+              isLight={isLight}
             />
           )}
 
@@ -2703,7 +2704,7 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupMode, setup
 }
 
 // Read Types Tab Component (Offense only)
-function ReadTypesTab({ readTypes, onUpdate }) {
+function ReadTypesTab({ readTypes, onUpdate, isLight = false }) {
   const addReadType = () => {
     const name = prompt('New Read Type Name:');
     if (!name) return;
@@ -2727,8 +2728,8 @@ function ReadTypesTab({ readTypes, onUpdate }) {
   return (
     <div>
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-white">Read Types</h3>
-        <p className="text-slate-400 text-sm">
+        <h3 className={`text-lg font-semibold ${isLight ? 'text-gray-800' : 'text-white'}`}>Read Types</h3>
+        <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
           Define the types of reads your offense uses (e.g., Pre-snap, Post-snap, RPO reads).
         </p>
       </div>
@@ -2737,14 +2738,14 @@ function ReadTypesTab({ readTypes, onUpdate }) {
         {readTypes.map(readType => (
           <div
             key={readType.id}
-            className="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg border border-slate-600"
+            className={`flex items-center gap-3 p-3 rounded-lg border ${isLight ? 'bg-white border-gray-200 shadow-sm' : 'bg-slate-700/50 border-slate-600'}`}
           >
             <input
               id={`read-type-name-${readType.id}`}
               type="text"
               value={readType.name}
               onChange={(e) => updateReadType(readType.id, { name: e.target.value })}
-              className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white"
+              className={`flex-1 px-3 py-2 rounded ${isLight ? 'bg-gray-100 border border-gray-300 text-gray-800' : 'bg-slate-800 border border-slate-600 text-white'}`}
               placeholder="Read type name"
               aria-label="Read type name"
             />
@@ -2753,13 +2754,13 @@ function ReadTypesTab({ readTypes, onUpdate }) {
               type="text"
               value={readType.description || ''}
               onChange={(e) => updateReadType(readType.id, { description: e.target.value })}
-              className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white text-sm"
+              className={`flex-1 px-3 py-2 rounded text-sm ${isLight ? 'bg-gray-100 border border-gray-300 text-gray-700' : 'bg-slate-800 border border-slate-600 text-white'}`}
               placeholder="Description (optional)"
               aria-label="Read type description"
             />
             <button
               onClick={() => deleteReadType(readType.id)}
-              className="p-2 text-slate-400 hover:text-red-400"
+              className={`p-2 hover:text-red-400 ${isLight ? 'text-gray-400' : 'text-slate-400'}`}
             >
               <Trash2 size={16} />
             </button>
@@ -2767,7 +2768,7 @@ function ReadTypesTab({ readTypes, onUpdate }) {
         ))}
 
         {readTypes.length === 0 && (
-          <div className="text-center py-8 text-slate-400 border border-dashed border-slate-600 rounded-lg">
+          <div className={`text-center py-8 border border-dashed rounded-lg ${isLight ? 'text-gray-400 border-gray-300' : 'text-slate-400 border-slate-600'}`}>
             <Eye size={32} className="mx-auto mb-2 opacity-50" />
             <p>No read types defined yet.</p>
           </div>
@@ -2775,7 +2776,7 @@ function ReadTypesTab({ readTypes, onUpdate }) {
 
         <button
           onClick={addReadType}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-700/50 border border-dashed border-slate-500 rounded-lg text-slate-300 hover:bg-slate-700 hover:border-slate-400 transition-colors"
+          className={`w-full flex items-center justify-center gap-2 px-4 py-3 border border-dashed rounded-lg transition-colors ${isLight ? 'bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100 hover:border-gray-400' : 'bg-slate-700/50 border-slate-500 text-slate-300 hover:bg-slate-700 hover:border-slate-400'}`}
         >
           <Plus size={18} />
           Add Read Type
