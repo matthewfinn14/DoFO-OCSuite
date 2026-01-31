@@ -67,7 +67,6 @@ export default function PlayBankSidebar({
 
   // Get play buckets and concept families from setupConfig (with settings fallback)
   const playBuckets = setupConfig?.playBuckets || settings?.playBuckets || [];
-  const conceptGroups = setupConfig?.conceptGroups || settings?.conceptGroups || [];
   const formations = setupConfig?.formations || settings?.formations || [];
   const readTypes = setupConfig?.readTypes || [];
   const lookAlikeSeries = setupConfig?.lookAlikeSeries || [];
@@ -86,12 +85,21 @@ export default function PlayBankSidebar({
           .filter(b => (b.phase || 'OFFENSE') === playBankPhase)
           .map(b => ({ id: b.id, label: b.label }));
       case 'conceptGroup':
-        return conceptGroups
-          .filter(c => {
-            const bucket = playBuckets.find(b => b.id === c.categoryId);
-            return bucket && (bucket.phase || 'OFFENSE') === playBankPhase;
-          })
-          .map(c => ({ id: c.id, label: c.label }));
+        // Derive concept groups from bucket.families
+        const groups = [];
+        playBuckets
+          .filter(b => (b.phase || 'OFFENSE') === playBankPhase)
+          .forEach(bucket => {
+            (bucket.families || []).forEach(familyName => {
+              groups.push({
+                id: `${bucket.id}_${familyName}`,
+                label: `${bucket.label}: ${familyName}`,
+                bucketId: bucket.id,
+                familyName: familyName
+              });
+            });
+          });
+        return groups;
       case 'readType':
         return readTypes.map(r => ({ id: r.id, label: r.name }));
       case 'lookAlike':
@@ -103,7 +111,7 @@ export default function PlayBankSidebar({
       default:
         return [];
     }
-  }, [filterCategory, formations, playBuckets, conceptGroups, readTypes, lookAlikeSeries, fieldZones, specialSituations, playBankPhase]);
+  }, [filterCategory, formations, playBuckets, readTypes, lookAlikeSeries, fieldZones, specialSituations, playBankPhase]);
 
   const filterOptions = getFilterOptions();
 
@@ -117,8 +125,11 @@ export default function PlayBankSidebar({
       case 'bucket':
         return play.bucketId === filterValue;
       case 'conceptGroup':
-        const cg = conceptGroups.find(c => c.id === filterValue);
-        return cg && play.bucketId === cg.categoryId && play.conceptFamily === cg.label;
+        // filterValue is in format "bucketId_familyName"
+        const parts = filterValue.split('_');
+        const bucketId = parts[0];
+        const familyName = parts.slice(1).join('_');
+        return play.bucketId === bucketId && play.conceptFamily === familyName;
       case 'readType':
         return play.readType === filterValue;
       case 'lookAlike':
@@ -129,7 +140,7 @@ export default function PlayBankSidebar({
       default:
         return true;
     }
-  }, [filterCategory, filterValue, conceptGroups, lookAlikeSeries]);
+  }, [filterCategory, filterValue, lookAlikeSeries]);
 
   // Get current week
   const currentWeek = weeks.find(w => w.id === currentWeekId) || null;
@@ -173,29 +184,36 @@ export default function PlayBankSidebar({
     );
 
     const buckets = phaseBuckets.map(bucket => {
-      const families = conceptGroups
-        .filter(cf => cf.categoryId === bucket.id)
-        .map(family => {
-          // Find plays assigned to this bucket and concept family
-          const familyPlays = Object.values(filteredMap).filter(p =>
-            p.bucketId === bucket.id && p.conceptFamily === family.label
-          ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      // Get families from bucket.families (array of strings)
+      const bucketFamilies = bucket.families || [];
+      const families = bucketFamilies.map(familyName => {
+        // Find plays assigned to this bucket and concept family
+        const familyPlays = Object.values(filteredMap).filter(p =>
+          p.bucketId === bucket.id && p.conceptFamily === familyName
+        ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
-          return { ...family, plays: familyPlays };
-        })
-        .filter(f => searchTerm ? f.plays.length > 0 : true);
+        return { id: `${bucket.id}_${familyName}`, label: familyName, plays: familyPlays };
+      }).filter(f => searchTerm ? f.plays.length > 0 : true);
+
+      // Also find plays in this bucket that don't have a concept family (uncategorized)
+      const uncategorizedPlays = Object.values(filteredMap).filter(p =>
+        p.bucketId === bucket.id && !p.conceptFamily
+      ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+      if (uncategorizedPlays.length > 0 || (!searchTerm && families.length > 0)) {
+        families.push({ id: `${bucket.id}_uncategorized`, label: 'Uncategorized', plays: uncategorizedPlays });
+      }
 
       const totalPlays = families.reduce((sum, f) => sum + f.plays.length, 0);
       return { ...bucket, families, totalPlays };
     }).filter(b => searchTerm ? b.totalPlays > 0 : true);
 
-    // Find unassigned plays (those not matching a bucket/family combination)
+    // Find unassigned plays (those without a bucket)
     const unassignedPlays = Object.values(filteredMap).filter(p => {
-      if (!p.bucketId || !p.conceptFamily) return true;
-      // Also unassigned if its bucketId or conceptFamily doesn't exist in setup
+      if (!p.bucketId) return true;
+      // Also unassigned if its bucketId doesn't exist in setup
       const bucketExists = playBuckets.some(bucket => bucket.id === p.bucketId);
-      const familyExists = conceptGroups.some(cf => cf.categoryId === p.bucketId && cf.label === p.conceptFamily);
-      return !bucketExists || !familyExists;
+      return !bucketExists;
     }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     if (unassignedPlays.length > 0 || !searchTerm) {
@@ -209,7 +227,7 @@ export default function PlayBankSidebar({
     }
 
     return buckets;
-  }, [playsArray, playBuckets, conceptGroups, searchTerm, playBankPhase, playMatchesFilter]);
+  }, [playsArray, playBuckets, searchTerm, playBankPhase, playMatchesFilter]);
 
   // Calculate install data organized by bucket and concept family (like usageData but filtered to installed plays)
   const installUsageData = useMemo(() => {
@@ -239,27 +257,34 @@ export default function PlayBankSidebar({
     );
 
     const buckets = phaseBuckets.map(bucket => {
-      const families = conceptGroups
-        .filter(cf => cf.categoryId === bucket.id)
-        .map(family => {
-          const familyPlays = Object.values(filteredMap).filter(p =>
-            p.bucketId === bucket.id && p.conceptFamily === family.label
-          ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      // Get families from bucket.families (array of strings)
+      const bucketFamilies = bucket.families || [];
+      const families = bucketFamilies.map(familyName => {
+        const familyPlays = Object.values(filteredMap).filter(p =>
+          p.bucketId === bucket.id && p.conceptFamily === familyName
+        ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
-          return { ...family, plays: familyPlays };
-        })
-        .filter(f => f.plays.length > 0);
+        return { id: `${bucket.id}_${familyName}`, label: familyName, plays: familyPlays };
+      }).filter(f => f.plays.length > 0);
+
+      // Also find plays in this bucket that don't have a concept family
+      const uncategorizedPlays = Object.values(filteredMap).filter(p =>
+        p.bucketId === bucket.id && !p.conceptFamily
+      ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+      if (uncategorizedPlays.length > 0) {
+        families.push({ id: `${bucket.id}_uncategorized`, label: 'Uncategorized', plays: uncategorizedPlays });
+      }
 
       const totalPlays = families.reduce((sum, f) => sum + f.plays.length, 0);
       return { ...bucket, families, totalPlays };
     }).filter(b => b.totalPlays > 0);
 
-    // Find unassigned installed plays
+    // Find unassigned installed plays (no bucket)
     const unassignedPlays = Object.values(filteredMap).filter(p => {
-      if (!p.bucketId || !p.conceptFamily) return true;
+      if (!p.bucketId) return true;
       const bucketExists = playBuckets.some(bucket => bucket.id === p.bucketId);
-      const familyExists = conceptGroups.some(cf => cf.categoryId === p.bucketId && cf.label === p.conceptFamily);
-      return !bucketExists || !familyExists;
+      return !bucketExists;
     }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     if (unassignedPlays.length > 0) {
@@ -273,7 +298,7 @@ export default function PlayBankSidebar({
     }
 
     return buckets;
-  }, [playsArray, playBuckets, conceptGroups, currentWeek, searchTerm, playBankPhase, playMatchesFilter]);
+  }, [playsArray, playBuckets, currentWeek, searchTerm, playBankPhase, playMatchesFilter]);
 
   // Total install count for display
   const installTotalCount = useMemo(() => {

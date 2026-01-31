@@ -2213,7 +2213,7 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
                   >
                     <option value="">-- Select Personnel --</option>
                     {personnelGroupings.map(p => (
-                      <option key={p.id} value={p.code}>{p.code} - {p.name}</option>
+                      <option key={p.id} value={p.id}>{p.code || p.name} - {p.name}</option>
                     ))}
                   </select>
                 </div>
