@@ -23,7 +23,8 @@ export default function PlayEditor({
   phase = 'OFFENSE',
   availablePlays = []
 }) {
-  const { setupConfig, updateSetupConfig, weeks } = useSchool();
+  const { setupConfig, updateSetupConfig, weeks, settings } = useSchool();
+  const isLight = settings?.theme === 'light';
   const isEditing = !!play;
 
   // Get OL schemes from setup config for library selection
@@ -542,34 +543,35 @@ export default function PlayEditor({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-900 rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className={`rounded-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col shadow-xl ${isLight ? 'bg-white' : 'bg-slate-900'}`}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-800">
-          <h2 className="text-xl font-bold text-white">
+        <div className={`flex items-center justify-between p-4 border-b ${isLight ? 'border-gray-200 bg-gray-50' : 'border-slate-800'}`}>
+          <h2 className={`text-xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
             {isEditing ? 'Edit Play' : 'New Play'}
           </h2>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-md hover:bg-slate-800"
+            className={`p-2 rounded-md ${isLight ? 'text-gray-500 hover:text-gray-700 hover:bg-gray-200' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className={`flex-1 overflow-y-auto p-4 space-y-4 ${isLight ? 'bg-gray-100' : ''}`}>
           {/* Play Call Section */}
           <Section
             title="Play Call"
             isOpen={expandedSections.basic}
             onToggle={() => toggleSection('basic')}
+            isLight={isLight}
           >
             <div className="space-y-4">
               {/* BASIC MODE: Single text field for entire play call */}
               {isBasicMode && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-1">
+                  <label className={`block text-sm font-medium mb-1 ${isLight ? 'text-gray-700' : 'text-slate-400'}`}>
                     Play Call *
                   </label>
                   <input
@@ -577,21 +579,21 @@ export default function PlayEditor({
                     value={formData.name}
                     onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
                     placeholder="Enter entire play call (e.g., Trips Right Z Motion 94 Mesh)"
-                    className="w-full px-3 py-3 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500 text-lg font-medium"
+                    className={`w-full px-3 py-3 border rounded-md text-lg font-medium ${isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-slate-800 border-slate-700 text-white placeholder-slate-500'}`}
                     autoFocus
                   />
-                  <div className="mt-2 px-3 py-2 bg-slate-700/30 rounded-md flex items-center justify-between">
+                  <div className={`mt-2 px-3 py-2 rounded-md flex items-center justify-between ${isLight ? 'bg-sky-50 border border-sky-200' : 'bg-slate-700/30'}`}>
                     <div>
-                      <span className="text-xs text-slate-500 uppercase tracking-wide">Play: </span>
-                      <span className="text-emerald-400 font-semibold">
+                      <span className={`text-xs uppercase tracking-wide ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Play: </span>
+                      <span className={`font-semibold ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`}>
                         {formData.name || '...'}
                       </span>
                     </div>
-                    <span className="text-xs text-slate-400/70 bg-slate-600/30 px-2 py-0.5 rounded">
+                    <span className={`text-xs px-2 py-0.5 rounded ${isLight ? 'text-gray-500 bg-gray-200' : 'text-slate-400/70 bg-slate-600/30'}`}>
                       Basic Mode
                     </span>
                   </div>
-                  <p className="mt-2 text-xs text-slate-500">
+                  <p className={`mt-2 text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
                     Type your play call exactly as you say it. No parsing - just simple entry for practice scripts and game plans.
                   </p>
                 </div>
@@ -1012,6 +1014,7 @@ export default function PlayEditor({
               }
               isOpen={expandedSections.situations}
               onToggle={() => toggleSection('situations')}
+              isLight={isLight}
             >
               <div className="space-y-4">
                 {/* Field Zones */}
@@ -1151,6 +1154,7 @@ export default function PlayEditor({
             }
             isOpen={expandedSections.gameplan}
             onToggle={() => toggleSection('gameplan')}
+            isLight={isLight}
           >
             <div className="space-y-5">
               {/* How Do We Like It? */}
@@ -1382,6 +1386,7 @@ export default function PlayEditor({
               title="Play Diagrams"
               isOpen={expandedSections.diagrams}
               onToggle={() => toggleSection('diagrams')}
+              isLight={isLight}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* WIZ Skill Diagram */}
@@ -1599,6 +1604,7 @@ export default function PlayEditor({
             }
             isOpen={expandedSections.complementary}
             onToggle={() => toggleSection('complementary')}
+            isLight={isLight}
           >
             <div className="space-y-4">
               {/* Existing Complements */}
@@ -1698,6 +1704,7 @@ export default function PlayEditor({
               }
               isOpen={expandedSections.levels}
               onToggle={() => toggleSection('levels')}
+              isLight={isLight}
             >
               <div className="space-y-4">
                 <p className="text-sm text-slate-400">
@@ -1778,6 +1785,7 @@ export default function PlayEditor({
               }
               isOpen={expandedSections.history}
               onToggle={() => toggleSection('history')}
+              isLight={isLight}
             >
               <div className="space-y-4">
                 {/* Practice Instances */}
@@ -1895,19 +1903,19 @@ export default function PlayEditor({
               onChange={e => setFormData(prev => ({ ...prev, incomplete: e.target.checked }))}
               className="w-4 h-4 rounded"
             />
-            <label htmlFor="incomplete" className="text-sm text-slate-400">
+            <label htmlFor="incomplete" className={`text-sm ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
               Mark as incomplete (needs diagram or more info)
             </label>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-slate-800">
+        <div className={`flex items-center justify-between p-4 border-t ${isLight ? 'border-gray-200 bg-gray-50' : 'border-slate-800'}`}>
           <div>
             {isEditing && onDelete && (
               <button
                 onClick={handleDelete}
-                className="px-4 py-2 bg-red-500/10 text-red-400 rounded-md hover:bg-red-500/20 flex items-center gap-2"
+                className={`px-4 py-2 rounded-md flex items-center gap-2 ${isLight ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'}`}
               >
                 <Trash2 size={16} />
                 Delete
@@ -1917,7 +1925,7 @@ export default function PlayEditor({
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-slate-800 text-slate-300 rounded-md hover:bg-slate-700"
+              className={`px-4 py-2 rounded-md ${isLight ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
             >
               Cancel
             </button>
@@ -2149,18 +2157,18 @@ export default function PlayEditor({
 }
 
 // Collapsible section component
-function Section({ title, isOpen, onToggle, children }) {
+function Section({ title, isOpen, onToggle, children, isLight = false }) {
   return (
-    <div className="border border-slate-800 rounded-lg overflow-hidden">
+    <div className={`border rounded-lg overflow-hidden ${isLight ? 'border-gray-200 bg-white' : 'border-slate-800'}`}>
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-3 bg-slate-800/50 text-left"
+        className={`w-full flex items-center justify-between p-3 text-left ${isLight ? 'bg-gray-50 hover:bg-gray-100' : 'bg-slate-800/50'}`}
       >
-        <span className="font-medium text-white">{title}</span>
-        {isOpen ? <ChevronDown size={18} className="text-slate-400" /> : <ChevronRight size={18} className="text-slate-400" />}
+        <span className={`font-medium ${isLight ? 'text-gray-900' : 'text-white'}`}>{title}</span>
+        {isOpen ? <ChevronDown size={18} className={isLight ? 'text-gray-500' : 'text-slate-400'} /> : <ChevronRight size={18} className={isLight ? 'text-gray-500' : 'text-slate-400'} />}
       </button>
       {isOpen && (
-        <div className="p-4">
+        <div className={`p-4 ${isLight ? 'bg-white' : ''}`}>
           {children}
         </div>
       )}
