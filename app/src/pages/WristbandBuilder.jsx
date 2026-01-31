@@ -80,7 +80,7 @@ const getDefaultCardSettings = () => ({
 });
 
 export default function WristbandBuilder() {
-  const { year, phase, week: weekParam } = useParams();
+  const { year, phase, week: weekParam, weekId: legacyWeekId } = useParams();
   const {
     playsArray,
     weeks,
@@ -126,6 +126,78 @@ export default function WristbandBuilder() {
     startSingleSelect();
     return () => stopSingleSelect();
   }, [startSingleSelect, stopSingleSelect]);
+
+  // Handler to save a new formation template
+  const handleSaveFormation = useCallback((newFormation) => {
+    const existingFormations = setupConfig?.formations || [];
+    const updatedFormations = [...existingFormations, newFormation];
+    updateSetupConfig({ formations: updatedFormations });
+  }, [setupConfig?.formations, updateSetupConfig]);
+
+  // Custom default positions for formation building
+  const customDefaultPositions = useMemo(() => setupConfig?.defaultFormationPositions || {}, [setupConfig]);
+
+  // Handler to save custom default positions
+  const handleSaveDefaultPositions = useCallback((positions) => {
+    updateSetupConfig({ defaultFormationPositions: positions });
+  }, [updateSetupConfig]);
+
+  // Get current week - support both new URL structure and legacy
+  const currentWeek = useMemo(() => {
+    // Legacy URL format: /week/:weekId/wristband
+    if (legacyWeekId) {
+      return weeks.find(w => w.id === legacyWeekId);
+    }
+    // New URL format: /:year/:phase/:week/wristband
+    if (weekParam) {
+      return weeks.find(w => {
+        const wYear = w.year?.toString() || new Date(w.startDate || w.createdAt).getFullYear().toString();
+        const wPhase = w.phase?.toLowerCase();
+        const wNum = w.weekNumber?.toString() || w.name?.match(/\d+/)?.[0];
+        return wYear === year && wPhase === phase && wNum === weekParam;
+      }) || weeks.find(w => w.id === currentWeekId);
+    }
+    return weeks.find(w => w.id === currentWeekId);
+  }, [weeks, year, phase, weekParam, legacyWeekId, currentWeekId]);
+
+  // Get selected level
+  const selectedLevel = activeLevelId || programLevels?.[0]?.id || 'varsity';
+
+  // Get wristband settings for current week and level
+  const wristbandSettings = useMemo(() => {
+    if (!currentWeek) return {};
+    const settings = currentWeek.wristbandSettings || {};
+    return settings[selectedLevel] || {};
+  }, [currentWeek, selectedLevel]);
+
+  // Get current card settings
+  const currentCard = useMemo(() => {
+    return wristbandSettings[activeCardId] || getDefaultCardSettings();
+  }, [wristbandSettings, activeCardId]);
+
+  // Get active tab config
+  const activeTab = CARD_TABS.find(t => t.id === activeCardId);
+
+  // Build slot map for quick lookup
+  const slotMap = useMemo(() => {
+    const map = {};
+    playsArray.forEach(p => {
+      if (p.wristbandSlot) map[p.wristbandSlot] = p;
+      if (p.staplesSlot) map[p.staplesSlot] = p;
+    });
+    return map;
+  }, [playsArray]);
+
+  // Generate slots for current card
+  const slots = useMemo(() => {
+    if (!activeTab) return [];
+    if (activeCardId === 'cardStaples') {
+      return Array.from({ length: 80 }, (_, i) => 10 + i);
+    }
+    const isWiz = currentCard.type === 'wiz';
+    const count = isWiz ? 16 : 48;
+    return Array.from({ length: count }, (_, i) => activeTab.startSlot + i);
+  }, [activeCardId, activeTab, currentCard.type]);
 
   // Handle Batch Add Event from PlayBank sidebar
   useEffect(() => {
@@ -176,73 +248,6 @@ export default function WristbandBuilder() {
 
     clearBatchAddEvent();
   }, [batchAddEvent, clearBatchAddEvent, slots, currentCard, slotMap, updatePlay, currentWeek, selectedLevel, wristbandSettings, activeCardId, updateWeek]);
-
-  // Handler to save a new formation template
-  const handleSaveFormation = useCallback((newFormation) => {
-    const existingFormations = setupConfig?.formations || [];
-    const updatedFormations = [...existingFormations, newFormation];
-    updateSetupConfig({ formations: updatedFormations });
-  }, [setupConfig?.formations, updateSetupConfig]);
-
-  // Custom default positions for formation building
-  const customDefaultPositions = useMemo(() => setupConfig?.defaultFormationPositions || {}, [setupConfig]);
-
-  // Handler to save custom default positions
-  const handleSaveDefaultPositions = useCallback((positions) => {
-    updateSetupConfig({ defaultFormationPositions: positions });
-  }, [updateSetupConfig]);
-
-  // Get current week
-  const currentWeek = useMemo(() => {
-    if (weekParam) {
-      return weeks.find(w => {
-        const wYear = w.year?.toString() || new Date(w.startDate || w.createdAt).getFullYear().toString();
-        const wPhase = w.phase?.toLowerCase();
-        const wNum = w.weekNumber?.toString() || w.name?.match(/\d+/)?.[0];
-        return wYear === year && wPhase === phase && wNum === weekParam;
-      }) || weeks.find(w => w.id === currentWeekId);
-    }
-    return weeks.find(w => w.id === currentWeekId);
-  }, [weeks, year, phase, weekParam, currentWeekId]);
-
-  // Get selected level
-  const selectedLevel = activeLevelId || programLevels?.[0]?.id || 'varsity';
-
-  // Get wristband settings for current week and level
-  const wristbandSettings = useMemo(() => {
-    if (!currentWeek) return {};
-    const settings = currentWeek.wristbandSettings || {};
-    return settings[selectedLevel] || {};
-  }, [currentWeek, selectedLevel]);
-
-  // Get current card settings
-  const currentCard = useMemo(() => {
-    return wristbandSettings[activeCardId] || getDefaultCardSettings();
-  }, [wristbandSettings, activeCardId]);
-
-  // Get active tab config
-  const activeTab = CARD_TABS.find(t => t.id === activeCardId);
-
-  // Build slot map for quick lookup
-  const slotMap = useMemo(() => {
-    const map = {};
-    playsArray.forEach(p => {
-      if (p.wristbandSlot) map[p.wristbandSlot] = p;
-      if (p.staplesSlot) map[p.staplesSlot] = p;
-    });
-    return map;
-  }, [playsArray]);
-
-  // Generate slots for current card
-  const slots = useMemo(() => {
-    if (!activeTab) return [];
-    if (activeCardId === 'cardStaples') {
-      return Array.from({ length: 80 }, (_, i) => 10 + i);
-    }
-    const isWiz = currentCard.type === 'wiz';
-    const count = isWiz ? 16 : 48;
-    return Array.from({ length: count }, (_, i) => activeTab.startSlot + i);
-  }, [activeCardId, activeTab, currentCard.type]);
 
   // Get OL schemes with diagrams for library selection
   const olSchemes = useMemo(() => {
