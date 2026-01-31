@@ -1261,6 +1261,7 @@ export default function Setup() {
               onUpdate={updateLocal}
               setupMode={localConfig.setupMode?.[phase] || 'standard'}
               setupConfig={localConfig}
+              isLight={isLight}
             />
           )}
 
@@ -2396,7 +2397,7 @@ function ShiftMotionsTab({ shiftMotions, onUpdate }) {
 }
 
 // Play Buckets Tab Component (called Categories for Defense/ST)
-function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupMode, setupConfig }) {
+function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupMode, setupConfig, isLight = false }) {
   const phaseLabel = phase === 'DEFENSE' ? 'Defensive Categories' : phase === 'SPECIAL_TEAMS' ? 'Special Teams Categories' : 'Play Buckets';
   const itemLabel = phase === 'OFFENSE' ? 'Bucket' : 'Category';
   const isBasicMode = setupMode === 'basic';
@@ -2615,7 +2616,7 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupMode, setup
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-white">{phaseLabel}</h3>
+        <h3 className={`text-lg font-semibold ${isLight ? 'text-gray-800' : 'text-white'}`}>{phaseLabel}</h3>
         <button
           onClick={addBucket}
           className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700"
@@ -2625,14 +2626,14 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupMode, setup
       </div>
 
       {isAdvanced && phase === 'OFFENSE' && (
-        <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm text-amber-200">
+        <div className={`mb-4 p-3 rounded-lg text-sm ${isLight ? 'bg-amber-50 border border-amber-200 text-amber-700' : 'bg-amber-500/10 border border-amber-500/30 text-amber-200'}`}>
           <strong>Advanced Mode:</strong> Each bucket has its own play call syntax. Click "Edit Syntax" to customize the call structure for each type of play.
         </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {buckets.map(bucket => (
-          <div key={bucket.id} className="bg-slate-700/50 rounded-lg border border-slate-600 p-4">
+          <div key={bucket.id} className={`rounded-lg border p-4 ${isLight ? 'bg-white border-gray-200 shadow-sm' : 'bg-slate-700/50 border-slate-600'}`}>
             <div className="flex justify-between items-start mb-3 gap-2">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <div className="relative flex-shrink-0">
@@ -2657,7 +2658,7 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupMode, setup
                   value={bucket.label}
                   onChange={(e) => updateBucket(bucket.id, { label: e.target.value })}
                   aria-label="Bucket label"
-                  className="flex-1 min-w-0 px-2 py-1 font-semibold bg-slate-600 border border-slate-500 rounded text-white truncate"
+                  className={`flex-1 min-w-0 px-2 py-1 font-semibold rounded truncate ${isLight ? 'bg-gray-100 border border-gray-300 text-gray-800' : 'bg-slate-600 border border-slate-500 text-white'}`}
                 />
               </div>
               <button onClick={() => deleteBucket(bucket.id)} className="text-red-400 hover:text-red-300 flex-shrink-0">
@@ -2667,13 +2668,13 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupMode, setup
 
             {/* Syntax preview and edit button - Advanced mode only */}
             {isAdvanced && phase === 'OFFENSE' && (
-              <div className="mt-2 pt-2 border-t border-slate-600">
-                <div className="text-xs text-slate-500 mb-1">Syntax:</div>
+              <div className={`mt-2 pt-2 border-t ${isLight ? 'border-gray-200' : 'border-slate-600'}`}>
+                <div className={`text-xs mb-1 ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Syntax:</div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-slate-400 truncate">{getExampleCall(bucket)}</span>
+                  <span className={`text-xs truncate ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>{getExampleCall(bucket)}</span>
                   <button
                     onClick={() => setEditingSyntaxBucket(bucket.id)}
-                    className="text-xs px-2 py-1 bg-slate-600 text-sky-400 rounded hover:bg-slate-500"
+                    className={`text-xs px-2 py-1 rounded ${isLight ? 'bg-gray-100 text-sky-600 hover:bg-gray-200' : 'bg-slate-600 text-sky-400 hover:bg-slate-500'}`}
                   >
                     Edit
                   </button>
@@ -2685,14 +2686,14 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupMode, setup
       </div>
 
       {buckets.length === 0 && (
-        <div className="text-center py-12 text-slate-400">
+        <div className={`text-center py-12 ${isLight ? 'text-gray-400' : 'text-slate-400'}`}>
           <Tag size={48} className="mx-auto mb-4 opacity-30" />
           <p>No {phaseLabel.toLowerCase()} defined.</p>
         </div>
       )}
 
-      <div className="mt-6 p-4 bg-slate-700/30 rounded-lg text-sm text-slate-400">
-        <strong>Note:</strong> {phase === 'DEFENSE' ? 'These categories organize your defensive scheme (e.g. Fronts, Coverages, Blitzes).' : phase === 'SPECIAL_TEAMS' ? 'These categories organize your special teams units.' : 'These buckets define the high-level organization (e.g. Run, Pass, RPO).'}
+      <div className={`mt-6 p-4 rounded-lg text-sm ${isLight ? 'bg-gray-100 text-gray-600' : 'bg-slate-700/30 text-slate-400'}`}>
+        <strong className={isLight ? 'text-gray-700' : ''}>Note:</strong> {phase === 'DEFENSE' ? 'These categories organize your defensive scheme (e.g. Fronts, Coverages, Blitzes).' : phase === 'SPECIAL_TEAMS' ? 'These categories organize your special teams units.' : 'These buckets define the high-level organization (e.g. Run, Pass, RPO).'}
       </div>
 
       {/* Syntax editing modal */}
