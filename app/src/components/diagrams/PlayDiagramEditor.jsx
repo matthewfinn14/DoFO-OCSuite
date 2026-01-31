@@ -851,6 +851,7 @@ export default function PlayDiagramEditor({
   };
 
   // Save current player positions as the new custom defaults
+  const [defaultsSaved, setDefaultsSaved] = useState(false);
   const setAsDefaultPositions = () => {
     if (!onSaveDefaultPositions) return;
 
@@ -863,6 +864,8 @@ export default function PlayDiagramEditor({
     });
 
     onSaveDefaultPositions(defaults);
+    setDefaultsSaved(true);
+    setTimeout(() => setDefaultsSaved(false), 2000);
   };
 
   // Toggle custom blocker (for wiz-oline)
@@ -1291,10 +1294,10 @@ export default function PlayDiagramEditor({
                   {onSaveDefaultPositions && (
                     <button
                       onClick={setAsDefaultPositions}
-                      className="px-2 py-1 text-xs bg-amber-600 text-white rounded hover:bg-amber-500"
+                      className={`px-2 py-1 text-xs text-white rounded transition-colors ${defaultsSaved ? 'bg-emerald-500' : 'bg-amber-600 hover:bg-amber-500'}`}
                       title="Save current positions as YOUR default (will be used by Snap Default)"
                     >
-                      Set Default
+                      {defaultsSaved ? 'Saved!' : 'Set Default'}
                     </button>
                   )}
                 </div>
