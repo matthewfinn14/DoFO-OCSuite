@@ -64,10 +64,15 @@ export default function PlayEditor({
 
     // Search through all weeks for practice script instances
     (weeks || []).forEach(week => {
-      // Check practice plans
-      (week.practicePlans || []).forEach(plan => {
-        (plan.segments || []).forEach(segment => {
-          (segment.script || []).forEach((row, rowIndex) => {
+      // Check practice plans - handle both array and object formats
+      const plans = Array.isArray(week.practicePlans)
+        ? week.practicePlans
+        : Object.values(week.practicePlans || {});
+      plans.forEach(plan => {
+        const segments = Array.isArray(plan?.segments) ? plan.segments : [];
+        segments.forEach(segment => {
+          const script = Array.isArray(segment?.script) ? segment.script : [];
+          script.forEach((row, rowIndex) => {
             if (row.playId === play.id) {
               practiceInstances.push({
                 type: 'practice',
@@ -88,7 +93,8 @@ export default function PlayEditor({
       });
 
       // Check game call log (if exists) - placeholder for future feature
-      (week.gameCallLog || []).forEach(call => {
+      const gameLog = Array.isArray(week.gameCallLog) ? week.gameCallLog : [];
+      gameLog.forEach(call => {
         if (call.playId === play.id) {
           gameInstances.push({
             type: 'game',
