@@ -741,6 +741,7 @@ export default function Setup() {
         { id: 'personnel', label: 'Personnel Groupings', icon: UserCheck },
         { id: 'situations', label: 'Define Situations', icon: Target },
         { id: 'play-buckets', label: 'Define Play Buckets', icon: Tag },
+        { id: 'concept-groups', label: 'Concepts/Groups', icon: Grid },
         { id: 'quality-control', label: 'Quality Control Definitions', icon: ClipboardCheck }
       );
     }
@@ -800,15 +801,13 @@ export default function Setup() {
     }
 
     // Add remaining tabs that weren't in the syntax (for offense)
+    // Note: concept-groups is now in the top section for offense, so skip it here
     if (isOffense) {
       if (!addedTabs.has('formations')) {
         tabs.push({ id: 'formations', label: 'Formations/Families', icon: LayoutGrid });
       }
       if (!addedTabs.has('shifts-motions')) {
         tabs.push({ id: 'shifts-motions', label: 'Shifts/Motions', icon: ArrowRightLeft });
-      }
-      if (!addedTabs.has('concept-groups')) {
-        tabs.push({ id: 'concept-groups', label: 'Concepts/Groups', icon: Grid });
       }
       if (!addedTabs.has('read-types')) {
         tabs.push({ id: 'read-types', label: 'Read Types', icon: Eye });
