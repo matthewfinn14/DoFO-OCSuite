@@ -64,6 +64,8 @@ const SHAPES = [
   { id: 'lock', label: 'Lock', icon: '🔒' },
   { id: 'arrow-left', label: 'Arrow Left', icon: '←' },
   { id: 'arrow-right', label: 'Arrow Right', icon: '→' },
+  { id: 'triangle-up', label: 'Triangle Up', icon: '▲' },
+  { id: 'triangle-down', label: 'Triangle Down', icon: '▼' },
 ];
 
 // Default position colors (fallback only - user's positionColors from setup take precedence)
@@ -1217,6 +1219,26 @@ export default function PlayDiagramEditor({
               strokeLinejoin="round"
             />
           </g>
+        );
+      } else if (el.shapeType === 'triangle-up') {
+        // Equilateral triangle pointing up (similar size to star)
+        const triSize = size * 1.1;
+        const h = triSize * Math.sqrt(3) / 2; // height of equilateral triangle
+        shapeElement = (
+          <polygon
+            points={`${x},${y - h * 2/3} ${x - triSize/2},${y + h/3} ${x + triSize/2},${y + h/3}`}
+            fill={shapeColor}
+          />
+        );
+      } else if (el.shapeType === 'triangle-down') {
+        // Equilateral triangle pointing down (similar size to star)
+        const triSize = size * 1.1;
+        const h = triSize * Math.sqrt(3) / 2;
+        shapeElement = (
+          <polygon
+            points={`${x},${y + h * 2/3} ${x - triSize/2},${y - h/3} ${x + triSize/2},${y - h/3}`}
+            fill={shapeColor}
+          />
         );
       }
 

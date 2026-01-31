@@ -292,6 +292,24 @@ export default function DiagramPreview({
               />
             </g>
           );
+        } else if (el.shapeType === 'triangle-up') {
+          const triSize = size * 1.1;
+          const h = triSize * Math.sqrt(3) / 2;
+          shapeElement = (
+            <polygon
+              points={`${x},${y - h * 2/3} ${x - triSize/2},${y + h/3} ${x + triSize/2},${y + h/3}`}
+              fill={shapeColor}
+            />
+          );
+        } else if (el.shapeType === 'triangle-down') {
+          const triSize = size * 1.1;
+          const h = triSize * Math.sqrt(3) / 2;
+          shapeElement = (
+            <polygon
+              points={`${x},${y + h * 2/3} ${x - triSize/2},${y - h/3} ${x + triSize/2},${y - h/3}`}
+              fill={shapeColor}
+            />
+          );
         }
 
         return <g key={key}>{shapeElement}</g>;
