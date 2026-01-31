@@ -117,13 +117,13 @@ const getWizSkillFormation = (positionColors = {}, positionNames = {}, skillPosi
   const baseTime = Date.now();
   const olGroupId = `ol-group-${baseTime}`; // Group ID for OL
 
-  // Always include 5 OL (grouped by default)
+  // Always include 5 OL (grouped by default) - positionKey used for saving/restoring defaults
   const elements = [
-    { id: baseTime + 1, type: 'player', points: [{ x: wizCenter, y: olY }], color: getColor('C', cOL), label: 'C', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId },
-    { id: baseTime + 2, type: 'player', points: [{ x: wizCenter - spacing, y: olY }], color: getColor('LG', cOL), label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId },
-    { id: baseTime + 3, type: 'player', points: [{ x: wizCenter + spacing, y: olY }], color: getColor('RG', cOL), label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId },
-    { id: baseTime + 4, type: 'player', points: [{ x: wizCenter - (spacing * 2), y: olY }], color: getColor('LT', cOL), label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId },
-    { id: baseTime + 5, type: 'player', points: [{ x: wizCenter + (spacing * 2), y: olY }], color: getColor('RT', cOL), label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId },
+    { id: baseTime + 1, type: 'player', points: [{ x: wizCenter, y: olY }], color: getColor('C', cOL), label: 'C', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'C' },
+    { id: baseTime + 2, type: 'player', points: [{ x: wizCenter - spacing, y: olY }], color: getColor('LG', cOL), label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'LG' },
+    { id: baseTime + 3, type: 'player', points: [{ x: wizCenter + spacing, y: olY }], color: getColor('RG', cOL), label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'RG' },
+    { id: baseTime + 4, type: 'player', points: [{ x: wizCenter - (spacing * 2), y: olY }], color: getColor('LT', cOL), label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'LT' },
+    { id: baseTime + 5, type: 'player', points: [{ x: wizCenter + (spacing * 2), y: olY }], color: getColor('RT', cOL), label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'RT' },
   ];
 
   // Add skill players based on the provided positions
@@ -815,24 +815,31 @@ export default function PlayDiagramEditor({
 
       // OL positions (text-only shape)
       if (el.shape === 'text-only') {
-        // Check custom defaults for OL too
-        if (customDefaultPositions[el.label]) {
-          const customPos = customDefaultPositions[el.label];
+        // Use positionKey if available (LG, RG, LT, RT, C), otherwise infer from position
+        const olKey = el.positionKey || el.label;
+
+        // Check custom defaults for OL
+        if (customDefaultPositions[olKey]) {
+          const customPos = customDefaultPositions[olKey];
           return { ...el, points: [{ x: customPos.x, y: customPos.y }] };
         }
 
+        // Fall back to built-in defaults based on positionKey or inferred position
         let defaultPos = { x: wizCenter, y: wizLos };
-        if (el.label === 'C') defaultPos = { x: wizCenter, y: wizLos };
-        else if (el.label === 'G' || el.label === 'LG') {
+        if (olKey === 'C') defaultPos = { x: wizCenter, y: wizLos };
+        else if (olKey === 'LG') defaultPos = { x: wizCenter - olSpacing, y: wizLos };
+        else if (olKey === 'RG') defaultPos = { x: wizCenter + olSpacing, y: wizLos };
+        else if (olKey === 'LT') defaultPos = { x: wizCenter - (olSpacing * 2), y: wizLos };
+        else if (olKey === 'RT') defaultPos = { x: wizCenter + (olSpacing * 2), y: wizLos };
+        else if (el.label === 'G') {
+          // Legacy: infer left/right from current position
           const isLeftG = el.points[0].x < wizCenter;
           defaultPos = { x: isLeftG ? wizCenter - olSpacing : wizCenter + olSpacing, y: wizLos };
         }
-        else if (el.label === 'RG') defaultPos = { x: wizCenter + olSpacing, y: wizLos };
-        else if (el.label === 'T' || el.label === 'LT') {
+        else if (el.label === 'T') {
           const isLeftT = el.points[0].x < wizCenter;
           defaultPos = { x: isLeftT ? wizCenter - (olSpacing * 2) : wizCenter + (olSpacing * 2), y: wizLos };
         }
-        else if (el.label === 'RT') defaultPos = { x: wizCenter + (olSpacing * 2), y: wizLos };
 
         return { ...el, points: [defaultPos] };
       }
