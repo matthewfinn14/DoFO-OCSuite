@@ -998,7 +998,7 @@ export default function Setup() {
                 <h3 className={`font-medium flex items-center gap-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
                   Setup Mode
                   <span className={`text-xs px-2 py-0.5 rounded ${(localConfig.setupMode?.[phase] || 'standard') === 'basic'
-                    ? isLight ? 'bg-gray-200 text-gray-600' : 'bg-slate-600/30 text-slate-300'
+                    ? isLight ? 'bg-sky-100 text-sky-700' : 'bg-sky-600/30 text-sky-400'
                     : (localConfig.setupMode?.[phase] || 'standard') === 'standard'
                       ? isLight ? 'bg-green-100 text-green-700' : 'bg-green-600/30 text-green-400'
                       : isLight ? 'bg-purple-100 text-purple-700' : 'bg-purple-600/30 text-purple-400'
@@ -1012,7 +1012,7 @@ export default function Setup() {
                 <button
                   onClick={() => updateLocal('setupMode', { ...localConfig.setupMode, [phase]: 'basic' })}
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${(localConfig.setupMode?.[phase] || 'standard') === 'basic'
-                    ? isLight ? 'bg-gray-600 text-white' : 'bg-slate-500 text-white'
+                    ? 'bg-sky-600 text-white'
                     : isLight
                       ? 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300'
                       : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
@@ -1040,22 +1040,26 @@ export default function Setup() {
               {/* Basic Mode Card */}
               <div className={`p-3 rounded-lg border transition-all ${(localConfig.setupMode?.[phase] || 'standard') === 'basic'
                 ? isLight
-                  ? 'bg-gray-50 border-gray-400 shadow-sm'
-                  : 'bg-slate-700/40 border-slate-500/50'
+                  ? 'bg-sky-50 border-sky-400 shadow-sm'
+                  : 'bg-sky-900/20 border-sky-600/50'
                 : isLight
                   ? 'bg-white border-gray-200 opacity-60'
                   : 'bg-slate-800/30 border-slate-700/50 opacity-60'
                 }`}>
-                <h4 className={`font-medium text-sm mb-2 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>Basic Mode</h4>
-                <ul className={`text-xs space-y-1 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                <h4 className={`font-medium text-sm mb-2 ${(localConfig.setupMode?.[phase] || 'standard') === 'basic'
+                  ? isLight ? 'text-sky-700' : 'text-sky-400'
+                  : isLight ? 'text-gray-700' : 'text-slate-300'
+                  }`}>Basic Mode</h4>
+                <ul className={`text-xs space-y-1 ${(localConfig.setupMode?.[phase] || 'standard') === 'basic'
+                  ? isLight ? 'text-sky-600' : 'text-sky-300'
+                  : isLight ? 'text-gray-500' : 'text-slate-400'
+                  }`}>
                   <li>• Type entire play call in one field</li>
                   <li>• No syntax parsing or breakdown</li>
                   <li>• Practice scripts and game plans work</li>
                   <li>• Situation tagging still available</li>
                 </ul>
               </div>
-
-
 
               {/* Advanced Mode Card */}
               <div className={`p-3 rounded-lg border transition-all ${(localConfig.setupMode?.[phase] || 'standard') === 'advanced'
@@ -1066,8 +1070,14 @@ export default function Setup() {
                   ? 'bg-white border-gray-200 opacity-60'
                   : 'bg-slate-800/30 border-slate-700/50 opacity-60'
                 }`}>
-                <h4 className={`font-medium text-sm mb-2 ${isLight ? 'text-purple-700' : 'text-purple-400'}`}>Advanced Mode</h4>
-                <ul className={`text-xs space-y-1 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                <h4 className={`font-medium text-sm mb-2 ${(localConfig.setupMode?.[phase] || 'standard') === 'advanced'
+                  ? isLight ? 'text-purple-700' : 'text-purple-400'
+                  : isLight ? 'text-gray-700' : 'text-slate-300'
+                  }`}>Advanced Mode</h4>
+                <ul className={`text-xs space-y-1 ${(localConfig.setupMode?.[phase] || 'standard') === 'advanced'
+                  ? isLight ? 'text-purple-600' : 'text-purple-300'
+                  : isLight ? 'text-gray-500' : 'text-slate-400'
+                  }`}>
                   <li>• Custom syntax per play bucket</li>
                   <li>• Term signals auto-fill fields</li>
                   <li>• Deep filtering for self-scout</li>
