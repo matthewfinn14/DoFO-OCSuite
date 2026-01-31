@@ -55,7 +55,7 @@ const getZigZagPath = (points) => {
 };
 
 // Render arrow head manually (no markers to avoid CSP issues)
-const renderArrowHead = (points, color) => {
+const renderArrowHead = (points, color, strokeWidth = 7) => {
   if (!points || points.length < 2) return null;
   const end = points[points.length - 1];
   const prev = points[points.length - 2];
@@ -65,9 +65,9 @@ const renderArrowHead = (points, color) => {
   const ux = dx / len;
   const uy = dy / len;
 
-  // Arrow size
-  const arrowLen = 12;
-  const arrowWidth = 8;
+  // Arrow size proportional to stroke width
+  const arrowLen = strokeWidth * 6;
+  const arrowWidth = strokeWidth * 3.5;
 
   // Arrow points
   const tip = end;
@@ -229,7 +229,7 @@ export default function DiagramPreview({
         const dx = end.x - prev.x;
         const dy = end.y - prev.y;
         const len = Math.hypot(dx, dy) || 1;
-        const sWidth = parseInt(el.strokeWidth || 9);
+        const sWidth = parseInt(el.strokeWidth || 7);
         const perpX = (-dy / len) * 15;
         const perpY = (dx / len) * 15;
 
@@ -245,11 +245,13 @@ export default function DiagramPreview({
       } else if (el.endType === 'dot') {
         const end = el.points[el.points.length - 1];
         endMarker = <circle cx={end.x} cy={end.y} r="6" fill={color} />;
-      } else if (el.endType === 'arrow') {
-        endMarker = renderArrowHead(el.points, color);
       }
 
-      const strokeWidth = el.strokeWidth || 9;
+      const strokeWidth = el.strokeWidth || 7;
+
+      if (el.endType === 'arrow') {
+        endMarker = renderArrowHead(el.points, color, strokeWidth);
+      }
 
       // Generate path for all points
       const segStyles = el.segmentStyles || [];

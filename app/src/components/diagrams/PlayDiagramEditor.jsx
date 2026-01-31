@@ -206,7 +206,7 @@ export default function PlayDiagramEditor({
   const [selectedTool, setSelectedTool] = useState('select');
   const [color, setColor] = useState('#000000');
   const [lineStyle, setLineStyle] = useState('solid');
-  const [lineWidth, setLineWidth] = useState(9);
+  const [lineWidth, setLineWidth] = useState(7);
   const [endType, setEndType] = useState(isWizOline ? 't' : 'arrow'); // T-block for OL, arrow for skill
 
   // Text Size State for Wiz OL
@@ -992,11 +992,40 @@ export default function PlayDiagramEditor({
     // Polyline rendering
     if (el.points.length < 2) return null;
 
-    let markerEnd = undefined;
+    let arrowHead = null;
     let tBlock = null;
 
     if (el.endType === 'arrow') {
-      markerEnd = `url(#arrowhead-${el.color})`;
+      // Draw arrow as filled polygon (not marker) to avoid line showing through
+      const end = el.points[el.points.length - 1];
+      const prev = el.points[el.points.length - 2] || el.points[0];
+      const dx = end.x - prev.x;
+      const dy = end.y - prev.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const ux = dx / len;
+      const uy = dy / len;
+
+      // Arrow dimensions proportional to stroke width
+      const sw = el.strokeWidth || 7;
+      const arrowLen = sw * 6;
+      const arrowWidth = sw * 3.5;
+
+      const tip = end;
+      const left = {
+        x: end.x - ux * arrowLen + uy * arrowWidth / 2,
+        y: end.y - uy * arrowLen - ux * arrowWidth / 2
+      };
+      const right = {
+        x: end.x - ux * arrowLen - uy * arrowWidth / 2,
+        y: end.y - uy * arrowLen + ux * arrowWidth / 2
+      };
+
+      arrowHead = (
+        <polygon
+          points={`${tip.x},${tip.y} ${left.x},${left.y} ${right.x},${right.y}`}
+          fill={el.color}
+        />
+      );
     } else if (el.endType === 't') {
       const end = el.points[el.points.length - 1];
       const prev = el.points[el.points.length - 2] || el.points[0];
@@ -1022,7 +1051,7 @@ export default function PlayDiagramEditor({
     }
 
     const isSelected = selectedIds.has(el.id);
-    const strokeWidth = el.strokeWidth || 9;
+    const strokeWidth = el.strokeWidth || 7;
     const isInteractionTool = selectedTool === 'select' || selectedTool === 'delete';
 
     // Generate segments with per-segment styles
@@ -1032,10 +1061,26 @@ export default function PlayDiagramEditor({
 
     for (let i = 0; i < el.points.length - 1; i++) {
       const p1 = el.points[i];
-      const p2 = el.points[i + 1];
+      let p2 = el.points[i + 1];
       const segStyle = segStyles[i] || defaultStyle;
       const isLastSegment = i === el.points.length - 2;
       const isSegmentSelected = selectedSegment?.elementId === el.id && selectedSegment?.segmentIndex === i;
+
+      // Shorten the last segment if there's an arrow to prevent line showing through
+      if (isLastSegment && el.endType === 'arrow') {
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const len = Math.hypot(dx, dy);
+        const sw = el.strokeWidth || 7;
+        const arrowLen = sw * 6;
+        if (len > arrowLen) {
+          const shortenBy = arrowLen * 0.7; // Pull back line to meet arrow base
+          p2 = {
+            x: p2.x - (dx / len) * shortenBy,
+            y: p2.y - (dy / len) * shortenBy
+          };
+        }
+      }
 
       let segD = '';
       if (segStyle === 'zigzag') {
@@ -1057,7 +1102,6 @@ export default function PlayDiagramEditor({
           strokeWidth={segStrokeWidth}
           fill="none"
           strokeDasharray={segStyle === 'dashed' ? '10,5' : 'none'}
-          markerEnd={isLastSegment ? markerEnd : undefined}
           filter={segFilter}
           style={{ cursor: isInteractionTool ? 'pointer' : 'default', pointerEvents: isInteractionTool ? 'all' : 'none' }}
           onClick={(e) => {
@@ -1103,6 +1147,7 @@ export default function PlayDiagramEditor({
         }}
       >
         {segments}
+        {arrowHead}
         {tBlock}
       </g>
     );
@@ -1117,7 +1162,7 @@ export default function PlayDiagramEditor({
     <div className="flex flex-col h-full">
       {/* Toolbar */}
       {!readOnly && (
-        <div className="flex items-center gap-2 px-2 py-1.5 bg-slate-800 border-b border-slate-600">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 py-1.5 bg-slate-800 border-b border-slate-600">
 
           {/* Play Name Display */}
           {playName && (
@@ -1546,10 +1591,13 @@ export default function PlayDiagramEditor({
         }}
       >
         <div
-          className="shadow-xl h-full"
+          className="shadow-xl"
           style={{
             aspectRatio,
             maxHeight: '100%',
+            maxWidth: '100%',
+            width: 'auto',
+            height: '100%',
             boxShadow: isWizSkill ? '0 4px 20px rgba(0,0,0,0.4)' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
           }}
         >
@@ -1577,8 +1625,8 @@ export default function PlayDiagramEditor({
                 ...Object.values(DEFAULT_POSITION_COLORS),
                 ...Object.values(positionColors)
               ])].map(c => (
-                <marker key={c} id={`arrowhead-${c}`} markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
-                  <polygon points="0 0, 6 2, 0 4" fill={c} />
+                <marker key={c} id={`arrowhead-${c}`} markerWidth="4.5" markerHeight="3" refX="3.75" refY="1.5" orient="auto">
+                  <polygon points="0 0, 4.5 1.5, 0 3" fill={c} />
                 </marker>
               ))}
             </defs>
