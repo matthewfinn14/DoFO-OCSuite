@@ -1543,7 +1543,6 @@ export default function Setup() {
               qcPlayPurposes={localConfig.qcPlayPurposes || []}
               onUpdate={updateLocal}
               isLight={isLight}
-              segmentFocusMode={localConfig.segmentFocusMode || 'all'}
             />
           )}
 
@@ -5720,18 +5719,11 @@ function SegmentFocusTab({
   shiftMotions,
   qcPlayPurposes,
   onUpdate,
-  isLight = false,
-  segmentFocusMode = 'all' // 'all' or 'manual'
+  isLight = false
 }) {
   const [selectedPhase, setSelectedPhase] = useState('O');
   const [selectedTypeId, setSelectedTypeId] = useState(null);
   const [customName, setCustomName] = useState('');
-
-  // Toggle focus mode
-  const toggleFocusMode = () => {
-    const newMode = segmentFocusMode === 'all' ? 'manual' : 'all';
-    onUpdate('segmentFocusMode', newMode);
-  };
 
   // Get segment types for selected phase
   const phaseSegmentTypes = segmentTypes[selectedPhase] || [];
@@ -5855,61 +5847,30 @@ function SegmentFocusTab({
     return !['conceptGroups', 'readTypes', 'lookAlikeSeries', 'shiftMotions'].includes(source.id);
   });
 
+  // Get focus mode for selected segment type (default to 'all')
+  const selectedTypeFocusMode = selectedType?.focusMode || 'all';
+
+  // Toggle focus mode for selected segment type
+  const toggleSegmentFocusMode = () => {
+    if (!selectedType) return;
+    const newMode = selectedTypeFocusMode === 'all' ? 'custom' : 'all';
+    const updatedTypes = phaseSegmentTypes.map(t =>
+      t.id === selectedTypeId ? { ...t, focusMode: newMode } : t
+    );
+    onUpdate('practiceSegmentTypes', { ...segmentTypes, [selectedPhase]: updatedTypes });
+  };
+
   return (
     <div>
       <div className="mb-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className={`text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>Segment Focus Items</h3>
-            <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
-              Configure focus options for each segment type. These appear as selectable focuses when building practice plans.
-            </p>
-          </div>
-
-          {/* Mode Toggle */}
-          <div className={`flex items-center gap-3 p-3 rounded-lg ${isLight ? 'bg-gray-50 border border-gray-200' : 'bg-slate-700/50'}`}>
-            <span className={`text-sm ${segmentFocusMode === 'all' ? (isLight ? 'text-gray-900 font-medium' : 'text-white font-medium') : (isLight ? 'text-gray-400' : 'text-slate-500')}`}>
-              All Available
-            </span>
-            <button
-              onClick={toggleFocusMode}
-              className={`relative w-12 h-6 rounded-full transition-colors ${
-                segmentFocusMode === 'manual'
-                  ? 'bg-sky-600'
-                  : isLight ? 'bg-gray-300' : 'bg-slate-600'
-              }`}
-            >
-              <span
-                className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                  segmentFocusMode === 'manual' ? 'translate-x-7' : 'translate-x-1'
-                }`}
-              />
-            </button>
-            <span className={`text-sm ${segmentFocusMode === 'manual' ? (isLight ? 'text-gray-900 font-medium' : 'text-white font-medium') : (isLight ? 'text-gray-400' : 'text-slate-500')}`}>
-              By Segment
-            </span>
-          </div>
-        </div>
+        <h3 className={`text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>Segment Focus Items</h3>
+        <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+          Configure focus options for each segment type. These appear as selectable focuses when building practice plans.
+        </p>
       </div>
 
-      {segmentFocusMode === 'all' ? (
-        /* All Options Mode */
-        <div className={`rounded-lg p-6 text-center ${isLight ? 'bg-emerald-50 border border-emerald-200' : 'bg-emerald-900/20 border border-emerald-800'}`}>
-          <Check size={48} className={`mx-auto mb-3 ${isLight ? 'text-emerald-500' : 'text-emerald-400'}`} />
-          <h4 className={`text-lg font-semibold mb-2 ${isLight ? 'text-emerald-700' : 'text-emerald-300'}`}>
-            All Focus Options Available
-          </h4>
-          <p className={`text-sm ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`}>
-            All defined situations, play buckets, concept groups, formations, and other items will be available as focus options when building practice plans for any segment type.
-          </p>
-          <p className={`text-xs mt-3 ${isLight ? 'text-emerald-500' : 'text-emerald-500'}`}>
-            Switch to "By Segment" mode to manually configure which focus options appear for each segment type.
-          </p>
-        </div>
-      ) : (
-        <>
-          {/* Phase Selector */}
-          <div className="flex gap-2 mb-4">
+      {/* Phase Selector */}
+      <div className="flex gap-2 mb-4">
         {PRACTICE_PHASES.map(phase => (
           <button
             key={phase.id}
@@ -5978,63 +5939,103 @@ function SegmentFocusTab({
             </div>
           ) : (
             <div className={`rounded-lg overflow-hidden ${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800/50'}`}>
-              {/* Selected Type Header */}
+              {/* Selected Type Header with Toggle */}
               <div className={`px-4 py-3 border-b ${isLight ? 'bg-gray-50 border-gray-200' : 'bg-slate-700/50 border-slate-600'}`}>
-                <h4 className={`font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>
-                  Focus Options for: <span className="text-sky-500">{selectedType.name}</span>
-                </h4>
-                <p className={`text-xs mt-1 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
-                  {currentFocusItems.length} focus item{currentFocusItems.length !== 1 ? 's' : ''} configured
-                </p>
-              </div>
-
-              {/* Current Focus Items */}
-              {currentFocusItems.length > 0 && (
-                <div className={`p-4 border-b ${isLight ? 'border-gray-200' : 'border-slate-600'}`}>
-                  <h5 className={`text-xs font-semibold uppercase tracking-wide mb-3 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
-                    Current Focus Items
-                  </h5>
-                  <div className="space-y-2">
-                    {Object.entries(groupedFocus).map(([source, items]) => {
-                      const sourceInfo = FOCUS_SOURCES.find(s => s.id === source) ||
-                        { label: source.charAt(0).toUpperCase() + source.slice(1), icon: Tag };
-                      const Icon = sourceInfo.icon;
-                      return (
-                        <div key={source} className="flex items-start gap-2">
-                          <div className={`flex items-center gap-1 min-w-[100px] ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
-                            <Icon size={12} />
-                            <span className="text-xs">{sourceInfo.label}</span>
-                          </div>
-                          <div className="flex flex-wrap gap-1.5 flex-1">
-                            {items.map(item => (
-                              <div
-                                key={`${item.id}-${item.source}`}
-                                className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs group ${
-                                  isLight ? 'bg-sky-100 text-sky-700' : 'bg-slate-700 text-white'
-                                }`}
-                              >
-                                <span>{item.name}</span>
-                                <button
-                                  onClick={() => removeFocusItem(item.id, item.source)}
-                                  className="p-0.5 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  <X size={10} />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className={`font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                      Focus Options for: <span className="text-sky-500">{selectedType.name}</span>
+                    </h4>
+                    <p className={`text-xs mt-1 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                      {selectedTypeFocusMode === 'all' ? 'All options available' : `${currentFocusItems.length} custom item${currentFocusItems.length !== 1 ? 's' : ''} selected`}
+                    </p>
+                  </div>
+                  {/* Per-Segment Toggle */}
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs ${selectedTypeFocusMode === 'all' ? (isLight ? 'text-emerald-600 font-medium' : 'text-emerald-400 font-medium') : (isLight ? 'text-gray-400' : 'text-slate-500')}`}>
+                      All
+                    </span>
+                    <button
+                      onClick={toggleSegmentFocusMode}
+                      className={`relative w-10 h-5 rounded-full transition-colors ${
+                        selectedTypeFocusMode === 'custom'
+                          ? 'bg-sky-600'
+                          : isLight ? 'bg-emerald-500' : 'bg-emerald-600'
+                      }`}
+                    >
+                      <span
+                        className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                          selectedTypeFocusMode === 'custom' ? 'translate-x-5' : 'translate-x-0.5'
+                        }`}
+                      />
+                    </button>
+                    <span className={`text-xs ${selectedTypeFocusMode === 'custom' ? (isLight ? 'text-sky-600 font-medium' : 'text-sky-400 font-medium') : (isLight ? 'text-gray-400' : 'text-slate-500')}`}>
+                      Custom
+                    </span>
                   </div>
                 </div>
-              )}
+              </div>
 
-              {/* All Sources - Scrollable List */}
-              <div className="p-4 max-h-[500px] overflow-y-auto space-y-4">
-                <p className={`text-sm mb-2 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
-                  Click items to add them as focus options for this segment type:
-                </p>
+              {selectedTypeFocusMode === 'all' ? (
+                /* All Options Mode for this segment */
+                <div className={`p-6 text-center ${isLight ? 'bg-emerald-50' : 'bg-emerald-900/10'}`}>
+                  <Check size={32} className={`mx-auto mb-2 ${isLight ? 'text-emerald-500' : 'text-emerald-400'}`} />
+                  <p className={`text-sm font-medium ${isLight ? 'text-emerald-700' : 'text-emerald-300'}`}>
+                    All focus options available for {selectedType.name}
+                  </p>
+                  <p className={`text-xs mt-1 ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`}>
+                    All situations, buckets, concept groups, formations, etc. can be selected when building practice plans.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Current Focus Items */}
+                  {currentFocusItems.length > 0 && (
+                    <div className={`p-4 border-b ${isLight ? 'border-gray-200' : 'border-slate-600'}`}>
+                      <h5 className={`text-xs font-semibold uppercase tracking-wide mb-3 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                        Selected Focus Items
+                      </h5>
+                      <div className="space-y-2">
+                        {Object.entries(groupedFocus).map(([source, items]) => {
+                          const sourceInfo = FOCUS_SOURCES.find(s => s.id === source) ||
+                            { label: source.charAt(0).toUpperCase() + source.slice(1), icon: Tag };
+                          const Icon = sourceInfo.icon;
+                          return (
+                            <div key={source} className="flex items-start gap-2">
+                              <div className={`flex items-center gap-1 min-w-[100px] ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
+                                <Icon size={12} />
+                                <span className="text-xs">{sourceInfo.label}</span>
+                              </div>
+                              <div className="flex flex-wrap gap-1.5 flex-1">
+                                {items.map(item => (
+                                  <div
+                                    key={`${item.id}-${item.source}`}
+                                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs group ${
+                                      isLight ? 'bg-sky-100 text-sky-700' : 'bg-slate-700 text-white'
+                                    }`}
+                                  >
+                                    <span>{item.name}</span>
+                                    <button
+                                      onClick={() => removeFocusItem(item.id, item.source)}
+                                      className="p-0.5 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <X size={10} />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* All Sources - Scrollable List */}
+                  <div className="p-4 max-h-[400px] overflow-y-auto space-y-4">
+                    <p className={`text-sm mb-2 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                      Click items to add them as focus options:
+                    </p>
 
                 {availableSources.filter(s => s.id !== 'custom').map(source => {
                   const Icon = source.icon;
@@ -6121,12 +6122,12 @@ function SegmentFocusTab({
                   </div>
                 </div>
               </div>
+                </>
+              )}
             </div>
           )}
         </div>
       </div>
-        </>
-      )}
     </div>
   );
 }
