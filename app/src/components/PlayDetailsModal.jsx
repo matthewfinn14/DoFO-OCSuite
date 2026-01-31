@@ -393,14 +393,14 @@ export default function PlayDetailsModal({
         )}
 
         {/* Bucket & Concept Group Selection - Side by Side Dropdowns */}
-        {phaseBuckets.length > 0 && (
-          <div className="p-4 border-b border-slate-200">
-            <div className="grid grid-cols-2 gap-4">
-              {/* Bucket Selection */}
-              <div>
-                <label htmlFor="play-details-bucket" className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2 block">
-                  Bucket
-                </label>
+        <div className="p-4 border-b border-slate-200">
+          <div className="grid grid-cols-2 gap-4">
+            {/* Bucket Selection */}
+            <div>
+              <label htmlFor="play-details-bucket" className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2 block">
+                Bucket
+              </label>
+              {phaseBuckets.length > 0 ? (
                 <select
                   id="play-details-bucket"
                   value={play.bucketId || ''}
@@ -417,13 +417,19 @@ export default function PlayDetailsModal({
                     <option key={b.id} value={b.id}>{b.label}</option>
                   ))}
                 </select>
-              </div>
+              ) : (
+                <div className="text-xs text-slate-400 italic py-1.5">
+                  No buckets defined in Setup
+                </div>
+              )}
+            </div>
 
-              {/* Concept Group Selection */}
-              <div>
-                <label htmlFor="play-details-concept-group" className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2 block">
-                  Concept Group
-                </label>
+            {/* Concept Group Selection */}
+            <div>
+              <label htmlFor="play-details-concept-group" className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2 block">
+                Concept Group
+              </label>
+              {phaseBuckets.length > 0 ? (
                 <select
                   id="play-details-concept-group"
                   value={play.conceptFamily || ''}
@@ -443,10 +449,14 @@ export default function PlayDetailsModal({
                     <option key={cf.id} value={cf.label}>{cf.label}</option>
                   ))}
                 </select>
-              </div>
+              ) : (
+                <div className="text-xs text-slate-400 italic py-1.5">
+                  Define buckets first
+                </div>
+              )}
             </div>
           </div>
-        )}
+        </div>
 
         {/* Read Type, Series & Play Purpose */}
         <div className="p-4 border-b border-slate-200">
