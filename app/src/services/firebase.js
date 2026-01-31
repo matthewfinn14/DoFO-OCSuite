@@ -8,7 +8,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyBSN0enEOC6opYM71kxCPLo13npMdY0dog",
   authDomain: "dofo-ocsuite-prod.firebaseapp.com",
   projectId: "dofo-ocsuite-prod",
-  storageBucket: "dofo.ocsuite.prod.firebasestorage.app",
+  storageBucket: "dofoocsuiteprod",
   messagingSenderId: "388773904656",
   appId: "1:388773904656:web:df87487a0b1441344de595",
   measurementId: "G-0DS2K18FX9"
