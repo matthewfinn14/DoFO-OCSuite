@@ -1007,16 +1007,25 @@ export default function Admin() {
               <button
                 onClick={() => {
                   const updates = {
-                    name: editingSchool.name,
-                    mascot: editingSchool.mascot,
+                    name: editingSchool.name || '',
+                    mascot: editingSchool.mascot || '',
                     memberList: editingSchool.memberList || []
                   };
                   // Only include fields that are defined
                   if (editingSchool.schoolAdminEmail) {
                     updates.schoolAdminEmail = editingSchool.schoolAdminEmail;
                   }
+                  // Clean subscription object - remove undefined values
                   if (editingSchool.subscription) {
-                    updates.subscription = editingSchool.subscription;
+                    const cleanSub = {};
+                    Object.entries(editingSchool.subscription).forEach(([key, value]) => {
+                      if (value !== undefined) {
+                        cleanSub[key] = value;
+                      }
+                    });
+                    if (Object.keys(cleanSub).length > 0) {
+                      updates.subscription = cleanSub;
+                    }
                   }
                   updateSchoolSubscription(editingSchool.id, updates);
                 }}
