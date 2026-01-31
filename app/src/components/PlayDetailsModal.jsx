@@ -742,26 +742,6 @@ export default function PlayDetailsModal({
             </div>
           </div>
 
-          {/* Setup Play */}
-          <div className="mb-3">
-            <label htmlFor="play-details-setup-play" className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 block">
-              Setup By Another Play?
-            </label>
-            <select
-              id="play-details-setup-play"
-              value={play.setupPlayId || ''}
-              onChange={(e) => onUpdatePlay?.(playId, { setupPlayId: e.target.value })}
-              className="w-full px-2 py-1.5 text-xs bg-white border border-slate-300 rounded text-slate-700"
-            >
-              <option value="">No setup play</option>
-              {samePhasePlays.map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.formation ? `${p.formation} ` : ''}{p.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
           {/* Premium Looks */}
           <div>
             <label htmlFor="play-details-premium-looks" className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 block">
