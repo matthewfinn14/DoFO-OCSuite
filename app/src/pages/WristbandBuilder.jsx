@@ -1002,9 +1002,9 @@ function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, on
                 ? (play?.wizAbbreviation || fullPlayCall)
                 : (play?.wizOlineRef?.name || '');
 
-              // Get diagram data for preview
+              // Get diagram data for preview - fall back to other diagram sources
               const diagramData = viewType === 'skill'
-                ? play?.wizSkillData
+                ? (play?.wizSkillData || play?.rooskiSkillData || (Array.isArray(play?.diagramData) ? play?.diagramData : play?.diagramData?.elements))
                 : play?.wizOlineRef?.diagramData;
 
               // For OLINE view without wizOlineRef, show option to select

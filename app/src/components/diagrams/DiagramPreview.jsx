@@ -132,13 +132,12 @@ export default function DiagramPreview({
 
   // Use content-fitted viewBox or default
   // For wiz-skill mode, ALWAYS use full canvas viewBox to maintain background alignment
-  // For wiz-skill with fillContainer (wristband cells), add side padding for trimming
   // For wiz-oline, use content-fitted bounds for better preview
   const viewBox = isWizSkill
-    ? (fillContainer ? '-10 0 920 320' : '0 0 900 320')  // Always use full canvas for wiz-skill
+    ? '0 0 950 600'  // Always use full canvas for wiz-skill (1.5:1 ratio)
     : (bounds
       ? `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`
-      : '0 0 900 600');
+      : '0 0 950 600');
 
   if (!elements || elements.length === 0) {
     if (fillContainer) {
@@ -186,7 +185,7 @@ export default function DiagramPreview({
         }
 
         // Circle/square
-        const size = 30;
+        const size = 42;
         const isRect = el.shape === 'square';
         const isFilled = el.variant === 'filled';
         const fillColor = isFilled ? el.color : 'white';
@@ -205,7 +204,7 @@ export default function DiagramPreview({
               y={y}
               dy="0.35em"
               textAnchor="middle"
-              fontSize="16"
+              fontSize="22"
               fontWeight="bold"
               fill={textColor}
               style={{ fontFamily: 'Arial, sans-serif' }}
@@ -302,10 +301,21 @@ export default function DiagramPreview({
         width="100%"
         height="100%"
         viewBox={viewBox}
-        preserveAspectRatio="xMidYMid meet"
+        preserveAspectRatio="none"
         xmlns="http://www.w3.org/2000/svg"
         style={{ display: 'block' }}
       >
+        {/* Background for wiz-skill mode */}
+        {isWizSkill && showBackground && (
+          <image
+            href="/WIZ Background.jpg"
+            x="0"
+            y="0"
+            width="950"
+            height="600"
+            preserveAspectRatio="none"
+          />
+        )}
         {/* Render elements */}
         {elements.map((el, idx) => renderElement(el, idx))}
       </svg>
@@ -314,7 +324,7 @@ export default function DiagramPreview({
 
   // Support responsive width (when width is "100%" or similar string)
   const isResponsive = typeof width === 'string' && width.includes('%');
-  const aspectRatio = isWizSkill ? '900 / 320' : '900 / 600';
+  const aspectRatio = '950 / 600';
 
   return (
     <div

@@ -2283,8 +2283,8 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
       const point = el.points[0];
       const pos = {
         label: el.label,
-        x: Math.round((point.x / 900) * 100 * 10) / 10, // Convert to percentage
-        y: Math.round((point.y / 320) * 100 * 10) / 10,
+        x: Math.round((point.x / 950) * 100 * 10) / 10, // Convert to percentage
+        y: Math.round((point.y / 600) * 100 * 10) / 10,
         shape: el.shape || 'circle',
         variant: el.variant || 'filled'
       };
@@ -2327,7 +2327,7 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
       return editingFormation.positions.map((pos, idx) => ({
         id: Date.now() + idx,
         type: 'player',
-        points: [{ x: (pos.x / 100) * 900, y: (pos.y / 100) * 320 }],
+        points: [{ x: (pos.x / 100) * 950, y: (pos.y / 100) * 600 }],
         color: pos.color || positionColors[pos.label] || '#64748b',
         label: pos.label,
         shape: pos.shape || 'circle',

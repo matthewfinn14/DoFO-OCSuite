@@ -86,30 +86,30 @@ const getDefaultWizOLFormation = () => {
 // Default skill positions for 11 personnel (no personnel grouping selected)
 const DEFAULT_SKILL_POSITIONS = ['QB', 'RB', 'X', 'Z', 'Y', 'A'];
 
-// Default position placements on the canvas (wiz-card viewBox 900x320 - wider aspect ratio)
-// LOS is around y=210, backfield around y=250-290
+// Default position placements on the canvas (wiz-card viewBox 950x600 - 1.58:1 ratio)
+// LOS is around y=390, backfield around y=450-520
 const SKILL_POSITION_PLACEMENTS = {
-  'QB': { x: 485, y: 275 },     // Backfield, center
-  'RB': { x: 400, y: 285 },     // Backfield, left of QB
-  'FB': { x: 485, y: 250 },     // Behind QB (fullback)
-  'X': { x: 105, y: 210 },      // Wide left on LOS
-  'Z': { x: 680, y: 245 },      // Off ball, slot right
-  'Y': { x: 795, y: 210 },      // Wide right on LOS
-  'A': { x: 320, y: 250 },      // Off ball, slot left
-  'H': { x: 720, y: 250 },      // H-back (wing right)
-  'F': { x: 560, y: 275 },      // F-back (right of QB)
-  'B': { x: 340, y: 285 },      // Extra back
-  'TE': { x: 600, y: 215 },     // Tight end (on LOS)
-  'WR': { x: 105, y: 210 },     // Wide receiver (default to X spot)
+  'QB': { x: 510, y: 500 },     // Backfield, center
+  'RB': { x: 420, y: 520 },     // Backfield, left of QB
+  'FB': { x: 510, y: 460 },     // Behind QB (fullback)
+  'X': { x: 80, y: 390 },       // Wide left on LOS
+  'Z': { x: 710, y: 440 },      // Off ball, slot right
+  'Y': { x: 870, y: 390 },      // Wide right on LOS
+  'A': { x: 330, y: 450 },      // Off ball, slot left
+  'H': { x: 750, y: 450 },      // H-back (wing right)
+  'F': { x: 590, y: 500 },      // F-back (right of QB)
+  'B': { x: 350, y: 520 },      // Extra back
+  'TE': { x: 630, y: 395 },     // Tight end (on LOS)
+  'WR': { x: 80, y: 390 },      // Wide receiver (default to X spot)
 };
 
 // Generate WIZ Skill Formation based on personnel grouping
 const getWizSkillFormation = (positionColors = {}, positionNames = {}, skillPositions = DEFAULT_SKILL_POSITIONS) => {
   const getColor = (pos, fallback) => positionColors[pos] || DEFAULT_POSITION_COLORS[pos] || fallback;
 
-  const wizCenter = 450; // 900/2 for wiz-card viewBox
-  const wizLos = 210;    // LOS position
-  const initialSize = 32; // OL text size
+  const wizCenter = 475; // 950/2 for wiz-card viewBox
+  const wizLos = 390;    // LOS position (900x600 canvas)
+  const initialSize = 40; // OL text size (25% bigger)
   const spacing = 38;    // OL spacing (tighter gaps)
   const olY = wizLos;    // OL on the LOS
 
@@ -165,8 +165,8 @@ export default function PlayDiagramEditor({
   const isWizOline = mode === 'wiz-oline';
 
   // ViewBox settings based on mode (wiz-skill uses wider aspect ratio to fit wristband cells)
-  const viewBox = isWizSkill ? '0 0 900 320' : '0 0 900 600';
-  const aspectRatio = isWizSkill ? '900 / 320' : '900 / 600';
+  const viewBox = isWizSkill ? '0 0 950 600' : '0 0 950 600';
+  const aspectRatio = '950 / 600';
 
   // Get available skill positions (non-OL positions)
   const OL_POSITIONS = ['LT', 'LG', 'C', 'RG', 'RT'];
@@ -271,6 +271,49 @@ export default function PlayDiagramEditor({
     }
   };
 
+  // Keyboard arrow keys to move selected elements
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Only handle arrow keys when elements are selected
+      if (selectedIds.size === 0 && !selectedSegment) return;
+
+      // Don't handle if typing in an input
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+
+      const arrowKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+      if (!arrowKeys.includes(e.key)) return;
+
+      e.preventDefault();
+
+      // Move amount: 1px normally, 10px with shift
+      const moveAmount = e.shiftKey ? 10 : 1;
+
+      let dx = 0, dy = 0;
+      switch (e.key) {
+        case 'ArrowUp': dy = -moveAmount; break;
+        case 'ArrowDown': dy = moveAmount; break;
+        case 'ArrowLeft': dx = -moveAmount; break;
+        case 'ArrowRight': dx = moveAmount; break;
+      }
+
+      // Move selected elements
+      const newElements = elements.map(el => {
+        if (selectedIds.has(el.id)) {
+          return {
+            ...el,
+            points: el.points.map(p => ({ x: p.x + dx, y: p.y + dy }))
+          };
+        }
+        return el;
+      });
+
+      updateElements(newElements);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedIds, selectedSegment, elements, updateElements]);
+
   // Define Formation - Save current player positions as a formation template
   // State for formation definition modal
   const [showDefineFormationModal, setShowDefineFormationModal] = useState(false);
@@ -296,13 +339,13 @@ export default function PlayDiagramEditor({
     const playerElements = elements.filter(el => el.type === 'player');
 
     // Convert pixel coordinates to percentages (0-100) for portability
-    // ViewBox is 900x320 for wiz-skill
+    // ViewBox is 900x600 for wiz-skill
     const positions = playerElements.map(el => {
       const point = el.points[0];
       const pos = {
         label: el.label,
-        x: Math.round((point.x / 900) * 100 * 10) / 10, // Round to 1 decimal
-        y: Math.round((point.y / 320) * 100 * 10) / 10,
+        x: Math.round((point.x / 950) * 100 * 10) / 10, // Round to 1 decimal
+        y: Math.round((point.y / 600) * 100 * 10) / 10,
         shape: el.shape || 'circle',
         variant: el.variant || 'filled'
       };
@@ -359,9 +402,9 @@ export default function PlayDiagramEditor({
     const olGroupId = hasOLGroup ? `ol-group-${baseTime}` : null;
 
     formation.positions.forEach((pos, idx) => {
-      // Convert percentage (0-100) to pixel coordinates for wiz-card viewBox (900x320)
-      const x = (pos.x / 100) * 900;
-      const y = (pos.y / 100) * 320;
+      // Convert percentage (0-100) to pixel coordinates for wiz-card viewBox (900x600)
+      const x = (pos.x / 100) * 950;
+      const y = (pos.y / 100) * 600;
 
       const defaultConfig = positionConfig[pos.label] || { shape: 'circle', variant: 'filled' };
       const isOL = ['C', 'G', 'T', 'LT', 'LG', 'RG', 'RT'].includes(pos.label);
@@ -720,7 +763,7 @@ export default function PlayDiagramEditor({
 
   // Flip formation
   const flipFormation = () => {
-    const canvasWidth = 900; // Both modes use 900 width now
+    const canvasWidth = 950; // Both modes use 950 width now
     const flippedElements = elements.map(el => {
       if (el.type === 'player' || el.type === 'poly' || el.type === 'free') {
         return {
@@ -943,7 +986,7 @@ export default function PlayDiagramEditor({
       }
 
       // Circle/square shapes for skill players
-      const size = 30;
+      const size = 42;
       const isRect = el.shape === 'square';
       const isFilled = el.variant === 'filled';
       const fillColor = isFilled ? effectiveColor : 'white';
@@ -978,7 +1021,7 @@ export default function PlayDiagramEditor({
             y={y}
             dy="0.35em"
             textAnchor="middle"
-            fontSize="16"
+            fontSize="22"
             fontWeight="bold"
             fill={textColor}
             style={{ pointerEvents: 'none', userSelect: 'none', fontFamily: 'Arial, sans-serif' }}
@@ -1614,7 +1657,7 @@ export default function PlayDiagramEditor({
             onMouseLeave={handleMouseUp}
             style={{
               cursor: selectedTool === 'delete' ? 'not-allowed' : (selectedTool === 'line' ? 'crosshair' : 'default'),
-              aspectRatio: isWizSkill ? '900 / 320' : undefined
+              aspectRatio: isWizSkill ? '950 / 600' : undefined
             }}
           >
             <defs>
