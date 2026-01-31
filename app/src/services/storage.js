@@ -6,11 +6,13 @@ import { storage } from './firebase';
  * @param {File} file - The image file to compress
  * @param {number} maxWidth - Maximum width (default 400px for logos)
  * @param {number} quality - JPEG quality 0-1 (default 0.8)
- * @returns {Promise<Blob>} - Compressed image blob
+ * @returns {Promise<{blob: Blob, isPng: boolean}>} - Compressed image blob and format info
  */
 export async function compressImage(file, maxWidth = 400, quality = 0.8) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
+    const isPng = file.type === 'image/png';
+
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
@@ -28,18 +30,29 @@ export async function compressImage(file, maxWidth = 400, quality = 0.8) {
         canvas.height = height;
 
         const ctx = canvas.getContext('2d');
+
+        // For PNG, keep transparent background; for others, fill white first
+        if (!isPng) {
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, width, height);
+        }
+
         ctx.drawImage(img, 0, 0, width, height);
+
+        // Use PNG format for PNGs (preserves transparency), JPEG for others
+        const outputFormat = isPng ? 'image/png' : 'image/jpeg';
+        const outputQuality = isPng ? undefined : quality;
 
         canvas.toBlob(
           (blob) => {
             if (blob) {
-              resolve(blob);
+              resolve({ blob, isPng });
             } else {
               reject(new Error('Failed to compress image'));
             }
           },
-          'image/jpeg',
-          quality
+          outputFormat,
+          outputQuality
         );
       };
       img.onerror = () => reject(new Error('Failed to load image'));
@@ -60,15 +73,19 @@ export async function uploadSchoolLogo(schoolId, file) {
   if (!schoolId) throw new Error('School ID is required');
   if (!file) throw new Error('File is required');
 
-  // Compress the image first
-  const compressedBlob = await compressImage(file, 400, 0.85);
+  // Compress the image first (preserves PNG transparency)
+  const { blob: compressedBlob, isPng } = await compressImage(file, 400, 0.85);
+
+  // Use appropriate file extension based on format
+  const extension = isPng ? 'png' : 'jpg';
+  const contentType = isPng ? 'image/png' : 'image/jpeg';
 
   // Create a reference to the logo location
-  const logoRef = ref(storage, `schools/${schoolId}/logo.jpg`);
+  const logoRef = ref(storage, `schools/${schoolId}/logo.${extension}`);
 
   // Upload the compressed image
   const snapshot = await uploadBytes(logoRef, compressedBlob, {
-    contentType: 'image/jpeg',
+    contentType,
   });
 
   // Get and return the download URL
