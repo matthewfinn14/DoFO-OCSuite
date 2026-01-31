@@ -1289,6 +1289,7 @@ export default function Setup() {
               downDistanceCategories={localConfig.downDistanceCategories || []}
               specialSituations={localConfig.specialSituations || []}
               onUpdate={updateLocal}
+              isLight={isLight}
             />
           )}
 
@@ -3022,7 +3023,7 @@ function LookAlikeSeriesTab({ series, buckets, plays, onUpdate }) {
 }
 
 // Define Situations Tab Component
-function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituations, onUpdate }) {
+function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituations, onUpdate, isLight = false }) {
   const [expandedSections, setExpandedSections] = useState({
     fieldZones: true,
     downDistance: false,
@@ -3153,39 +3154,39 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
   return (
     <div className="space-y-4">
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-white">Define Situations</h3>
-        <p className="text-slate-400 text-sm">
+        <h3 className={`text-lg font-semibold ${isLight ? 'text-gray-800' : 'text-white'}`}>Define Situations</h3>
+        <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
           Configure field zones, down & distance categories, and special situations for tagging and filtering plays.
         </p>
       </div>
 
       {/* Field Zones Section */}
-      <div className="bg-slate-700/50 rounded-lg border border-slate-600 overflow-hidden">
+      <div className={`rounded-lg border overflow-hidden ${isLight ? 'bg-white border-gray-200 shadow-sm' : 'bg-slate-700/50 border-slate-600'}`}>
         <button
           onClick={() => toggleSection('fieldZones')}
-          className="w-full flex items-center justify-between p-3 bg-slate-700/30 hover:bg-slate-700/50 transition-colors"
+          className={`w-full flex items-center justify-between p-3 transition-colors ${isLight ? 'bg-gray-50 hover:bg-gray-100' : 'bg-slate-700/30 hover:bg-slate-700/50'}`}
         >
           <div className="flex items-center gap-2">
-            {expandedSections.fieldZones ? <ChevronDown size={18} /> : <ChevronUp size={18} className="rotate-180" />}
-            <span className="font-medium text-white">Field Zones</span>
-            <span className="text-sm text-slate-400">({fieldZones.length} zones)</span>
+            {expandedSections.fieldZones ? <ChevronDown size={18} className={isLight ? 'text-gray-600' : ''} /> : <ChevronUp size={18} className={`rotate-180 ${isLight ? 'text-gray-600' : ''}`} />}
+            <span className={`font-medium ${isLight ? 'text-gray-800' : 'text-white'}`}>Field Zones</span>
+            <span className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>({fieldZones.length} zones)</span>
           </div>
         </button>
         {expandedSections.fieldZones && (
-          <div className="p-4 border-t border-slate-600 space-y-3">
+          <div className={`p-4 border-t space-y-3 ${isLight ? 'border-gray-200' : 'border-slate-600'}`}>
             {fieldZones.length === 0 && (
-              <div className="text-center py-4 text-slate-400">
+              <div className={`text-center py-4 ${isLight ? 'text-gray-400' : 'text-slate-400'}`}>
                 <p className="mb-2">No field zones defined yet.</p>
                 <button
                   onClick={loadDefaultFieldZones}
-                  className="text-sky-400 hover:text-sky-300 text-sm underline"
+                  className="text-sky-500 hover:text-sky-400 text-sm underline"
                 >
                   Load default field zones
                 </button>
               </div>
             )}
             {fieldZones.map(zone => (
-              <div key={zone.id} className="flex items-center gap-3 p-3 bg-slate-800 rounded-lg border border-slate-600">
+              <div key={zone.id} className={`flex items-center gap-3 p-3 rounded-lg border ${isLight ? 'bg-gray-50 border-gray-200' : 'bg-slate-800 border-slate-600'}`}>
                 <input
                   id={`field-zone-color-${zone.id}`}
                   type="color"
@@ -3200,7 +3201,7 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
                   value={zone.name}
                   onChange={(e) => updateFieldZone(zone.id, { name: e.target.value })}
                   aria-label="Zone name"
-                  className="flex-1 px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-white font-medium"
+                  className={`flex-1 px-3 py-1.5 rounded font-medium ${isLight ? 'bg-white border border-gray-300 text-gray-800' : 'bg-slate-700 border border-slate-600 text-white'}`}
                   placeholder="Zone name"
                 />
                 <input
@@ -3209,17 +3210,17 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
                   value={zone.description || ''}
                   onChange={(e) => updateFieldZone(zone.id, { description: e.target.value })}
                   aria-label="Zone description"
-                  className="flex-1 px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                  className={`flex-1 px-3 py-1.5 rounded text-sm ${isLight ? 'bg-white border border-gray-300 text-gray-700' : 'bg-slate-700 border border-slate-600 text-white'}`}
                   placeholder="Description"
                 />
-                <div className="flex items-center gap-1 text-sm text-slate-400">
+                <div className={`flex items-center gap-1 text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
                   <input
                     id={`field-zone-start-${zone.id}`}
                     type="number"
                     value={zone.startYard || 0}
                     onChange={(e) => updateFieldZone(zone.id, { startYard: parseInt(e.target.value) || 0 })}
                     aria-label="Start yard"
-                    className="w-14 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-center"
+                    className={`w-14 px-2 py-1.5 rounded text-center ${isLight ? 'bg-white border border-gray-300 text-gray-800' : 'bg-slate-700 border border-slate-600 text-white'}`}
                     min="0"
                     max="100"
                   />
@@ -3230,7 +3231,7 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
                     value={zone.endYard || 0}
                     onChange={(e) => updateFieldZone(zone.id, { endYard: parseInt(e.target.value) || 0 })}
                     aria-label="End yard"
-                    className="w-14 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-center"
+                    className={`w-14 px-2 py-1.5 rounded text-center ${isLight ? 'bg-white border border-gray-300 text-gray-800' : 'bg-slate-700 border border-slate-600 text-white'}`}
                     min="0"
                     max="100"
                   />
@@ -3238,7 +3239,7 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
                 </div>
                 <button
                   onClick={() => deleteFieldZone(zone.id)}
-                  className="p-1.5 text-slate-400 hover:text-red-400"
+                  className={`p-1.5 hover:text-red-400 ${isLight ? 'text-gray-400' : 'text-slate-400'}`}
                 >
                   <Trash2 size={16} />
                 </button>
@@ -3247,7 +3248,7 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
             <div className="flex gap-2">
               <button
                 onClick={addFieldZone}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-700/50 border border-dashed border-slate-500 rounded-lg text-slate-300 hover:bg-slate-700 hover:border-slate-400 transition-colors"
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-dashed rounded-lg transition-colors ${isLight ? 'bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100 hover:border-gray-400' : 'bg-slate-700/50 border-slate-500 text-slate-300 hover:bg-slate-700 hover:border-slate-400'}`}
               >
                 <Plus size={16} />
                 Add Field Zone
@@ -3255,7 +3256,7 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
               {fieldZones.length > 0 && (
                 <button
                   onClick={loadDefaultFieldZones}
-                  className="px-3 py-2 text-slate-400 hover:text-slate-300 text-sm"
+                  className={`px-3 py-2 text-sm ${isLight ? 'text-gray-400 hover:text-gray-600' : 'text-slate-400 hover:text-slate-300'}`}
                 >
                   Reset to Defaults
                 </button>
@@ -3266,39 +3267,39 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
       </div>
 
       {/* Down & Distance Section */}
-      <div className="bg-slate-700/50 rounded-lg border border-slate-600 overflow-hidden">
+      <div className={`rounded-lg border overflow-hidden ${isLight ? 'bg-white border-gray-200 shadow-sm' : 'bg-slate-700/50 border-slate-600'}`}>
         <button
           onClick={() => toggleSection('downDistance')}
-          className="w-full flex items-center justify-between p-3 bg-slate-700/30 hover:bg-slate-700/50 transition-colors"
+          className={`w-full flex items-center justify-between p-3 transition-colors ${isLight ? 'bg-gray-50 hover:bg-gray-100' : 'bg-slate-700/30 hover:bg-slate-700/50'}`}
         >
           <div className="flex items-center gap-2">
-            {expandedSections.downDistance ? <ChevronDown size={18} /> : <ChevronUp size={18} className="rotate-180" />}
-            <span className="font-medium text-white">Down & Distance</span>
-            <span className="text-sm text-slate-400">({downDistanceCategories.length} categories)</span>
+            {expandedSections.downDistance ? <ChevronDown size={18} className={isLight ? 'text-gray-600' : ''} /> : <ChevronUp size={18} className={`rotate-180 ${isLight ? 'text-gray-600' : ''}`} />}
+            <span className={`font-medium ${isLight ? 'text-gray-800' : 'text-white'}`}>Down & Distance</span>
+            <span className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>({downDistanceCategories.length} categories)</span>
           </div>
         </button>
         {expandedSections.downDistance && (
-          <div className="p-4 border-t border-slate-600 space-y-3">
+          <div className={`p-4 border-t space-y-3 ${isLight ? 'border-gray-200' : 'border-slate-600'}`}>
             {downDistanceCategories.length === 0 && (
-              <div className="text-center py-4 text-slate-400">
+              <div className={`text-center py-4 ${isLight ? 'text-gray-400' : 'text-slate-400'}`}>
                 <p className="mb-2">No down & distance categories defined yet.</p>
                 <button
                   onClick={loadDefaultDownDistance}
-                  className="text-sky-400 hover:text-sky-300 text-sm underline"
+                  className="text-sky-500 hover:text-sky-400 text-sm underline"
                 >
                   Load default categories
                 </button>
               </div>
             )}
             {downDistanceCategories.map(cat => (
-              <div key={cat.id} className="flex items-center gap-3 p-3 bg-slate-800 rounded-lg border border-slate-600">
+              <div key={cat.id} className={`flex items-center gap-3 p-3 rounded-lg border ${isLight ? 'bg-gray-50 border-gray-200' : 'bg-slate-800 border-slate-600'}`}>
                 <input
                   id={`down-dist-name-${cat.id}`}
                   type="text"
                   value={cat.name}
                   onChange={(e) => updateDownDistance(cat.id, { name: e.target.value })}
                   aria-label="Category name"
-                  className="flex-1 px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-white font-medium"
+                  className={`flex-1 px-3 py-1.5 rounded font-medium ${isLight ? 'bg-white border border-gray-300 text-gray-800' : 'bg-slate-700 border border-slate-600 text-white'}`}
                   placeholder="Category name"
                 />
                 <input
@@ -3307,7 +3308,7 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
                   value={cat.description || ''}
                   onChange={(e) => updateDownDistance(cat.id, { description: e.target.value })}
                   aria-label="Category description"
-                  className="flex-1 px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                  className={`flex-1 px-3 py-1.5 rounded text-sm ${isLight ? 'bg-white border border-gray-300 text-gray-700' : 'bg-slate-700 border border-slate-600 text-white'}`}
                   placeholder="Description"
                 />
                 <select
@@ -3315,7 +3316,7 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
                   value={cat.down || ''}
                   onChange={(e) => updateDownDistance(cat.id, { down: e.target.value })}
                   aria-label="Down"
-                  className="w-24 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                  className={`w-24 px-2 py-1.5 rounded text-sm ${isLight ? 'bg-white border border-gray-300 text-gray-800' : 'bg-slate-700 border border-slate-600 text-white'}`}
                 >
                   <option value="">Down</option>
                   <option value="1">1st</option>
@@ -3328,7 +3329,7 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
                   value={cat.distanceType || ''}
                   onChange={(e) => updateDownDistance(cat.id, { distanceType: e.target.value })}
                   aria-label="Distance type"
-                  className="w-28 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                  className={`w-28 px-2 py-1.5 rounded text-sm ${isLight ? 'bg-white border border-gray-300 text-gray-800' : 'bg-slate-700 border border-slate-600 text-white'}`}
                 >
                   <option value="">Distance</option>
                   <option value="short">Short (1-3)</option>
@@ -3338,7 +3339,7 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
                 </select>
                 <button
                   onClick={() => deleteDownDistance(cat.id)}
-                  className="p-1.5 text-slate-400 hover:text-red-400"
+                  className={`p-1.5 hover:text-red-400 ${isLight ? 'text-gray-400' : 'text-slate-400'}`}
                 >
                   <Trash2 size={16} />
                 </button>
@@ -3347,7 +3348,7 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
             <div className="flex gap-2">
               <button
                 onClick={addDownDistance}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-700/50 border border-dashed border-slate-500 rounded-lg text-slate-300 hover:bg-slate-700 hover:border-slate-400 transition-colors"
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-dashed rounded-lg transition-colors ${isLight ? 'bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100 hover:border-gray-400' : 'bg-slate-700/50 border-slate-500 text-slate-300 hover:bg-slate-700 hover:border-slate-400'}`}
               >
                 <Plus size={16} />
                 Add Down & Distance
@@ -3355,7 +3356,7 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
               {downDistanceCategories.length > 0 && (
                 <button
                   onClick={loadDefaultDownDistance}
-                  className="px-3 py-2 text-slate-400 hover:text-slate-300 text-sm"
+                  className={`px-3 py-2 text-sm ${isLight ? 'text-gray-400 hover:text-gray-600' : 'text-slate-400 hover:text-slate-300'}`}
                 >
                   Reset to Defaults
                 </button>
@@ -3366,39 +3367,39 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
       </div>
 
       {/* Special Situations Section */}
-      <div className="bg-slate-700/50 rounded-lg border border-slate-600 overflow-hidden">
+      <div className={`rounded-lg border overflow-hidden ${isLight ? 'bg-white border-gray-200 shadow-sm' : 'bg-slate-700/50 border-slate-600'}`}>
         <button
           onClick={() => toggleSection('special')}
-          className="w-full flex items-center justify-between p-3 bg-slate-700/30 hover:bg-slate-700/50 transition-colors"
+          className={`w-full flex items-center justify-between p-3 transition-colors ${isLight ? 'bg-gray-50 hover:bg-gray-100' : 'bg-slate-700/30 hover:bg-slate-700/50'}`}
         >
           <div className="flex items-center gap-2">
-            {expandedSections.special ? <ChevronDown size={18} /> : <ChevronUp size={18} className="rotate-180" />}
-            <span className="font-medium text-white">Special Situations</span>
-            <span className="text-sm text-slate-400">({specialSituations.length} situations)</span>
+            {expandedSections.special ? <ChevronDown size={18} className={isLight ? 'text-gray-600' : ''} /> : <ChevronUp size={18} className={`rotate-180 ${isLight ? 'text-gray-600' : ''}`} />}
+            <span className={`font-medium ${isLight ? 'text-gray-800' : 'text-white'}`}>Special Situations</span>
+            <span className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>({specialSituations.length} situations)</span>
           </div>
         </button>
         {expandedSections.special && (
-          <div className="p-4 border-t border-slate-600 space-y-3">
+          <div className={`p-4 border-t space-y-3 ${isLight ? 'border-gray-200' : 'border-slate-600'}`}>
             {specialSituations.length === 0 && (
-              <div className="text-center py-4 text-slate-400">
+              <div className={`text-center py-4 ${isLight ? 'text-gray-400' : 'text-slate-400'}`}>
                 <p className="mb-2">No special situations defined yet.</p>
                 <button
                   onClick={loadDefaultSpecialSituations}
-                  className="text-sky-400 hover:text-sky-300 text-sm underline"
+                  className="text-sky-500 hover:text-sky-400 text-sm underline"
                 >
                   Load default situations
                 </button>
               </div>
             )}
             {specialSituations.map(sit => (
-              <div key={sit.id} className="flex items-center gap-3 p-3 bg-slate-800 rounded-lg border border-slate-600">
+              <div key={sit.id} className={`flex items-center gap-3 p-3 rounded-lg border ${isLight ? 'bg-gray-50 border-gray-200' : 'bg-slate-800 border-slate-600'}`}>
                 <input
                   id={`special-sit-name-${sit.id}`}
                   type="text"
                   value={sit.name}
                   onChange={(e) => updateSpecialSituation(sit.id, { name: e.target.value })}
                   aria-label="Situation name"
-                  className="flex-1 px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-white font-medium"
+                  className={`flex-1 px-3 py-1.5 rounded font-medium ${isLight ? 'bg-white border border-gray-300 text-gray-800' : 'bg-slate-700 border border-slate-600 text-white'}`}
                   placeholder="Situation name"
                 />
                 <input
@@ -3407,12 +3408,12 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
                   value={sit.description || ''}
                   onChange={(e) => updateSpecialSituation(sit.id, { description: e.target.value })}
                   aria-label="Situation description"
-                  className="flex-[2] px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                  className={`flex-[2] px-3 py-1.5 rounded text-sm ${isLight ? 'bg-white border border-gray-300 text-gray-700' : 'bg-slate-700 border border-slate-600 text-white'}`}
                   placeholder="Description"
                 />
                 <button
                   onClick={() => deleteSpecialSituation(sit.id)}
-                  className="p-1.5 text-slate-400 hover:text-red-400"
+                  className={`p-1.5 hover:text-red-400 ${isLight ? 'text-gray-400' : 'text-slate-400'}`}
                 >
                   <Trash2 size={16} />
                 </button>
@@ -3421,7 +3422,7 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
             <div className="flex gap-2">
               <button
                 onClick={addSpecialSituation}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-slate-700/50 border border-dashed border-slate-500 rounded-lg text-slate-300 hover:bg-slate-700 hover:border-slate-400 transition-colors"
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-dashed rounded-lg transition-colors ${isLight ? 'bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100 hover:border-gray-400' : 'bg-slate-700/50 border-slate-500 text-slate-300 hover:bg-slate-700 hover:border-slate-400'}`}
               >
                 <Plus size={16} />
                 Add Special Situation
@@ -3429,7 +3430,7 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
               {specialSituations.length > 0 && (
                 <button
                   onClick={loadDefaultSpecialSituations}
-                  className="px-3 py-2 text-slate-400 hover:text-slate-300 text-sm"
+                  className={`px-3 py-2 text-sm ${isLight ? 'text-gray-400 hover:text-gray-600' : 'text-slate-400 hover:text-slate-300'}`}
                 >
                   Reset to Defaults
                 </button>
