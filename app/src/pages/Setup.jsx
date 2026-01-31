@@ -1395,6 +1395,7 @@ export default function Setup() {
                 updateLocal('formations', [...otherFormations, ...formations]);
               }}
               onUpdateFamilies={(families) => updateLocal('formationFamilies', families)}
+              positionColors={localConfig.positionColors || {}}
               isLight={isLight}
             />
           )}
@@ -2141,9 +2142,13 @@ function PersonnelTab({ personnelGroupings, positions, positionNames, positionCo
 }
 
 // Formations Tab Component
-function FormationsTab({ phase, formations, personnelGroupings, formationFamilies = [], onUpdate, onUpdateFamilies, isLight = false }) {
+function FormationsTab({ phase, formations, personnelGroupings, formationFamilies = [], onUpdate, onUpdateFamilies, positionColors = {}, isLight = false }) {
   const [showFamiliesSection, setShowFamiliesSection] = useState(true);
+  const [editingFormationId, setEditingFormationId] = useState(null);
   const isOffense = phase === 'OFFENSE';
+
+  // Get the formation being edited
+  const editingFormation = editingFormationId ? formations.find(f => f.id === editingFormationId) : null;
 
   const addFormation = () => {
     const name = prompt('Formation name:');
@@ -2153,6 +2158,7 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
       name,
       personnel: '',
       families: [],
+      positions: null, // Will be set when diagram is created
       phase,
       createdAt: new Date().toISOString()
     };
@@ -2166,6 +2172,54 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
 
   const updateFormation = (id, updates) => {
     onUpdate(formations.map(f => f.id === id ? { ...f, ...updates } : f));
+  };
+
+  // Handle saving formation diagram from WIZ editor
+  const handleSaveFormationDiagram = (elements) => {
+    if (!editingFormationId) return;
+
+    // Extract player positions from elements (convert to percentage-based coords)
+    const playerElements = elements.filter(el => el.type === 'player');
+    const positions = playerElements.map(el => {
+      const point = el.points[0];
+      return {
+        label: el.label,
+        x: Math.round((point.x / 900) * 100 * 10) / 10, // Convert to percentage
+        y: Math.round((point.y / 320) * 100 * 10) / 10,
+        shape: el.shape,
+        variant: el.variant,
+        color: el.color,
+        fontSize: el.fontSize,
+        groupId: el.groupId ? 'grouped' : undefined
+      };
+    });
+
+    // Update the formation with positions
+    updateFormation(editingFormationId, { positions });
+    setEditingFormationId(null);
+  };
+
+  // Get initial elements for the WIZ editor based on formation
+  const getInitialElements = () => {
+    if (!editingFormation) return null;
+
+    // If formation already has positions, load them
+    if (editingFormation.positions && editingFormation.positions.length > 0) {
+      return editingFormation.positions.map((pos, idx) => ({
+        id: Date.now() + idx,
+        type: 'player',
+        points: [{ x: (pos.x / 100) * 900, y: (pos.y / 100) * 320 }],
+        color: pos.color || positionColors[pos.label] || '#64748b',
+        label: pos.label,
+        shape: pos.shape || 'circle',
+        variant: pos.variant || 'filled',
+        fontSize: pos.fontSize,
+        groupId: pos.groupId
+      }));
+    }
+
+    // Otherwise, return null to use default formation
+    return null;
   };
 
   // Default formation families organized by category
@@ -2402,7 +2456,7 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
 
               {/* Personnel (Offense only) */}
               {isOffense && personnelGroupings.length > 0 && (
-                <div>
+                <div className="mb-3">
                   <label htmlFor={`formation-personnel-${formation.id}`} className={`text-xs block mb-1 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>Personnel</label>
                   <select
                     id={`formation-personnel-${formation.id}`}
@@ -2417,6 +2471,28 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
                   </select>
                 </div>
               )}
+
+              {/* Set WIZ Formation Button (Offense only) */}
+              {isOffense && (
+                <div className="mt-3 pt-3 border-t border-slate-600/50">
+                  <button
+                    onClick={() => setEditingFormationId(formation.id)}
+                    className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded text-sm font-medium transition-colors ${
+                      formation.positions && formation.positions.length > 0
+                        ? (isLight ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30')
+                        : (isLight ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-amber-600/20 text-amber-400 hover:bg-amber-600/30')
+                    }`}
+                  >
+                    <Grid size={14} />
+                    {formation.positions && formation.positions.length > 0 ? 'Edit Diagram' : 'Set Formation Diagram'}
+                  </button>
+                  {!formation.positions && (
+                    <p className={`text-xs mt-1 text-center ${isLight ? 'text-amber-600' : 'text-amber-400/70'}`}>
+                      Diagram not set
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -2428,6 +2504,53 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
           </div>
         )}
       </div>
+
+      {/* WIZ Formation Editor Modal */}
+      {editingFormationId && editingFormation && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className={`w-full max-w-5xl rounded-xl overflow-hidden flex flex-col max-h-[90vh] ${isLight ? 'bg-white' : 'bg-slate-900'}`}>
+            {/* Modal Header */}
+            <div className={`flex items-center justify-between px-6 py-4 border-b ${isLight ? 'border-gray-200' : 'border-slate-700'}`}>
+              <div>
+                <h2 className={`text-lg font-bold ${isLight ? 'text-gray-800' : 'text-white'}`}>
+                  Set Formation Diagram: {editingFormation.name}
+                </h2>
+                <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                  Position players to define this formation template
+                </p>
+              </div>
+              <button
+                onClick={() => setEditingFormationId(null)}
+                className={`p-2 rounded-lg ${isLight ? 'hover:bg-gray-100 text-gray-500' : 'hover:bg-slate-800 text-slate-400'}`}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* WIZ Editor */}
+            <div className="flex-1 overflow-auto p-4">
+              <PlayDiagramEditor
+                mode="wiz-skill"
+                initialData={{ elements: getInitialElements() }}
+                personnelGroupings={personnelGroupings}
+                formations={formations}
+                positionColors={positionColors}
+                onSave={({ elements }) => handleSaveFormationDiagram(elements)}
+              />
+            </div>
+
+            {/* Modal Footer */}
+            <div className={`flex items-center justify-end gap-3 px-6 py-4 border-t ${isLight ? 'border-gray-200 bg-gray-50' : 'border-slate-700 bg-slate-800/50'}`}>
+              <button
+                onClick={() => setEditingFormationId(null)}
+                className={`px-4 py-2 rounded-lg ${isLight ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
