@@ -432,7 +432,11 @@ export default function FZDnDView({
                                   </div>
                                 ) : (
                                   // Autocomplete Input
-                                  <div style={{ position: 'relative', width: '100%', padding: '2px' }}>
+                                  <div
+                                    style={{ position: 'relative', width: '100%', padding: '2px' }}
+                                    onDragOver={handleDragOver}
+                                    onDrop={(e) => handleDropOnCell(e, zone.id, rowIdx, cIdx)}
+                                  >
                                     <input
                                       id={`fzdnd-cell-${zone.id}-${rowIdx}-${cIdx}`}
                                       type="text"
