@@ -215,6 +215,7 @@ export default function Roster() {
           <div className="relative flex-1 min-w-[200px]">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
+              id="roster-search"
               type="text"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
@@ -225,6 +226,7 @@ export default function Roster() {
 
           {/* Position filter */}
           <select
+            id="roster-filter-position"
             value={filterPosition}
             onChange={e => setFilterPosition(e.target.value)}
             className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
@@ -238,6 +240,7 @@ export default function Roster() {
 
           {/* Year filter */}
           <select
+            id="roster-filter-year"
             value={filterYear}
             onChange={e => setFilterYear(e.target.value)}
             className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
@@ -297,6 +300,7 @@ export default function Roster() {
             <tr className="bg-slate-800">
               <th className="px-4 py-3 text-left">
                 <input
+                  id="roster-select-all"
                   type="checkbox"
                   checked={selectedPlayers.size === filteredRoster.length && filteredRoster.length > 0}
                   onChange={toggleSelectAll}
@@ -350,6 +354,7 @@ export default function Roster() {
                 >
                   <td className="px-4 py-3">
                     <input
+                      id={`roster-select-player-${player.id}`}
                       type="checkbox"
                       checked={selectedPlayers.has(player.id)}
                       onChange={() => togglePlayerSelection(player.id)}
@@ -407,8 +412,9 @@ export default function Roster() {
             <div className="p-4 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Name *</label>
+                  <label htmlFor="player-name" className="text-sm text-slate-400 block mb-1">Name *</label>
                   <input
+                    id="player-name"
                     type="text"
                     value={editingPlayer.name}
                     onChange={e => setEditingPlayer({ ...editingPlayer, name: e.target.value })}
@@ -417,8 +423,9 @@ export default function Roster() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Number</label>
+                  <label htmlFor="player-number" className="text-sm text-slate-400 block mb-1">Number</label>
                   <input
+                    id="player-number"
                     type="text"
                     value={editingPlayer.number}
                     onChange={e => setEditingPlayer({ ...editingPlayer, number: e.target.value })}
@@ -430,8 +437,9 @@ export default function Roster() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Position</label>
+                  <label htmlFor="player-position" className="text-sm text-slate-400 block mb-1">Position</label>
                   <input
+                    id="player-position"
                     type="text"
                     value={editingPlayer.position}
                     onChange={e => setEditingPlayer({ ...editingPlayer, position: e.target.value })}
@@ -440,8 +448,9 @@ export default function Roster() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Year</label>
+                  <label htmlFor="player-year" className="text-sm text-slate-400 block mb-1">Year</label>
                   <select
+                    id="player-year"
                     value={editingPlayer.year}
                     onChange={e => setEditingPlayer({ ...editingPlayer, year: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
@@ -456,8 +465,9 @@ export default function Roster() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Height</label>
+                  <label htmlFor="player-height" className="text-sm text-slate-400 block mb-1">Height</label>
                   <input
+                    id="player-height"
                     type="text"
                     value={editingPlayer.height}
                     onChange={e => setEditingPlayer({ ...editingPlayer, height: e.target.value })}
@@ -466,8 +476,9 @@ export default function Roster() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Weight</label>
+                  <label htmlFor="player-weight" className="text-sm text-slate-400 block mb-1">Weight</label>
                   <input
+                    id="player-weight"
                     type="text"
                     value={editingPlayer.weight}
                     onChange={e => setEditingPlayer({ ...editingPlayer, weight: e.target.value })}
@@ -478,8 +489,9 @@ export default function Roster() {
               </div>
 
               <div>
-                <label className="text-sm text-slate-400 block mb-1">Email</label>
+                <label htmlFor="player-email" className="text-sm text-slate-400 block mb-1">Email</label>
                 <input
+                  id="player-email"
                   type="email"
                   value={editingPlayer.email || ''}
                   onChange={e => setEditingPlayer({ ...editingPlayer, email: e.target.value })}
@@ -489,8 +501,9 @@ export default function Roster() {
               </div>
 
               <div>
-                <label className="text-sm text-slate-400 block mb-1">Notes</label>
+                <label htmlFor="player-notes" className="text-sm text-slate-400 block mb-1">Notes</label>
                 <textarea
+                  id="player-notes"
                   value={editingPlayer.notes || ''}
                   onChange={e => setEditingPlayer({ ...editingPlayer, notes: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white resize-none"

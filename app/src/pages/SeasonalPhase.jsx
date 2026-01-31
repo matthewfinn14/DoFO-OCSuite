@@ -275,8 +275,9 @@ export default function SeasonalPhase({ phase = 'offseason' }) {
             <div className="p-4 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Week Number</label>
+                  <label htmlFor="week-editor-number" className="text-sm text-slate-400 block mb-1">Week Number</label>
                   <input
+                    id="week-editor-number"
                     type="number"
                     value={editingWeek.number || ''}
                     onChange={e => setEditingWeek({ ...editingWeek, number: parseInt(e.target.value) || 0 })}
@@ -285,8 +286,9 @@ export default function SeasonalPhase({ phase = 'offseason' }) {
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Date</label>
+                  <label htmlFor="week-editor-date" className="text-sm text-slate-400 block mb-1">Date</label>
                   <input
+                    id="week-editor-date"
                     type="date"
                     value={editingWeek.date || ''}
                     onChange={e => setEditingWeek({ ...editingWeek, date: e.target.value })}
@@ -296,8 +298,9 @@ export default function SeasonalPhase({ phase = 'offseason' }) {
               </div>
 
               <div>
-                <label className="text-sm text-slate-400 block mb-1">Week Name (optional)</label>
+                <label htmlFor="week-editor-name" className="text-sm text-slate-400 block mb-1">Week Name (optional)</label>
                 <input
+                  id="week-editor-name"
                   type="text"
                   value={editingWeek.name || ''}
                   onChange={e => setEditingWeek({ ...editingWeek, name: e.target.value })}
@@ -309,8 +312,9 @@ export default function SeasonalPhase({ phase = 'offseason' }) {
               {phase === 'season' && (
                 <>
                   <div>
-                    <label className="text-sm text-slate-400 block mb-1">Opponent</label>
+                    <label htmlFor="week-editor-opponent" className="text-sm text-slate-400 block mb-1">Opponent</label>
                     <input
+                      id="week-editor-opponent"
                       type="text"
                       value={editingWeek.opponent || ''}
                       onChange={e => setEditingWeek({ ...editingWeek, opponent: e.target.value })}
@@ -322,27 +326,33 @@ export default function SeasonalPhase({ phase = 'offseason' }) {
                   <div>
                     <label className="text-sm text-slate-400 block mb-1">Location</label>
                     <div className="flex gap-4">
-                      <label className="flex items-center gap-2 text-white">
+                      <label htmlFor="week-editor-location-home" className="flex items-center gap-2 text-white">
                         <input
+                          id="week-editor-location-home"
                           type="radio"
+                          name="week-editor-location"
                           checked={editingWeek.location === 'home'}
                           onChange={() => setEditingWeek({ ...editingWeek, location: 'home' })}
                           className="text-sky-500"
                         />
                         Home
                       </label>
-                      <label className="flex items-center gap-2 text-white">
+                      <label htmlFor="week-editor-location-away" className="flex items-center gap-2 text-white">
                         <input
+                          id="week-editor-location-away"
                           type="radio"
+                          name="week-editor-location"
                           checked={editingWeek.location === 'away'}
                           onChange={() => setEditingWeek({ ...editingWeek, location: 'away' })}
                           className="text-sky-500"
                         />
                         Away
                       </label>
-                      <label className="flex items-center gap-2 text-white">
+                      <label htmlFor="week-editor-location-neutral" className="flex items-center gap-2 text-white">
                         <input
+                          id="week-editor-location-neutral"
                           type="radio"
+                          name="week-editor-location"
                           checked={editingWeek.location === 'neutral'}
                           onChange={() => setEditingWeek({ ...editingWeek, location: 'neutral' })}
                           className="text-sky-500"
@@ -355,8 +365,9 @@ export default function SeasonalPhase({ phase = 'offseason' }) {
               )}
 
               <div>
-                <label className="text-sm text-slate-400 block mb-1">Notes</label>
+                <label htmlFor="week-editor-notes" className="text-sm text-slate-400 block mb-1">Notes</label>
                 <textarea
+                  id="week-editor-notes"
                   value={editingWeek.notes || ''}
                   onChange={e => setEditingWeek({ ...editingWeek, notes: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white resize-none"

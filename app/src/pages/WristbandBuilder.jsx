@@ -387,9 +387,11 @@ export default function WristbandBuilder() {
           <div className="flex items-center gap-3">
             {programLevels?.length > 0 && (
               <select
+                id="wristband-program-level"
                 value={selectedLevel}
                 onChange={(e) => setActiveLevelId(e.target.value)}
                 className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-sm"
+                aria-label="Program level"
               >
                 {programLevels.map(level => (
                   <option key={level.id} value={level.id}>{level.name}</option>
@@ -445,8 +447,9 @@ export default function WristbandBuilder() {
         {/* Settings Row */}
         <div className="flex items-center gap-4 mb-4 p-3 bg-slate-900 rounded-lg border border-slate-800">
           <div className="flex items-center gap-2">
-            <span className="text-slate-400 text-sm">Layout:</span>
+            <label htmlFor="wristband-layout-type" className="text-slate-400 text-sm">Layout:</label>
             <select
+              id="wristband-layout-type"
               value={currentCard.type || 'standard'}
               onChange={(e) => updateCardSettings({ type: e.target.value })}
               className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-sm"
@@ -457,8 +460,9 @@ export default function WristbandBuilder() {
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-slate-400 text-sm">Opponent:</span>
+            <label htmlFor="wristband-opponent" className="text-slate-400 text-sm">Opponent:</label>
             <input
+              id="wristband-opponent"
               type="text"
               value={currentCard.opponent || ''}
               onChange={(e) => updateCardSettings({ opponent: e.target.value })}
@@ -467,8 +471,9 @@ export default function WristbandBuilder() {
             />
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-slate-400 text-sm">Iter:</span>
+            <label htmlFor="wristband-iteration" className="text-slate-400 text-sm">Iter:</label>
             <input
+              id="wristband-iteration"
               type="text"
               value={currentCard.iteration || '1'}
               onChange={(e) => updateCardSettings({ iteration: e.target.value })}
@@ -477,8 +482,9 @@ export default function WristbandBuilder() {
           </div>
           {currentCard.type !== 'wiz' && (
             <div className="flex items-center gap-2">
-              <span className="text-slate-400 text-sm">Color:</span>
+              <label htmlFor="wristband-card-color" className="text-slate-400 text-sm">Color:</label>
               <select
+                id="wristband-card-color"
                 value={currentCard.color || 'white'}
                 onChange={(e) => updateCardSettings({ color: e.target.value })}
                 className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-sm"
@@ -1023,12 +1029,14 @@ function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, on
                     >
                       {isEditing ? (
                         <input
+                          id={`wiz-abbreviation-${slot}`}
                           type="text"
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
                           onBlur={() => handleSaveAbbreviation(play)}
                           onKeyDown={(e) => handleKeyDown(e, play)}
                           autoFocus
+                          aria-label="WIZ abbreviation"
                           style={{
                             width: '100%',
                             height: '9px',
@@ -1150,8 +1158,9 @@ function MiniScriptEditor({ rows, plays, startCoord, onUpdateRow, onRemoveRow, o
           return (
             <div key={row.id} className="flex items-center gap-2 p-2 bg-slate-800 rounded border border-slate-700">
               <div className="flex flex-col flex-1">
-                <label className="text-xs text-slate-400 mb-1">Header Label</label>
+                <label htmlFor={`header-label-${row.id}`} className="text-xs text-slate-400 mb-1">Header Label</label>
                 <input
+                  id={`header-label-${row.id}`}
                   value={row.label || ''}
                   onChange={(e) => onUpdateRow(row.id, { label: e.target.value })}
                   className="px-2 py-1 bg-slate-900 border border-slate-600 rounded text-white text-sm font-bold"
@@ -1159,8 +1168,9 @@ function MiniScriptEditor({ rows, plays, startCoord, onUpdateRow, onRemoveRow, o
                 />
               </div>
               <div className="flex flex-col">
-                <label className="text-xs text-slate-400 mb-1">Color</label>
+                <label htmlFor={`header-color-${row.id}`} className="text-xs text-slate-400 mb-1">Color</label>
                 <select
+                  id={`header-color-${row.id}`}
                   value={row.color || 'gray'}
                   onChange={(e) => onUpdateRow(row.id, { color: e.target.value })}
                   className="px-2 py-1 bg-slate-900 border border-slate-600 rounded text-white text-sm"
@@ -1183,18 +1193,22 @@ function MiniScriptEditor({ rows, plays, startCoord, onUpdateRow, onRemoveRow, o
             <div key={row.id} className="grid grid-cols-[50px_80px_1fr_80px_1fr_60px] gap-2 items-center p-2 bg-slate-800 rounded border border-slate-700">
               <div className="text-center text-white font-bold text-sm">{coord}</div>
               <input
+                id={`tempo-a-${row.id}`}
                 value={row.col0 || ''}
                 onChange={(e) => onUpdateRow(row.id, { col0: e.target.value })}
                 className="px-2 py-1 bg-slate-900 border border-slate-600 rounded text-white text-sm"
                 placeholder="Tempo"
+                aria-label={`Tempo A for row ${coord}`}
               />
               <input
+                id={`play-a-${row.id}`}
                 value={row.col1 || ''}
                 onChange={(e) => handlePlayChange(row.id, 'A', e.target.value)}
                 onBlur={(e) => handlePlayBlur(row.id, 'A', e.target.value)}
                 className="px-2 py-1 bg-slate-900 border border-slate-600 rounded text-white text-sm"
                 placeholder="Play A"
                 list={`plays-a-${row.id}`}
+                aria-label={`Play A for row ${coord}`}
               />
               <datalist id={`plays-a-${row.id}`}>
                 {plays.filter(p => p.phase === 'offense').map(p => (
@@ -1202,18 +1216,22 @@ function MiniScriptEditor({ rows, plays, startCoord, onUpdateRow, onRemoveRow, o
                 ))}
               </datalist>
               <input
+                id={`tempo-b-${row.id}`}
                 value={row.col2 || ''}
                 onChange={(e) => onUpdateRow(row.id, { col2: e.target.value })}
                 className="px-2 py-1 bg-slate-900 border border-slate-600 rounded text-white text-sm"
                 placeholder="Tempo"
+                aria-label={`Tempo B for row ${coord}`}
               />
               <input
+                id={`play-b-${row.id}`}
                 value={row.col3 || ''}
                 onChange={(e) => handlePlayChange(row.id, 'B', e.target.value)}
                 onBlur={(e) => handlePlayBlur(row.id, 'B', e.target.value)}
                 className="px-2 py-1 bg-slate-900 border border-slate-600 rounded text-white text-sm"
                 placeholder="Play B"
                 list={`plays-b-${row.id}`}
+                aria-label={`Play B for row ${coord}`}
               />
               <datalist id={`plays-b-${row.id}`}>
                 {plays.filter(p => p.phase === 'offense').map(p => (

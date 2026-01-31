@@ -321,8 +321,9 @@ export default function PlayDetailsModal({
 
           {/* Personnel Group */}
           <div className="flex items-center gap-1.5 ml-auto">
-            <label className="text-sm font-semibold text-slate-500">PERS:</label>
+            <label htmlFor="play-details-personnel" className="text-sm font-semibold text-slate-500">PERS:</label>
             <input
+              id="play-details-personnel"
               type="text"
               value={play.personnel || ''}
               onChange={(e) => onUpdatePlay?.(playId, { personnel: e.target.value })}
@@ -333,7 +334,7 @@ export default function PlayDetailsModal({
 
           {/* Wristband Slot */}
           <div className="flex items-center gap-1.5">
-            <label className="text-sm font-semibold text-slate-500">WB:</label>
+            <label htmlFor="play-details-wristband" className="text-sm font-semibold text-slate-500">WB:</label>
             <span className={`w-14 px-2 py-1.5 text-sm font-semibold text-center border rounded ${
               play.wristbandSlot
                 ? 'border-sky-300 bg-sky-50 text-sky-700'
@@ -397,10 +398,11 @@ export default function PlayDetailsModal({
             <div className="grid grid-cols-2 gap-4">
               {/* Bucket Selection */}
               <div>
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">
+                <label htmlFor="play-details-bucket" className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2 block">
                   Bucket
-                </div>
+                </label>
                 <select
+                  id="play-details-bucket"
                   value={play.bucketId || ''}
                   onChange={(e) => handleBucketChange(e.target.value)}
                   className="w-full px-2 py-1.5 text-sm bg-white border border-slate-300 rounded text-slate-700"
@@ -419,10 +421,11 @@ export default function PlayDetailsModal({
 
               {/* Concept Group Selection */}
               <div>
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">
+                <label htmlFor="play-details-concept-group" className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2 block">
                   Concept Group
-                </div>
+                </label>
                 <select
+                  id="play-details-concept-group"
                   value={play.conceptFamily || ''}
                   onChange={(e) => handleFamilyChange(e.target.value)}
                   disabled={!play.bucketId || bucketConceptFamilies.length === 0}
@@ -450,11 +453,12 @@ export default function PlayDetailsModal({
           <div className="grid grid-cols-2 gap-3">
             {/* Read Type */}
             <div>
-              <label className="flex items-center gap-1 text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">
+              <label htmlFor="play-details-read-type" className="flex items-center gap-1 text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">
                 <Eye size={12} />
                 Read Type
               </label>
               <select
+                id="play-details-read-type"
                 value={play.readType || ''}
                 onChange={(e) => onUpdatePlay?.(playId, { readType: e.target.value })}
                 className="w-full px-2 py-1.5 text-xs bg-white border border-slate-300 rounded text-slate-700"
@@ -468,11 +472,12 @@ export default function PlayDetailsModal({
 
             {/* Look-Alike Series */}
             <div>
-              <label className="flex items-center gap-1 text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">
+              <label htmlFor="play-details-series" className="flex items-center gap-1 text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">
                 <Layers size={12} />
                 Series
               </label>
               <select
+                id="play-details-series"
                 value={play.seriesId || ''}
                 onChange={(e) => onUpdatePlay?.(playId, { seriesId: e.target.value })}
                 className="w-full px-2 py-1.5 text-xs bg-white border border-slate-300 rounded text-slate-700"
@@ -743,10 +748,11 @@ export default function PlayDetailsModal({
 
           {/* Setup Play */}
           <div className="mb-3">
-            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 block">
+            <label htmlFor="play-details-setup-play" className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 block">
               Setup By Another Play?
             </label>
             <select
+              id="play-details-setup-play"
               value={play.setupPlayId || ''}
               onChange={(e) => onUpdatePlay?.(playId, { setupPlayId: e.target.value })}
               className="w-full px-2 py-1.5 text-xs bg-white border border-slate-300 rounded text-slate-700"
@@ -762,10 +768,11 @@ export default function PlayDetailsModal({
 
           {/* Premium Looks */}
           <div>
-            <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 block">
+            <label htmlFor="play-details-premium-looks" className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5 block">
               Premium Looks (Fronts/Coverages)
             </label>
             <input
+              id="play-details-premium-looks"
               type="text"
               value={play.premiumLooks || ''}
               onChange={(e) => onUpdatePlay?.(playId, { premiumLooks: e.target.value })}
@@ -914,10 +921,11 @@ export default function PlayDetailsModal({
 
               {/* Series name input */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
+                <label htmlFor="play-details-new-series-name" className="block text-sm font-medium text-slate-700 mb-1">
                   Series Name
                 </label>
                 <input
+                  id="play-details-new-series-name"
                   type="text"
                   value={seriesName}
                   onChange={(e) => setSeriesName(e.target.value)}

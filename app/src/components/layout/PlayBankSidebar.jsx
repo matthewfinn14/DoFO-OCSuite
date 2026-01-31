@@ -677,8 +677,9 @@ export default function PlayBankSidebar({
         <div className="flex items-center justify-between px-3 py-2.5 bg-slate-800 border-b border-slate-600">
           <div className="flex items-center gap-2">
             <Landmark size={20} className="text-slate-300" />
-            <h3 className="text-sm font-extrabold text-white tracking-wide">PLAY BANK</h3>
+            <label htmlFor="playbank-phase-select" className="text-sm font-extrabold text-white tracking-wide">PLAY BANK</label>
             <select
+              id="playbank-phase-select"
               value={playBankPhase}
               onChange={(e) => setPlayBankPhase(e.target.value)}
               className="bg-slate-700 border border-slate-600 rounded px-2 py-0.5 text-white text-xs font-semibold cursor-pointer"
@@ -791,8 +792,10 @@ export default function PlayBankSidebar({
 
         {/* Quick Add */}
         <div className="p-2 bg-slate-50 border-b border-slate-200">
+          <label htmlFor="playbank-quick-add" className="sr-only">Quick add play</label>
           <div className="flex gap-1.5">
             <input
+              id="playbank-quick-add"
               placeholder={
                 currentSyntax.length > 0
                   ? `e.g. ${currentSyntax.map(c => c.label?.toUpperCase() || '').slice(0, 3).join(' ')}`
@@ -825,9 +828,11 @@ export default function PlayBankSidebar({
 
         {/* Search */}
         <div className="p-2 bg-white border-b border-slate-200">
+          <label htmlFor="playbank-search" className="sr-only">Search plays</label>
           <div className="relative">
             <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
+              id="playbank-search"
               placeholder="Search plays..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value.toUpperCase())}
@@ -840,6 +845,8 @@ export default function PlayBankSidebar({
         <div className="p-2 bg-slate-50 border-b border-slate-200">
           <div className="flex gap-2">
             <select
+              id="playbank-filter-category"
+              aria-label="Filter category"
               value={filterCategory}
               onChange={(e) => {
                 setFilterCategory(e.target.value);
@@ -856,6 +863,8 @@ export default function PlayBankSidebar({
               <option value="situation">Situation</option>
             </select>
             <select
+              id="playbank-filter-value"
+              aria-label="Filter value"
               value={filterValue}
               onChange={(e) => setFilterValue(e.target.value)}
               disabled={!filterCategory}

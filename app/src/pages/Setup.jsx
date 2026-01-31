@@ -1521,10 +1521,12 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
                 </button>
               </div>
               <input
+                id={`position-desc-${pos.key}`}
                 type="text"
                 value={positionDescriptions[pos.key] ?? pos.description}
                 onChange={(e) => updatePositionDesc(pos.key, e.target.value)}
                 placeholder={pos.description}
+                aria-label={`${pos.default} description`}
                 className={`text-xs text-right bg-transparent border-none w-24 focus:outline-none ${isLight ? 'text-gray-600' : 'text-slate-300'
                   }`}
               />
@@ -1533,9 +1535,11 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
             <div className="flex gap-2 items-stretch">
               <div className="relative flex-shrink-0">
                 <input
+                  id={`position-color-${pos.key}`}
                   type="color"
                   value={positionColors[pos.key] || DEFAULT_POSITION_COLORS[pos.key] || '#64748b'}
                   onChange={(e) => updatePositionColor(pos.key, e.target.value)}
+                  aria-label={`${pos.default} color`}
                   className="absolute inset-0 opacity-0 cursor-pointer"
                 />
                 <div
@@ -1546,11 +1550,13 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
                 </div>
               </div>
               <input
+                id={`position-name-${pos.key}`}
                 type="text"
                 value={positionNames[pos.key] ?? pos.default}
                 onChange={(e) => updatePositionName(pos.key, e.target.value)}
                 placeholder={pos.default}
                 maxLength={3}
+                aria-label={`${pos.default} abbreviation`}
                 className="flex-1 min-w-0 px-2 py-2 text-center font-bold text-white rounded-lg border border-slate-600"
                 style={{ backgroundColor: positionColors[pos.key] || DEFAULT_POSITION_COLORS[pos.key] || '#64748b' }}
               />
@@ -1560,8 +1566,10 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
             {phase === 'OFFENSE' && (
               <div className="mt-2">
                 <select
+                  id={`position-type-${pos.key}`}
                   value={getPositionType(pos.key)}
                   onChange={(e) => updatePositionType(pos.key, e.target.value)}
+                  aria-label={`${pos.default} position type`}
                   className="w-full px-2 py-1 text-xs bg-slate-800 border border-slate-600 rounded text-slate-300"
                 >
                   <option value="skill">Ball Carrier / Skill</option>
@@ -1659,17 +1667,21 @@ function PositionGroupsTab({ phase, positionGroups, staff, onUpdate }) {
               <div className="flex-1 space-y-2">
                 <div className="flex items-center gap-2">
                   <input
+                    id={`group-abbrev-${group.id}`}
                     type="text"
                     value={group.abbrev || ''}
                     onChange={(e) => updateGroup(group.id, { abbrev: e.target.value.toUpperCase() })}
+                    aria-label="Group abbreviation"
                     className="w-14 bg-sky-500 text-black px-2 py-1 rounded text-xs font-bold text-center uppercase"
                     placeholder="ABB"
                     maxLength={4}
                   />
                   <input
+                    id={`group-name-${group.id}`}
                     type="text"
                     value={group.name || ''}
                     onChange={(e) => updateGroup(group.id, { name: e.target.value })}
+                    aria-label="Group name"
                     className="flex-1 bg-transparent border-b border-slate-500 text-white font-semibold focus:border-sky-500 focus:outline-none px-1"
                     placeholder="Group Name"
                   />
@@ -1685,8 +1697,9 @@ function PositionGroupsTab({ phase, positionGroups, staff, onUpdate }) {
 
             {/* Coach Selection */}
             <div className="mb-3">
-              <label className="text-xs text-slate-400 block mb-1">Coach</label>
+              <label htmlFor={`group-coach-${group.id}`} className="text-xs text-slate-400 block mb-1">Coach</label>
               <select
+                id={`group-coach-${group.id}`}
                 value={group.coachId || ''}
                 onChange={(e) => updateGroup(group.id, { coachId: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white text-sm"
@@ -1700,13 +1713,14 @@ function PositionGroupsTab({ phase, positionGroups, staff, onUpdate }) {
 
             {/* Big 3 */}
             <div>
-              <label className="text-xs text-slate-400 block mb-1">Big 3</label>
+              <span className="text-xs text-slate-400 block mb-1">Big 3</span>
               {[0, 1, 2].map(i => (
                 <div key={i} className="flex items-center gap-2 mb-2">
                   <span className="w-5 h-5 bg-sky-500 text-black rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
                     {i + 1}
                   </span>
                   <input
+                    id={`group-big3-${group.id}-${i}`}
                     type="text"
                     placeholder={`Focus ${i + 1}...`}
                     value={(group.big3 || [])[i] || ''}
@@ -1715,6 +1729,7 @@ function PositionGroupsTab({ phase, positionGroups, staff, onUpdate }) {
                       newBig3[i] = e.target.value;
                       updateGroup(group.id, { big3: newBig3 });
                     }}
+                    aria-label={`Focus point ${i + 1}`}
                     className="flex-1 px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white text-sm"
                   />
                 </div>
@@ -1794,25 +1809,31 @@ function PersonnelTab({ personnelGroupings, positions, positionNames, positionCo
               <div className="flex-1">
                 <div className="flex gap-2 mb-2">
                   <input
+                    id={`personnel-code-${grouping.id}`}
                     type="text"
                     value={grouping.code || ''}
                     onChange={(e) => updateGrouping(idx, { code: e.target.value })}
                     placeholder="Code"
+                    aria-label="Personnel code"
                     className="w-14 px-2 py-1 text-center font-bold text-sky-400 bg-slate-600 border border-slate-500 rounded"
                   />
                   <input
+                    id={`personnel-name-${grouping.id}`}
                     type="text"
                     value={grouping.name || ''}
                     onChange={(e) => updateGrouping(idx, { name: e.target.value })}
                     placeholder="Name"
+                    aria-label="Personnel name"
                     className="flex-1 px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white"
                   />
                 </div>
                 <input
+                  id={`personnel-desc-${grouping.id}`}
                   type="text"
                   value={grouping.description || ''}
                   onChange={(e) => updateGrouping(idx, { description: e.target.value })}
                   placeholder="Description (e.g., 2 RB, 1 TE)"
+                  aria-label="Personnel description"
                   className="w-full px-2 py-1 text-sm bg-slate-600 border border-slate-500 rounded text-slate-300"
                 />
               </div>
@@ -1831,6 +1852,7 @@ function PersonnelTab({ personnelGroupings, positions, positionNames, positionCo
                 return (
                   <label
                     key={pos}
+                    htmlFor={`personnel-pos-${grouping.id}-${pos}`}
                     className="flex items-center gap-1 px-2 py-1 rounded cursor-pointer transition-opacity"
                     style={{
                       backgroundColor: isActive ? color : 'transparent',
@@ -1839,6 +1861,7 @@ function PersonnelTab({ personnelGroupings, positions, positionNames, positionCo
                     }}
                   >
                     <input
+                      id={`personnel-pos-${grouping.id}-${pos}`}
                       type="checkbox"
                       checked={isActive}
                       onChange={() => togglePosition(idx, pos)}
@@ -2018,15 +2041,19 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
                     style={{ backgroundColor: family.color + '20', borderColor: family.color }}
                   >
                     <input
+                      id={`family-color-${family.id}`}
                       type="color"
                       value={family.color}
                       onChange={(e) => updateFamily(family.id, { color: e.target.value })}
+                      aria-label={`${family.name} color`}
                       className="w-4 h-4 rounded cursor-pointer border-0"
                     />
                     <input
+                      id={`family-name-${family.id}`}
                       type="text"
                       value={family.name}
                       onChange={(e) => updateFamily(family.id, { name: e.target.value })}
+                      aria-label="Family name"
                       className="bg-transparent text-white text-sm font-medium border-none focus:outline-none w-20"
                     />
                     <button
@@ -2084,9 +2111,11 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
             <div key={formation.id} className="bg-slate-700/50 rounded-lg border border-slate-600 p-4">
               <div className="flex justify-between items-start mb-3">
                 <input
+                  id={`formation-name-${formation.id}`}
                   type="text"
                   value={formation.name}
                   onChange={(e) => updateFormation(formation.id, { name: e.target.value })}
+                  aria-label="Formation name"
                   className="font-semibold text-white bg-transparent border-none focus:outline-none"
                 />
                 <button onClick={() => deleteFormation(formation.id)} className="text-red-400 hover:text-red-300">
@@ -2126,8 +2155,9 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
               {/* Personnel (Offense only) */}
               {isOffense && personnelGroupings.length > 0 && (
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Personnel</label>
+                  <label htmlFor={`formation-personnel-${formation.id}`} className="text-xs text-slate-400 block mb-1">Personnel</label>
                   <select
+                    id={`formation-personnel-${formation.id}`}
                     value={formation.personnel || ''}
                     onChange={(e) => updateFormation(formation.id, { personnel: e.target.value })}
                     className="w-full px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white text-sm"
@@ -2240,15 +2270,19 @@ function ShiftMotionsTab({ shiftMotions, onUpdate }) {
               style={{ borderColor: item.color }}
             >
               <input
+                id={`motion-color-${item.id}`}
                 type="color"
                 value={item.color}
                 onChange={(e) => updateItem(item.id, { color: e.target.value })}
+                aria-label={`${item.name} color`}
                 className="w-6 h-6 rounded cursor-pointer border-0 flex-shrink-0"
               />
               <input
+                id={`motion-name-${item.id}`}
                 type="text"
                 value={item.name}
                 onChange={(e) => updateItem(item.id, { name: e.target.value })}
+                aria-label="Motion name"
                 className="flex-1 bg-transparent text-white font-medium border-none focus:outline-none min-w-0"
               />
               <button
@@ -2284,15 +2318,19 @@ function ShiftMotionsTab({ shiftMotions, onUpdate }) {
               style={{ borderColor: item.color }}
             >
               <input
+                id={`shift-color-${item.id}`}
                 type="color"
                 value={item.color}
                 onChange={(e) => updateItem(item.id, { color: e.target.value })}
+                aria-label={`${item.name} color`}
                 className="w-6 h-6 rounded cursor-pointer border-0 flex-shrink-0"
               />
               <input
+                id={`shift-name-${item.id}`}
                 type="text"
                 value={item.name}
                 onChange={(e) => updateItem(item.id, { name: e.target.value })}
+                aria-label="Shift name"
                 className="flex-1 bg-transparent text-white font-medium border-none focus:outline-none min-w-0"
               />
               <button
@@ -2463,23 +2501,28 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupMode, setup
                     {idx + 1}
                   </span>
                   <input
+                    id={`bucket-syntax-part-label-${bucket.id}-${part.id}`}
                     type="text"
                     value={part.label}
                     onChange={(e) => updateSyntaxPart(bucket.id, idx, { label: e.target.value })}
                     placeholder="Part name"
                     className="w-32 px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white text-sm"
+                    aria-label="Part name"
                   />
                   <select
+                    id={`bucket-syntax-part-source-${bucket.id}-${part.id}`}
                     value={part.sourceCategory || 'custom'}
                     onChange={(e) => updateSyntaxPart(bucket.id, idx, { sourceCategory: e.target.value })}
                     className="flex-1 px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white text-sm"
+                    aria-label="Source category"
                   >
                     {SOURCE_CATEGORIES.map(cat => (
                       <option key={cat.id} value={cat.id}>{cat.label}</option>
                     ))}
                   </select>
-                  <label className="flex items-center gap-1 text-xs text-slate-400">
+                  <label htmlFor={`bucket-syntax-part-required-${bucket.id}-${part.id}`} className="flex items-center gap-1 text-xs text-slate-400">
                     <input
+                      id={`bucket-syntax-part-required-${bucket.id}-${part.id}`}
                       type="checkbox"
                       checked={part.required || false}
                       onChange={(e) => updateSyntaxPart(bucket.id, idx, { required: e.target.checked })}
@@ -2558,9 +2601,11 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupMode, setup
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <div className="relative flex-shrink-0">
                   <input
+                    id={`bucket-color-${bucket.id}`}
                     type="color"
                     value={bucket.color === 'gray' ? '#94a3b8' : bucket.color}
                     onChange={(e) => updateBucket(bucket.id, { color: e.target.value })}
+                    aria-label={`${bucket.label} color`}
                     className="absolute inset-0 opacity-0 cursor-pointer"
                   />
                   <div
@@ -2571,9 +2616,11 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupMode, setup
                   </div>
                 </div>
                 <input
+                  id={`bucket-label-${bucket.id}`}
                   type="text"
                   value={bucket.label}
                   onChange={(e) => updateBucket(bucket.id, { label: e.target.value })}
+                  aria-label="Bucket label"
                   className="flex-1 min-w-0 px-2 py-1 font-semibold bg-slate-600 border border-slate-500 rounded text-white truncate"
                 />
               </div>
@@ -2656,18 +2703,22 @@ function ReadTypesTab({ readTypes, onUpdate }) {
             className="flex items-center gap-3 p-3 bg-slate-700/50 rounded-lg border border-slate-600"
           >
             <input
+              id={`read-type-name-${readType.id}`}
               type="text"
               value={readType.name}
               onChange={(e) => updateReadType(readType.id, { name: e.target.value })}
               className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white"
               placeholder="Read type name"
+              aria-label="Read type name"
             />
             <input
+              id={`read-type-description-${readType.id}`}
               type="text"
               value={readType.description || ''}
               onChange={(e) => updateReadType(readType.id, { description: e.target.value })}
               className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white text-sm"
               placeholder="Description (optional)"
+              aria-label="Read type description"
             />
             <button
               onClick={() => deleteReadType(readType.id)}
@@ -2792,11 +2843,13 @@ function LookAlikeSeriesTab({ series, buckets, plays, onUpdate }) {
                   {isExpanded ? <ChevronDown size={18} /> : <ChevronUp size={18} className="rotate-180" />}
                 </button>
                 <input
+                  id={`series-name-${s.id}`}
                   type="text"
                   value={s.name}
                   onChange={(e) => updateSeries(s.id, { name: e.target.value })}
                   className="flex-1 px-3 py-1.5 bg-slate-800 border border-slate-600 rounded text-white font-medium"
                   placeholder="Series name"
+                  aria-label="Series name"
                 />
                 <span className="text-sm text-slate-400">{s.playIds.length} plays</span>
                 <button
@@ -2812,8 +2865,9 @@ function LookAlikeSeriesTab({ series, buckets, plays, onUpdate }) {
                 <div className="p-4 border-t border-slate-600 space-y-4">
                   {/* Description */}
                   <div>
-                    <label className="block text-xs text-slate-400 uppercase mb-1">Description</label>
+                    <label htmlFor={`series-description-${s.id}`} className="block text-xs text-slate-400 uppercase mb-1">Description</label>
                     <input
+                      id={`series-description-${s.id}`}
                       type="text"
                       value={s.description || ''}
                       onChange={(e) => updateSeries(s.id, { description: e.target.value })}
@@ -2884,8 +2938,9 @@ function LookAlikeSeriesTab({ series, buckets, plays, onUpdate }) {
 
                   {/* Add Play Dropdown */}
                   <div>
-                    <label className="block text-xs text-slate-400 uppercase mb-1">Add Play</label>
+                    <label htmlFor={`series-add-play-${s.id}`} className="block text-xs text-slate-400 uppercase mb-1">Add Play</label>
                     <select
+                      id={`series-add-play-${s.id}`}
                       onChange={(e) => {
                         if (e.target.value) {
                           addPlayToSeries(s.id, e.target.value);
@@ -3097,39 +3152,49 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
             {fieldZones.map(zone => (
               <div key={zone.id} className="flex items-center gap-3 p-3 bg-slate-800 rounded-lg border border-slate-600">
                 <input
+                  id={`field-zone-color-${zone.id}`}
                   type="color"
                   value={zone.color || '#64748b'}
                   onChange={(e) => updateFieldZone(zone.id, { color: e.target.value })}
+                  aria-label={`${zone.name} color`}
                   className="w-8 h-8 rounded cursor-pointer border-0"
                 />
                 <input
+                  id={`field-zone-name-${zone.id}`}
                   type="text"
                   value={zone.name}
                   onChange={(e) => updateFieldZone(zone.id, { name: e.target.value })}
+                  aria-label="Zone name"
                   className="flex-1 px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-white font-medium"
                   placeholder="Zone name"
                 />
                 <input
+                  id={`field-zone-desc-${zone.id}`}
                   type="text"
                   value={zone.description || ''}
                   onChange={(e) => updateFieldZone(zone.id, { description: e.target.value })}
+                  aria-label="Zone description"
                   className="flex-1 px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-sm"
                   placeholder="Description"
                 />
                 <div className="flex items-center gap-1 text-sm text-slate-400">
                   <input
+                    id={`field-zone-start-${zone.id}`}
                     type="number"
                     value={zone.startYard || 0}
                     onChange={(e) => updateFieldZone(zone.id, { startYard: parseInt(e.target.value) || 0 })}
+                    aria-label="Start yard"
                     className="w-14 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-center"
                     min="0"
                     max="100"
                   />
                   <span>-</span>
                   <input
+                    id={`field-zone-end-${zone.id}`}
                     type="number"
                     value={zone.endYard || 0}
                     onChange={(e) => updateFieldZone(zone.id, { endYard: parseInt(e.target.value) || 0 })}
+                    aria-label="End yard"
                     className="w-14 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-center"
                     min="0"
                     max="100"
@@ -3193,22 +3258,28 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
             {downDistanceCategories.map(cat => (
               <div key={cat.id} className="flex items-center gap-3 p-3 bg-slate-800 rounded-lg border border-slate-600">
                 <input
+                  id={`down-dist-name-${cat.id}`}
                   type="text"
                   value={cat.name}
                   onChange={(e) => updateDownDistance(cat.id, { name: e.target.value })}
+                  aria-label="Category name"
                   className="flex-1 px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-white font-medium"
                   placeholder="Category name"
                 />
                 <input
+                  id={`down-dist-desc-${cat.id}`}
                   type="text"
                   value={cat.description || ''}
                   onChange={(e) => updateDownDistance(cat.id, { description: e.target.value })}
+                  aria-label="Category description"
                   className="flex-1 px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-sm"
                   placeholder="Description"
                 />
                 <select
+                  id={`down-dist-down-${cat.id}`}
                   value={cat.down || ''}
                   onChange={(e) => updateDownDistance(cat.id, { down: e.target.value })}
+                  aria-label="Down"
                   className="w-24 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-sm"
                 >
                   <option value="">Down</option>
@@ -3218,8 +3289,10 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
                   <option value="4">4th</option>
                 </select>
                 <select
+                  id={`down-dist-distance-${cat.id}`}
                   value={cat.distanceType || ''}
                   onChange={(e) => updateDownDistance(cat.id, { distanceType: e.target.value })}
+                  aria-label="Distance type"
                   className="w-28 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-sm"
                 >
                   <option value="">Distance</option>
@@ -3285,16 +3358,20 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
             {specialSituations.map(sit => (
               <div key={sit.id} className="flex items-center gap-3 p-3 bg-slate-800 rounded-lg border border-slate-600">
                 <input
+                  id={`special-sit-name-${sit.id}`}
                   type="text"
                   value={sit.name}
                   onChange={(e) => updateSpecialSituation(sit.id, { name: e.target.value })}
+                  aria-label="Situation name"
                   className="flex-1 px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-white font-medium"
                   placeholder="Situation name"
                 />
                 <input
+                  id={`special-sit-desc-${sit.id}`}
                   type="text"
                   value={sit.description || ''}
                   onChange={(e) => updateSpecialSituation(sit.id, { description: e.target.value })}
+                  aria-label="Situation description"
                   className="flex-[2] px-3 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-sm"
                   placeholder="Description"
                 />
@@ -3596,10 +3673,11 @@ function TeachPlayCallModal({ isOpen, onClose, phase, currentSyntax, termLibrary
         <div className="p-4 space-y-6">
           {/* Raw call input */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label htmlFor="teach-play-call-input" className="block text-sm font-medium text-slate-300 mb-2">
               Enter a full play call
             </label>
             <input
+              id="teach-play-call-input"
               type="text"
               value={rawCall}
               onChange={(e) => {
@@ -3635,8 +3713,10 @@ function TeachPlayCallModal({ isOpen, onClose, phase, currentSyntax, termLibrary
                       </span>
                       <span className="text-slate-500">→</span>
                       <select
+                        id={`teach-token-assignment-${idx}`}
                         value={assignment || ''}
                         onChange={(e) => setAssignment(idx, e.target.value || null)}
+                        aria-label={`Tag for ${token}`}
                         className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white text-sm"
                       >
                         <option value="">-- Select category --</option>
@@ -4091,8 +4171,9 @@ function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupCo
                     {/* Body */}
                     <div className="p-3 space-y-2">
                       <div>
-                        <label className="text-[10px] text-slate-500 uppercase tracking-wide">Name</label>
+                        <label htmlFor={`syntax-component-name-${item.id}`} className="text-[10px] text-slate-500 uppercase tracking-wide">Name</label>
                         <input
+                          id={`syntax-component-name-${item.id}`}
                           type="text"
                           value={item.label}
                           onChange={(e) => updateSyntaxComponent(idx, { label: e.target.value })}
@@ -4101,8 +4182,9 @@ function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupCo
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] text-slate-500 uppercase tracking-wide">Source Category</label>
+                        <label htmlFor={`syntax-component-source-${item.id}`} className="text-[10px] text-slate-500 uppercase tracking-wide">Source Category</label>
                         <select
+                          id={`syntax-component-source-${item.id}`}
                           value={item.sourceCategory || 'custom'}
                           onChange={(e) => updateSyntaxComponent(idx, { sourceCategory: e.target.value })}
                           className="w-full px-2 py-1.5 bg-slate-600 border border-slate-500 rounded text-white text-sm"
@@ -4124,8 +4206,9 @@ function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupCo
                         })()}
                       </div>
                       <div className="flex items-center gap-2">
-                        <label className="flex items-center gap-1.5 text-[10px] text-slate-400 cursor-pointer">
+                        <label htmlFor={`syntax-component-required-${item.id}`} className="flex items-center gap-1.5 text-[10px] text-slate-400 cursor-pointer">
                           <input
+                            id={`syntax-component-required-${item.id}`}
                             type="checkbox"
                             checked={item.required || false}
                             onChange={(e) => updateSyntaxComponent(idx, { required: e.target.checked })}
@@ -4136,8 +4219,9 @@ function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupCo
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-[10px] text-slate-500 uppercase tracking-wide">Prefix</label>
+                          <label htmlFor={`syntax-component-prefix-${item.id}`} className="text-[10px] text-slate-500 uppercase tracking-wide">Prefix</label>
                           <input
+                            id={`syntax-component-prefix-${item.id}`}
                             type="text"
                             value={item.prefix || ''}
                             onChange={(e) => updateSyntaxComponent(idx, { prefix: e.target.value })}
@@ -4146,8 +4230,9 @@ function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupCo
                           />
                         </div>
                         <div>
-                          <label className="text-[10px] text-slate-500 uppercase tracking-wide">Suffix</label>
+                          <label htmlFor={`syntax-component-suffix-${item.id}`} className="text-[10px] text-slate-500 uppercase tracking-wide">Suffix</label>
                           <input
+                            id={`syntax-component-suffix-${item.id}`}
                             type="text"
                             value={item.suffix || ''}
                             onChange={(e) => updateSyntaxComponent(idx, { suffix: e.target.value })}
@@ -4372,15 +4457,19 @@ function CustomSyntaxTermsTab({ phase, syntaxPart, termLibrary, syntax, onUpdate
       <div className="p-2 bg-slate-700/50 rounded-lg border border-slate-600 group">
         <div className="flex items-center gap-2">
           <input
+            id={`term-label-${term.id}`}
             type="text"
             value={term.label}
             onChange={(e) => updateTerm(term.id, { label: e.target.value })}
+            aria-label="Term label"
             className="flex-1 bg-transparent text-white text-sm font-medium focus:outline-none focus:ring-1 focus:ring-sky-500 rounded px-1 min-w-0"
           />
           {subdivisions.length > 0 && (
             <select
+              id={`term-subdivision-${term.id}`}
               value={term.subdivision || ''}
               onChange={(e) => updateTerm(term.id, { subdivision: e.target.value || null })}
+              aria-label="Term category"
               className="text-xs bg-slate-600 border border-slate-500 rounded px-1 py-0.5 text-slate-300"
             >
               <option value="">No category</option>
@@ -4445,9 +4534,10 @@ function CustomSyntaxTermsTab({ phase, syntaxPart, termLibrary, syntax, onUpdate
             </p>
             {signalFields.map(field => (
               <div key={field.id} className="space-y-1">
-                <label className="block text-sm font-medium text-slate-300">{field.label}</label>
+                <label htmlFor={`signal-field-${term.id}-${field.id}`} className="block text-sm font-medium text-slate-300">{field.label}</label>
                 {field.values === 'custom' ? (
                   <input
+                    id={`signal-field-${term.id}-${field.id}`}
                     type="text"
                     value={termSignals[field.id] || ''}
                     onChange={(e) => updateTermSignal(term.id, field.id, e.target.value)}
@@ -4456,6 +4546,7 @@ function CustomSyntaxTermsTab({ phase, syntaxPart, termLibrary, syntax, onUpdate
                   />
                 ) : (
                   <select
+                    id={`signal-field-${term.id}-${field.id}`}
                     value={termSignals[field.id] || ''}
                     onChange={(e) => updateTermSignal(term.id, field.id, e.target.value)}
                     className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-md text-white text-sm"
@@ -4683,7 +4774,7 @@ function GlossaryDefinitionsTab({ phase, termLibrary, syntax, glossaryDefinition
                     {/* Term (Left Side) */}
                     <div className="w-48 flex-shrink-0 pt-2">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sky-400">{term.label}</span>
+                        <label htmlFor={`glossary-def-${term.id}`} className="font-semibold text-sky-400 cursor-pointer">{term.label}</label>
                         {term.source === 'custom' && (
                           <button
                             onClick={() => deleteCustomTerm(term.id)}
@@ -4702,6 +4793,7 @@ function GlossaryDefinitionsTab({ phase, termLibrary, syntax, glossaryDefinition
                     {/* Definition (Right Side) */}
                     <div className="flex-1">
                       <input
+                        id={`glossary-def-${term.id}`}
                         type="text"
                         value={currentDefinitions[term.id] || ''}
                         onChange={(e) => updateDefinition(term.id, e.target.value)}
@@ -4851,10 +4943,12 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
             <div key={prot.id} className="bg-slate-700/50 rounded-lg border border-slate-600 p-4">
               <div className="flex justify-between items-center mb-3">
                 <input
+                  id={`protection-name-${prot.id}`}
                   type="text"
                   value={prot.name}
                   onChange={(e) => updateProtection(idx, { name: e.target.value.toUpperCase() })}
                   className="font-bold text-lg bg-transparent border-none text-white w-24"
+                  aria-label="Protection name"
                 />
                 <button onClick={() => deleteProtection(prot.id)} className="text-red-400 hover:text-red-300">
                   <Trash2 size={14} />
@@ -4863,8 +4957,9 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
 
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Slide Direction</label>
+                  <label htmlFor={`protection-slide-${prot.id}`} className="text-xs text-slate-400 block mb-1">Slide Direction</label>
                   <select
+                    id={`protection-slide-${prot.id}`}
                     value={prot.slideDirection}
                     onChange={(e) => updateProtection(idx, { slideDirection: e.target.value })}
                     className="w-full px-2 py-1.5 bg-slate-600 border border-slate-500 rounded text-white text-sm"
@@ -4875,8 +4970,9 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 block mb-1">Man Side</label>
+                  <label htmlFor={`protection-man-side-${prot.id}`} className="text-xs text-slate-400 block mb-1">Man Side</label>
                   <select
+                    id={`protection-man-side-${prot.id}`}
                     value={prot.manSide}
                     onChange={(e) => updateProtection(idx, { manSide: e.target.value })}
                     className="w-full px-2 py-1.5 bg-slate-600 border border-slate-500 rounded text-white text-sm"
@@ -4889,8 +4985,9 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
               </div>
 
               <div className="mb-2">
-                <label className="text-xs text-slate-400 block mb-1">Call Text</label>
+                <label htmlFor={`protection-call-text-${prot.id}`} className="text-xs text-slate-400 block mb-1">Call Text</label>
                 <input
+                  id={`protection-call-text-${prot.id}`}
                   type="text"
                   value={prot.callText || ''}
                   onChange={(e) => updateProtection(idx, { callText: e.target.value })}
@@ -4900,8 +4997,9 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
               </div>
 
               <div className="mb-3">
-                <label className="text-xs text-slate-400 block mb-1">Notes</label>
+                <label htmlFor={`protection-notes-${prot.id}`} className="text-xs text-slate-400 block mb-1">Notes</label>
                 <textarea
+                  id={`protection-notes-${prot.id}`}
                   value={prot.notes || ''}
                   onChange={(e) => updateProtection(idx, { notes: e.target.value })}
                   placeholder="Optional notes..."
@@ -4912,7 +5010,7 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
 
               {/* Diagram Section */}
               <div className="pt-3 border-t border-slate-600">
-                <label className="text-xs text-slate-400 block mb-2">Blocking Diagram</label>
+                <span className="text-xs text-slate-400 block mb-2">Blocking Diagram</span>
                 <div className="flex items-center gap-3">
                   {prot.diagramData && prot.diagramData.length > 0 ? (
                     <DiagramPreview
@@ -4971,10 +5069,12 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
             <div key={scheme.id} className="bg-slate-700/50 rounded-lg border border-slate-600 p-4">
               <div className="flex justify-between items-center mb-3">
                 <input
+                  id={`run-scheme-name-${scheme.id}`}
                   type="text"
                   value={scheme.name}
                   onChange={(e) => updateRunScheme(idx, { name: e.target.value.toUpperCase() })}
                   className="font-bold text-lg bg-transparent border-none text-white w-24"
+                  aria-label="Scheme name"
                 />
                 <button onClick={() => deleteRunScheme(scheme.id)} className="text-red-400 hover:text-red-300">
                   <Trash2 size={14} />
@@ -4982,8 +5082,9 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
               </div>
 
               <div className="mb-3">
-                <label className="text-xs text-slate-400 block mb-1">Scheme Type</label>
+                <label htmlFor={`run-scheme-type-${scheme.id}`} className="text-xs text-slate-400 block mb-1">Scheme Type</label>
                 <select
+                  id={`run-scheme-type-${scheme.id}`}
                   value={scheme.type}
                   onChange={(e) => updateRunScheme(idx, { type: e.target.value })}
                   className="w-full px-2 py-1.5 bg-slate-600 border border-slate-500 rounded text-white text-sm"
@@ -4999,8 +5100,9 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
               </div>
 
               <div className="mb-2">
-                <label className="text-xs text-slate-400 block mb-1">Call Text</label>
+                <label htmlFor={`run-scheme-call-text-${scheme.id}`} className="text-xs text-slate-400 block mb-1">Call Text</label>
                 <input
+                  id={`run-scheme-call-text-${scheme.id}`}
                   type="text"
                   value={scheme.callText || ''}
                   onChange={(e) => updateRunScheme(idx, { callText: e.target.value })}
@@ -5010,8 +5112,9 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
               </div>
 
               <div className="mb-3">
-                <label className="text-xs text-slate-400 block mb-1">Notes</label>
+                <label htmlFor={`run-scheme-notes-${scheme.id}`} className="text-xs text-slate-400 block mb-1">Notes</label>
                 <textarea
+                  id={`run-scheme-notes-${scheme.id}`}
                   value={scheme.notes || ''}
                   onChange={(e) => updateRunScheme(idx, { notes: e.target.value })}
                   placeholder="Optional notes..."
@@ -5022,7 +5125,7 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
 
               {/* Diagram Section */}
               <div className="pt-3 border-t border-slate-600">
-                <label className="text-xs text-slate-400 block mb-2">Blocking Diagram</label>
+                <span className="text-xs text-slate-400 block mb-2">Blocking Diagram</span>
                 <div className="flex items-center gap-3">
                   {scheme.diagramData && scheme.diagramData.length > 0 ? (
                     <DiagramPreview
@@ -5165,6 +5268,7 @@ function SegmentTypesTab({ segmentTypes, onUpdate }) {
           >
             {editingType === segType.id ? (
               <input
+                id={`segment-type-name-${segType.id}`}
                 autoFocus
                 defaultValue={segType.name}
                 onBlur={(e) => renameSegmentType(segType.id, e.target.value)}
@@ -5172,6 +5276,7 @@ function SegmentTypesTab({ segmentTypes, onUpdate }) {
                   if (e.key === 'Enter') renameSegmentType(segType.id, e.target.value);
                   if (e.key === 'Escape') setEditingType(null);
                 }}
+                aria-label="Segment type name"
                 className="flex-1 bg-slate-600 text-white px-2 py-1 rounded border border-slate-500 focus:outline-none focus:border-sky-500"
               />
             ) : (
@@ -5391,9 +5496,10 @@ function SegmentFocusTab({
         <div className="p-4">
           {activeSource === 'custom' ? (
             <div>
-              <p className="text-slate-400 text-sm mb-3">Add a custom focus item:</p>
+              <label htmlFor="segment-focus-custom-input" className="text-slate-400 text-sm mb-3 block">Add a custom focus item:</label>
               <div className="flex gap-2">
                 <input
+                  id="segment-focus-custom-input"
                   type="text"
                   value={customName}
                   onChange={(e) => setCustomName(e.target.value)}
@@ -5487,10 +5593,12 @@ function TemplatesTab({ title, description, templates, onUpdate, icon: Icon }) {
             <div key={template.id} className="bg-slate-700/50 rounded-lg border border-slate-600 p-4">
               <div className="flex justify-between items-start mb-2">
                 <input
+                  id={`template-name-${template.id}`}
                   type="text"
                   value={template.name}
                   onChange={(e) => renameTemplate(template.id, e.target.value)}
                   className="font-semibold text-white bg-transparent border-none focus:outline-none flex-1"
+                  aria-label="Template name"
                 />
                 <button onClick={() => deleteTemplate(template.id)} className="text-red-400 hover:text-red-300 ml-2">
                   <Trash2 size={14} />
@@ -5642,8 +5750,9 @@ function ProgramLevelsTab({ programLevels, staff, onUpdate }) {
                 <div className="border-t border-slate-600 p-4 space-y-6">
                   {/* Level Name Edit */}
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">Level Name</label>
+                    <label htmlFor={`level-name-${level.id}`} className="block text-sm font-medium text-slate-300 mb-2">Level Name</label>
                     <input
+                      id={`level-name-${level.id}`}
                       type="text"
                       value={level.name}
                       onChange={(e) => updateLevel(level.id, { name: e.target.value })}
@@ -5666,9 +5775,11 @@ function ProgramLevelsTab({ programLevels, staff, onUpdate }) {
                           return (
                             <label
                               key={s.id}
+                              htmlFor={`level-staff-perm-${level.id}-${s.id}`}
                               className="flex items-center gap-3 p-2 bg-slate-600/50 rounded cursor-pointer hover:bg-slate-600"
                             >
                               <input
+                                id={`level-staff-perm-${level.id}-${s.id}`}
                                 type="checkbox"
                                 checked={hasAccess}
                                 onChange={() => toggleStaffPermission(level.id, s.id)}
@@ -5703,9 +5814,11 @@ function ProgramLevelsTab({ programLevels, staff, onUpdate }) {
                           return (
                             <label
                               key={tool.key}
+                              htmlFor={`level-tool-${level.id}-${tool.key}`}
                               className="flex items-center gap-3 p-2 bg-slate-600/50 rounded cursor-pointer hover:bg-slate-600"
                             >
                               <input
+                                id={`level-tool-${level.id}-${tool.key}`}
                                 type="checkbox"
                                 checked={isEnabled}
                                 onChange={() => toggleTool(level.id, tool.key)}
@@ -5725,10 +5838,11 @@ function ProgramLevelsTab({ programLevels, staff, onUpdate }) {
                   {/* Level Focus & Expectations (HC Only fields) */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-600">
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                      <label htmlFor={`level-focus-${level.id}`} className="block text-sm font-medium text-slate-300 mb-2">
                         Level Focus
                       </label>
                       <textarea
+                        id={`level-focus-${level.id}`}
                         value={level.levelFocus || ''}
                         onChange={(e) => updateLevel(level.id, { levelFocus: e.target.value })}
                         placeholder="What is the primary focus for this level? (e.g., Development, fundamentals, game experience...)"
@@ -5737,10 +5851,11 @@ function ProgramLevelsTab({ programLevels, staff, onUpdate }) {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                      <label htmlFor={`level-expectations-${level.id}`} className="block text-sm font-medium text-slate-300 mb-2">
                         Coach Expectations
                       </label>
                       <textarea
+                        id={`level-expectations-${level.id}`}
                         value={level.coachExpectations || ''}
                         onChange={(e) => updateLevel(level.id, { coachExpectations: e.target.value })}
                         placeholder="What do you need from coaches at this level? (e.g., Daily attendance tracking, film review emphasis...)"
@@ -5985,10 +6100,12 @@ function SeasonPhasesTab({ seasonPhases, onUpdate, isLight = false }) {
                   </button>
                 </div>
                 <input
+                  id={`phase-name-${phase.id}`}
                   type="text"
                   value={phase.name}
                   onChange={e => updatePhase(phase.id, { name: e.target.value })}
                   className="bg-transparent text-white font-semibold border-none outline-none flex-1"
+                  aria-label="Phase name"
                 />
                 <button
                   onClick={() => deletePhase(phase.id, phase.name)}
@@ -6002,8 +6119,9 @@ function SeasonPhasesTab({ seasonPhases, onUpdate, isLight = false }) {
               <div className="p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
                 {/* Color */}
                 <div>
-                  <label className={`block text-xs font-medium uppercase mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Color</label>
+                  <label htmlFor={`phase-color-${phase.id}`} className={`block text-xs font-medium uppercase mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Color</label>
                   <select
+                    id={`phase-color-${phase.id}`}
                     value={phase.color}
                     onChange={e => updatePhase(phase.id, { color: e.target.value })}
                     className={`w-full px-3 py-2 border rounded text-sm ${isLight
@@ -6019,8 +6137,9 @@ function SeasonPhasesTab({ seasonPhases, onUpdate, isLight = false }) {
 
                 {/* Start Date */}
                 <div>
-                  <label className={`block text-xs font-medium uppercase mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Start Date</label>
+                  <label htmlFor={`phase-start-date-${phase.id}`} className={`block text-xs font-medium uppercase mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Start Date</label>
                   <input
+                    id={`phase-start-date-${phase.id}`}
                     type="date"
                     value={phase.startDate || ''}
                     onChange={e => updatePhase(phase.id, { startDate: e.target.value })}
@@ -6033,8 +6152,9 @@ function SeasonPhasesTab({ seasonPhases, onUpdate, isLight = false }) {
 
                 {/* Number of Weeks */}
                 <div>
-                  <label className={`block text-xs font-medium uppercase mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Number of Weeks</label>
+                  <label htmlFor={`phase-num-weeks-${phase.id}`} className={`block text-xs font-medium uppercase mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Number of Weeks</label>
                   <input
+                    id={`phase-num-weeks-${phase.id}`}
                     type="number"
                     value={phase.numWeeks || ''}
                     onChange={e => updatePhase(phase.id, { numWeeks: parseInt(e.target.value) || 0 })}
@@ -6316,9 +6436,11 @@ function SeasonScheduleTab({ weeks, seasonPhases, programLevels, activeYear, onU
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <select
+            id="season-schedule-filter-phase"
             value={filterPhase}
             onChange={e => setFilterPhase(e.target.value)}
             className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
+            aria-label="Filter by phase"
           >
             <option value="all">All Phases</option>
             {phases.map(p => (
@@ -6326,9 +6448,11 @@ function SeasonScheduleTab({ weeks, seasonPhases, programLevels, activeYear, onU
             ))}
           </select>
           <select
+            id="season-schedule-filter-level"
             value={filterLevel}
             onChange={e => setFilterLevel(e.target.value)}
             className="px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm"
+            aria-label="Filter by level"
           >
             <option value="all">All Levels</option>
             <option value="varsity">Varsity</option>
@@ -6557,8 +6681,9 @@ function WeekEditModal({ week, phases, programLevels, defaultPhaseId, getNextWee
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Phase</label>
+              <label htmlFor="week-edit-phase" className="block text-sm font-medium text-slate-300 mb-1">Phase</label>
               <select
+                id="week-edit-phase"
                 value={formData.phaseId}
                 onChange={e => {
                   const newPhase = e.target.value;
@@ -6576,8 +6701,9 @@ function WeekEditModal({ week, phases, programLevels, defaultPhaseId, getNextWee
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Week #</label>
+              <label htmlFor="week-edit-week-num" className="block text-sm font-medium text-slate-300 mb-1">Week #</label>
               <input
+                id="week-edit-week-num"
                 type="number"
                 value={formData.weekNum}
                 onChange={e => setFormData({ ...formData, weekNum: e.target.value, dateOverride: false })}
@@ -6588,8 +6714,9 @@ function WeekEditModal({ week, phases, programLevels, defaultPhaseId, getNextWee
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Week Name *</label>
+            <label htmlFor="week-edit-name" className="block text-sm font-medium text-slate-300 mb-1">Week Name *</label>
             <input
+              id="week-edit-name"
               type="text"
               value={formData.name}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
@@ -6600,8 +6727,9 @@ function WeekEditModal({ week, phases, programLevels, defaultPhaseId, getNextWee
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Opponent</label>
+              <label htmlFor="week-edit-opponent" className="block text-sm font-medium text-slate-300 mb-1">Opponent</label>
               <input
+                id="week-edit-opponent"
                 type="text"
                 value={formData.opponent}
                 onChange={e => setFormData({ ...formData, opponent: e.target.value })}
@@ -6610,8 +6738,9 @@ function WeekEditModal({ week, phases, programLevels, defaultPhaseId, getNextWee
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Home/Away</label>
+              <label htmlFor="week-edit-home-away" className="block text-sm font-medium text-slate-300 mb-1">Home/Away</label>
               <select
+                id="week-edit-home-away"
                 value={formData.isHome ? 'home' : 'away'}
                 onChange={e => setFormData({ ...formData, isHome: e.target.value === 'home' })}
                 className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
@@ -6624,13 +6753,14 @@ function WeekEditModal({ week, phases, programLevels, defaultPhaseId, getNextWee
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">
+              <label htmlFor="week-edit-start-date" className="block text-sm font-medium text-slate-300 mb-1">
                 Week Start Date
                 {!formData.dateOverride && formData.date && (
                   <span className="text-xs text-emerald-400 ml-2">(auto-calculated)</span>
                 )}
               </label>
               <input
+                id="week-edit-start-date"
                 type="date"
                 value={formData.date}
                 onChange={e => setFormData({ ...formData, date: e.target.value, dateOverride: true })}
@@ -6647,8 +6777,9 @@ function WeekEditModal({ week, phases, programLevels, defaultPhaseId, getNextWee
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Program Level</label>
+              <label htmlFor="week-edit-level" className="block text-sm font-medium text-slate-300 mb-1">Program Level</label>
               <select
+                id="week-edit-level"
                 value={formData.levelId}
                 onChange={e => setFormData({ ...formData, levelId: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
@@ -6662,8 +6793,9 @@ function WeekEditModal({ week, phases, programLevels, defaultPhaseId, getNextWee
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Notes</label>
+            <label htmlFor="week-edit-notes" className="block text-sm font-medium text-slate-300 mb-1">Notes</label>
             <textarea
+              id="week-edit-notes"
               value={formData.notes}
               onChange={e => setFormData({ ...formData, notes: e.target.value })}
               placeholder="Any additional notes..."
@@ -6854,8 +6986,9 @@ function EventEditModal({ event, onSave, onClose }) {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Event Name *</label>
+              <label htmlFor="event-edit-name" className="block text-sm font-medium text-slate-300 mb-1">Event Name *</label>
               <input
+                id="event-edit-name"
                 type="text"
                 value={formData.name}
                 onChange={e => setFormData({ ...formData, name: e.target.value })}
@@ -6865,8 +6998,9 @@ function EventEditModal({ event, onSave, onClose }) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Type</label>
+              <label htmlFor="event-edit-type" className="block text-sm font-medium text-slate-300 mb-1">Type</label>
               <select
+                id="event-edit-type"
                 value={formData.type}
                 onChange={e => setFormData({ ...formData, type: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
@@ -6881,8 +7015,9 @@ function EventEditModal({ event, onSave, onClose }) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Date</label>
+              <label htmlFor="event-edit-date" className="block text-sm font-medium text-slate-300 mb-1">Date</label>
               <input
+                id="event-edit-date"
                 type="date"
                 value={formData.date}
                 onChange={e => setFormData({ ...formData, date: e.target.value })}
@@ -6890,8 +7025,9 @@ function EventEditModal({ event, onSave, onClose }) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Time</label>
+              <label htmlFor="event-edit-time" className="block text-sm font-medium text-slate-300 mb-1">Time</label>
               <input
+                id="event-edit-time"
                 type="time"
                 value={formData.time}
                 onChange={e => setFormData({ ...formData, time: e.target.value })}
@@ -6901,8 +7037,9 @@ function EventEditModal({ event, onSave, onClose }) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Location</label>
+            <label htmlFor="event-edit-location" className="block text-sm font-medium text-slate-300 mb-1">Location</label>
             <input
+              id="event-edit-location"
               type="text"
               value={formData.location}
               onChange={e => setFormData({ ...formData, location: e.target.value })}
@@ -6912,8 +7049,9 @@ function EventEditModal({ event, onSave, onClose }) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Notes</label>
+            <label htmlFor="event-edit-notes" className="block text-sm font-medium text-slate-300 mb-1">Notes</label>
             <textarea
+              id="event-edit-notes"
               value={formData.notes}
               onChange={e => setFormData({ ...formData, notes: e.target.value })}
               placeholder="Any additional details..."
@@ -7089,15 +7227,19 @@ function QualityControlDefinitionsTab({ qualityControlDefinitions, onUpdate }) {
                 >
                   <div className="flex items-center gap-3">
                     <input
+                      id={`purpose-color-${purpose.id}`}
                       type="color"
                       value={purpose.color}
                       onChange={(e) => updatePurpose(purpose.id, 'color', e.target.value)}
+                      aria-label={`${purpose.name} color`}
                       className="w-8 h-8 rounded cursor-pointer border-0"
                     />
                     <input
+                      id={`purpose-name-${purpose.id}`}
                       type="text"
                       value={purpose.name}
                       onChange={(e) => updatePurpose(purpose.id, 'name', e.target.value)}
+                      aria-label="Purpose name"
                       className="px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white text-sm w-32"
                     />
                     <span className="text-xs text-slate-500">ID: {purpose.id}</span>
@@ -7146,11 +7288,13 @@ function QualityControlDefinitionsTab({ qualityControlDefinitions, onUpdate }) {
                   {['run', 'pass', 'screen', 'default'].map(bucket => (
                     <td key={bucket} className="px-3 py-2">
                       <input
+                        id={`efficiency-${down}-${bucket}`}
                         type="number"
                         min="0"
                         max={down === '1st' ? 20 : 100}
                         value={config.efficiencyThresholds?.[down]?.[bucket] ?? defaults.efficiencyThresholds[down][bucket]}
                         onChange={(e) => updateEfficiencyThreshold(down, bucket, e.target.value)}
+                        aria-label={`${down} ${bucket} efficiency threshold`}
                         className="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-center"
                       />
                     </td>
@@ -7172,9 +7316,10 @@ function QualityControlDefinitionsTab({ qualityControlDefinitions, onUpdate }) {
           <div className="grid grid-cols-4 gap-4">
             {['run', 'pass', 'screen', 'default'].map(bucket => (
               <div key={bucket}>
-                <label className="block text-xs text-slate-400 mb-1 capitalize">{bucket}</label>
+                <label htmlFor={`explosive-${bucket}`} className="block text-xs text-slate-400 mb-1 capitalize">{bucket}</label>
                 <div className="flex items-center gap-2">
                   <input
+                    id={`explosive-${bucket}`}
                     type="number"
                     min="0"
                     value={config.explosiveThresholds?.[bucket] ?? defaults.explosiveThresholds[bucket]}
@@ -7200,8 +7345,9 @@ function QualityControlDefinitionsTab({ qualityControlDefinitions, onUpdate }) {
         <div className="p-4">
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm text-slate-300 mb-2">Practice (min reps)</label>
+              <label htmlFor="qc-min-volume-practice" className="block text-sm text-slate-300 mb-2">Practice (min reps)</label>
               <input
+                id="qc-min-volume-practice"
                 type="number"
                 min="1"
                 value={config.minimumVolume?.practice ?? 3}
@@ -7210,8 +7356,9 @@ function QualityControlDefinitionsTab({ qualityControlDefinitions, onUpdate }) {
               />
             </div>
             <div>
-              <label className="block text-sm text-slate-300 mb-2">Game (min calls)</label>
+              <label htmlFor="qc-min-volume-game" className="block text-sm text-slate-300 mb-2">Game (min calls)</label>
               <input
+                id="qc-min-volume-game"
                 type="number"
                 min="1"
                 value={config.minimumVolume?.game ?? 2}

@@ -387,8 +387,10 @@ export default function PracticeScriptBuilder() {
       <div className="bg-slate-900 rounded-lg border border-slate-800 p-4 mb-6">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
+            <label htmlFor="practice-date-selector" className="sr-only">Practice Date</label>
             <Calendar size={18} className="text-slate-400" />
             <input
+              id="practice-date-selector"
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
@@ -397,8 +399,9 @@ export default function PracticeScriptBuilder() {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-slate-400">Week:</span>
+            <label htmlFor="week-selector" className="text-slate-400">Week:</label>
             <select
+              id="week-selector"
               value={currentWeekId || ''}
               onChange={(e) => setCurrentWeekId(e.target.value)}
               className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
@@ -414,8 +417,9 @@ export default function PracticeScriptBuilder() {
 
           {showSettings && (
             <div className="flex items-center gap-2 ml-auto">
-              <span className="text-slate-400">Start Time:</span>
+              <label htmlFor="practice-start-time" className="text-slate-400">Start Time:</label>
               <input
+                id="practice-start-time"
                 type="time"
                 value={practiceData?.startTime || '15:00'}
                 onChange={(e) => updatePractice({ startTime: e.target.value })}
@@ -454,7 +458,9 @@ export default function PracticeScriptBuilder() {
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3">
+                    <label htmlFor={`segment-name-${segment.id}`} className="sr-only">Segment Name</label>
                     <input
+                      id={`segment-name-${segment.id}`}
                       type="text"
                       value={segment.name}
                       onChange={(e) => {
@@ -481,8 +487,10 @@ export default function PracticeScriptBuilder() {
 
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1">
+                    <label htmlFor={`segment-duration-${segment.id}`} className="sr-only">Segment Duration</label>
                     <Clock size={14} className="text-slate-500" />
                     <input
+                      id={`segment-duration-${segment.id}`}
                       type="number"
                       value={segment.duration}
                       onChange={(e) => {
@@ -597,7 +605,9 @@ export default function PracticeScriptBuilder() {
                                 <tr key={row.id} className="border-b border-slate-700/50 hover:bg-slate-700/30">
                                   <td className="p-2 text-center text-slate-500">{idx + 1}</td>
                                   <td className="p-2 text-center">
+                                    <label htmlFor={`script-hash-${segment.id}-${row.id}`} className="sr-only">Hash Position</label>
                                     <select
+                                      id={`script-hash-${segment.id}-${row.id}`}
                                       value={row.hash || 'M'}
                                       onChange={(e) => updateScriptRow(segment.id, row.id, { hash: e.target.value })}
                                       className="w-full px-1 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs text-center"
@@ -652,7 +662,9 @@ export default function PracticeScriptBuilder() {
                                     )}
                                   </td>
                                   <td className="p-2">
+                                    <label htmlFor={`script-notes-${segment.id}-${row.id}`} className="sr-only">Script Row Notes</label>
                                     <input
+                                      id={`script-notes-${segment.id}-${row.id}`}
                                       type="text"
                                       value={row.notes || ''}
                                       onChange={(e) => updateScriptRow(segment.id, row.id, { notes: e.target.value })}
@@ -731,8 +743,9 @@ export default function PracticeScriptBuilder() {
                               </div>
 
                               <div className="flex items-center gap-2">
-                                <span className="text-slate-500 text-sm">Reps:</span>
+                                <label htmlFor={`play-reps-${segment.id}-${playIdx}`} className="text-slate-500 text-sm">Reps:</label>
                                 <input
+                                  id={`play-reps-${segment.id}-${playIdx}`}
                                   type="number"
                                   value={playEntry.reps || 1}
                                   onChange={(e) => {
@@ -764,8 +777,9 @@ export default function PracticeScriptBuilder() {
 
                   {/* Notes */}
                   <div className="mt-4">
-                    <label className="text-sm text-slate-400 block mb-2">Notes</label>
+                    <label htmlFor={`segment-notes-${segment.id}`} className="text-sm text-slate-400 block mb-2">Notes</label>
                     <textarea
+                      id={`segment-notes-${segment.id}`}
                       value={segment.notes || ''}
                       onChange={(e) => updateSegment(segment.id, { notes: e.target.value })}
                       placeholder="Add notes for this segment..."
@@ -812,8 +826,10 @@ export default function PracticeScriptBuilder() {
             <div className="p-4 border-b border-slate-800">
               <div className="flex gap-3">
                 <div className="relative flex-1">
+                  <label htmlFor="play-search-input" className="sr-only">Search plays</label>
                   <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                   <input
+                    id="play-search-input"
                     type="text"
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
@@ -822,7 +838,9 @@ export default function PracticeScriptBuilder() {
                     autoFocus
                   />
                 </div>
+                <label htmlFor="play-phase-filter" className="sr-only">Filter by phase</label>
                 <select
+                  id="play-phase-filter"
                   value={filterPhase}
                   onChange={e => setFilterPhase(e.target.value)}
                   className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"

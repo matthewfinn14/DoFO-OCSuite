@@ -144,11 +144,13 @@ export default function FZDnDView({
                   gap: '8px'
                 }}>
                   <input
+                    id={`fzdnd-zone-title-${zone.id}`}
                     type="text"
                     value={zoneTitle}
                     onChange={(e) => onUpdateCustomZone(zone.id, { title: e.target.value })}
                     disabled={isLocked}
                     className="hide-on-print"
+                    aria-label={`Zone title for ${zone.title}`}
                     style={{
                       flex: 1,
                       background: 'transparent',
@@ -174,6 +176,7 @@ export default function FZDnDView({
                   {!isLocked && (
                     <div style={{ display: 'flex', gap: '4px' }}>
                       <input
+                        id={`fzdnd-zone-color-${zone.id}`}
                         type="color"
                         value={zoneColor}
                         onChange={(e) => onUpdateCustomZone(zone.id, { color: e.target.value })}
@@ -186,8 +189,10 @@ export default function FZDnDView({
                           padding: 0
                         }}
                         title="Change zone color"
+                        aria-label={`Zone background color for ${zone.title}`}
                       />
                       <input
+                        id={`fzdnd-zone-text-color-${zone.id}`}
                         type="color"
                         value={zoneTextColor}
                         onChange={(e) => onUpdateCustomZone(zone.id, { textColor: e.target.value })}
@@ -200,6 +205,7 @@ export default function FZDnDView({
                           padding: 0
                         }}
                         title="Change text color"
+                        aria-label={`Zone text color for ${zone.title}`}
                       />
                     </div>
                   )}
@@ -208,11 +214,13 @@ export default function FZDnDView({
                 {/* Philosophy Notes */}
                 <div style={{ padding: '4px 8px' }}>
                   <input
+                    id={`fzdnd-zone-philosophy-${zone.id}`}
                     type="text"
                     value={zonePhilosophy}
                     onChange={(e) => onUpdateZoneNote(zone.id, e.target.value)}
                     disabled={isLocked}
                     placeholder="Philosophy reminders..."
+                    aria-label={`Philosophy notes for ${zone.title}`}
                     style={{
                       width: '100%',
                       background: 'transparent',
@@ -254,10 +262,12 @@ export default function FZDnDView({
                           justifyContent: 'center'
                         }}>
                           <input
+                            id={`fzdnd-col-header-${zone.id}-${cIdx}`}
                             type="text"
                             value={customCols[cIdx] || colName}
                             onChange={(e) => onUpdateCustomColumns(zone.id, cIdx, e.target.value)}
                             disabled={isLocked}
+                            aria-label={`Column header ${cIdx + 1} for ${zone.title}`}
                             style={{
                               width: '100%',
                               background: 'transparent',
@@ -418,10 +428,12 @@ export default function FZDnDView({
                                   // Autocomplete Input
                                   <div style={{ position: 'relative', width: '100%', padding: '2px' }}>
                                     <input
+                                      id={`fzdnd-cell-${zone.id}-${rowIdx}-${cIdx}`}
                                       type="text"
                                       placeholder="Type play name..."
                                       value={query}
                                       disabled={isLocked}
+                                      aria-label={`Play input for ${zone.title} row ${rowIdx + 1} column ${cIdx + 1}`}
                                       onFocus={() => setAutocomplete({
                                         zoneId: zone.id,
                                         rowIdx,

@@ -401,6 +401,7 @@ export default function BoxEditorModal({
               color: '#64748b'
             }} />
             <input
+              id="box-editor-play-search"
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -948,10 +949,11 @@ export default function BoxEditorModal({
 
         {/* Row count control */}
         <div style={{ marginTop: '12px' }}>
-          <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500' }}>
+          <label htmlFor="box-editor-script-row-count" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500' }}>
             Number of Rows
           </label>
           <input
+            id="box-editor-script-row-count"
             type="number"
             min="1"
             max="30"
@@ -1178,10 +1180,11 @@ export default function BoxEditorModal({
           <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: '#334155' }}>Basic Settings</h4>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div>
-              <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
+              <label htmlFor="box-editor-header-title" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
                 Header Title
               </label>
               <input
+                id="box-editor-header-title"
                 type="text"
                 value={localBox.header || ''}
                 onChange={(e) => updateField('header', e.target.value)}
@@ -1197,10 +1200,11 @@ export default function BoxEditorModal({
               />
             </div>
             <div>
-              <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
+              <label htmlFor="box-editor-box-type" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
                 Box Type
               </label>
               <select
+                id="box-editor-box-type"
                 value={localBox.type || 'grid'}
                 onChange={(e) => updateField('type', e.target.value)}
                 disabled={isLocked}
@@ -1218,10 +1222,11 @@ export default function BoxEditorModal({
               </select>
             </div>
             <div>
-              <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
+              <label htmlFor="box-editor-column-span" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
                 Column Span (1-7)
               </label>
               <input
+                id="box-editor-column-span"
                 type="number"
                 min="1"
                 max="7"
@@ -1238,10 +1243,11 @@ export default function BoxEditorModal({
               />
             </div>
             <div>
-              <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
+              <label htmlFor="box-editor-header-color" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
                 Header Color
               </label>
               <input
+                id="box-editor-header-color"
                 type="color"
                 value={localBox.color || '#3b82f6'}
                 onChange={(e) => updateField('color', e.target.value)}
@@ -1265,10 +1271,11 @@ export default function BoxEditorModal({
             <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: '#334155' }}>Grid Settings</h4>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
+                <label htmlFor="box-editor-grid-columns" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
                   Columns
                 </label>
                 <input
+                  id="box-editor-grid-columns"
                   type="number"
                   min="1"
                   max="6"
@@ -1285,10 +1292,11 @@ export default function BoxEditorModal({
                 />
               </div>
               <div>
-                <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
+                <label htmlFor="box-editor-grid-rows" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
                   Rows
                 </label>
                 <input
+                  id="box-editor-grid-rows"
                   type="number"
                   min="1"
                   max="10"
@@ -1305,10 +1313,11 @@ export default function BoxEditorModal({
                 />
               </div>
               <div>
-                <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
+                <label htmlFor="box-editor-corner-label" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
                   Corner Label
                 </label>
                 <input
+                  id="box-editor-corner-label"
                   type="text"
                   value={localBox.cornerLabel || '#'}
                   onChange={(e) => updateField('cornerLabel', e.target.value)}
@@ -1327,14 +1336,16 @@ export default function BoxEditorModal({
 
             {/* Column Headings */}
             <div style={{ marginTop: '12px' }}>
-              <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '8px' }}>
+              <label id="box-editor-column-headings-label" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '8px' }}>
                 Column Headings
               </label>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }} role="group" aria-labelledby="box-editor-column-headings-label">
                 {Array(localBox.gridColumns || 4).fill(null).map((_, i) => (
                   <input
                     key={i}
+                    id={`box-editor-column-heading-${i}`}
                     type="text"
+                    aria-label={`Column ${i + 1} heading`}
                     value={(localBox.gridHeadings || [])[i] || `COL ${i + 1}`}
                     onChange={(e) => {
                       const newHeadings = [...(localBox.gridHeadings || [])];
@@ -1363,10 +1374,11 @@ export default function BoxEditorModal({
             <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: '#334155' }}>Script Settings</h4>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
+                <label htmlFor="box-editor-script-rows" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
                   Number of Rows
                 </label>
                 <input
+                  id="box-editor-script-rows"
                   type="number"
                   min="1"
                   max="30"
@@ -1391,10 +1403,11 @@ export default function BoxEditorModal({
                 />
               </div>
               <div>
-                <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
+                <label htmlFor="box-editor-script-columns" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
                   Columns
                 </label>
                 <select
+                  id="box-editor-script-columns"
                   value={localBox.scriptColumns || 2}
                   onChange={(e) => updateField('scriptColumns', parseInt(e.target.value))}
                   disabled={isLocked}

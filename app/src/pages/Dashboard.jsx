@@ -368,10 +368,11 @@ export default function Dashboard() {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Megaphone size={20} className="text-sky-400" />
-            <span className="text-sm font-semibold text-slate-400">Season Theme:</span>
+            <label htmlFor="dashboard-season-motto" className="text-sm font-semibold text-slate-400">Season Theme:</label>
           </div>
           {isHeadCoach ? (
             <input
+              id="dashboard-season-motto"
               type="text"
               value={currentCulture.seasonMotto || ''}
               onChange={(e) => handleCultureChange('seasonMotto', e.target.value)}

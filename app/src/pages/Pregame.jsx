@@ -214,7 +214,9 @@ function PregameNotesModal({ item, staff, positionGroups, onUpdateNotes, onClose
 
           {/* Note Input */}
           <div className="relative">
+            <label htmlFor="pregame-note-text" className="sr-only">Notes</label>
             <textarea
+              id="pregame-note-text"
               ref={textareaRef}
               value={noteText}
               onChange={handleTextChange}
@@ -402,10 +404,11 @@ function SavePregameTemplateModal({ schedule, gameTime, existingTemplates, onSav
 
           {/* Template Name */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label htmlFor="pregame-template-name" className="block text-sm font-medium text-slate-300 mb-2">
               Template Name <span className="text-red-400">*</span>
             </label>
             <input
+              id="pregame-template-name"
               type="text"
               value={templateName}
               onChange={e => setTemplateName(e.target.value)}
@@ -417,13 +420,14 @@ function SavePregameTemplateModal({ schedule, gameTime, existingTemplates, onSav
 
           {/* Folder Selection */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label htmlFor="pregame-template-folder" className="block text-sm font-medium text-slate-300 mb-2">
               Folder (Optional)
             </label>
 
             {!isCreatingFolder ? (
               <div className="space-y-2">
                 <select
+                  id="pregame-template-folder"
                   value={selectedFolder}
                   onChange={e => setSelectedFolder(e.target.value)}
                   className="w-full px-4 py-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sky-500"
@@ -442,7 +446,9 @@ function SavePregameTemplateModal({ schedule, gameTime, existingTemplates, onSav
               </div>
             ) : (
               <div className="space-y-2">
+                <label htmlFor="pregame-new-folder-name" className="sr-only">New folder name</label>
                 <input
+                  id="pregame-new-folder-name"
                   type="text"
                   value={newFolderName}
                   onChange={e => setNewFolderName(e.target.value)}
@@ -550,8 +556,9 @@ function ImportPregameTemplateModal({ existingTemplates, onImport, onClose }) {
               {/* Folder Filter */}
               {folders.length > 0 && (
                 <div>
-                  <label className="text-xs text-slate-500 uppercase tracking-wide">Folder</label>
+                  <label htmlFor="pregame-import-folder-filter" className="text-xs text-slate-500 uppercase tracking-wide">Folder</label>
                   <select
+                    id="pregame-import-folder-filter"
                     value={selectedFolder}
                     onChange={e => { setSelectedFolder(e.target.value); setSelectedTemplateId(null); }}
                     className="w-full mt-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
@@ -871,8 +878,9 @@ export default function Pregame() {
           </div>
           <div className="w-px h-8 bg-slate-700" />
           <div className="flex items-center gap-2">
-            <span className="text-slate-400">Kickoff:</span>
+            <label htmlFor="pregame-kickoff-time" className="text-slate-400">Kickoff:</label>
             <input
+              id="pregame-kickoff-time"
               type="time"
               value={gameTime}
               onChange={e => setGameTime(e.target.value)}
@@ -1081,8 +1089,9 @@ export default function Pregame() {
             <div className="p-4 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 sm:col-span-1">
-                  <label className="text-sm text-slate-400 block mb-1">Item Name</label>
+                  <label htmlFor="pregame-item-name" className="text-sm text-slate-400 block mb-1">Item Name</label>
                   <input
+                    id="pregame-item-name"
                     type="text"
                     value={editingItem.name}
                     onChange={e => setEditingItem({ ...editingItem, name: e.target.value })}
@@ -1091,8 +1100,9 @@ export default function Pregame() {
                   />
                 </div>
                 <div className="col-span-2 sm:col-span-1">
-                  <label className="text-sm text-slate-400 block mb-1">Location</label>
+                  <label htmlFor="pregame-item-location" className="text-sm text-slate-400 block mb-1">Location</label>
                   <input
+                    id="pregame-item-location"
                     type="text"
                     value={editingItem.location || ''}
                     onChange={e => setEditingItem({ ...editingItem, location: e.target.value })}
@@ -1104,8 +1114,9 @@ export default function Pregame() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Minutes Before Kickoff</label>
+                  <label htmlFor="pregame-item-time" className="text-sm text-slate-400 block mb-1">Minutes Before Kickoff</label>
                   <input
+                    id="pregame-item-time"
                     type="number"
                     value={Math.abs(editingItem.time)}
                     onChange={e => setEditingItem({ ...editingItem, time: -Math.abs(parseInt(e.target.value) || 0) })}
@@ -1115,8 +1126,9 @@ export default function Pregame() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Duration (minutes)</label>
+                  <label htmlFor="pregame-item-duration" className="text-sm text-slate-400 block mb-1">Duration (minutes)</label>
                   <input
+                    id="pregame-item-duration"
                     type="number"
                     value={editingItem.duration || 0}
                     onChange={e => setEditingItem({ ...editingItem, duration: parseInt(e.target.value) || 0 })}
@@ -1131,8 +1143,8 @@ export default function Pregame() {
               </p>
 
               <div>
-                <label className="text-sm text-slate-400 block mb-1">Category</label>
-                <div className="grid grid-cols-2 gap-2">
+                <span className="text-sm text-slate-400 block mb-1">Category</span>
+                <div className="grid grid-cols-2 gap-2" role="group" aria-label="Category selection">
                   {CATEGORIES.map(category => (
                     <button
                       key={category.id}

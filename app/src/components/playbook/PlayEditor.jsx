@@ -571,10 +571,11 @@ export default function PlayEditor({
               {/* BASIC MODE: Single text field for entire play call */}
               {isBasicMode && (
                 <div>
-                  <label className={`block text-sm font-medium mb-1 ${isLight ? 'text-gray-700' : 'text-slate-400'}`}>
+                  <label htmlFor="play-editor-name-basic" className={`block text-sm font-medium mb-1 ${isLight ? 'text-gray-700' : 'text-slate-400'}`}>
                     Play Call *
                   </label>
                   <input
+                    id="play-editor-name-basic"
                     type="text"
                     value={formData.name}
                     onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
@@ -602,11 +603,12 @@ export default function PlayEditor({
               {/* STANDARD MODE: Formation + Motion/Tag + Play Name */}
               {isStandardMode && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-1">
+                  <label htmlFor="play-editor-formation-standard" className="block text-sm font-medium text-slate-400 mb-1">
                     Full Play Call *
                   </label>
                   <div className="flex gap-2">
                     <input
+                      id="play-editor-formation-standard"
                       type="text"
                       value={formData.formation}
                       onChange={e => setFormData(prev => ({ ...prev, formation: e.target.value }))}
@@ -615,6 +617,7 @@ export default function PlayEditor({
                       className="w-1/4 px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500 text-lg font-medium"
                     />
                     <input
+                      id="play-editor-motion-tag-standard"
                       type="text"
                       value={formData.formationTag || ''}
                       onChange={e => setFormData(prev => ({ ...prev, formationTag: e.target.value }))}
@@ -622,6 +625,7 @@ export default function PlayEditor({
                       className="w-1/4 px-3 py-2.5 bg-slate-800 border border-slate-600 rounded-md text-white placeholder-slate-500 text-base"
                     />
                     <input
+                      id="play-editor-name-standard"
                       type="text"
                       value={formData.name}
                       onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
@@ -657,10 +661,11 @@ export default function PlayEditor({
                   {phase === 'OFFENSE' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-slate-400 mb-2">
+                        <label htmlFor="play-editor-bucket-advanced" className="block text-sm font-medium text-slate-400 mb-2">
                           Play Bucket <span className="text-slate-500">(determines syntax)</span>
                         </label>
                         <select
+                          id="play-editor-bucket-advanced"
                           value={selectedBucketId}
                           onChange={e => {
                             setSelectedBucketId(e.target.value);
@@ -675,10 +680,11 @@ export default function PlayEditor({
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-slate-400 mb-2">
+                        <label htmlFor="play-editor-concept-group-advanced" className="block text-sm font-medium text-slate-400 mb-2">
                           Concept Group
                         </label>
                         <select
+                          id="play-editor-concept-group-advanced"
                           value={formData.bucketId || ''}
                           onChange={e => setFormData(prev => ({ ...prev, bucketId: e.target.value }))}
                           className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white"
@@ -697,11 +703,12 @@ export default function PlayEditor({
 
                   {/* Full Play Call */}
                   <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1">
+                    <label htmlFor="play-editor-formation-advanced" className="block text-sm font-medium text-slate-400 mb-1">
                       Full Play Call *
                     </label>
                     <div className="flex gap-2">
                       <input
+                        id="play-editor-formation-advanced"
                         type="text"
                         value={formData.formation}
                         onChange={e => setFormData(prev => ({ ...prev, formation: e.target.value }))}
@@ -710,6 +717,7 @@ export default function PlayEditor({
                         className="w-1/3 px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500 text-lg font-medium"
                       />
                       <input
+                        id="play-editor-name-advanced"
                         type="text"
                         value={formData.name}
                         onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
@@ -893,6 +901,7 @@ export default function PlayEditor({
                             </div>
                           ) : dropdownItems.length > 0 ? (
                             <select
+                              id={`play-editor-slot-${slot.id}`}
                               onChange={(e) => handleTermSelection(e.target.value, slot.id)}
                               className="w-full px-1 py-0.5 bg-slate-700 border border-slate-600 rounded text-xs text-slate-400"
                               value=""
@@ -918,10 +927,11 @@ export default function PlayEditor({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Category */}
                     <div>
-                      <label className="block text-sm font-medium text-slate-400 mb-1">
+                      <label htmlFor="play-editor-bucket" className="block text-sm font-medium text-slate-400 mb-1">
                         Bucket
                       </label>
                       <select
+                        id="play-editor-bucket"
                         value={formData.playCategory}
                         onChange={e => setFormData(prev => ({ ...prev, playCategory: e.target.value, bucketId: '' }))}
                         className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
@@ -935,10 +945,11 @@ export default function PlayEditor({
 
                     {/* Concept Group */}
                     <div>
-                      <label className="block text-sm font-medium text-slate-400 mb-1">
+                      <label htmlFor="play-editor-concept-group" className="block text-sm font-medium text-slate-400 mb-1">
                         Concept Group
                       </label>
                       <select
+                        id="play-editor-concept-group"
                         value={formData.bucketId}
                         onChange={e => setFormData(prev => ({ ...prev, bucketId: e.target.value }))}
                         className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
@@ -959,11 +970,12 @@ export default function PlayEditor({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Read Type */}
                     <div>
-                      <label className="block text-sm font-medium text-slate-400 mb-1">
+                      <label htmlFor="play-editor-read-type" className="block text-sm font-medium text-slate-400 mb-1">
                         <Eye size={14} className="inline mr-1" />
                         Read Type
                       </label>
                       <select
+                        id="play-editor-read-type"
                         value={formData.readType || ''}
                         onChange={e => setFormData(prev => ({ ...prev, readType: e.target.value }))}
                         className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
@@ -977,11 +989,12 @@ export default function PlayEditor({
 
                     {/* Look-Alike Series */}
                     <div>
-                      <label className="block text-sm font-medium text-slate-400 mb-1">
+                      <label htmlFor="play-editor-series" className="block text-sm font-medium text-slate-400 mb-1">
                         <Layers size={14} className="inline mr-1" />
                         Look-Alike Series
                       </label>
                       <select
+                        id="play-editor-series"
                         value={formData.seriesId || ''}
                         onChange={e => setFormData(prev => ({ ...prev, seriesId: e.target.value }))}
                         className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
@@ -1275,10 +1288,11 @@ export default function PlayEditor({
 
               {/* Setup Play */}
               <div>
-                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+                <label htmlFor="play-editor-setup-play" className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
                   Setup By Another Play?
                 </label>
                 <select
+                  id="play-editor-setup-play"
                   value={formData.setupPlayId || ''}
                   onChange={e => setFormData(prev => ({ ...prev, setupPlayId: e.target.value }))}
                   className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
@@ -1307,12 +1321,13 @@ export default function PlayEditor({
                 <div className="space-y-2">
                   {(formData.targetProgressions || []).map((target, idx) => (
                     <div key={idx} className="flex items-center gap-2 p-2 bg-slate-800 rounded-lg">
-                      <span className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${
+                      <label htmlFor={`play-editor-target-position-${idx}`} className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${
                         idx === 0 ? 'bg-amber-500 text-white' : 'bg-slate-600 text-slate-300'
                       }`}>
                         {idx + 1}
-                      </span>
+                      </label>
                       <input
+                        id={`play-editor-target-position-${idx}`}
                         type="text"
                         value={target.position || ''}
                         onChange={e => {
@@ -1324,6 +1339,7 @@ export default function PlayEditor({
                         className="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
                       />
                       <input
+                        id={`play-editor-target-note-${idx}`}
                         type="text"
                         value={target.note || ''}
                         onChange={e => {
@@ -1366,10 +1382,11 @@ export default function PlayEditor({
 
               {/* Premium Looks */}
               <div>
-                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+                <label htmlFor="play-editor-premium-looks" className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
                   Premium Looks (Fronts/Coverages/Blitzes)
                 </label>
                 <textarea
+                  id="play-editor-premium-looks"
                   value={formData.premiumLooks || ''}
                   onChange={e => setFormData(prev => ({ ...prev, premiumLooks: e.target.value }))}
                   placeholder="What defensive looks make this a great call? (e.g., Cover 3, single-high, man-free...)"
@@ -1451,10 +1468,11 @@ export default function PlayEditor({
                         <Edit3 size={18} />
                         Draw Diagram
                       </button>
-                      <label className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-400 hover:bg-slate-700 cursor-pointer transition-colors text-sm">
+                      <label htmlFor="play-editor-wiz-skill-upload" className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-400 hover:bg-slate-700 cursor-pointer transition-colors text-sm">
                         <Upload size={14} />
                         Upload Image
                         <input
+                          id="play-editor-wiz-skill-upload"
                           type="file"
                           accept="image/*"
                           onChange={(e) => {
@@ -1553,10 +1571,11 @@ export default function PlayEditor({
                         <Edit3 size={18} />
                         Draw Diagram
                       </button>
-                      <label className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-400 hover:bg-slate-700 cursor-pointer transition-colors text-sm">
+                      <label htmlFor="play-editor-wiz-oline-upload" className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-400 hover:bg-slate-700 cursor-pointer transition-colors text-sm">
                         <Upload size={14} />
                         Upload Image
                         <input
+                          id="play-editor-wiz-oline-upload"
                           type="file"
                           accept="image/*"
                           onChange={(e) => {
@@ -1646,7 +1665,7 @@ export default function PlayEditor({
               {/* Add Complement */}
               <div className="flex gap-2">
                 <select
-                  id="editor-complement-type-select"
+                  id="play-editor-complement-type"
                   className="px-3 py-2 text-sm bg-slate-800 border border-slate-700 rounded-md text-white"
                   defaultValue=""
                 >
@@ -1656,11 +1675,11 @@ export default function PlayEditor({
                   ))}
                 </select>
                 <select
-                  id="editor-complement-play-select"
+                  id="play-editor-complement-play"
                   className="flex-1 px-3 py-2 text-sm bg-slate-800 border border-slate-700 rounded-md text-white"
                   defaultValue=""
                   onChange={(e) => {
-                    const typeSelect = document.getElementById('editor-complement-type-select');
+                    const typeSelect = document.getElementById('play-editor-complement-type');
                     if (e.target.value && typeSelect.value) {
                       handleAddComplementary(e.target.value, typeSelect.value);
                       e.target.value = '';
@@ -1718,6 +1737,7 @@ export default function PlayEditor({
                     return (
                       <label
                         key={level.id}
+                        htmlFor={`play-editor-level-${level.id}`}
                         className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
                           isAssigned
                             ? 'bg-purple-500/10 border-purple-500/50'
@@ -1725,6 +1745,7 @@ export default function PlayEditor({
                         }`}
                       >
                         <input
+                          id={`play-editor-level-${level.id}`}
                           type="checkbox"
                           checked={isAssigned}
                           onChange={() => {
@@ -1898,12 +1919,12 @@ export default function PlayEditor({
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
-              id="incomplete"
+              id="play-editor-incomplete"
               checked={formData.incomplete}
               onChange={e => setFormData(prev => ({ ...prev, incomplete: e.target.checked }))}
               className="w-4 h-4 rounded"
             />
-            <label htmlFor="incomplete" className={`text-sm ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+            <label htmlFor="play-editor-incomplete" className={`text-sm ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
               Mark as incomplete (needs diagram or more info)
             </label>
           </div>
@@ -2115,10 +2136,11 @@ export default function PlayEditor({
 
               {/* Series name input */}
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-1">
+                <label htmlFor="play-editor-series-name" className="block text-sm font-medium text-slate-400 mb-1">
                   Series Name
                 </label>
                 <input
+                  id="play-editor-series-name"
                   type="text"
                   value={seriesName}
                   onChange={(e) => setSeriesName(e.target.value)}

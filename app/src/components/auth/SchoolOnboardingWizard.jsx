@@ -213,8 +213,9 @@ export default function SchoolOnboardingWizard() {
             >
               &larr; Back
             </button>
-            <label className="block mb-2 text-slate-300">Select School</label>
+            <label htmlFor="onboarding-school-select" className="block mb-2 text-slate-300">Select School</label>
             <select
+              id="onboarding-school-select"
               value={selectedSchoolId}
               onChange={e => setSelectedSchoolId(e.target.value)}
               className="w-full p-3 rounded-md bg-slate-900 border border-slate-600 text-white mb-4"
@@ -249,8 +250,9 @@ export default function SchoolOnboardingWizard() {
             )}
 
             <div className="mb-4">
-              <label className="block mb-2 text-slate-300">School Name</label>
+              <label htmlFor="onboarding-school-name" className="block mb-2 text-slate-300">School Name</label>
               <input
+                id="onboarding-school-name"
                 value={schoolName}
                 onChange={e => setSchoolName(e.target.value)}
                 className="w-full p-3 rounded-md bg-slate-900 border border-slate-600 text-white placeholder-slate-500"
@@ -260,8 +262,9 @@ export default function SchoolOnboardingWizard() {
 
             <div className="flex gap-4 mb-4">
               <div className="flex-1">
-                <label className="block mb-2 text-slate-300">Mascot</label>
+                <label htmlFor="onboarding-mascot" className="block mb-2 text-slate-300">Mascot</label>
                 <input
+                  id="onboarding-mascot"
                   value={mascot}
                   onChange={e => setMascot(e.target.value)}
                   className="w-full p-3 rounded-md bg-slate-900 border border-slate-600 text-white placeholder-slate-500"
@@ -269,8 +272,9 @@ export default function SchoolOnboardingWizard() {
                 />
               </div>
               <div className="flex-1">
-                <label className="block mb-2 text-slate-300">Zip Code</label>
+                <label htmlFor="onboarding-zipcode" className="block mb-2 text-slate-300">Zip Code</label>
                 <input
+                  id="onboarding-zipcode"
                   value={zipCode}
                   onChange={e => setZipCode(e.target.value)}
                   className="w-full p-3 rounded-md bg-slate-900 border border-slate-600 text-white placeholder-slate-500"
@@ -281,27 +285,29 @@ export default function SchoolOnboardingWizard() {
 
             <div className="flex gap-4 mb-8">
               <div className="flex-1">
-                <label className="block mb-2 text-slate-300">School Colors</label>
+                <label htmlFor="onboarding-primary-color" className="block mb-2 text-slate-300">School Colors</label>
                 <div className="flex gap-2 items-center bg-slate-900 p-2 rounded-md border border-slate-600">
                   <input
+                    id="onboarding-primary-color"
                     type="color"
                     value={primaryColor}
                     onChange={e => setPrimaryColor(e.target.value)}
                     className="w-8 h-8 cursor-pointer border-0 bg-transparent"
                   />
-                  <span className="text-slate-400 text-sm">Primary</span>
+                  <label htmlFor="onboarding-primary-color" className="text-slate-400 text-sm">Primary</label>
                 </div>
               </div>
               <div className="flex-1">
-                <label className="block mb-2 text-slate-300">&nbsp;</label>
+                <label htmlFor="onboarding-secondary-color" className="block mb-2 text-slate-300">&nbsp;</label>
                 <div className="flex gap-2 items-center bg-slate-900 p-2 rounded-md border border-slate-600">
                   <input
+                    id="onboarding-secondary-color"
                     type="color"
                     value={secondaryColor}
                     onChange={e => setSecondaryColor(e.target.value)}
                     className="w-8 h-8 cursor-pointer border-0 bg-transparent"
                   />
-                  <span className="text-slate-400 text-sm">Secondary</span>
+                  <label htmlFor="onboarding-secondary-color" className="text-slate-400 text-sm">Secondary</label>
                 </div>
               </div>
             </div>

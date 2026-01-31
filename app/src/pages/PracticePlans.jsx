@@ -154,7 +154,7 @@ const generateScriptRows = (duration, existingScript = []) => {
 };
 
 // Play Call Autocomplete Input Component
-function PlayCallAutocomplete({ value, playId, plays, onSelectPlay, onChangeText, onClear, placeholder = "Play Call..." }) {
+function PlayCallAutocomplete({ id, value, playId, plays, onSelectPlay, onChangeText, onClear, placeholder = "Play Call..." }) {
   const [inputValue, setInputValue] = useState(value || '');
   const [showDropdown, setShowDropdown] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -231,6 +231,7 @@ function PlayCallAutocomplete({ value, playId, plays, onSelectPlay, onChangeText
     <div className="relative">
       <div className="flex items-center gap-1">
         <input
+          id={id}
           ref={inputRef}
           type="text"
           value={inputValue}
@@ -239,6 +240,7 @@ function PlayCallAutocomplete({ value, playId, plays, onSelectPlay, onChangeText
           onFocus={() => inputValue.length > 0 && setShowDropdown(true)}
           placeholder={placeholder}
           className="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs placeholder-slate-500"
+          aria-label="Play call"
         />
         {(inputValue || playId) && (
           <button
@@ -441,6 +443,7 @@ function SegmentNotesModal({ segment, staff, positionGroups, onUpdateNotes, onCl
           {/* Note Input */}
           <div className="relative">
             <textarea
+              id="segment-notes-text"
               ref={textareaRef}
               value={noteText}
               onChange={handleTextChange}
@@ -448,6 +451,7 @@ function SegmentNotesModal({ segment, staff, positionGroups, onUpdateNotes, onCl
               className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 text-sm resize-none font-mono"
               rows={6}
               autoFocus
+              aria-label="Segment notes"
             />
 
             {/* Mention Suggestions Dropdown */}
@@ -588,10 +592,11 @@ function PrintSettingsModal({ staff, positionGroups, practicePlans, weekName, on
         <div className="p-6 space-y-6">
           {/* Coach Filter */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label htmlFor="print-coach-filter" className="block text-sm font-medium text-slate-300 mb-2">
               Print for Coach
             </label>
             <select
+              id="print-coach-filter"
               value={selectedCoach}
               onChange={e => setSelectedCoach(e.target.value)}
               className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
@@ -618,9 +623,9 @@ function PrintSettingsModal({ staff, positionGroups, practicePlans, weekName, on
           {/* Day Selection */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-slate-300">
+              <span className="text-sm font-medium text-slate-300">
                 Days to Print
-              </label>
+              </span>
               <button
                 onClick={selectAllDays}
                 className="text-xs text-sky-400 hover:text-sky-300"
@@ -755,10 +760,11 @@ function LegacySegmentNotesModal({ segment, staff, onUpdateNotes, onClose }) {
               {/* All Coaches Row */}
               <tr className="border-b border-slate-700 bg-slate-900/50">
                 <td className="px-4 py-3">
-                  <span className="font-bold text-amber-400">ALL COACHES</span>
+                  <label htmlFor="legacy-notes-all-coaches" className="font-bold text-amber-400">ALL COACHES</label>
                 </td>
                 <td className="px-4 py-3">
                   <textarea
+                    id="legacy-notes-all-coaches"
                     value={notes['ALL_COACHES'] || ''}
                     onChange={e => handleNoteChange('ALL_COACHES', e.target.value)}
                     placeholder="Notes visible to everyone..."
@@ -779,13 +785,14 @@ function LegacySegmentNotesModal({ segment, staff, onUpdateNotes, onClose }) {
                   {coaches.map(coach => (
                     <tr key={coach.id} className="border-b border-slate-700">
                       <td className="px-4 py-3">
-                        <span className="font-medium text-slate-200">{coach.name}</span>
+                        <label htmlFor={`legacy-notes-coach-${coach.id}`} className="font-medium text-slate-200">{coach.name}</label>
                         {coach.positionGroup && (
                           <span className="ml-2 text-xs text-slate-500">({coach.positionGroup})</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
                         <textarea
+                          id={`legacy-notes-coach-${coach.id}`}
                           value={notes[coach.id] || ''}
                           onChange={e => handleNoteChange(coach.id, e.target.value)}
                           placeholder={`Notes for ${coach.name}...`}
@@ -809,13 +816,14 @@ function LegacySegmentNotesModal({ segment, staff, onUpdateNotes, onClose }) {
                   {otherStaff.map(person => (
                     <tr key={person.id} className="border-b border-slate-700">
                       <td className="px-4 py-3">
-                        <span className="font-medium text-slate-200">{person.name}</span>
+                        <label htmlFor={`legacy-notes-staff-${person.id}`} className="font-medium text-slate-200">{person.name}</label>
                         {person.role && (
                           <span className="ml-2 text-xs text-slate-500">({person.role})</span>
                         )}
                       </td>
                       <td className="px-4 py-3">
                         <textarea
+                          id={`legacy-notes-staff-${person.id}`}
                           value={notes[person.id] || ''}
                           onChange={e => handleNoteChange(person.id, e.target.value)}
                           placeholder={`Notes for ${person.name}...`}
@@ -920,8 +928,9 @@ function SegmentLevelsSelector({ segment, programLevels, onChange }) {
           <div className="absolute top-full left-0 mt-1 bg-slate-700 border border-slate-600 rounded-lg shadow-xl z-50 min-w-[140px]">
             <div className="p-2 space-y-1">
               {/* All Levels Option */}
-              <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-600 cursor-pointer">
+              <label htmlFor={`segment-level-all-${segment.id}`} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-600 cursor-pointer">
                 <input
+                  id={`segment-level-all-${segment.id}`}
                   type="checkbox"
                   checked={isAllLevels}
                   onChange={() => toggleLevel('all')}
@@ -933,8 +942,9 @@ function SegmentLevelsSelector({ segment, programLevels, onChange }) {
               <div className="border-t border-slate-600 my-1" />
 
               {/* Varsity (always present) */}
-              <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-600 cursor-pointer">
+              <label htmlFor={`segment-level-varsity-${segment.id}`} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-600 cursor-pointer">
                 <input
+                  id={`segment-level-varsity-${segment.id}`}
                   type="checkbox"
                   checked={!isAllLevels && selectedLevels.includes('varsity')}
                   onChange={() => toggleLevel('varsity')}
@@ -946,8 +956,9 @@ function SegmentLevelsSelector({ segment, programLevels, onChange }) {
 
               {/* Program Levels */}
               {programLevels.map(level => (
-                <label key={level.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-600 cursor-pointer">
+                <label key={level.id} htmlFor={`segment-level-${level.id}-${segment.id}`} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-600 cursor-pointer">
                   <input
+                    id={`segment-level-${level.id}-${segment.id}`}
                     type="checkbox"
                     checked={!isAllLevels && selectedLevels.includes(level.id)}
                     onChange={() => toggleLevel(level.id)}
@@ -1070,10 +1081,11 @@ function SaveTemplateModal({ currentPlan, selectedDay, existingTemplates, onSave
 
           {/* Template Name */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label htmlFor="template-name" className="block text-sm font-medium text-slate-300 mb-2">
               Template Name <span className="text-red-400">*</span>
             </label>
             <input
+              id="template-name"
               type="text"
               value={templateName}
               onChange={e => setTemplateName(e.target.value)}
@@ -1085,13 +1097,14 @@ function SaveTemplateModal({ currentPlan, selectedDay, existingTemplates, onSave
 
           {/* Folder Selection */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label htmlFor="template-folder" className="block text-sm font-medium text-slate-300 mb-2">
               Folder (Optional)
             </label>
 
             {!isCreatingFolder ? (
               <div className="space-y-2">
                 <select
+                  id="template-folder"
                   value={selectedFolder}
                   onChange={e => setSelectedFolder(e.target.value)}
                   className="w-full px-4 py-2.5 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-sky-500"
@@ -1111,6 +1124,7 @@ function SaveTemplateModal({ currentPlan, selectedDay, existingTemplates, onSave
             ) : (
               <div className="space-y-2">
                 <input
+                  id="template-new-folder"
                   type="text"
                   value={newFolderName}
                   onChange={e => setNewFolderName(e.target.value)}
@@ -1220,8 +1234,9 @@ function ImportTemplateModal({ existingTemplates, onImport, onClose }) {
               {/* Folder Filter */}
               {folders.length > 0 && (
                 <div>
-                  <label className="text-xs text-slate-500 uppercase tracking-wide">Folder</label>
+                  <label htmlFor="import-template-folder" className="text-xs text-slate-500 uppercase tracking-wide">Folder</label>
                   <select
+                    id="import-template-folder"
                     value={selectedFolder}
                     onChange={e => { setSelectedFolder(e.target.value); setSelectedTemplateId(null); }}
                     className="w-full mt-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
@@ -1236,7 +1251,7 @@ function ImportTemplateModal({ existingTemplates, onImport, onClose }) {
 
               {/* Template List */}
               <div>
-                <label className="text-xs text-slate-500 uppercase tracking-wide">Select Template</label>
+                <span className="text-xs text-slate-500 uppercase tracking-wide">Select Template</span>
                 <div className="mt-1 space-y-2 max-h-48 overflow-y-auto">
                   {filteredTemplates.map(template => (
                     <button
@@ -1999,9 +2014,10 @@ export default function PracticePlans() {
 
               {/* Print Section */}
               <div className="flex flex-col gap-1">
-                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Print For</span>
+                <label htmlFor="header-print-coach-filter" className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Print For</label>
                 <div className="flex items-center gap-2">
                   <select
+                    id="header-print-coach-filter"
                     value={coachFilter}
                     onChange={e => setCoachFilter(e.target.value)}
                     className="h-8 px-2 bg-slate-700 border border-slate-600 rounded text-white text-sm"
@@ -2058,8 +2074,9 @@ export default function PracticePlans() {
               {/* View Level Selector (Program view only - to see varsity or sub-level plans) */}
               {hasMultipleLevels && !activeLevelId && (
                 <div className="flex flex-col gap-1">
-                  <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Level</span>
+                  <label htmlFor="plan-view-level" className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Level</label>
                   <select
+                    id="plan-view-level"
                     value={viewingLevelId || 'varsity'}
                     onChange={e => setViewingLevelId(e.target.value === 'varsity' ? null : e.target.value)}
                     className="h-8 px-2 bg-slate-700 border border-slate-600 rounded text-white text-sm"
@@ -2075,10 +2092,11 @@ export default function PracticePlans() {
               {/* Timer Source (only show for sub-levels, not varsity or program view) */}
               {hasMultipleLevels && activeLevelId && (
                 <div className="flex flex-col gap-1">
-                  <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Timer Sync</span>
+                  <label htmlFor="plan-timer-source" className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Timer Sync</label>
                   <div className="h-8 flex items-center gap-1.5">
                     <Link2 size={14} className="text-slate-400" />
                     <select
+                      id="plan-timer-source"
                       value={currentPlan.timerSource || 'own'}
                       onChange={e => updateCurrentPlan({ timerSource: e.target.value })}
                       className={`h-8 px-2 border rounded text-sm ${currentPlan.timerSource && currentPlan.timerSource !== 'own'
@@ -2098,8 +2116,9 @@ export default function PracticePlans() {
 
               {/* Start Time */}
               <div className="flex flex-col gap-1">
-                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Start Time</span>
+                <label htmlFor="plan-start-time" className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Start Time</label>
                 <input
+                  id="plan-start-time"
                   type="time"
                   value={currentPlan.startTime || '15:30'}
                   onChange={e => updateCurrentPlan({ startTime: e.target.value })}
@@ -2129,21 +2148,25 @@ export default function PracticePlans() {
                 <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Transition</span>
                 <div className="flex items-center gap-1">
                   <input
+                    id="plan-transition-minutes"
                     type="number"
                     value={currentPlan.transitionTime || 0}
                     onChange={e => updateCurrentPlan({ transitionTime: Math.max(0, parseInt(e.target.value) || 0) })}
                     className="w-10 h-8 px-1 bg-slate-700 border border-slate-600 rounded text-white text-sm text-center"
                     min="0"
                     max="59"
+                    aria-label="Transition minutes"
                   />
                   <span className="text-xs text-slate-500">min</span>
                   <input
+                    id="plan-transition-seconds"
                     type="number"
                     value={currentPlan.transitionSeconds || 0}
                     onChange={e => updateCurrentPlan({ transitionSeconds: Math.max(0, Math.min(59, parseInt(e.target.value) || 0)) })}
                     className="w-10 h-8 px-1 bg-slate-700 border border-slate-600 rounded text-white text-sm text-center"
                     min="0"
                     max="59"
+                    aria-label="Transition seconds"
                   />
                   <span className="text-xs text-slate-500">sec</span>
                 </div>
@@ -2151,8 +2174,9 @@ export default function PracticePlans() {
 
               {/* Options Group */}
               <div className="flex flex-col gap-2 border-l border-slate-700 pl-3">
-                <label className="flex items-center gap-1.5 cursor-pointer">
+                <label htmlFor="plan-two-platoon" className="flex items-center gap-1.5 cursor-pointer">
                   <input
+                    id="plan-two-platoon"
                     type="checkbox"
                     checked={currentPlan.isTwoPlatoon || false}
                     onChange={e => updateCurrentPlan({ isTwoPlatoon: e.target.checked })}
@@ -2160,8 +2184,9 @@ export default function PracticePlans() {
                   />
                   <span className="text-sm text-slate-300">2-Platoon</span>
                 </label>
-                <label className="flex items-center gap-1.5 cursor-pointer">
+                <label htmlFor="plan-period-zero" className="flex items-center gap-1.5 cursor-pointer">
                   <input
+                    id="plan-period-zero"
                     type="checkbox"
                     checked={currentPlan.showPeriodZero !== false}
                     onChange={e => updateCurrentPlan({ showPeriodZero: e.target.checked })}
@@ -2176,8 +2201,9 @@ export default function PracticePlans() {
 
               {/* Filter Group */}
               <div className="flex flex-col gap-1 border-l border-slate-700 pl-3">
-                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Filter</span>
+                <label htmlFor="plan-coach-filter" className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Filter</label>
                 <select
+                  id="plan-coach-filter"
                   value={coachFilter}
                   onChange={e => setCoachFilter(e.target.value)}
                   className="h-8 px-2 bg-slate-700 border border-slate-600 rounded text-white text-sm"
@@ -2192,8 +2218,9 @@ export default function PracticePlans() {
 
             {/* Pre-Practice Notes */}
             <div className="p-4 bg-slate-800 rounded-lg">
-              <label className="block text-sm font-medium text-slate-300 mb-2">Pre-Practice Notes</label>
+              <label htmlFor="pre-practice-notes" className="block text-sm font-medium text-slate-300 mb-2">Pre-Practice Notes</label>
               <textarea
+                id="pre-practice-notes"
                 value={currentPlan.prePracticeNotes || ''}
                 onChange={e => updateCurrentPlan({ prePracticeNotes: e.target.value })}
                 placeholder="Announcements, weather, focus points..."
@@ -2256,19 +2283,23 @@ export default function PracticePlans() {
                       </td>
                       <td className="px-3 py-3 text-center">
                         <input
+                          id="warmup-duration"
                           type="number"
                           value={currentPlan.warmupDuration || 0}
                           onChange={e => updateCurrentPlan({ warmupDuration: parseInt(e.target.value) || 0 })}
                           onClick={e => e.stopPropagation()}
                           className="w-14 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm text-center"
+                          aria-label="Warmup duration"
                         />
                       </td>
                       <td className="px-3 py-3 text-center">
                         <select
+                          id="warmup-phase"
                           value={currentPlan.warmupPhase || 'ALL'}
                           onChange={e => updateCurrentPlan({ warmupPhase: e.target.value })}
                           onClick={e => e.stopPropagation()}
                           className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs"
+                          aria-label="Warmup phase"
                         >
                           {PHASES.map(p => (
                             <option key={p.value} value={p.value}>{p.label}</option>
@@ -2280,10 +2311,12 @@ export default function PracticePlans() {
                         <>
                           <td className="px-3 py-3">
                             <select
+                              id="warmup-offense-focus"
                               value={currentPlan.warmupOffenseFocus || ''}
                               onChange={e => updateCurrentPlan({ warmupOffenseFocus: e.target.value })}
                               onClick={e => e.stopPropagation()}
                               className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                              aria-label="Warmup offense focus"
                             >
                               <option value="">-- Offense --</option>
                               {getFocusItemsForType('O', currentPlan.warmupType).map(f => (
@@ -2293,10 +2326,12 @@ export default function PracticePlans() {
                           </td>
                           <td className="px-3 py-3">
                             <select
+                              id="warmup-defense-focus"
                               value={currentPlan.warmupDefenseFocus || ''}
                               onChange={e => updateCurrentPlan({ warmupDefenseFocus: e.target.value })}
                               onClick={e => e.stopPropagation()}
                               className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                              aria-label="Warmup defense focus"
                             >
                               <option value="">-- Defense --</option>
                               {getFocusItemsForType('D', currentPlan.warmupType).map(f => (
@@ -2308,10 +2343,12 @@ export default function PracticePlans() {
                       ) : (
                         <td className="px-3 py-3">
                           <select
+                            id="warmup-situation"
                             value={currentPlan.warmupSituation || ''}
                             onChange={e => updateCurrentPlan({ warmupSituation: e.target.value })}
                             onClick={e => e.stopPropagation()}
                             className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                            aria-label="Warmup situation"
                           >
                             <option value="">-- Select Focus --</option>
                             {getFocusItemsForType('C', currentPlan.warmupType).map(f => (
@@ -2322,10 +2359,12 @@ export default function PracticePlans() {
                       )}
                       <td className="px-3 py-3 text-center">
                         <select
+                          id="warmup-contact"
                           value={currentPlan.warmupContact || ''}
                           onChange={e => updateCurrentPlan({ warmupContact: e.target.value })}
                           onClick={e => e.stopPropagation()}
                           className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs"
+                          aria-label="Warmup contact level"
                         >
                           {CONTACT_LEVELS.map(c => (
                             <option key={c.value} value={c.value}>{c.label}</option>
@@ -2350,11 +2389,13 @@ export default function PracticePlans() {
                       </td>
                       <td className="px-3 py-3 text-center">
                         <input
+                          id="warmup-has-script"
                           type="checkbox"
                           checked={currentPlan.warmupHasScript || false}
                           onChange={e => updateCurrentPlan({ warmupHasScript: e.target.checked })}
                           onClick={e => e.stopPropagation()}
                           className="rounded border-slate-600 bg-slate-700 text-sky-500"
+                          aria-label="Warmup has script"
                         />
                       </td>
                       <td className="px-3 py-3"></td>
@@ -2398,19 +2439,23 @@ export default function PracticePlans() {
                       </td>
                       <td className="px-3 py-3 text-center">
                         <input
+                          id={`segment-${seg.id}-duration`}
                           type="number"
                           value={seg.duration || 0}
                           onChange={e => updateSegment(seg.id, 'duration', parseInt(e.target.value) || 0)}
                           onClick={e => e.stopPropagation()}
                           className="w-14 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm text-center"
+                          aria-label="Segment duration"
                         />
                       </td>
                       <td className="px-3 py-3 text-center">
                         <select
+                          id={`segment-${seg.id}-phase`}
                           value={seg.phase || 'ALL'}
                           onChange={e => updateSegment(seg.id, 'phase', e.target.value)}
                           onClick={e => e.stopPropagation()}
                           className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs"
+                          aria-label="Segment phase"
                         >
                           {PHASES.map(p => (
                             <option key={p.value} value={p.value}>{p.label}</option>
@@ -2419,10 +2464,12 @@ export default function PracticePlans() {
                       </td>
                       <td className="px-3 py-3">
                         <select
+                          id={`segment-${seg.id}-type`}
                           value={seg.type || ''}
                           onChange={e => updateSegment(seg.id, 'type', e.target.value)}
                           onClick={e => e.stopPropagation()}
                           className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                          aria-label="Segment type"
                         >
                           <option value="">-- Select Type --</option>
                           {getSegmentTypesForPhase(seg.phase).map(t => (
@@ -2434,10 +2481,12 @@ export default function PracticePlans() {
                         <>
                           <td className="px-3 py-3">
                             <select
+                              id={`segment-${seg.id}-offense-focus`}
                               value={seg.offenseFocus || ''}
                               onChange={e => updateSegment(seg.id, 'offenseFocus', e.target.value)}
                               onClick={e => e.stopPropagation()}
                               className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                              aria-label="Segment offense focus"
                             >
                               <option value="">-- Offense --</option>
                               {getFocusItemsForType('O', seg.type).map(f => (
@@ -2447,10 +2496,12 @@ export default function PracticePlans() {
                           </td>
                           <td className="px-3 py-3">
                             <select
+                              id={`segment-${seg.id}-defense-focus`}
                               value={seg.defenseFocus || ''}
                               onChange={e => updateSegment(seg.id, 'defenseFocus', e.target.value)}
                               onClick={e => e.stopPropagation()}
                               className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                              aria-label="Segment defense focus"
                             >
                               <option value="">-- Defense --</option>
                               {getFocusItemsForType('D', seg.type).map(f => (
@@ -2462,10 +2513,12 @@ export default function PracticePlans() {
                       ) : (
                         <td className="px-3 py-3">
                           <select
+                            id={`segment-${seg.id}-situation`}
                             value={seg.situation || ''}
                             onChange={e => updateSegment(seg.id, 'situation', e.target.value)}
                             onClick={e => e.stopPropagation()}
                             className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                            aria-label="Segment situation"
                           >
                             <option value="">-- Select Focus --</option>
                             {getFocusItemsForType(seg.phase, seg.type).map(f => (
@@ -2476,10 +2529,12 @@ export default function PracticePlans() {
                       )}
                       <td className="px-3 py-3 text-center">
                         <select
+                          id={`segment-${seg.id}-contact`}
                           value={seg.contact || ''}
                           onChange={e => updateSegment(seg.id, 'contact', e.target.value)}
                           onClick={e => e.stopPropagation()}
                           className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs"
+                          aria-label="Segment contact level"
                         >
                           {CONTACT_LEVELS.map(c => (
                             <option key={c.value} value={c.value}>{c.label}</option>
@@ -2504,11 +2559,13 @@ export default function PracticePlans() {
                       </td>
                       <td className="px-3 py-3 text-center">
                         <input
+                          id={`segment-${seg.id}-has-script`}
                           type="checkbox"
                           checked={seg.hasScript || false}
                           onChange={e => updateSegment(seg.id, 'hasScript', e.target.checked)}
                           onClick={e => e.stopPropagation()}
                           className="rounded border-slate-600 bg-slate-700 text-sky-500"
+                          aria-label="Segment has script"
                         />
                       </td>
                       <td className="px-3 py-3 text-center">
@@ -2541,8 +2598,9 @@ export default function PracticePlans() {
 
             {/* Post-Practice Notes */}
             <div className="p-4 bg-slate-800 rounded-lg">
-              <label className="block text-sm font-medium text-slate-300 mb-2">Post-Practice Notes</label>
+              <label htmlFor="post-practice-notes" className="block text-sm font-medium text-slate-300 mb-2">Post-Practice Notes</label>
               <textarea
+                id="post-practice-notes"
                 value={currentPlan.postPracticeNotes || ''}
                 onChange={e => updateCurrentPlan({ postPracticeNotes: e.target.value })}
                 placeholder="Post-practice thoughts, ideas for tomorrow, things that went well or need work..."
@@ -2638,9 +2696,11 @@ export default function PracticePlans() {
                                   <td className="px-2 py-2 text-center text-slate-500">{idx + 1}</td>
                                   <td className="px-2 py-2 text-center">
                                     <select
+                                      id={`script-${seg.id}-${row.id}-hash`}
                                       value={row.hash || 'M'}
                                       onChange={(e) => updateScriptRow(seg.id, row.id, 'hash', e.target.value)}
                                       className="w-full px-1 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs text-center"
+                                      aria-label="Hash mark"
                                     >
                                       <option value="L">L</option>
                                       <option value="LM">LM</option>
@@ -2651,9 +2711,11 @@ export default function PracticePlans() {
                                   </td>
                                   <td className="px-2 py-2 text-center">
                                     <select
+                                      id={`script-${seg.id}-${row.id}-down`}
                                       value={row.dn || ''}
                                       onChange={(e) => updateScriptRow(seg.id, row.id, 'dn', e.target.value)}
                                       className="w-full px-1 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs text-center"
+                                      aria-label="Down"
                                     >
                                       <option value=""></option>
                                       <option value="1">1</option>
@@ -2664,20 +2726,24 @@ export default function PracticePlans() {
                                   </td>
                                   <td className="px-2 py-2 text-center">
                                     <input
+                                      id={`script-${seg.id}-${row.id}-distance`}
                                       type="text"
                                       value={row.dist || ''}
                                       onChange={(e) => updateScriptRow(seg.id, row.id, 'dist', e.target.value)}
                                       placeholder=""
                                       className="w-full px-1 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs text-center"
+                                      aria-label="Distance"
                                     />
                                   </td>
                                   <td className="px-2 py-2">
                                     <input
+                                      id={`script-${seg.id}-${row.id}-situation`}
                                       type="text"
                                       value={row.situation || ''}
                                       onChange={(e) => updateScriptRow(seg.id, row.id, 'situation', e.target.value)}
                                       placeholder="Situation"
                                       className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs placeholder-slate-500"
+                                      aria-label="Situation"
                                     />
                                   </td>
                                   <td
@@ -2732,6 +2798,7 @@ export default function PracticePlans() {
                                     style={{ cursor: stagedPlay ? 'copy' : 'text' }}
                                   >
                                     <PlayCallAutocomplete
+                                      id={`script-${seg.id}-${row.id}-play-call`}
                                       value={row.playName || ''}
                                       playId={row.playId}
                                       plays={playsArray}
@@ -2755,20 +2822,24 @@ export default function PracticePlans() {
                                   </td>
                                   <td className="px-2 py-2">
                                     <input
+                                      id={`script-${seg.id}-${row.id}-defense`}
                                       type="text"
                                       value={row.defense || ''}
                                       onChange={(e) => updateScriptRow(seg.id, row.id, 'defense', e.target.value)}
                                       placeholder="Defense"
                                       className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs placeholder-slate-500"
+                                      aria-label="Defense"
                                     />
                                   </td>
                                   <td className="px-2 py-2">
                                     <input
+                                      id={`script-${seg.id}-${row.id}-notes`}
                                       type="text"
                                       value={row.notes || ''}
                                       onChange={(e) => updateScriptRow(seg.id, row.id, 'notes', e.target.value)}
                                       placeholder="Add Note..."
                                       className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs placeholder-slate-500"
+                                      aria-label="Notes"
                                     />
                                   </td>
                                   <td className="px-2 py-2 text-center">
@@ -2873,18 +2944,22 @@ export default function PracticePlans() {
               <div className="flex gap-3">
                 <div className="relative flex-1">
                   <input
+                    id="play-selector-search"
                     type="text"
                     value={playSearchTerm}
                     onChange={e => setPlaySearchTerm(e.target.value)}
                     placeholder="Search plays..."
                     className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500"
                     autoFocus
+                    aria-label="Search plays"
                   />
                 </div>
                 <select
+                  id="play-selector-phase"
                   value={playFilterPhase}
                   onChange={e => setPlayFilterPhase(e.target.value)}
                   className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                  aria-label="Filter by phase"
                 >
                   <option value="OFFENSE">Offense</option>
                   <option value="DEFENSE">Defense</option>

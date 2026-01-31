@@ -69,7 +69,7 @@ export default function PrintSettingsPanel({
 function CommonSettings({ settings, onChange, layout }) {
   return (
     <>
-      <SettingsField label="Orientation" layout={layout}>
+      <SettingsField label="Orientation" layout={layout} id="print-settings-orientation">
         <select
           value={settings.orientation || 'portrait'}
           onChange={(e) => onChange('orientation', e.target.value)}
@@ -79,6 +79,7 @@ function CommonSettings({ settings, onChange, layout }) {
         </select>
       </SettingsField>
       <SettingsCheckbox
+        id="print-settings-include-logo"
         checked={settings.includeLogo !== false}
         onChange={(e) => onChange('includeLogo', e.target.checked)}
         label="Include team logo"
@@ -102,7 +103,7 @@ function WristbandSettings({ settings, onChange, weekData, layout }) {
 
   return (
     <>
-      <SettingsField label="Format" layout={layout}>
+      <SettingsField label="Format" layout={layout} id="print-settings-wristband-format">
         <select
           value={settings.format || 'player'}
           onChange={(e) => onChange('format', e.target.value)}
@@ -114,6 +115,7 @@ function WristbandSettings({ settings, onChange, weekData, layout }) {
 
       {layout === 'horizontal' ? (
         <MultiSelectDropdown
+          id="print-settings-wristband-cards"
           label="Cards"
           options={cardOptions}
           selectedIds={settings.cardSelection || ['card100']}
@@ -121,11 +123,12 @@ function WristbandSettings({ settings, onChange, weekData, layout }) {
         />
       ) : (
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Cards to Print</label>
-          <div className="space-y-2">
+          <label id="print-settings-wristband-cards-label" className="block text-sm font-medium text-gray-700 mb-2">Cards to Print</label>
+          <div className="space-y-2" role="group" aria-labelledby="print-settings-wristband-cards-label">
             {cardOptions.map(card => (
               <SettingsCheckbox
                 key={card.id}
+                id={`print-settings-wristband-card-${card.id}`}
                 checked={(settings.cardSelection || ['card100']).includes(card.id)}
                 onChange={(e) => {
                   const current = settings.cardSelection || ['card100'];
@@ -141,7 +144,7 @@ function WristbandSettings({ settings, onChange, weekData, layout }) {
         </div>
       )}
 
-      <SettingsField label="WIZ Card Type" layout={layout}>
+      <SettingsField label="WIZ Card Type" layout={layout} id="print-settings-wristband-wiz-type">
         <select
           value={settings.wizType || 'both'}
           onChange={(e) => onChange('wizType', e.target.value)}
@@ -153,6 +156,7 @@ function WristbandSettings({ settings, onChange, weekData, layout }) {
       </SettingsField>
 
       <SettingsCheckbox
+        id="print-settings-wristband-show-slot-numbers"
         checked={settings.showSlotNumbers !== false}
         onChange={(e) => onChange('showSlotNumbers', e.target.checked)}
         label="Show slot numbers"
@@ -160,6 +164,7 @@ function WristbandSettings({ settings, onChange, weekData, layout }) {
       />
 
       <SettingsCheckbox
+        id="print-settings-wristband-show-formation"
         checked={settings.showFormation === true}
         onChange={(e) => onChange('showFormation', e.target.checked)}
         label="Show formation names"
@@ -173,7 +178,7 @@ function WristbandSettings({ settings, onChange, weekData, layout }) {
 function CoachWristbandSettings({ settings, onChange, weekData, layout }) {
   return (
     <>
-      <SettingsField label="Consolidation Mode" layout={layout}>
+      <SettingsField label="Consolidation Mode" layout={layout} id="print-settings-coach-wristband-consolidation-mode">
         <select
           value={settings.consolidationMode || 'byCard'}
           onChange={(e) => onChange('consolidationMode', e.target.value)}
@@ -183,7 +188,7 @@ function CoachWristbandSettings({ settings, onChange, weekData, layout }) {
         </select>
       </SettingsField>
 
-      <SettingsField label="Font Size" layout={layout}>
+      <SettingsField label="Font Size" layout={layout} id="print-settings-coach-wristband-font-size">
         <select
           value={settings.fontSize || 'medium'}
           onChange={(e) => onChange('fontSize', e.target.value)}
@@ -195,6 +200,7 @@ function CoachWristbandSettings({ settings, onChange, weekData, layout }) {
       </SettingsField>
 
       <SettingsCheckbox
+        id="print-settings-coach-wristband-show-color-coding"
         checked={settings.showColorCoding !== false}
         onChange={(e) => onChange('showColorCoding', e.target.checked)}
         label="Show color coding"
@@ -228,7 +234,7 @@ function DepthChartSettings({ settings, onChange, layout }) {
 
   return (
     <>
-      <SettingsField label="View Mode" layout={layout}>
+      <SettingsField label="View Mode" layout={layout} id="print-settings-depth-chart-view-mode">
         <select
           value={settings.viewMode || 'full'}
           onChange={(e) => onChange('viewMode', e.target.value)}
@@ -242,6 +248,7 @@ function DepthChartSettings({ settings, onChange, layout }) {
       {isFormationView ? (
         layout === 'horizontal' ? (
           <MultiSelectDropdown
+            id="print-settings-depth-chart-formation-pages"
             label="Formation Pages"
             options={formationPairOptions}
             selectedIds={settings.formationPairs || ['offense-defense']}
@@ -249,11 +256,12 @@ function DepthChartSettings({ settings, onChange, layout }) {
           />
         ) : (
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Formation Pages to Print</label>
-            <div className="space-y-2">
+            <label id="print-settings-depth-chart-formation-pages-label" className="block text-sm font-medium text-gray-700 mb-2">Formation Pages to Print</label>
+            <div className="space-y-2" role="group" aria-labelledby="print-settings-depth-chart-formation-pages-label">
               {formationPairOptions.map(pair => (
                 <SettingsCheckbox
                   key={pair.id}
+                  id={`print-settings-depth-chart-formation-pair-${pair.id}`}
                   checked={(settings.formationPairs || ['offense-defense']).includes(pair.id)}
                   onChange={(e) => {
                     const current = settings.formationPairs || ['offense-defense'];
@@ -271,6 +279,7 @@ function DepthChartSettings({ settings, onChange, layout }) {
       ) : (
         layout === 'horizontal' ? (
           <MultiSelectDropdown
+            id="print-settings-depth-chart-charts"
             label="Charts"
             options={chartTypes}
             selectedIds={settings.chartTypes || ['offense', 'defense']}
@@ -278,11 +287,12 @@ function DepthChartSettings({ settings, onChange, layout }) {
           />
         ) : (
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Charts to Print</label>
-            <div className="space-y-2">
+            <label id="print-settings-depth-chart-charts-label" className="block text-sm font-medium text-gray-700 mb-2">Charts to Print</label>
+            <div className="space-y-2" role="group" aria-labelledby="print-settings-depth-chart-charts-label">
               {chartTypes.map(chart => (
                 <SettingsCheckbox
                   key={chart.id}
+                  id={`print-settings-depth-chart-chart-${chart.id}`}
                   checked={(settings.chartTypes || ['offense', 'defense']).includes(chart.id)}
                   onChange={(e) => {
                     const current = settings.chartTypes || ['offense', 'defense'];
@@ -299,7 +309,7 @@ function DepthChartSettings({ settings, onChange, layout }) {
         )
       )}
 
-      <SettingsField label="Depth Levels" layout={layout}>
+      <SettingsField label="Depth Levels" layout={layout} id="print-settings-depth-chart-depth-levels">
         <select
           value={settings.depthLevels || 2}
           onChange={(e) => onChange('depthLevels', parseInt(e.target.value))}
@@ -311,6 +321,7 @@ function DepthChartSettings({ settings, onChange, layout }) {
 
       {!isFormationView && (
         <SettingsCheckbox
+          id="print-settings-depth-chart-show-backups"
           checked={settings.showBackups !== false}
           onChange={(e) => onChange('showBackups', e.target.checked)}
           label="Show backups"
@@ -328,6 +339,7 @@ function PracticePlanSettings({ settings, onChange, staff, layout }) {
   return (
     <>
       <SettingsCheckbox
+        id="print-settings-practice-plan-coach-view"
         checked={settings.coachView === true}
         onChange={(e) => onChange('coachView', e.target.checked)}
         label="Coach-specific view"
@@ -335,7 +347,7 @@ function PracticePlanSettings({ settings, onChange, staff, layout }) {
       />
 
       {settings.coachView && staff?.length > 0 && (
-        <SettingsField label="Filter by Coach" layout={layout}>
+        <SettingsField label="Filter by Coach" layout={layout} id="print-settings-practice-plan-coach-filter">
           <select
             value={settings.coachId || ''}
             onChange={(e) => onChange('coachId', e.target.value || null)}
@@ -352,6 +364,7 @@ function PracticePlanSettings({ settings, onChange, staff, layout }) {
 
       {layout === 'horizontal' ? (
         <MultiSelectDropdown
+          id="print-settings-practice-plan-days"
           label="Days"
           options={days.map(d => ({ id: d, label: d }))}
           selectedIds={settings.days || days.slice(0, 5)}
@@ -359,11 +372,12 @@ function PracticePlanSettings({ settings, onChange, staff, layout }) {
         />
       ) : (
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Days to Print</label>
-          <div className="space-y-2">
+          <label id="print-settings-practice-plan-days-label" className="block text-sm font-medium text-gray-700 mb-2">Days to Print</label>
+          <div className="space-y-2" role="group" aria-labelledby="print-settings-practice-plan-days-label">
             {days.map(day => (
               <SettingsCheckbox
                 key={day}
+                id={`print-settings-practice-plan-day-${day.toLowerCase()}`}
                 checked={(settings.days || days.slice(0, 5)).includes(day)}
                 onChange={(e) => {
                   const current = settings.days || days.slice(0, 5);
@@ -380,13 +394,14 @@ function PracticePlanSettings({ settings, onChange, staff, layout }) {
       )}
 
       <SettingsCheckbox
+        id="print-settings-practice-plan-include-scripts"
         checked={settings.includeScripts === true}
         onChange={(e) => onChange('includeScripts', e.target.checked)}
         label="Include scripts"
         layout={layout}
       />
 
-      <SettingsField label="Orientation" layout={layout}>
+      <SettingsField label="Orientation" layout={layout} id="print-settings-practice-plan-orientation">
         <select
           value={settings.orientation || 'portrait'}
           onChange={(e) => onChange('orientation', e.target.value)}
@@ -397,6 +412,7 @@ function PracticePlanSettings({ settings, onChange, staff, layout }) {
       </SettingsField>
 
       <SettingsCheckbox
+        id="print-settings-practice-plan-show-notes"
         checked={settings.showNotes !== false}
         onChange={(e) => onChange('showNotes', e.target.checked)}
         label="Show notes"
@@ -404,6 +420,7 @@ function PracticePlanSettings({ settings, onChange, staff, layout }) {
       />
 
       <SettingsCheckbox
+        id="print-settings-practice-plan-show-contact-level"
         checked={settings.showContactLevel === true}
         onChange={(e) => onChange('showContactLevel', e.target.checked)}
         label="Show contact level"
@@ -417,7 +434,7 @@ function PracticePlanSettings({ settings, onChange, staff, layout }) {
 function GamePlanSettings({ settings, onChange, layout }) {
   return (
     <>
-      <SettingsField label="View Type" layout={layout}>
+      <SettingsField label="View Type" layout={layout} id="print-settings-game-plan-view-type">
         <select
           value={settings.viewType || 'sheet'}
           onChange={(e) => onChange('viewType', e.target.value)}
@@ -428,7 +445,7 @@ function GamePlanSettings({ settings, onChange, layout }) {
         </select>
       </SettingsField>
 
-      <SettingsField label="Orientation" layout={layout}>
+      <SettingsField label="Orientation" layout={layout} id="print-settings-game-plan-orientation">
         <select
           value={settings.orientation || 'landscape'}
           onChange={(e) => onChange('orientation', e.target.value)}
@@ -438,7 +455,7 @@ function GamePlanSettings({ settings, onChange, layout }) {
         </select>
       </SettingsField>
 
-      <SettingsField label="Font Size" layout={layout}>
+      <SettingsField label="Font Size" layout={layout} id="print-settings-game-plan-font-size">
         <select
           value={settings.fontSize || 'medium'}
           onChange={(e) => onChange('fontSize', e.target.value)}
@@ -450,6 +467,7 @@ function GamePlanSettings({ settings, onChange, layout }) {
       </SettingsField>
 
       <SettingsCheckbox
+        id="print-settings-game-plan-include-logo"
         checked={settings.includeLogo !== false}
         onChange={(e) => onChange('includeLogo', e.target.checked)}
         label="Tm Logo"
@@ -457,6 +475,7 @@ function GamePlanSettings({ settings, onChange, layout }) {
       />
 
       <SettingsCheckbox
+        id="print-settings-game-plan-include-opponent"
         checked={settings.includeOpponent !== false}
         onChange={(e) => onChange('includeOpponent', e.target.checked)}
         label="Opp Name"
@@ -470,7 +489,7 @@ function GamePlanSettings({ settings, onChange, layout }) {
 function PreGameSettings({ settings, onChange, layout }) {
   return (
     <>
-      <SettingsField label="Game Time" layout={layout}>
+      <SettingsField label="Game Time" layout={layout} id="print-settings-pregame-game-time">
         <input
           type="time"
           value={settings.gameTime || '19:00'}
@@ -478,7 +497,7 @@ function PreGameSettings({ settings, onChange, layout }) {
         />
       </SettingsField>
 
-      <SettingsField label="Time Format" layout={layout}>
+      <SettingsField label="Time Format" layout={layout} id="print-settings-pregame-time-format">
         <select
           value={settings.timeFormat || 'actual'}
           onChange={(e) => onChange('timeFormat', e.target.value)}
@@ -489,7 +508,7 @@ function PreGameSettings({ settings, onChange, layout }) {
         </select>
       </SettingsField>
 
-      <SettingsField label="Orientation" layout={layout}>
+      <SettingsField label="Orientation" layout={layout} id="print-settings-pregame-orientation">
         <select
           value={settings.orientation || 'portrait'}
           onChange={(e) => onChange('orientation', e.target.value)}
@@ -500,6 +519,7 @@ function PreGameSettings({ settings, onChange, layout }) {
       </SettingsField>
 
       <SettingsCheckbox
+        id="print-settings-pregame-include-checkboxes"
         checked={settings.includeCheckboxes !== false}
         onChange={(e) => onChange('includeCheckboxes', e.target.checked)}
         label="Checkboxes"
@@ -507,6 +527,7 @@ function PreGameSettings({ settings, onChange, layout }) {
       />
 
       <SettingsCheckbox
+        id="print-settings-pregame-show-notes"
         checked={settings.showNotes !== false}
         onChange={(e) => onChange('showNotes', e.target.checked)}
         label="Show notes"
@@ -529,7 +550,7 @@ function RosterSettings({ settings, onChange, layout }) {
 
   return (
     <>
-      <SettingsField label="Sort By" layout={layout}>
+      <SettingsField label="Sort By" layout={layout} id="print-settings-roster-sort-by">
         <select
           value={settings.sortBy || 'number'}
           onChange={(e) => onChange('sortBy', e.target.value)}
@@ -543,6 +564,7 @@ function RosterSettings({ settings, onChange, layout }) {
 
       {layout === 'horizontal' ? (
         <MultiSelectDropdown
+          id="print-settings-roster-columns"
           label="Columns"
           options={columns}
           selectedIds={settings.columns || ['number', 'name', 'position', 'year']}
@@ -550,11 +572,12 @@ function RosterSettings({ settings, onChange, layout }) {
         />
       ) : (
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Columns to Show</label>
-          <div className="space-y-2">
+          <label id="print-settings-roster-columns-label" className="block text-sm font-medium text-gray-700 mb-2">Columns to Show</label>
+          <div className="space-y-2" role="group" aria-labelledby="print-settings-roster-columns-label">
             {columns.map(col => (
               <SettingsCheckbox
                 key={col.id}
+                id={`print-settings-roster-column-${col.id}`}
                 checked={(settings.columns || ['number', 'name', 'position', 'year']).includes(col.id)}
                 onChange={(e) => {
                   const current = settings.columns || ['number', 'name', 'position', 'year'];
@@ -571,6 +594,7 @@ function RosterSettings({ settings, onChange, layout }) {
       )}
 
       <SettingsCheckbox
+        id="print-settings-roster-checkbox-column"
         checked={settings.checkboxColumn !== false}
         onChange={(e) => onChange('checkboxColumn', e.target.checked)}
         label="Att. Box"
@@ -578,7 +602,7 @@ function RosterSettings({ settings, onChange, layout }) {
       />
 
       {settings.checkboxColumn !== false && (
-        <SettingsField label="Box Size" layout={layout}>
+        <SettingsField label="Box Size" layout={layout} id="print-settings-roster-checkbox-size">
           <select
             value={settings.checkboxSize || 'medium'}
             onChange={(e) => onChange('checkboxSize', e.target.value)}
@@ -597,7 +621,7 @@ function RosterSettings({ settings, onChange, layout }) {
 function PlaybookSettings({ settings, onChange, layout }) {
   return (
     <>
-      <SettingsField label="View Mode" layout={layout}>
+      <SettingsField label="View Mode" layout={layout} id="print-settings-playbook-view-mode">
         <select
           value={settings.viewMode || 'cards'}
           onChange={(e) => onChange('viewMode', e.target.value)}
@@ -608,7 +632,7 @@ function PlaybookSettings({ settings, onChange, layout }) {
       </SettingsField>
 
       {settings.viewMode !== 'list' && (
-        <SettingsField label="Cards/Page" layout={layout}>
+        <SettingsField label="Cards/Page" layout={layout} id="print-settings-playbook-cards-per-page">
           <select
             value={settings.cardsPerPage || 4}
             onChange={(e) => onChange('cardsPerPage', parseInt(e.target.value))}
@@ -623,6 +647,7 @@ function PlaybookSettings({ settings, onChange, layout }) {
       )}
 
       <SettingsCheckbox
+        id="print-settings-playbook-show-diagrams"
         checked={settings.showDiagrams !== false}
         onChange={(e) => onChange('showDiagrams', e.target.checked)}
         label="Show diagrams"
@@ -630,6 +655,7 @@ function PlaybookSettings({ settings, onChange, layout }) {
       />
 
       <SettingsCheckbox
+        id="print-settings-playbook-show-formation"
         checked={settings.showFormation !== false}
         onChange={(e) => onChange('showFormation', e.target.checked)}
         label="Show formation"
@@ -637,6 +663,7 @@ function PlaybookSettings({ settings, onChange, layout }) {
       />
 
       <SettingsCheckbox
+        id="print-settings-playbook-show-tags"
         checked={settings.showTags === true}
         onChange={(e) => onChange('showTags', e.target.checked)}
         label="Show tags"
@@ -646,16 +673,17 @@ function PlaybookSettings({ settings, onChange, layout }) {
   );
 }
 
-function SettingsField({ label, children, layout }) {
+function SettingsField({ label, children, layout, id }) {
   if (layout === 'horizontal') {
     return (
       <div className="flex items-center gap-2">
-        <label className="text-xs font-semibold text-gray-500 whitespace-nowrap uppercase tracking-wide">{label}</label>
+        <label htmlFor={id} className="text-xs font-semibold text-gray-500 whitespace-nowrap uppercase tracking-wide">{label}</label>
         <div className="relative">
           {/* Inject compact styles into children if they are selects/inputs */}
           {children.type === 'select' ? (
             <select
               {...children.props}
+              id={id}
               className="w-full pl-2 pr-8 py-1.5 bg-white border border-gray-300 rounded text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 font-medium"
             >
               {children.props.children}
@@ -663,6 +691,7 @@ function SettingsField({ label, children, layout }) {
           ) : (
             <input
               {...children.props}
+              id={id}
               className="w-full px-2 py-1.5 bg-white border border-gray-300 rounded text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 font-medium"
             />
           )}
@@ -673,11 +702,12 @@ function SettingsField({ label, children, layout }) {
 
   return (
     <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
       <div className="relative">
         {children.type === 'select' ? (
           <select
             {...children.props}
+            id={id}
             className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
           >
             {children.props.children}
@@ -685,6 +715,7 @@ function SettingsField({ label, children, layout }) {
         ) : (
           <input
             {...children.props}
+            id={id}
             className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
           />
         )}
@@ -693,15 +724,16 @@ function SettingsField({ label, children, layout }) {
   );
 }
 
-function SettingsCheckbox({ checked, onChange, label, layout }) {
+function SettingsCheckbox({ checked, onChange, label, layout, id }) {
   if (layout === 'horizontal') {
     return (
-      <label className={`flex items-center gap-1.5 cursor-pointer select-none px-3 py-1.5 rounded transition-colors border ${checked
+      <label htmlFor={id} className={`flex items-center gap-1.5 cursor-pointer select-none px-3 py-1.5 rounded transition-colors border ${checked
         ? 'bg-sky-50 border-sky-200 text-sky-700'
         : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
         }`}>
         <input
           type="checkbox"
+          id={id}
           checked={checked}
           onChange={onChange}
           className="sr-only" // Hidden native checkbox
@@ -713,9 +745,10 @@ function SettingsCheckbox({ checked, onChange, label, layout }) {
   }
 
   return (
-    <label className="flex items-center gap-2 cursor-pointer mb-2">
+    <label htmlFor={id} className="flex items-center gap-2 cursor-pointer mb-2">
       <input
         type="checkbox"
+        id={id}
         checked={checked}
         onChange={onChange}
         className="w-4 h-4 rounded border-gray-300 text-sky-500 focus:ring-sky-500"
@@ -728,9 +761,10 @@ function SettingsCheckbox({ checked, onChange, label, layout }) {
 /**
  * Helper component for multi-select checklists in horizontal mode
  */
-function MultiSelectDropdown({ label, options, selectedIds, onChange }) {
+function MultiSelectDropdown({ label, options, selectedIds, onChange, id }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
+  const baseId = id || `print-settings-multiselect-${label.toLowerCase().replace(/\s+/g, '-')}`;
 
   // Close when clicking outside
   useEffect(() => {
@@ -746,6 +780,7 @@ function MultiSelectDropdown({ label, options, selectedIds, onChange }) {
   return (
     <div className="relative" ref={containerRef}>
       <button
+        id={`${baseId}-button`}
         onClick={() => setIsOpen(!isOpen)}
         className={`flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 ${isOpen ? 'ring-2 ring-sky-500 border-sky-500' : ''}`}
       >
@@ -759,25 +794,30 @@ function MultiSelectDropdown({ label, options, selectedIds, onChange }) {
       {isOpen && (
         <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg p-2 z-50 animate-in fade-in slide-in-from-top-1 duration-100">
           <div className="space-y-1 max-h-60 overflow-y-auto">
-            {options.map(option => (
-              <label
-                key={option.id}
-                className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedIds.includes(option.id)}
-                  onChange={(e) => {
-                    const updated = e.target.checked
-                      ? [...selectedIds, option.id]
-                      : selectedIds.filter(id => id !== option.id);
-                    onChange(updated);
-                  }}
-                  className="w-3.5 h-3.5 rounded border-gray-300 text-sky-500 focus:ring-sky-500"
-                />
-                <span className="text-sm text-gray-700">{option.label}</span>
-              </label>
-            ))}
+            {options.map(option => {
+              const optionId = `${baseId}-option-${option.id}`;
+              return (
+                <label
+                  key={option.id}
+                  htmlFor={optionId}
+                  className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 rounded cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    id={optionId}
+                    checked={selectedIds.includes(option.id)}
+                    onChange={(e) => {
+                      const updated = e.target.checked
+                        ? [...selectedIds, option.id]
+                        : selectedIds.filter(id => id !== option.id);
+                      onChange(updated);
+                    }}
+                    className="w-3.5 h-3.5 rounded border-gray-300 text-sky-500 focus:ring-sky-500"
+                  />
+                  <span className="text-sm text-gray-700">{option.label}</span>
+                </label>
+              );
+            })}
           </div>
         </div>
       )}

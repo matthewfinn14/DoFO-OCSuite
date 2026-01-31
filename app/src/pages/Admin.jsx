@@ -396,6 +396,7 @@ export default function Admin() {
           <div className="relative max-w-md">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
+              id="admin-search"
               type="text"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
@@ -731,8 +732,9 @@ export default function Admin() {
                   )}
 
                   <div>
-                    <label className="text-sm text-slate-400 block mb-1">School Name *</label>
+                    <label htmlFor="create-school-name" className="text-sm text-slate-400 block mb-1">School Name *</label>
                     <input
+                      id="create-school-name"
                       type="text"
                       value={newSchool.name}
                       onChange={e => setNewSchool({ ...newSchool, name: e.target.value })}
@@ -743,8 +745,9 @@ export default function Admin() {
                   </div>
 
                   <div>
-                    <label className="text-sm text-slate-400 block mb-1">Mascot</label>
+                    <label htmlFor="create-school-mascot" className="text-sm text-slate-400 block mb-1">Mascot</label>
                     <input
+                      id="create-school-mascot"
                       type="text"
                       value={newSchool.mascot}
                       onChange={e => setNewSchool({ ...newSchool, mascot: e.target.value })}
@@ -754,8 +757,9 @@ export default function Admin() {
                   </div>
 
                   <div>
-                    <label className="text-sm text-slate-400 block mb-1">School Admin Email * (must be a Google account)</label>
+                    <label htmlFor="create-school-admin-email" className="text-sm text-slate-400 block mb-1">School Admin Email * (must be a Google account)</label>
                     <input
+                      id="create-school-admin-email"
                       type="email"
                       value={newSchool.adminEmail}
                       onChange={e => setNewSchool({ ...newSchool, adminEmail: e.target.value })}
@@ -769,8 +773,9 @@ export default function Admin() {
                   </div>
 
                   <div>
-                    <label className="text-sm text-slate-400 block mb-1">Trial Duration</label>
+                    <label htmlFor="create-school-trial-duration" className="text-sm text-slate-400 block mb-1">Trial Duration</label>
                     <select
+                      id="create-school-trial-duration"
                       value={newSchool.trialDuration}
                       onChange={e => setNewSchool({ ...newSchool, trialDuration: parseInt(e.target.value) })}
                       className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
@@ -782,8 +787,9 @@ export default function Admin() {
                   </div>
 
                   <div>
-                    <label className="text-sm text-slate-400 block mb-1">Notes (optional)</label>
+                    <label htmlFor="create-school-notes" className="text-sm text-slate-400 block mb-1">Notes (optional)</label>
                     <textarea
+                      id="create-school-notes"
                       value={newSchool.notes}
                       onChange={e => setNewSchool({ ...newSchool, notes: e.target.value })}
                       className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white resize-none"
@@ -831,8 +837,9 @@ export default function Admin() {
 
             <div className="p-4 space-y-4">
               <div>
-                <label className="text-sm text-slate-400 block mb-1">School Name</label>
+                <label htmlFor="edit-school-name" className="text-sm text-slate-400 block mb-1">School Name</label>
                 <input
+                  id="edit-school-name"
                   type="text"
                   value={editingSchool.name || ''}
                   onChange={e => setEditingSchool({ ...editingSchool, name: e.target.value })}
@@ -841,8 +848,9 @@ export default function Admin() {
               </div>
 
               <div>
-                <label className="text-sm text-slate-400 block mb-1">Mascot</label>
+                <label htmlFor="edit-school-mascot" className="text-sm text-slate-400 block mb-1">Mascot</label>
                 <input
+                  id="edit-school-mascot"
                   type="text"
                   value={editingSchool.mascot || ''}
                   onChange={e => setEditingSchool({ ...editingSchool, mascot: e.target.value })}
@@ -851,8 +859,9 @@ export default function Admin() {
               </div>
 
               <div>
-                <label className="text-sm text-slate-400 block mb-1">School Admin Email</label>
+                <label htmlFor="edit-school-admin-email" className="text-sm text-slate-400 block mb-1">School Admin Email</label>
                 <input
+                  id="edit-school-admin-email"
                   type="email"
                   value={editingSchool.schoolAdminEmail || ''}
                   onChange={e => setEditingSchool({ ...editingSchool, schoolAdminEmail: e.target.value })}
@@ -862,8 +871,9 @@ export default function Admin() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Subscription Status</label>
+                  <label htmlFor="edit-school-subscription-status" className="text-sm text-slate-400 block mb-1">Subscription Status</label>
                   <select
+                    id="edit-school-subscription-status"
                     value={editingSchool.subscription?.status || 'trial'}
                     onChange={e => setEditingSchool({
                       ...editingSchool,
@@ -878,8 +888,9 @@ export default function Admin() {
                 </div>
 
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Trial End Date</label>
+                  <label htmlFor="edit-school-trial-end-date" className="text-sm text-slate-400 block mb-1">Trial End Date</label>
                   <input
+                    id="edit-school-trial-end-date"
                     type="date"
                     value={editingSchool.subscription?.trialEndDate
                       ? new Date(editingSchool.subscription.trialEndDate).toISOString().split('T')[0]
@@ -897,8 +908,9 @@ export default function Admin() {
               </div>
 
               <div>
-                <label className="text-sm text-slate-400 block mb-1">Notes</label>
+                <label htmlFor="edit-school-notes" className="text-sm text-slate-400 block mb-1">Notes</label>
                 <textarea
+                  id="edit-school-notes"
                   value={editingSchool.subscription?.notes || ''}
                   onChange={e => setEditingSchool({
                     ...editingSchool,
@@ -911,7 +923,7 @@ export default function Admin() {
 
               {/* Member List Section */}
               <div>
-                <label className="text-sm text-slate-400 block mb-1">
+                <label htmlFor="newMemberEmail" className="text-sm text-slate-400 block mb-1">
                   Member List ({editingSchool.memberList?.length || 0} members)
                 </label>
                 <div className="bg-slate-800 border border-slate-700 rounded-lg p-2 max-h-32 overflow-y-auto mb-2">

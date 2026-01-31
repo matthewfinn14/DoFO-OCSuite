@@ -1048,8 +1048,9 @@ export default function PlayDiagramEditor({
           {isWizSkill && personnelGroupings.length > 0 && (
             <>
               <div className="flex flex-col items-center">
-                <span className="text-[9px] text-slate-400 font-medium">Personnel</span>
+                <label htmlFor="diagram-personnel-select" className="text-[9px] text-slate-400 font-medium">Personnel</label>
                 <select
+                  id="diagram-personnel-select"
                   value={selectedPersonnelId}
                   onChange={(e) => {
                     if (e.target.value) {
@@ -1080,10 +1081,11 @@ export default function PlayDiagramEditor({
           {isWizSkill && (
             <>
               <div className="flex flex-col items-center">
-                <span className="text-[9px] text-slate-400 font-medium">Formation</span>
+                <label htmlFor="diagram-formation-select" className="text-[9px] text-slate-400 font-medium">Formation</label>
                 <div className="flex items-center gap-1">
                   {formations.length > 0 && (
                     <select
+                      id="diagram-formation-select"
                       value={selectedFormationId}
                       onChange={(e) => {
                         if (e.target.value) {
@@ -1160,9 +1162,10 @@ export default function PlayDiagramEditor({
           {isWizOline && (
             <>
               <div className="flex flex-col items-center">
-                <span className="text-[9px] text-slate-400 font-medium">Add Blocker</span>
+                <label htmlFor="diagram-blocker-input" className="text-[9px] text-slate-400 font-medium">Add Blocker</label>
                 <div className="flex items-center gap-1 bg-sky-900/50 px-2 py-1 rounded border border-sky-700">
                   <input
+                    id="diagram-blocker-input"
                     type="text"
                     value={customLetterInput}
                     onChange={(e) => setCustomLetterInput(e.target.value.toUpperCase())}
@@ -1323,9 +1326,10 @@ export default function PlayDiagramEditor({
 
           {/* Colors - Dropdown */}
           <div className="flex flex-col items-center">
-            <span className="text-[9px] text-slate-400 font-medium">Color</span>
+            <label htmlFor="diagram-color-select" className="text-[9px] text-slate-400 font-medium">Color</label>
             <div className="relative">
               <select
+                id="diagram-color-select"
                 value={color}
                 onChange={(e) => { setColor(e.target.value); if (selectedIds.size > 0) updateElements(elements.map(el => selectedIds.has(el.id) ? { ...el, color: e.target.value } : el)); }}
                 className="appearance-none pl-6 pr-4 py-1 text-xs bg-slate-600 border border-slate-500 rounded text-white cursor-pointer"
@@ -1522,8 +1526,9 @@ export default function PlayDiagramEditor({
             </div>
             <div className="p-4 space-y-4">
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Formation Name</label>
+                <label htmlFor="diagram-new-formation-name" className="block text-xs font-medium text-slate-300 mb-1">Formation Name</label>
                 <input
+                  id="diagram-new-formation-name"
                   type="text"
                   value={newFormationName}
                   onChange={(e) => setNewFormationName(e.target.value)}
@@ -1533,8 +1538,9 @@ export default function PlayDiagramEditor({
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Personnel Grouping</label>
+                <label htmlFor="diagram-new-formation-personnel" className="block text-xs font-medium text-slate-300 mb-1">Personnel Grouping</label>
                 <select
+                  id="diagram-new-formation-personnel"
                   value={newFormationPersonnel}
                   onChange={(e) => setNewFormationPersonnel(e.target.value)}
                   className="w-full px-3 py-2 text-sm bg-slate-700 border border-slate-600 rounded text-white"

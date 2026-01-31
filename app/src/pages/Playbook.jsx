@@ -575,12 +575,13 @@ export default function Playbook() {
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-3">
           {/* Search with Quick Add */}
           <div className="col-span-2">
-            <label className="block text-xs font-medium text-slate-500 uppercase mb-1">
+            <label htmlFor="playbook-search" className="block text-xs font-medium text-slate-500 uppercase mb-1">
               Search / Quick Add
             </label>
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
               <input
+                id="playbook-search"
                 type="text"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
@@ -610,10 +611,11 @@ export default function Playbook() {
 
           {/* Formation */}
           <div>
-            <label className="block text-xs font-medium text-slate-500 uppercase mb-1">
+            <label htmlFor="playbook-filter-formation" className="block text-xs font-medium text-slate-500 uppercase mb-1">
               {getPhaseLabel('formation')}
             </label>
             <select
+              id="playbook-filter-formation"
               value={filters.formation}
               onChange={e => setFilters(prev => ({ ...prev, formation: e.target.value }))}
               className="w-full h-[38px] px-3 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
@@ -627,10 +629,11 @@ export default function Playbook() {
 
           {/* Bucket */}
           <div>
-            <label className="block text-xs font-medium text-slate-500 uppercase mb-1">
+            <label htmlFor="playbook-filter-bucket" className="block text-xs font-medium text-slate-500 uppercase mb-1">
               Bucket
             </label>
             <select
+              id="playbook-filter-bucket"
               value={filters.bucketId}
               onChange={e => setFilters(prev => ({ ...prev, bucketId: e.target.value, conceptGroup: '' }))}
               className="w-full h-[38px] px-3 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
@@ -644,10 +647,11 @@ export default function Playbook() {
 
           {/* Concept Group */}
           <div>
-            <label className="block text-xs font-medium text-slate-500 uppercase mb-1">
+            <label htmlFor="playbook-filter-concept-group" className="block text-xs font-medium text-slate-500 uppercase mb-1">
               Concept Group
             </label>
             <select
+              id="playbook-filter-concept-group"
               value={filters.conceptGroup}
               onChange={e => setFilters(prev => ({ ...prev, conceptGroup: e.target.value }))}
               className="w-full h-[38px] px-3 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
@@ -663,10 +667,11 @@ export default function Playbook() {
 
           {/* Read Type */}
           <div>
-            <label className="block text-xs font-medium text-slate-500 uppercase mb-1">
+            <label htmlFor="playbook-filter-read-type" className="block text-xs font-medium text-slate-500 uppercase mb-1">
               Read Type
             </label>
             <select
+              id="playbook-filter-read-type"
               value={filters.readType}
               onChange={e => setFilters(prev => ({ ...prev, readType: e.target.value }))}
               className="w-full h-[38px] px-3 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
@@ -680,10 +685,11 @@ export default function Playbook() {
 
           {/* Look-Alike Series */}
           <div>
-            <label className="block text-xs font-medium text-slate-500 uppercase mb-1">
+            <label htmlFor="playbook-filter-look-alike" className="block text-xs font-medium text-slate-500 uppercase mb-1">
               Look-Alike
             </label>
             <select
+              id="playbook-filter-look-alike"
               value={filters.lookAlikeSeries}
               onChange={e => setFilters(prev => ({ ...prev, lookAlikeSeries: e.target.value }))}
               className="w-full h-[38px] px-3 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
@@ -700,10 +706,11 @@ export default function Playbook() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {/* Situation */}
           <div>
-            <label className="block text-xs font-medium text-slate-500 uppercase mb-1">
+            <label htmlFor="playbook-filter-situation" className="block text-xs font-medium text-slate-500 uppercase mb-1">
               Situation
             </label>
             <select
+              id="playbook-filter-situation"
               value={filters.situation}
               onChange={e => setFilters(prev => ({ ...prev, situation: e.target.value }))}
               className="w-full h-[38px] px-3 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
@@ -721,10 +728,11 @@ export default function Playbook() {
 
           {/* Tag */}
           <div>
-            <label className="block text-xs font-medium text-slate-500 uppercase mb-1">
+            <label htmlFor="playbook-filter-tag" className="block text-xs font-medium text-slate-500 uppercase mb-1">
               Tag
             </label>
             <select
+              id="playbook-filter-tag"
               value={filters.tag}
               onChange={e => setFilters(prev => ({ ...prev, tag: e.target.value }))}
               className="w-full h-[38px] px-3 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
@@ -848,6 +856,7 @@ function PlayRow({ play, isSelected, onToggleSelect, onEdit }) {
       {/* Checkbox */}
       <div onClick={e => { e.stopPropagation(); onToggleSelect(play.id); }}>
         <input
+          id={`playrow-select-${play.id}`}
           type="checkbox"
           checked={isSelected}
           onChange={() => {}}

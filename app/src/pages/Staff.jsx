@@ -437,6 +437,7 @@ function StaffTab() {
           <div className="relative flex-1 min-w-[200px]">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
+              id="staff-search"
               type="text"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
@@ -446,6 +447,7 @@ function StaffTab() {
           </div>
 
           <select
+            id="staff-filter-role"
             value={filterRole}
             onChange={e => setFilterRole(e.target.value)}
             className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
@@ -526,8 +528,9 @@ function StaffTab() {
 
             <div className="p-4 space-y-4">
               <div>
-                <label className="text-sm text-slate-400 block mb-1">Name *</label>
+                <label htmlFor="staff-name" className="text-sm text-slate-400 block mb-1">Name *</label>
                 <input
+                  id="staff-name"
                   type="text"
                   value={editingStaff.name}
                   onChange={e => setEditingStaff({ ...editingStaff, name: e.target.value })}
@@ -537,8 +540,9 @@ function StaffTab() {
               </div>
 
               <div>
-                <label className="text-sm text-slate-400 block mb-1">Title</label>
+                <label htmlFor="staff-title" className="text-sm text-slate-400 block mb-1">Title</label>
                 <input
+                  id="staff-title"
                   type="text"
                   value={editingStaff.title || ''}
                   onChange={e => setEditingStaff({ ...editingStaff, title: e.target.value })}
@@ -549,8 +553,9 @@ function StaffTab() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Role</label>
+                  <label htmlFor="staff-role" className="text-sm text-slate-400 block mb-1">Role</label>
                   <select
+                    id="staff-role"
                     value={editingStaff.role}
                     onChange={e => setEditingStaff({ ...editingStaff, role: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
@@ -561,8 +566,9 @@ function StaffTab() {
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Permission Level</label>
+                  <label htmlFor="staff-permission-level" className="text-sm text-slate-400 block mb-1">Permission Level</label>
                   <select
+                    id="staff-permission-level"
                     value={editingStaff.permissionLevel}
                     onChange={e => setEditingStaff({ ...editingStaff, permissionLevel: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
@@ -576,9 +582,10 @@ function StaffTab() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Position Group</label>
+                  <label htmlFor="staff-position-group" className="text-sm text-slate-400 block mb-1">Position Group</label>
                   {allPositionGroups.length > 0 ? (
                     <select
+                      id="staff-position-group"
                       value={editingStaff.positionGroup || ''}
                       onChange={e => setEditingStaff({ ...editingStaff, positionGroup: e.target.value })}
                       className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
@@ -601,6 +608,7 @@ function StaffTab() {
                     </select>
                   ) : (
                     <input
+                      id="staff-position-group"
                       type="text"
                       value={editingStaff.positionGroup || ''}
                       onChange={e => setEditingStaff({ ...editingStaff, positionGroup: e.target.value })}
@@ -611,8 +619,9 @@ function StaffTab() {
                 </div>
 
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Program Level</label>
+                  <label htmlFor="staff-program-level" className="text-sm text-slate-400 block mb-1">Program Level</label>
                   <select
+                    id="staff-program-level"
                     value={editingStaff.levelId || ''}
                     onChange={e => setEditingStaff({ ...editingStaff, levelId: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
@@ -629,10 +638,11 @@ function StaffTab() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">
+                  <label htmlFor="staff-email" className="text-sm text-slate-400 block mb-1">
                     Email {!staff.find(s => s.id === editingStaff?.id) && <span className="text-red-400">*</span>}
                   </label>
                   <input
+                    id="staff-email"
                     type="email"
                     value={editingStaff.email || ''}
                     onChange={e => setEditingStaff({ ...editingStaff, email: e.target.value })}
@@ -647,8 +657,9 @@ function StaffTab() {
                   )}
                 </div>
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Phone</label>
+                  <label htmlFor="staff-phone" className="text-sm text-slate-400 block mb-1">Phone</label>
                   <input
+                    id="staff-phone"
                     type="tel"
                     value={editingStaff.phone || ''}
                     onChange={e => setEditingStaff({ ...editingStaff, phone: e.target.value })}
@@ -659,8 +670,9 @@ function StaffTab() {
               </div>
 
               <div>
-                <label className="text-sm text-slate-400 block mb-1">Notes</label>
+                <label htmlFor="staff-notes" className="text-sm text-slate-400 block mb-1">Notes</label>
                 <textarea
+                  id="staff-notes"
                   value={editingStaff.notes || ''}
                   onChange={e => setEditingStaff({ ...editingStaff, notes: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white resize-none"
@@ -777,6 +789,7 @@ function PermissionsTab() {
           <div className="relative mb-4">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
+              id="permissions-search"
               type="text"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
@@ -1070,6 +1083,7 @@ function RosterTab() {
           <div className="relative flex-1 min-w-[200px]">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
+              id="roster-search"
               type="text"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
@@ -1079,6 +1093,7 @@ function RosterTab() {
           </div>
 
           <select
+            id="roster-filter-position"
             value={filterPosition}
             onChange={e => setFilterPosition(e.target.value)}
             className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
@@ -1091,6 +1106,7 @@ function RosterTab() {
           </select>
 
           <select
+            id="roster-filter-year"
             value={filterYear}
             onChange={e => setFilterYear(e.target.value)}
             className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
@@ -1150,10 +1166,12 @@ function RosterTab() {
             <tr className="bg-slate-800">
               <th className="px-4 py-3 text-left">
                 <input
+                  id="roster-select-all"
                   type="checkbox"
                   checked={selectedPlayers.size === filteredRoster.length && filteredRoster.length > 0}
                   onChange={toggleSelectAll}
                   className="w-4 h-4 rounded bg-slate-700 border-slate-600 text-sky-500"
+                  aria-label="Select all players"
                 />
               </th>
               <th
@@ -1201,10 +1219,12 @@ function RosterTab() {
                 >
                   <td className="px-4 py-3">
                     <input
+                      id={`roster-player-${player.id}`}
                       type="checkbox"
                       checked={selectedPlayers.has(player.id)}
                       onChange={() => togglePlayerSelection(player.id)}
                       className="w-4 h-4 rounded bg-slate-700 border-slate-600 text-sky-500"
+                      aria-label={`Select ${player.name}`}
                     />
                   </td>
                   <td className="px-4 py-3">
@@ -1251,8 +1271,9 @@ function RosterTab() {
             <div className="p-4 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Name *</label>
+                  <label htmlFor="player-name" className="text-sm text-slate-400 block mb-1">Name *</label>
                   <input
+                    id="player-name"
                     type="text"
                     value={editingPlayer.name}
                     onChange={e => setEditingPlayer({ ...editingPlayer, name: e.target.value })}
@@ -1261,8 +1282,9 @@ function RosterTab() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Number</label>
+                  <label htmlFor="player-number" className="text-sm text-slate-400 block mb-1">Number</label>
                   <input
+                    id="player-number"
                     type="text"
                     value={editingPlayer.number}
                     onChange={e => setEditingPlayer({ ...editingPlayer, number: e.target.value })}
@@ -1274,8 +1296,9 @@ function RosterTab() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Position</label>
+                  <label htmlFor="player-position" className="text-sm text-slate-400 block mb-1">Position</label>
                   <input
+                    id="player-position"
                     type="text"
                     value={editingPlayer.position}
                     onChange={e => setEditingPlayer({ ...editingPlayer, position: e.target.value })}
@@ -1284,8 +1307,9 @@ function RosterTab() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Year</label>
+                  <label htmlFor="player-year" className="text-sm text-slate-400 block mb-1">Year</label>
                   <select
+                    id="player-year"
                     value={editingPlayer.year}
                     onChange={e => setEditingPlayer({ ...editingPlayer, year: e.target.value })}
                     className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
@@ -1300,8 +1324,9 @@ function RosterTab() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Height</label>
+                  <label htmlFor="player-height" className="text-sm text-slate-400 block mb-1">Height</label>
                   <input
+                    id="player-height"
                     type="text"
                     value={editingPlayer.height}
                     onChange={e => setEditingPlayer({ ...editingPlayer, height: e.target.value })}
@@ -1310,8 +1335,9 @@ function RosterTab() {
                   />
                 </div>
                 <div>
-                  <label className="text-sm text-slate-400 block mb-1">Weight</label>
+                  <label htmlFor="player-weight" className="text-sm text-slate-400 block mb-1">Weight</label>
                   <input
+                    id="player-weight"
                     type="text"
                     value={editingPlayer.weight}
                     onChange={e => setEditingPlayer({ ...editingPlayer, weight: e.target.value })}
@@ -1322,8 +1348,9 @@ function RosterTab() {
               </div>
 
               <div>
-                <label className="text-sm text-slate-400 block mb-1">Email</label>
+                <label htmlFor="player-email" className="text-sm text-slate-400 block mb-1">Email</label>
                 <input
+                  id="player-email"
                   type="email"
                   value={editingPlayer.email || ''}
                   onChange={e => setEditingPlayer({ ...editingPlayer, email: e.target.value })}
@@ -1333,8 +1360,9 @@ function RosterTab() {
               </div>
 
               <div>
-                <label className="text-sm text-slate-400 block mb-1">Notes</label>
+                <label htmlFor="player-notes" className="text-sm text-slate-400 block mb-1">Notes</label>
                 <textarea
+                  id="player-notes"
                   value={editingPlayer.notes || ''}
                   onChange={e => setEditingPlayer({ ...editingPlayer, notes: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white resize-none"
@@ -1508,6 +1536,7 @@ function ArchiveTab() {
           <div className="relative flex-1 max-w-md">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
+              id="archive-search"
               type="text"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
@@ -1556,6 +1585,7 @@ function ArchiveTab() {
               <tr className="bg-slate-800">
                 <th className="px-4 py-3 text-left w-12">
                   <input
+                    id="archive-select-all"
                     type="checkbox"
                     checked={selectedItems.size === currentItems.length && currentItems.length > 0}
                     onChange={() => {
@@ -1566,6 +1596,7 @@ function ArchiveTab() {
                       }
                     }}
                     className="w-4 h-4 rounded bg-slate-700 border-slate-600 text-sky-500"
+                    aria-label="Select all archived items"
                   />
                 </th>
                 {archiveType === 'players' ? (
@@ -1594,10 +1625,12 @@ function ArchiveTab() {
                 >
                   <td className="px-4 py-3">
                     <input
+                      id={`archive-item-${item.id}`}
                       type="checkbox"
                       checked={selectedItems.has(item.id)}
                       onChange={() => toggleSelection(item.id)}
                       className="w-4 h-4 rounded bg-slate-700 border-slate-600 text-sky-500"
+                      aria-label={`Select ${item.name}`}
                     />
                   </td>
                   {archiveType === 'players' ? (
