@@ -1005,13 +1005,21 @@ export default function Admin() {
                 Cancel
               </button>
               <button
-                onClick={() => updateSchoolSubscription(editingSchool.id, {
-                  name: editingSchool.name,
-                  mascot: editingSchool.mascot,
-                  schoolAdminEmail: editingSchool.schoolAdminEmail,
-                  memberList: editingSchool.memberList || [],
-                  subscription: editingSchool.subscription
-                })}
+                onClick={() => {
+                  const updates = {
+                    name: editingSchool.name,
+                    mascot: editingSchool.mascot,
+                    memberList: editingSchool.memberList || []
+                  };
+                  // Only include fields that are defined
+                  if (editingSchool.schoolAdminEmail) {
+                    updates.schoolAdminEmail = editingSchool.schoolAdminEmail;
+                  }
+                  if (editingSchool.subscription) {
+                    updates.subscription = editingSchool.subscription;
+                  }
+                  updateSchoolSubscription(editingSchool.id, updates);
+                }}
                 disabled={saving}
                 className="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 disabled:opacity-50"
               >
