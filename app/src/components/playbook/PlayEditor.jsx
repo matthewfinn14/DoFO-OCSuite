@@ -513,6 +513,31 @@ export default function PlayEditor({
         name: formData.name.trim(),
       };
 
+      // Auto-create formation if it doesn't exist in the library (offense only)
+      if (formData.formation && phase === 'OFFENSE') {
+        const existingFormations = setupConfig?.formations || [];
+        const formationExists = existingFormations.some(
+          f => f.name.toUpperCase() === formData.formation.toUpperCase() && f.phase === 'OFFENSE'
+        );
+
+        if (!formationExists) {
+          // Create new formation entry without diagram (positions: null)
+          const newFormation = {
+            id: `form_${Date.now()}`,
+            name: formData.formation.toUpperCase(),
+            personnel: '',
+            families: [],
+            positions: null, // Will be set when diagram is created in Setup
+            phase: 'OFFENSE',
+            createdAt: new Date().toISOString(),
+            source: 'play-editor' // Mark as auto-created
+          };
+
+          // Add to formations list
+          await updateSetupConfig({ formations: [...existingFormations, newFormation] });
+        }
+      }
+
       if (isEditing && play) {
         await onSave({ ...play, ...playData });
       } else {

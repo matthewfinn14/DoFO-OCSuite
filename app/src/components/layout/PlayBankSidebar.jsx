@@ -40,7 +40,8 @@ export default function PlayBankSidebar({
     scripts,
     addPlay,
     updateWeek,
-    setupConfig
+    setupConfig,
+    updateSetupConfig
   } = useSchool();
 
   // Get single select mode from context (for wristband assignment)
@@ -407,6 +408,33 @@ export default function PlayBankSidebar({
       }
     }
 
+    // Auto-create formation if it doesn't exist in the library
+    if (formation && playBankPhase === 'OFFENSE') {
+      const existingFormations = setupConfig?.formations || [];
+      const formationExists = existingFormations.some(
+        f => f.name.toUpperCase() === formation.toUpperCase() && f.phase === 'OFFENSE'
+      );
+
+      if (!formationExists) {
+        // Create new formation entry without diagram (positions: null)
+        const newFormation = {
+          id: `form_${Date.now()}`,
+          name: formation,
+          personnel: '',
+          families: [],
+          positions: null, // Will be set when diagram is created in Setup
+          phase: 'OFFENSE',
+          createdAt: new Date().toISOString(),
+          source: 'quick-add' // Mark as auto-created
+        };
+
+        // Add to formations list
+        await updateSetupConfig({
+          formations: [...existingFormations, newFormation]
+        });
+      }
+    }
+
     // Create the new play
     const playData = {
       name,
@@ -430,7 +458,7 @@ export default function PlayBankSidebar({
 
     // Clear the input
     setQuickAddValue('');
-  }, [quickAddValue, playBankPhase, addPlay, currentWeek, currentWeekId, updateWeek, parseWithSyntax]);
+  }, [quickAddValue, playBankPhase, addPlay, currentWeek, currentWeekId, updateWeek, parseWithSyntax, setupConfig, updateSetupConfig]);
 
   // Toggle play selection for batch mode
   const togglePlaySelection = useCallback((playId) => {
