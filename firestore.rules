@@ -35,7 +35,6 @@ service cloud.firestore {
       allow read: if request.auth != null;
 
       // Update/Delete: Any authenticated user (app-level permissions handle admin checks)
-      // TODO: Tighten this once app is stable
       allow update, delete: if request.auth != null;
 
       // Subcollections (roster, plays, practice_plans, etc.)
