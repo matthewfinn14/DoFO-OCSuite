@@ -1281,6 +1281,7 @@ export default function Setup() {
               buckets={getPlayBuckets()}
               plays={playsArray}
               onUpdate={updateLocal}
+              isLight={isLight}
             />
           )}
 
@@ -2787,7 +2788,7 @@ function ReadTypesTab({ readTypes, onUpdate, isLight = false }) {
 }
 
 // Look-Alike Series Tab Component (Offense only)
-function LookAlikeSeriesTab({ series, buckets, plays, onUpdate }) {
+function LookAlikeSeriesTab({ series, buckets, plays, onUpdate, isLight = false }) {
   const [expandedSeries, setExpandedSeries] = useState({});
 
   const addSeries = () => {
@@ -2858,8 +2859,8 @@ function LookAlikeSeriesTab({ series, buckets, plays, onUpdate }) {
   return (
     <div>
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-white">Look-Alike Series</h3>
-        <p className="text-slate-400 text-sm">
+        <h3 className={`text-lg font-semibold ${isLight ? 'text-gray-800' : 'text-white'}`}>Look-Alike Series</h3>
+        <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
           Group plays from different buckets/concept groups that look alike based on formation, motion, and/or backfield action.
         </p>
       </div>
@@ -2870,13 +2871,13 @@ function LookAlikeSeriesTab({ series, buckets, plays, onUpdate }) {
           return (
             <div
               key={s.id}
-              className="bg-slate-700/50 rounded-lg border border-slate-600 overflow-hidden"
+              className={`rounded-lg border overflow-hidden ${isLight ? 'bg-white border-gray-200 shadow-sm' : 'bg-slate-700/50 border-slate-600'}`}
             >
               {/* Series Header */}
-              <div className="flex items-center gap-3 p-3 bg-slate-700/30">
+              <div className={`flex items-center gap-3 p-3 ${isLight ? 'bg-gray-50' : 'bg-slate-700/30'}`}>
                 <button
                   onClick={() => toggleExpand(s.id)}
-                  className="p-1 text-slate-400 hover:text-white"
+                  className={`p-1 ${isLight ? 'text-gray-400 hover:text-gray-700' : 'text-slate-400 hover:text-white'}`}
                 >
                   {isExpanded ? <ChevronDown size={18} /> : <ChevronUp size={18} className="rotate-180" />}
                 </button>
@@ -2885,14 +2886,14 @@ function LookAlikeSeriesTab({ series, buckets, plays, onUpdate }) {
                   type="text"
                   value={s.name}
                   onChange={(e) => updateSeries(s.id, { name: e.target.value })}
-                  className="flex-1 px-3 py-1.5 bg-slate-800 border border-slate-600 rounded text-white font-medium"
+                  className={`flex-1 px-3 py-1.5 rounded font-medium ${isLight ? 'bg-white border border-gray-300 text-gray-800' : 'bg-slate-800 border border-slate-600 text-white'}`}
                   placeholder="Series name"
                   aria-label="Series name"
                 />
-                <span className="text-sm text-slate-400">{s.playIds.length} plays</span>
+                <span className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>{s.playIds.length} plays</span>
                 <button
                   onClick={() => deleteSeries(s.id)}
-                  className="p-1.5 text-slate-400 hover:text-red-400"
+                  className={`p-1.5 hover:text-red-400 ${isLight ? 'text-gray-400' : 'text-slate-400'}`}
                 >
                   <Trash2 size={16} />
                 </button>
@@ -2900,31 +2901,33 @@ function LookAlikeSeriesTab({ series, buckets, plays, onUpdate }) {
 
               {/* Expanded Content */}
               {isExpanded && (
-                <div className="p-4 border-t border-slate-600 space-y-4">
+                <div className={`p-4 border-t space-y-4 ${isLight ? 'border-gray-200' : 'border-slate-600'}`}>
                   {/* Description */}
                   <div>
-                    <label htmlFor={`series-description-${s.id}`} className="block text-xs text-slate-400 uppercase mb-1">Description</label>
+                    <label htmlFor={`series-description-${s.id}`} className={`block text-xs uppercase mb-1 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>Description</label>
                     <input
                       id={`series-description-${s.id}`}
                       type="text"
                       value={s.description || ''}
                       onChange={(e) => updateSeries(s.id, { description: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white text-sm"
+                      className={`w-full px-3 py-2 rounded text-sm ${isLight ? 'bg-gray-100 border border-gray-300 text-gray-800' : 'bg-slate-800 border border-slate-600 text-white'}`}
                       placeholder="What makes these plays look alike?"
                     />
                   </div>
 
                   {/* Common Elements */}
                   <div>
-                    <label className="block text-xs text-slate-400 uppercase mb-2">Looks Alike Because Of</label>
+                    <label className={`block text-xs uppercase mb-2 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>Looks Alike Because Of</label>
                     <div className="flex gap-2">
                       {COMMON_ELEMENTS.map(el => (
                         <button
                           key={el.id}
                           onClick={() => toggleCommonElement(s.id, el.id)}
                           className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${(s.commonElements || []).includes(el.id)
-                            ? 'bg-sky-500/20 text-sky-400 border border-sky-500/50'
-                            : 'bg-slate-800 text-slate-400 border border-slate-600 hover:border-slate-500'
+                            ? 'bg-sky-500/20 text-sky-500 border border-sky-500/50'
+                            : isLight
+                              ? 'bg-gray-100 text-gray-500 border border-gray-300 hover:border-gray-400'
+                              : 'bg-slate-800 text-slate-400 border border-slate-600 hover:border-slate-500'
                             }`}
                         >
                           {el.label}
@@ -2935,7 +2938,7 @@ function LookAlikeSeriesTab({ series, buckets, plays, onUpdate }) {
 
                   {/* Plays in Series */}
                   <div>
-                    <label className="block text-xs text-slate-400 uppercase mb-2">Plays in Series</label>
+                    <label className={`block text-xs uppercase mb-2 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>Plays in Series</label>
                     <div className="space-y-2">
                       {s.playIds.map(playId => {
                         const info = getPlayInfo(playId);
@@ -2943,10 +2946,10 @@ function LookAlikeSeriesTab({ series, buckets, plays, onUpdate }) {
                         return (
                           <div
                             key={playId}
-                            className="flex items-center justify-between px-3 py-2 bg-slate-800 rounded border border-slate-600"
+                            className={`flex items-center justify-between px-3 py-2 rounded border ${isLight ? 'bg-gray-50 border-gray-200' : 'bg-slate-800 border-slate-600'}`}
                           >
                             <div>
-                              <span className="text-white font-medium">
+                              <span className={`font-medium ${isLight ? 'text-gray-800' : 'text-white'}`}>
                                 {info.play.formation ? `${info.play.formation} ` : ''}{info.play.name}
                               </span>
                               {info.bucket && (
@@ -2960,7 +2963,7 @@ function LookAlikeSeriesTab({ series, buckets, plays, onUpdate }) {
                             </div>
                             <button
                               onClick={() => removePlayFromSeries(s.id, playId)}
-                              className="p-1 text-slate-400 hover:text-red-400"
+                              className={`p-1 hover:text-red-400 ${isLight ? 'text-gray-400' : 'text-slate-400'}`}
                             >
                               <X size={14} />
                             </button>
@@ -2969,14 +2972,14 @@ function LookAlikeSeriesTab({ series, buckets, plays, onUpdate }) {
                       })}
 
                       {s.playIds.length === 0 && (
-                        <p className="text-sm text-slate-500 italic py-2">No plays added yet</p>
+                        <p className={`text-sm italic py-2 ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>No plays added yet</p>
                       )}
                     </div>
                   </div>
 
                   {/* Add Play Dropdown */}
                   <div>
-                    <label htmlFor={`series-add-play-${s.id}`} className="block text-xs text-slate-400 uppercase mb-1">Add Play</label>
+                    <label htmlFor={`series-add-play-${s.id}`} className={`block text-xs uppercase mb-1 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>Add Play</label>
                     <select
                       id={`series-add-play-${s.id}`}
                       onChange={(e) => {
@@ -2985,7 +2988,7 @@ function LookAlikeSeriesTab({ series, buckets, plays, onUpdate }) {
                           e.target.value = '';
                         }
                       }}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded text-white text-sm"
+                      className={`w-full px-3 py-2 rounded text-sm ${isLight ? 'bg-white border border-gray-300 text-gray-800' : 'bg-slate-800 border border-slate-600 text-white'}`}
                       value=""
                     >
                       <option value="">Select a play to add...</option>
@@ -3005,7 +3008,7 @@ function LookAlikeSeriesTab({ series, buckets, plays, onUpdate }) {
         })}
 
         {series.length === 0 && (
-          <div className="text-center py-8 text-slate-400 border border-dashed border-slate-600 rounded-lg">
+          <div className={`text-center py-8 border border-dashed rounded-lg ${isLight ? 'text-gray-400 border-gray-300' : 'text-slate-400 border-slate-600'}`}>
             <Copy size={32} className="mx-auto mb-2 opacity-50" />
             <p>No look-alike series defined yet.</p>
             <p className="text-sm mt-1">Group plays that share formation, motion, or backfield action.</p>
@@ -3014,7 +3017,7 @@ function LookAlikeSeriesTab({ series, buckets, plays, onUpdate }) {
 
         <button
           onClick={addSeries}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-700/50 border border-dashed border-slate-500 rounded-lg text-slate-300 hover:bg-slate-700 hover:border-slate-400 transition-colors"
+          className={`w-full flex items-center justify-center gap-2 px-4 py-3 border border-dashed rounded-lg transition-colors ${isLight ? 'bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100 hover:border-gray-400' : 'bg-slate-700/50 border-slate-500 text-slate-300 hover:bg-slate-700 hover:border-slate-400'}`}
         >
           <Plus size={18} />
           Add Look-Alike Series
