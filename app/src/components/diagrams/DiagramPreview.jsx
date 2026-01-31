@@ -165,7 +165,7 @@ export default function DiagramPreview({
         const { x, y } = el.points[0];
 
         if (el.shape === 'text-only') {
-          const tSize = el.fontSize || (isWizSkill ? 24 : 170);
+          const tSize = el.fontSize || (isWizSkill ? 50 : 170);
           return (
             <g key={key}>
               <text

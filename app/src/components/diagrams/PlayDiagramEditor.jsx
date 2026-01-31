@@ -109,7 +109,7 @@ const getWizSkillFormation = (positionColors = {}, positionNames = {}, skillPosi
 
   const wizCenter = 475; // 950/2 for wiz-card viewBox
   const wizLos = 390;    // LOS position (900x600 canvas)
-  const initialSize = 40; // OL text size (25% bigger)
+  const initialSize = 50; // OL text size for WIZ Skill
   const spacing = 38;    // OL spacing (tighter gaps)
   const olY = wizLos;    // OL on the LOS
 
@@ -388,13 +388,13 @@ export default function PlayDiagramEditor({
 
     // Default config for positions that don't have saved shape/variant
     const positionConfig = {
-      'C': { shape: 'text-only', fontSize: 32 },
-      'G': { shape: 'text-only', fontSize: 32 },
-      'T': { shape: 'text-only', fontSize: 32 },
-      'LT': { shape: 'text-only', fontSize: 32 },
-      'LG': { shape: 'text-only', fontSize: 32 },
-      'RG': { shape: 'text-only', fontSize: 32 },
-      'RT': { shape: 'text-only', fontSize: 32 },
+      'C': { shape: 'text-only', fontSize: 50 },
+      'G': { shape: 'text-only', fontSize: 50 },
+      'T': { shape: 'text-only', fontSize: 50 },
+      'LT': { shape: 'text-only', fontSize: 50 },
+      'LG': { shape: 'text-only', fontSize: 50 },
+      'RG': { shape: 'text-only', fontSize: 50 },
+      'RT': { shape: 'text-only', fontSize: 50 },
     };
 
     // Check if any positions have groupId (for OL grouping)
@@ -937,7 +937,7 @@ export default function PlayDiagramEditor({
       const effectiveColor = positionColors[el.label] || el.color || DEFAULT_POSITION_COLORS[el.label] || '#3b82f6';
 
       if (el.shape === 'text-only') {
-        const tSize = el.fontSize || (isWizOline ? 170 : 24);
+        const tSize = el.fontSize || (isWizOline ? 170 : 50);
         return (
           <g
             key={el.id}
