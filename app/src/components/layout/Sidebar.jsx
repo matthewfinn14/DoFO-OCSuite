@@ -145,7 +145,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`flex flex-col transition-all duration-200 ${
+      className={`flex flex-col transition-all duration-200 print:hidden ${
         collapsed ? 'w-16' : 'w-64'
       } ${
         isLight

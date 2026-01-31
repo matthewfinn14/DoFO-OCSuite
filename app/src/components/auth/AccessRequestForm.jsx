@@ -101,8 +101,10 @@ export default function AccessRequestForm() {
 
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block mb-2 text-slate-300 text-sm">Your Name *</label>
+            <label htmlFor="name" className="block mb-2 text-slate-300 text-sm">Your Name *</label>
             <input
+              id="name"
+              name="name"
               value={formData.name}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
               className="w-full p-3 rounded-md bg-slate-900 border border-slate-600 text-white placeholder-slate-500"
@@ -111,8 +113,10 @@ export default function AccessRequestForm() {
           </div>
 
           <div className="mb-4">
-            <label className="block mb-2 text-slate-300 text-sm">School / Program Name *</label>
+            <label htmlFor="schoolName" className="block mb-2 text-slate-300 text-sm">School / Program Name *</label>
             <input
+              id="schoolName"
+              name="schoolName"
               value={formData.schoolName}
               onChange={e => setFormData({ ...formData, schoolName: e.target.value })}
               className="w-full p-3 rounded-md bg-slate-900 border border-slate-600 text-white placeholder-slate-500"
@@ -122,8 +126,10 @@ export default function AccessRequestForm() {
 
           <div className="flex gap-4 mb-4">
             <div className="flex-1">
-              <label className="block mb-2 text-slate-300 text-sm">Your Role</label>
+              <label htmlFor="role" className="block mb-2 text-slate-300 text-sm">Your Role</label>
               <select
+                id="role"
+                name="role"
                 value={formData.role}
                 onChange={e => setFormData({ ...formData, role: e.target.value })}
                 className="w-full p-3 rounded-md bg-slate-900 border border-slate-600 text-white"
@@ -137,8 +143,10 @@ export default function AccessRequestForm() {
               </select>
             </div>
             <div className="flex-1">
-              <label className="block mb-2 text-slate-300 text-sm">Phone (optional)</label>
+              <label htmlFor="phone" className="block mb-2 text-slate-300 text-sm">Phone (optional)</label>
               <input
+                id="phone"
+                name="phone"
                 value={formData.phone}
                 onChange={e => setFormData({ ...formData, phone: e.target.value })}
                 className="w-full p-3 rounded-md bg-slate-900 border border-slate-600 text-white placeholder-slate-500"
@@ -148,8 +156,10 @@ export default function AccessRequestForm() {
           </div>
 
           <div className="mb-6">
-            <label className="block mb-2 text-slate-300 text-sm">How did you hear about us?</label>
+            <label htmlFor="howHeard" className="block mb-2 text-slate-300 text-sm">How did you hear about us?</label>
             <select
+              id="howHeard"
+              name="howHeard"
               value={formData.howHeard}
               onChange={e => setFormData({ ...formData, howHeard: e.target.value })}
               className="w-full p-3 rounded-md bg-slate-900 border border-slate-600 text-white"

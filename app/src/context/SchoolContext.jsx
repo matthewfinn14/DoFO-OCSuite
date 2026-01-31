@@ -186,6 +186,7 @@ export function SchoolProvider({ children }) {
     },
 
     // Personnel Groupings (Offense only)
+    // Each grouping can have isBase: true to mark it as the default for depth charts
     personnelGroupings: [],
 
     // Formations

@@ -623,7 +623,7 @@ export default function PlayBankSidebar({
 
   return (
     <div
-      className="fixed right-0 top-0 bottom-0 flex flex-col transition-all duration-300 ease-in-out"
+      className="fixed right-0 top-0 bottom-0 flex flex-col transition-all duration-300 ease-in-out print:hidden"
       style={{
         zIndex: 2005,
         width: isOpen ? '360px' : '40px',

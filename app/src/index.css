@@ -184,43 +184,46 @@ body {
 
 
 
-  /* Wristband Print Styles */
+  /* Wristband Print Styles - dimensions must match WristbandPrint.jsx */
   .print-card {
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
-  /* Player wristband format: 4 cards per page (2x2 grid) */
+  /* Player wristband format: 4 cards per page (2x2 grid) on LANDSCAPE
+   * Cards: 4.75" × 2.8" each */
   .wristband-print-player {
     display: grid;
-    grid-template-columns: repeat(2, 3.5in);
-    gap: 0.25in;
+    grid-template-columns: repeat(2, 4.75in);
+    grid-template-rows: repeat(2, 2.8in);
+    gap: 0.4in 0.3in;
     padding: 0.25in;
+    justify-content: center;
+    align-content: center;
+    min-height: 8.5in;
   }
 
   .wristband-print-player .print-card {
-    width: 3.5in;
-    height: 4.5in;
-    font-size: 8px;
-    padding: 0.125in;
-    border-radius: 4px;
+    width: 4.75in;
+    height: 2.8in;
     overflow: hidden;
   }
 
-  /* Coach wristband format: 2 cards per page (stacked) */
+  /* Coach wristband format: 2 cards per page (stacked) on PORTRAIT
+   * Cards: 7.5" × 4" each */
   .wristband-print-coach {
     display: flex;
     flex-direction: column;
-    gap: 0.5in;
-    padding: 0.5in;
+    gap: 0.4in;
+    padding: 0.4in;
+    align-items: center;
+    justify-content: center;
+    min-height: 11in;
   }
 
   .wristband-print-coach .print-card {
     width: 7.5in;
-    height: 4.5in;
-    font-size: 12px;
-    padding: 0.25in;
-    border-radius: 8px;
+    height: 4in;
     overflow: hidden;
   }
 

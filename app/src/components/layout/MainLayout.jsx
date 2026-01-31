@@ -72,7 +72,7 @@ function MainLayoutContent() {
       updateSetupConfig={updateSetupConfig}
       onEditPlay={handleEditPlay}
     >
-      <div className={`flex h-screen ${
+      <div className={`flex h-screen print:block print:h-auto print:bg-white ${
         theme === 'light'
           ? 'bg-gray-100 text-gray-900'
           : 'bg-slate-950 text-white'
@@ -82,7 +82,7 @@ function MainLayoutContent() {
 
         {/* Main Content */}
         <main
-          className="flex-1 overflow-auto transition-all duration-300"
+          className="flex-1 overflow-auto transition-all duration-300 print:!m-0 print:!p-0 print:overflow-visible"
           style={{ marginRight: playBankOpen ? '360px' : '40px' }}
         >
           {loading ? (

@@ -213,7 +213,7 @@ export default function Playbook() {
     readType: '',
     lookAlikeSeries: '',
     situation: '',
-    tag: ''
+    playPurpose: ''
   });
 
   // Editor state
@@ -260,18 +260,8 @@ export default function Playbook() {
     };
   }, [setupConfig]);
 
-  // Get all unique tags from plays
-  const allTags = useMemo(() => {
-    const tagSet = new Set();
-    playsArray.forEach(play => {
-      if (play.tags) {
-        play.tags.forEach(tag => tagSet.add(tag));
-      }
-      if (play.tag1) tagSet.add(play.tag1);
-      if (play.tag2) tagSet.add(play.tag2);
-    });
-    return Array.from(tagSet).sort();
-  }, [playsArray]);
+  // Get play purposes from setupConfig
+  const playPurposes = setupConfig?.qualityControlDefinitions?.playPurposes || [];
 
   // Filter plays by phase
   const phasePlays = useMemo(() => {
@@ -325,13 +315,8 @@ export default function Playbook() {
         if (!hasSituation) return false;
       }
 
-      // Tag filter
-      if (filters.tag) {
-        const hasTag = play.tags?.includes(filters.tag) ||
-          play.tag1 === filters.tag ||
-          play.tag2 === filters.tag;
-        if (!hasTag) return false;
-      }
+      // Play Purpose filter
+      if (filters.playPurpose && play.playPurpose !== filters.playPurpose) return false;
 
       return true;
     });
@@ -348,7 +333,7 @@ export default function Playbook() {
 
   // Clear all filters
   const clearFilters = () => {
-    setFilters({ formation: '', bucketId: '', conceptGroup: '', readType: '', lookAlikeSeries: '', situation: '', tag: '' });
+    setFilters({ formation: '', bucketId: '', conceptGroup: '', readType: '', lookAlikeSeries: '', situation: '', playPurpose: '' });
     setSearchTerm('');
   };
 
@@ -726,20 +711,20 @@ export default function Playbook() {
             </select>
           </div>
 
-          {/* Tag */}
+          {/* Play Purpose */}
           <div>
-            <label htmlFor="playbook-filter-tag" className="block text-xs font-medium text-slate-500 uppercase mb-1">
-              Tag
+            <label htmlFor="playbook-filter-purpose" className="block text-xs font-medium text-slate-500 uppercase mb-1">
+              Purpose
             </label>
             <select
-              id="playbook-filter-tag"
-              value={filters.tag}
-              onChange={e => setFilters(prev => ({ ...prev, tag: e.target.value }))}
+              id="playbook-filter-purpose"
+              value={filters.playPurpose}
+              onChange={e => setFilters(prev => ({ ...prev, playPurpose: e.target.value }))}
               className="w-full h-[38px] px-3 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
             >
-              <option value="">All Tags</option>
-              {allTags.map(tag => (
-                <option key={tag} value={tag}>{tag}</option>
+              <option value="">All Purposes</option>
+              {playPurposes.map(purpose => (
+                <option key={purpose.id} value={purpose.id}>{purpose.name}</option>
               ))}
             </select>
           </div>

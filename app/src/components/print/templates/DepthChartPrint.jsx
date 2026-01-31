@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useSchool } from '../../../context/SchoolContext';
+import { generateDepthChartPositions } from '../../../utils/depthChartPositions';
 
 // Default position layouts for each chart type
 const POSITION_LAYOUTS = {
@@ -259,7 +260,23 @@ export default function DepthChartPrint({
   levelId,
   formationPairs = ['offense-defense'] // For formation view: which pairs to print
 }) {
-  const { roster, depthCharts, weeks, programLevels, activeLevelId, settings } = useSchool();
+  const { roster, depthCharts, weeks, programLevels, activeLevelId, settings, setupConfig } = useSchool();
+
+  // Generate dynamic positions from personnel groupings
+  const personnelGroupings = setupConfig?.personnelGroupings || [];
+  const positionNames = setupConfig?.positionNames || {};
+  const { basePositions, additionalPositions, basePersonnel } = useMemo(() => {
+    return generateDepthChartPositions(levelId || activeLevelId, programLevels, personnelGroupings, positionNames);
+  }, [levelId, activeLevelId, programLevels, personnelGroupings, positionNames]);
+
+  // Convert dynamic positions to print format for offense
+  const dynamicOffenseLayout = useMemo(() => {
+    if (!basePositions || basePositions.length === 0) return POSITION_LAYOUTS.offense;
+    return basePositions.map(pos => ({
+      pos: pos.id,
+      label: pos.label
+    }));
+  }, [basePositions]);
 
   // Get current week
   const currentWeek = useMemo(() => {
@@ -280,7 +297,10 @@ export default function DepthChartPrint({
 
   // Get depth chart data
   const getDepthChartData = (chartType) => {
-    const positions = POSITION_LAYOUTS[chartType] || [];
+    // Use dynamic positions for offense if available
+    const positions = chartType === 'offense' && dynamicOffenseLayout.length > 0
+      ? dynamicOffenseLayout
+      : (POSITION_LAYOUTS[chartType] || []);
     const chartData = depthCharts?.[selectedLevel]?.[chartType] || {};
 
     return positions.map(({ pos, label }) => {

@@ -1225,6 +1225,7 @@ export default function Setup() {
               positionNames={localConfig.positionNames || {}}
               positionColors={localConfig.positionColors || {}}
               onUpdate={updateLocal}
+              isLight={isLight}
             />
           )}
 
@@ -1754,7 +1755,7 @@ function PositionGroupsTab({ phase, positionGroups, staff, onUpdate }) {
 }
 
 // Personnel Tab Component
-function PersonnelTab({ personnelGroupings, positions, positionNames, positionColors, onUpdate }) {
+function PersonnelTab({ personnelGroupings, positions, positionNames, positionColors, onUpdate, isLight = false }) {
   const oLinePositions = ['LT', 'LG', 'C', 'RG', 'RT'];
   const availablePositions = positions
     .filter(p => !oLinePositions.includes(p.key))
@@ -1811,8 +1812,8 @@ function PersonnelTab({ personnelGroupings, positions, positionNames, positionCo
     <div>
       <div className="flex justify-between items-center mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-white">Personnel Groupings</h3>
-          <p className="text-slate-400 text-sm">Define which skill positions are on the field for each package.</p>
+          <h3 className={`text-lg font-semibold ${isLight ? 'text-gray-800' : 'text-white'}`}>Personnel Groupings</h3>
+          <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>Define which skill positions are on the field for each package.</p>
         </div>
         <button
           onClick={addGrouping}
@@ -1824,7 +1825,7 @@ function PersonnelTab({ personnelGroupings, positions, positionNames, positionCo
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {personnelGroupings.map((grouping, idx) => (
-          <div key={grouping.id} className="bg-slate-700/50 rounded-lg border border-slate-600 p-4">
+          <div key={grouping.id} className={`rounded-lg border p-4 ${isLight ? 'bg-white border-gray-200 shadow-sm' : 'bg-slate-700/50 border-slate-600'}`}>
             <div className="flex justify-between items-start mb-3 gap-2">
               <div className="flex-1">
                 <div className="flex gap-2 mb-2">
@@ -1835,7 +1836,7 @@ function PersonnelTab({ personnelGroupings, positions, positionNames, positionCo
                     onChange={(e) => updateGrouping(idx, { code: e.target.value })}
                     placeholder="Code"
                     aria-label="Personnel code"
-                    className="w-14 px-2 py-1 text-center font-bold text-sky-400 bg-slate-600 border border-slate-500 rounded"
+                    className={`w-14 px-2 py-1 text-center font-bold rounded ${isLight ? 'text-sky-600 bg-gray-100 border border-gray-300' : 'text-sky-400 bg-slate-600 border border-slate-500'}`}
                   />
                   <input
                     id={`personnel-name-${grouping.id}`}
@@ -1844,7 +1845,7 @@ function PersonnelTab({ personnelGroupings, positions, positionNames, positionCo
                     onChange={(e) => updateGrouping(idx, { name: e.target.value })}
                     placeholder="Name"
                     aria-label="Personnel name"
-                    className="flex-1 px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white"
+                    className={`flex-1 px-2 py-1 rounded ${isLight ? 'bg-gray-100 border border-gray-300 text-gray-800' : 'bg-slate-600 border border-slate-500 text-white'}`}
                   />
                 </div>
                 <input
@@ -1854,24 +1855,24 @@ function PersonnelTab({ personnelGroupings, positions, positionNames, positionCo
                   onChange={(e) => updateGrouping(idx, { description: e.target.value })}
                   placeholder="Description (e.g., 2 RB, 1 TE)"
                   aria-label="Personnel description"
-                  className="w-full px-2 py-1 text-sm bg-slate-600 border border-slate-500 rounded text-slate-300"
+                  className={`w-full px-2 py-1 text-sm rounded ${isLight ? 'bg-gray-100 border border-gray-300 text-gray-600' : 'bg-slate-600 border border-slate-500 text-slate-300'}`}
                 />
               </div>
               <div className="flex items-center gap-2">
                 {grouping.isBase ? (
-                  <span className="flex items-center gap-1 text-amber-400 text-xs font-medium">
+                  <span className="flex items-center gap-1 text-amber-500 text-xs font-medium">
                     <Star size={14} fill="currentColor" /> Base
                   </span>
                 ) : (
                   <button
                     onClick={() => setAsBase(grouping.id)}
-                    className="flex items-center gap-1 text-slate-400 hover:text-amber-400 text-xs transition-colors"
+                    className={`flex items-center gap-1 hover:text-amber-500 text-xs transition-colors ${isLight ? 'text-gray-400' : 'text-slate-400'}`}
                     title="Set as default personnel for depth charts"
                   >
                     <Star size={14} /> Set as Base
                   </button>
                 )}
-                <span className="text-sm text-slate-400">{(grouping.positions || []).length}</span>
+                <span className={`text-sm ${isLight ? 'text-gray-400' : 'text-slate-400'}`}>{(grouping.positions || []).length}</span>
                 <button onClick={() => deleteGrouping(grouping.id)} className="text-red-400 hover:text-red-300">
                   <Trash2 size={16} />
                 </button>
@@ -1889,7 +1890,7 @@ function PersonnelTab({ personnelGroupings, positions, positionNames, positionCo
                     className="flex items-center gap-1 px-2 py-1 rounded cursor-pointer transition-opacity"
                     style={{
                       backgroundColor: isActive ? color : 'transparent',
-                      border: `1px solid ${isActive ? color : 'rgb(71, 85, 105)'}`,
+                      border: `1px solid ${isActive ? color : (isLight ? 'rgb(209, 213, 219)' : 'rgb(71, 85, 105)')}`,
                       opacity: isActive ? 1 : 0.6
                     }}
                   >
@@ -1900,7 +1901,7 @@ function PersonnelTab({ personnelGroupings, positions, positionNames, positionCo
                       onChange={() => togglePosition(idx, pos)}
                       className="hidden"
                     />
-                    <span className={`text-sm font-semibold ${isActive ? 'text-white' : 'text-slate-300'}`}>
+                    <span className={`text-sm font-semibold ${isActive ? 'text-white' : (isLight ? 'text-gray-600' : 'text-slate-300')}`}>
                       {positionNames[pos] || pos}
                     </span>
                   </label>
@@ -1912,15 +1913,15 @@ function PersonnelTab({ personnelGroupings, positions, positionNames, positionCo
       </div>
 
       {personnelGroupings.length === 0 && (
-        <div className="text-center py-12 text-slate-400">
+        <div className={`text-center py-12 ${isLight ? 'text-gray-400' : 'text-slate-400'}`}>
           <UserCheck size={48} className="mx-auto mb-4 opacity-30" />
           <p>No personnel groupings defined.</p>
         </div>
       )}
 
-      <div className="mt-6 p-4 bg-slate-700/30 rounded-lg text-sm text-slate-400">
-        <p className="mb-2"><strong>Base Personnel:</strong> The personnel grouping marked with a star is used as the default for Depth Charts. Positions in the base personnel determine which slots appear in the depth chart grid.</p>
-        <p><strong>Tip:</strong> Positions shown here come from your Positions tab. Add custom positions there to include them in personnel groupings.</p>
+      <div className={`mt-6 p-4 rounded-lg text-sm ${isLight ? 'bg-gray-100 text-gray-600' : 'bg-slate-700/30 text-slate-400'}`}>
+        <p className="mb-2"><strong className={isLight ? 'text-gray-700' : ''}>Base Personnel:</strong> The personnel grouping marked with a star is used as the default for Depth Charts. Positions in the base personnel determine which slots appear in the depth chart grid.</p>
+        <p><strong className={isLight ? 'text-gray-700' : ''}>Tip:</strong> Positions shown here come from your Positions tab. Add custom positions there to include them in personnel groupings.</p>
       </div>
     </div>
   );
