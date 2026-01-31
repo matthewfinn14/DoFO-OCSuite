@@ -36,7 +36,8 @@ import {
   Copy,
   Target,
   ArrowRightLeft,
-  ClipboardCheck
+  ClipboardCheck,
+  Star
 } from 'lucide-react';
 import PlayDiagramEditor from '../components/diagrams/PlayDiagramEditor';
 import DiagramPreview from '../components/diagrams/DiagramPreview';
@@ -1355,6 +1356,7 @@ export default function Setup() {
             <QualityControlDefinitionsTab
               qualityControlDefinitions={localConfig.qualityControlDefinitions || {}}
               onUpdate={updateLocal}
+              isLight={isLight}
             />
           )}
 
@@ -1385,6 +1387,7 @@ export default function Setup() {
           {activeTab === 'levels' && isProgram && (
             <ProgramLevelsTab
               programLevels={localConfig.programLevels || []}
+              personnelGroupings={localConfig.personnelGroupings || []}
               staff={staff || []}
               onUpdate={updateLocal}
             />
@@ -1761,20 +1764,37 @@ function PersonnelTab({ personnelGroupings, positions, positionNames, positionCo
 
   const addGrouping = () => {
     const newId = `pers_${Date.now()}`;
+    // If this is the first grouping, make it the base
+    const isFirst = personnelGroupings.length === 0;
     onUpdate('personnelGroupings', [
       ...personnelGroupings,
-      { id: newId, code: '', name: 'New Personnel', description: '', positions: [] }
+      { id: newId, code: '', name: 'New Personnel', description: '', positions: [], isBase: isFirst }
     ]);
   };
 
   const deleteGrouping = (id) => {
     if (!confirm('Delete this personnel grouping?')) return;
-    onUpdate('personnelGroupings', personnelGroupings.filter(g => g.id !== id));
+    const wasBase = personnelGroupings.find(g => g.id === id)?.isBase;
+    const remaining = personnelGroupings.filter(g => g.id !== id);
+    // If we deleted the base, make the first remaining one the base
+    if (wasBase && remaining.length > 0) {
+      remaining[0] = { ...remaining[0], isBase: true };
+    }
+    onUpdate('personnelGroupings', remaining);
   };
 
   const updateGrouping = (idx, updates) => {
     const updated = [...personnelGroupings];
     updated[idx] = { ...updated[idx], ...updates };
+    onUpdate('personnelGroupings', updated);
+  };
+
+  const setAsBase = (id) => {
+    // Set this one as base, unset all others
+    const updated = personnelGroupings.map(g => ({
+      ...g,
+      isBase: g.id === id
+    }));
     onUpdate('personnelGroupings', updated);
   };
 
@@ -1838,6 +1858,19 @@ function PersonnelTab({ personnelGroupings, positions, positionNames, positionCo
                 />
               </div>
               <div className="flex items-center gap-2">
+                {grouping.isBase ? (
+                  <span className="flex items-center gap-1 text-amber-400 text-xs font-medium">
+                    <Star size={14} fill="currentColor" /> Base
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => setAsBase(grouping.id)}
+                    className="flex items-center gap-1 text-slate-400 hover:text-amber-400 text-xs transition-colors"
+                    title="Set as default personnel for depth charts"
+                  >
+                    <Star size={14} /> Set as Base
+                  </button>
+                )}
                 <span className="text-sm text-slate-400">{(grouping.positions || []).length}</span>
                 <button onClick={() => deleteGrouping(grouping.id)} className="text-red-400 hover:text-red-300">
                   <Trash2 size={16} />
@@ -1886,7 +1919,8 @@ function PersonnelTab({ personnelGroupings, positions, positionNames, positionCo
       )}
 
       <div className="mt-6 p-4 bg-slate-700/30 rounded-lg text-sm text-slate-400">
-        <strong>Tip:</strong> Positions shown here come from your Positions tab. Add custom positions there to include them in personnel groupings.
+        <p className="mb-2"><strong>Base Personnel:</strong> The personnel grouping marked with a star is used as the default for Depth Charts. Positions in the base personnel determine which slots appear in the depth chart grid.</p>
+        <p><strong>Tip:</strong> Positions shown here come from your Positions tab. Add custom positions there to include them in personnel groupings.</p>
       </div>
     </div>
   );
@@ -5629,8 +5663,11 @@ const LEVEL_TOOLS = [
   { key: 'wristband', label: 'Wristband Builder', description: 'Create wristbands' }
 ];
 
-function ProgramLevelsTab({ programLevels, staff, onUpdate }) {
+function ProgramLevelsTab({ programLevels, personnelGroupings = [], staff, onUpdate }) {
   const [expandedLevel, setExpandedLevel] = useState(null);
+
+  // Get the program default base personnel (the one marked as isBase)
+  const defaultBasePersonnel = personnelGroupings.find(p => p.isBase) || personnelGroupings[0];
 
   // Add new level
   const addLevel = () => {
@@ -5749,15 +5786,44 @@ function ProgramLevelsTab({ programLevels, staff, onUpdate }) {
               {isExpanded && (
                 <div className="border-t border-slate-600 p-4 space-y-6">
                   {/* Level Name Edit */}
-                  <div>
-                    <label htmlFor={`level-name-${level.id}`} className="block text-sm font-medium text-slate-300 mb-2">Level Name</label>
-                    <input
-                      id={`level-name-${level.id}`}
-                      type="text"
-                      value={level.name}
-                      onChange={(e) => updateLevel(level.id, { name: e.target.value })}
-                      className="w-full max-w-xs px-3 py-2 bg-slate-600 border border-slate-500 rounded text-white focus:outline-none focus:border-sky-500"
-                    />
+                  <div className="flex gap-6 flex-wrap">
+                    <div>
+                      <label htmlFor={`level-name-${level.id}`} className="block text-sm font-medium text-slate-300 mb-2">Level Name</label>
+                      <input
+                        id={`level-name-${level.id}`}
+                        type="text"
+                        value={level.name}
+                        onChange={(e) => updateLevel(level.id, { name: e.target.value })}
+                        className="w-full max-w-xs px-3 py-2 bg-slate-600 border border-slate-500 rounded text-white focus:outline-none focus:border-sky-500"
+                      />
+                    </div>
+
+                    {/* Base Personnel Override */}
+                    {personnelGroupings.length > 0 && (
+                      <div>
+                        <label htmlFor={`level-personnel-${level.id}`} className="block text-sm font-medium text-slate-300 mb-2">
+                          Base Personnel
+                        </label>
+                        <select
+                          id={`level-personnel-${level.id}`}
+                          value={level.basePersonnelId || ''}
+                          onChange={(e) => updateLevel(level.id, { basePersonnelId: e.target.value || null })}
+                          className="w-full max-w-xs px-3 py-2 bg-slate-600 border border-slate-500 rounded text-white focus:outline-none focus:border-sky-500"
+                        >
+                          <option value="">
+                            Use Program Default{defaultBasePersonnel ? ` (${defaultBasePersonnel.code || defaultBasePersonnel.name})` : ''}
+                          </option>
+                          {personnelGroupings.map(p => (
+                            <option key={p.id} value={p.id}>
+                              {p.code ? `${p.code} - ${p.name}` : p.name}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Determines default positions shown on this level's depth chart.
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -7082,7 +7148,7 @@ function EventEditModal({ event, onSave, onClose }) {
 }
 
 // Quality Control Definitions Tab
-function QualityControlDefinitionsTab({ qualityControlDefinitions, onUpdate }) {
+function QualityControlDefinitionsTab({ qualityControlDefinitions, onUpdate, isLight = false }) {
   const defaults = {
     playPurposes: [
       { id: 'base', name: 'Base', color: '#3b82f6' },
@@ -7181,29 +7247,29 @@ function QualityControlDefinitionsTab({ qualityControlDefinitions, onUpdate }) {
   return (
     <div className="space-y-8">
       {/* Help Section */}
-      <HelpSection title="What are Quality Control Definitions?">
+      <HelpSection title="What are Quality Control Definitions?" isLight={isLight}>
         <div className="pt-3 space-y-3">
           <p>
-            These settings power the <strong className="text-white">X&O Quality Control</strong> tool in your Weekly Tools.
+            These settings power the <strong className={isLight ? "text-slate-900" : "text-white"}>X&O Quality Control</strong> tool in your Weekly Tools.
             They define how plays are categorized by purpose, and what constitutes "efficient" or "explosive" performance.
           </p>
           <p>
-            <strong className="text-white">Play Purposes</strong> categorize plays by their strategic role. Use these to
+            <strong className={isLight ? "text-slate-900" : "text-white"}>Play Purposes</strong> categorize plays by their strategic role. Use these to
             ensure your install and game plan have the right balance of foundational vs explosive plays.
           </p>
           <p>
-            <strong className="text-white">Efficiency Thresholds</strong> define success by down. 1st down typically needs
+            <strong className={isLight ? "text-slate-900" : "text-white"}>Efficiency Thresholds</strong> define success by down. 1st down typically needs
             4+ yards, while 2nd/3rd need a percentage of remaining distance.
           </p>
         </div>
       </HelpSection>
 
       {/* Play Purposes Section */}
-      <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
+      <div className={`rounded-lg border overflow-hidden ${isLight ? 'bg-white border-slate-200' : 'bg-slate-800 border-slate-700'}`}>
+        <div className={`flex items-center justify-between px-4 py-3 border-b ${isLight ? 'border-slate-200' : 'border-slate-700'}`}>
           <div>
-            <h3 className="text-white font-medium">Play Purposes</h3>
-            <p className="text-xs text-slate-400">Categorize plays by their strategic role</p>
+            <h3 className={`font-medium ${isLight ? 'text-slate-900' : 'text-white'}`}>Play Purposes</h3>
+            <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Categorize plays by their strategic role</p>
           </div>
           <button
             onClick={addPurpose}
@@ -7223,7 +7289,7 @@ function QualityControlDefinitionsTab({ qualityControlDefinitions, onUpdate }) {
               {(config.playPurposes || []).map(purpose => (
                 <div
                   key={purpose.id}
-                  className="flex items-center justify-between p-3 bg-slate-700/50 rounded-lg"
+                  className={`flex items-center justify-between p-3 rounded-lg ${isLight ? 'bg-slate-100' : 'bg-slate-700/50'}`}
                 >
                   <div className="flex items-center gap-3">
                     <input
@@ -7240,13 +7306,13 @@ function QualityControlDefinitionsTab({ qualityControlDefinitions, onUpdate }) {
                       value={purpose.name}
                       onChange={(e) => updatePurpose(purpose.id, 'name', e.target.value)}
                       aria-label="Purpose name"
-                      className="px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white text-sm w-32"
+                      className={`px-2 py-1 border rounded text-sm w-32 ${isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-600 border-slate-500 text-white'}`}
                     />
                     <span className="text-xs text-slate-500">ID: {purpose.id}</span>
                   </div>
                   <button
                     onClick={() => deletePurpose(purpose.id, purpose.name)}
-                    className="p-1.5 text-red-400 hover:text-red-300 hover:bg-slate-600 rounded"
+                    className={`p-1.5 text-red-400 hover:text-red-300 rounded ${isLight ? 'hover:bg-slate-200' : 'hover:bg-slate-600'}`}
                   >
                     <Trash2 size={16} />
                   </button>
@@ -7258,10 +7324,10 @@ function QualityControlDefinitionsTab({ qualityControlDefinitions, onUpdate }) {
       </div>
 
       {/* Efficiency Thresholds Section */}
-      <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-700">
-          <h3 className="text-white font-medium">Efficiency Thresholds</h3>
-          <p className="text-xs text-slate-400">
+      <div className={`rounded-lg border overflow-hidden ${isLight ? 'bg-white border-slate-200' : 'bg-slate-800 border-slate-700'}`}>
+        <div className={`px-4 py-3 border-b ${isLight ? 'border-slate-200' : 'border-slate-700'}`}>
+          <h3 className={`font-medium ${isLight ? 'text-slate-900' : 'text-white'}`}>Efficiency Thresholds</h3>
+          <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
             Define what counts as an efficient play by down. 1st down = yards needed, 2nd-4th = % of distance.
           </p>
         </div>
@@ -7269,17 +7335,17 @@ function QualityControlDefinitionsTab({ qualityControlDefinitions, onUpdate }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left">
-                <th className="px-3 py-2 text-slate-400 font-medium">Down</th>
-                <th className="px-3 py-2 text-slate-400 font-medium">Run</th>
-                <th className="px-3 py-2 text-slate-400 font-medium">Pass</th>
-                <th className="px-3 py-2 text-slate-400 font-medium">Screen</th>
-                <th className="px-3 py-2 text-slate-400 font-medium">Default</th>
+                <th className={`px-3 py-2 font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Down</th>
+                <th className={`px-3 py-2 font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Run</th>
+                <th className={`px-3 py-2 font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Pass</th>
+                <th className={`px-3 py-2 font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Screen</th>
+                <th className={`px-3 py-2 font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Default</th>
               </tr>
             </thead>
             <tbody>
               {['1st', '2nd', '3rd', '4th'].map(down => (
-                <tr key={down} className="border-t border-slate-700">
-                  <td className="px-3 py-2 text-white font-medium">
+                <tr key={down} className={`border-t ${isLight ? 'border-slate-200' : 'border-slate-700'}`}>
+                  <td className={`px-3 py-2 font-medium ${isLight ? 'text-slate-900' : 'text-white'}`}>
                     {down}
                     <span className="text-xs text-slate-500 ml-2">
                       {down === '1st' ? '(yards)' : '(% of dist)'}
@@ -7295,7 +7361,7 @@ function QualityControlDefinitionsTab({ qualityControlDefinitions, onUpdate }) {
                         value={config.efficiencyThresholds?.[down]?.[bucket] ?? defaults.efficiencyThresholds[down][bucket]}
                         onChange={(e) => updateEfficiencyThreshold(down, bucket, e.target.value)}
                         aria-label={`${down} ${bucket} efficiency threshold`}
-                        className="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-center"
+                        className={`w-16 px-2 py-1 border rounded text-center ${isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-700 border-slate-600 text-white'}`}
                       />
                     </td>
                   ))}
@@ -7307,16 +7373,16 @@ function QualityControlDefinitionsTab({ qualityControlDefinitions, onUpdate }) {
       </div>
 
       {/* Explosive Thresholds Section */}
-      <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-700">
-          <h3 className="text-white font-medium">Explosive Thresholds</h3>
-          <p className="text-xs text-slate-400">Minimum yards for a play to count as "explosive"</p>
+      <div className={`rounded-lg border overflow-hidden ${isLight ? 'bg-white border-slate-200' : 'bg-slate-800 border-slate-700'}`}>
+        <div className={`px-4 py-3 border-b ${isLight ? 'border-slate-200' : 'border-slate-700'}`}>
+          <h3 className={`font-medium ${isLight ? 'text-slate-900' : 'text-white'}`}>Explosive Thresholds</h3>
+          <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Minimum yards for a play to count as "explosive"</p>
         </div>
         <div className="p-4">
           <div className="grid grid-cols-4 gap-4">
             {['run', 'pass', 'screen', 'default'].map(bucket => (
               <div key={bucket}>
-                <label htmlFor={`explosive-${bucket}`} className="block text-xs text-slate-400 mb-1 capitalize">{bucket}</label>
+                <label htmlFor={`explosive-${bucket}`} className={`block text-xs mb-1 capitalize ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>{bucket}</label>
                 <div className="flex items-center gap-2">
                   <input
                     id={`explosive-${bucket}`}
@@ -7324,7 +7390,7 @@ function QualityControlDefinitionsTab({ qualityControlDefinitions, onUpdate }) {
                     min="0"
                     value={config.explosiveThresholds?.[bucket] ?? defaults.explosiveThresholds[bucket]}
                     onChange={(e) => updateExplosiveThreshold(bucket, e.target.value)}
-                    className="w-20 px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-center"
+                    className={`w-20 px-2 py-1.5 border rounded text-center ${isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-700 border-slate-600 text-white'}`}
                   />
                   <span className="text-xs text-slate-500">yards</span>
                 </div>
@@ -7335,35 +7401,35 @@ function QualityControlDefinitionsTab({ qualityControlDefinitions, onUpdate }) {
       </div>
 
       {/* Minimum Volume Section */}
-      <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-700">
-          <h3 className="text-white font-medium">Minimum Volume for Analysis</h3>
-          <p className="text-xs text-slate-400">
+      <div className={`rounded-lg border overflow-hidden ${isLight ? 'bg-white border-slate-200' : 'bg-slate-800 border-slate-700'}`}>
+        <div className={`px-4 py-3 border-b ${isLight ? 'border-slate-200' : 'border-slate-700'}`}>
+          <h3 className={`font-medium ${isLight ? 'text-slate-900' : 'text-white'}`}>Minimum Volume for Analysis</h3>
+          <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
             How many reps/calls before play-level stats are meaningful
           </p>
         </div>
         <div className="p-4">
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label htmlFor="qc-min-volume-practice" className="block text-sm text-slate-300 mb-2">Practice (min reps)</label>
+              <label htmlFor="qc-min-volume-practice" className={`block text-sm mb-2 ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>Practice (min reps)</label>
               <input
                 id="qc-min-volume-practice"
                 type="number"
                 min="1"
                 value={config.minimumVolume?.practice ?? 3}
                 onChange={(e) => updateMinimumVolume('practice', e.target.value)}
-                className="w-24 px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-center"
+                className={`w-24 px-3 py-2 border rounded text-center ${isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-700 border-slate-600 text-white'}`}
               />
             </div>
             <div>
-              <label htmlFor="qc-min-volume-game" className="block text-sm text-slate-300 mb-2">Game (min calls)</label>
+              <label htmlFor="qc-min-volume-game" className={`block text-sm mb-2 ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>Game (min calls)</label>
               <input
                 id="qc-min-volume-game"
                 type="number"
                 min="1"
                 value={config.minimumVolume?.game ?? 2}
                 onChange={(e) => updateMinimumVolume('game', e.target.value)}
-                className="w-24 px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white text-center"
+                className={`w-24 px-3 py-2 border rounded text-center ${isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-700 border-slate-600 text-white'}`}
               />
             </div>
           </div>
