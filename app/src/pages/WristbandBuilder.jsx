@@ -92,10 +92,12 @@ export default function WristbandBuilder() {
     setActiveLevelId,
     setupConfig,
     updateSetupConfig,
-    formations,
-    personnelGroupings,
     offensePositions
   } = useSchool();
+
+  // Get formations and personnelGroupings from setupConfig
+  const formations = useMemo(() => setupConfig?.formations || [], [setupConfig?.formations]);
+  const personnelGroupings = useMemo(() => setupConfig?.personnelGroupings || [], [setupConfig?.personnelGroupings]);
 
   const {
     startBatchSelect,
