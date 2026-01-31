@@ -1000,8 +1000,8 @@ export default function Setup() {
                   <span className={`text-xs px-2 py-0.5 rounded ${(localConfig.setupMode?.[phase] || 'standard') === 'basic'
                     ? isLight ? 'bg-gray-200 text-gray-600' : 'bg-slate-600/30 text-slate-300'
                     : (localConfig.setupMode?.[phase] || 'standard') === 'standard'
-                      ? 'bg-green-600/30 text-green-400'
-                      : 'bg-purple-600/30 text-purple-400'
+                      ? isLight ? 'bg-green-100 text-green-700' : 'bg-green-600/30 text-green-400'
+                      : isLight ? 'bg-purple-100 text-purple-700' : 'bg-purple-600/30 text-purple-400'
                     }`}>
                     {(localConfig.setupMode?.[phase] || 'standard') === 'basic' ? 'Basic' :
                       (localConfig.setupMode?.[phase] || 'standard') === 'standard' ? 'Standard' : 'Advanced'}
@@ -1012,9 +1012,9 @@ export default function Setup() {
                 <button
                   onClick={() => updateLocal('setupMode', { ...localConfig.setupMode, [phase]: 'basic' })}
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${(localConfig.setupMode?.[phase] || 'standard') === 'basic'
-                    ? 'bg-slate-500 text-white'
+                    ? isLight ? 'bg-gray-600 text-white' : 'bg-slate-500 text-white'
                     : isLight
-                      ? 'bg-gray-200 text-gray-600 hover:bg-gray-300 border border-gray-300'
+                      ? 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300'
                       : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                     }`}
                 >
@@ -1026,7 +1026,7 @@ export default function Setup() {
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${(localConfig.setupMode?.[phase] || 'standard') === 'advanced'
                     ? 'bg-purple-600 text-white'
                     : isLight
-                      ? 'bg-gray-200 text-gray-600 hover:bg-gray-300 border border-gray-300'
+                      ? 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300'
                       : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                     }`}
                 >
