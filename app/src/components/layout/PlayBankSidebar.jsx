@@ -64,6 +64,8 @@ export default function PlayBankSidebar({
   // Batch selection state
   const [selectedPlayIds, setSelectedPlayIds] = useState(new Set());
   const [internalBatchMode, setInternalBatchMode] = useState(false); // For internal batch-to-install
+  const [showDestinationSelector, setShowDestinationSelector] = useState(false);
+  const [pendingBatchPlays, setPendingBatchPlays] = useState([]); // Plays to be added after destination selected
 
   // Get play buckets and concept families from setupConfig (with settings fallback)
   const playBuckets = setupConfig?.playBuckets || settings?.playBuckets || [];
@@ -372,6 +374,19 @@ export default function PlayBankSidebar({
       }
     }
 
+    // Check for duplicate play (same name + formation + phase)
+    const isDuplicate = (playsArray || []).some(p =>
+      !p.archived &&
+      (p.phase || 'OFFENSE') === playBankPhase &&
+      p.name?.toUpperCase() === name &&
+      (p.formation || '').toUpperCase() === formation
+    );
+
+    if (isDuplicate) {
+      console.warn('Play already exists:', formation, name);
+      return; // Don't create duplicate
+    }
+
     // Auto-create formation if it doesn't exist in the library
     if (formation && playBankPhase === 'OFFENSE') {
       const existingFormations = setupConfig?.formations || [];
@@ -422,7 +437,7 @@ export default function PlayBankSidebar({
 
     // Clear the input
     setQuickAddValue('');
-  }, [quickAddValue, playBankPhase, addPlay, currentWeek, currentWeekId, updateWeek, parseWithSyntax, setupConfig, updateSetupConfig]);
+  }, [quickAddValue, playBankPhase, addPlay, currentWeek, currentWeekId, updateWeek, parseWithSyntax, setupConfig, updateSetupConfig, playsArray]);
 
   // Toggle play selection for batch mode
   const togglePlaySelection = useCallback((playId) => {
@@ -460,15 +475,22 @@ export default function PlayBankSidebar({
     setSelectedPlayIds(new Set());
   }, []);
 
-  // Handle batch add to install
+  // Handle batch add - show destination selector
   const handleBatchAddToInstall = useCallback(async () => {
-    if (!currentWeek || selectedPlayIds.size === 0) return;
+    if (selectedPlayIds.size === 0) return;
+    setPendingBatchPlays(Array.from(selectedPlayIds));
+    setShowDestinationSelector(true);
+  }, [selectedPlayIds]);
+
+  // Actually add to install after destination selected
+  const addToInstall = useCallback(async (playIds) => {
+    if (!currentWeek || playIds.length === 0) return;
 
     const installList = currentWeek.installList || [];
     const newInstallIds = currentWeek.newInstallIds || [];
 
     // Filter out plays that are already installed
-    const newPlayIds = Array.from(selectedPlayIds).filter(id => !installList.includes(id));
+    const newPlayIds = playIds.filter(id => !installList.includes(id));
 
     if (newPlayIds.length > 0) {
       await updateWeek(currentWeekId, {
@@ -479,7 +501,29 @@ export default function PlayBankSidebar({
 
     setSelectedPlayIds(new Set());
     setInternalBatchMode(false);
-  }, [currentWeek, currentWeekId, selectedPlayIds, updateWeek]);
+    setShowDestinationSelector(false);
+    setPendingBatchPlays([]);
+  }, [currentWeek, currentWeekId, updateWeek]);
+
+  // Handle destination selection
+  const handleDestinationSelect = useCallback((destination) => {
+    if (destination === 'install') {
+      addToInstall(pendingBatchPlays);
+    } else {
+      // Emit event for other destinations to handle
+      // The receiving component will listen for this
+      window.dispatchEvent(new CustomEvent('playbank-batch-add', {
+        detail: {
+          playIds: pendingBatchPlays,
+          destination: destination
+        }
+      }));
+      setSelectedPlayIds(new Set());
+      setInternalBatchMode(false);
+      setShowDestinationSelector(false);
+      setPendingBatchPlays([]);
+    }
+  }, [pendingBatchPlays, addToInstall]);
 
   // Check if in any batch mode (external or internal)
   const isInBatchMode = batchSelectMode || internalBatchMode;
@@ -487,14 +531,17 @@ export default function PlayBankSidebar({
   // Render a single play row
   const renderPlayRow = useCallback((play) => {
     // Build play call with formation first
-    const playCall = play.formation
+    const basePlayCall = play.formation
       ? `${play.formation} ${play.name}`
       : play.name;
+
+    // Append wristband slot to play call if assigned
+    const wristbandSlot = getWristbandDisplay(play);
+    const playCall = wristbandSlot ? `${basePlayCall} ${wristbandSlot}` : basePlayCall;
 
     const isBatchSelected = selectedPlayIds.has(play.id);
     const isSingleSelected = singleSelectMode && contextSelectedPlayId === play.id;
     const isHighlighted = playMatchesHighlightFocuses(play);
-    const wristbandSlot = getWristbandDisplay(play);
     const usage = scriptUsageByPlay[play.id];
 
     // Determine click behavior
@@ -545,12 +592,6 @@ export default function PlayBankSidebar({
           <div className={`flex-1 min-w-0 font-medium truncate ${isBatchSelected ? 'text-sky-700' : (isSingleSelected ? 'text-emerald-700' : 'text-slate-800')}`}>
             {playCall}
           </div>
-          {/* Wristband slot indicator */}
-          {wristbandSlot && (
-            <span className="text-xs font-bold text-sky-600 bg-sky-100 px-1.5 py-0.5 rounded flex-shrink-0 ml-1">
-              {wristbandSlot}
-            </span>
-          )}
           {play.priority && (
             <Star size={12} className="text-amber-500 fill-amber-500 flex-shrink-0 ml-1" />
           )}
@@ -750,55 +791,58 @@ export default function PlayBankSidebar({
           ))}
         </div>
 
-        {/* Quick Add */}
+        {/* Combined Search + Quick Add */}
         <div className="p-2 bg-slate-50 border-b border-slate-200">
-          <label htmlFor="playbank-quick-add" className="sr-only">Quick add play</label>
+          <label htmlFor="playbank-search" className="sr-only">Search or add play</label>
           <div className="flex gap-1.5">
-            <input
-              id="playbank-quick-add"
-              placeholder={
-                currentSyntax.length > 0
-                  ? `e.g. ${currentSyntax.map(c => c.label?.toUpperCase() || '').slice(0, 3).join(' ')}`
-                  : 'Quick add: FORM PLAY NAME'
-              }
-              value={quickAddValue}
-              onChange={e => setQuickAddValue(e.target.value.toUpperCase())}
-              onKeyDown={e => {
-                if (e.key === 'Enter') handleQuickAdd();
-              }}
-              className="flex-1 px-2.5 py-1.5 text-sm border border-slate-300 rounded bg-white text-slate-800 placeholder-slate-400"
-            />
-            <button
-              onClick={handleQuickAdd}
-              disabled={!quickAddValue.trim()}
-              className="px-2.5 py-1.5 bg-emerald-500 text-white rounded text-sm font-semibold hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-              title="Add play to playbook and install"
-            >
-              <PlusCircle size={14} />
-            </button>
+            <div className="relative flex-1">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                id="playbank-search"
+                placeholder="Search or add new play..."
+                value={searchTerm}
+                onChange={e => {
+                  const val = e.target.value.toUpperCase();
+                  setSearchTerm(val);
+                  setQuickAddValue(val);
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && searchTerm.trim()) {
+                    // If exact match exists, don't add duplicate
+                    const exactMatch = (playsArray || []).find(p =>
+                      !p.archived &&
+                      (p.phase || 'OFFENSE') === playBankPhase &&
+                      (p.name?.toUpperCase() === searchTerm.trim() ||
+                       `${p.formation || ''} ${p.name || ''}`.trim().toUpperCase() === searchTerm.trim())
+                    );
+                    if (!exactMatch) {
+                      handleQuickAdd();
+                      setSearchTerm('');
+                    }
+                  }
+                }}
+                className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-300 rounded bg-white text-slate-800 placeholder-slate-400"
+              />
+            </div>
+            {searchTerm.trim() && (
+              <button
+                onClick={() => {
+                  handleQuickAdd();
+                  setSearchTerm('');
+                }}
+                className="px-2.5 py-1.5 bg-emerald-500 text-white rounded text-sm font-semibold hover:bg-emerald-600 flex items-center gap-1"
+                title="Add as new play"
+              >
+                <Plus size={14} />
+              </button>
+            )}
           </div>
-          <p className="text-[10px] text-slate-400 mt-1">
-            {currentSyntax.length > 0
-              ? `Uses your Play Call Chain: ${currentSyntax.map(c => c.label).join(' → ')}`
-              : 'Press Enter to add play'
-            }
-            {currentWeek ? ' • Auto-installs for this week' : ''}
-          </p>
-        </div>
-
-        {/* Search */}
-        <div className="p-2 bg-white border-b border-slate-200">
-          <label htmlFor="playbank-search" className="sr-only">Search plays</label>
-          <div className="relative">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              id="playbank-search"
-              placeholder="Search plays..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value.toUpperCase())}
-              className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-300 rounded bg-white text-slate-800 placeholder-slate-400"
-            />
-          </div>
+          {searchTerm.trim() && (
+            <p className="text-[10px] text-slate-400 mt-1">
+              Press Enter or click + to add "{searchTerm}" as new play
+              {currentWeek ? ' (auto-installs)' : ''}
+            </p>
+          )}
         </div>
 
         {/* Filter Dropdowns */}
@@ -855,15 +899,31 @@ export default function PlayBankSidebar({
         <div className="flex-1 overflow-y-auto bg-white">
           {activeTab === 'usage' && (
             <>
-              {/* Batch Add to Install Button */}
+              {/* Batch Add Buttons */}
               {currentWeek && !isInBatchMode && (
-                <button
-                  onClick={startBatchAddToInstall}
-                  className="w-full px-3 py-2 bg-emerald-50 border-b border-emerald-200 text-emerald-700 text-sm font-medium hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2"
-                >
-                  <CheckSquare size={14} />
-                  Batch Add to Install
-                </button>
+                <div className="flex border-b border-emerald-200">
+                  <button
+                    onClick={startBatchAddToInstall}
+                    className="flex-1 px-3 py-2 bg-emerald-50 text-emerald-700 text-sm font-medium hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2 border-r border-emerald-200"
+                  >
+                    <CheckSquare size={14} />
+                    Batch Add
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Add all visible plays
+                      const allPlayIds = flatAllPlays.map(p => p.id);
+                      if (allPlayIds.length > 0) {
+                        setPendingBatchPlays(allPlayIds);
+                        setShowDestinationSelector(true);
+                      }
+                    }}
+                    className="flex-1 px-3 py-2 bg-sky-50 text-sky-700 text-sm font-medium hover:bg-sky-100 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Plus size={14} />
+                    Add All ({flatAllPlays.length})
+                  </button>
+                </div>
               )}
               {/* Usage header with day columns */}
               <div className="sticky top-0 bg-white border-b border-slate-200 flex items-center">
@@ -900,6 +960,31 @@ export default function PlayBankSidebar({
 
           {activeTab === 'install' && (
             <>
+              {/* Batch Add Buttons for Install Tab */}
+              {currentWeek && !isInBatchMode && flatInstallPlays.length > 0 && (
+                <div className="flex border-b border-sky-200">
+                  <button
+                    onClick={startBatchAddToInstall}
+                    className="flex-1 px-3 py-2 bg-sky-50 text-sky-700 text-sm font-medium hover:bg-sky-100 transition-colors flex items-center justify-center gap-2 border-r border-sky-200"
+                  >
+                    <CheckSquare size={14} />
+                    Batch Add
+                  </button>
+                  <button
+                    onClick={() => {
+                      const allPlayIds = flatInstallPlays.map(p => p.id);
+                      if (allPlayIds.length > 0) {
+                        setPendingBatchPlays(allPlayIds);
+                        setShowDestinationSelector(true);
+                      }
+                    }}
+                    className="flex-1 px-3 py-2 bg-purple-50 text-purple-700 text-sm font-medium hover:bg-purple-100 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Plus size={14} />
+                    Add All ({flatInstallPlays.length})
+                  </button>
+                </div>
+              )}
               {/* Install header with day columns */}
               <div className="sticky top-0 bg-emerald-500 flex items-center">
                 <span className="flex-1 text-xs font-bold text-white uppercase pl-2 py-1.5">
@@ -950,7 +1035,7 @@ export default function PlayBankSidebar({
                 onClick={() => setSelectedPlayIds(new Set())}
                 className="flex-1 px-3 py-2 bg-slate-200 text-slate-700 rounded text-sm font-medium hover:bg-slate-300 transition-colors"
               >
-                Clear All
+                Clear
               </button>
               {internalBatchMode ? (
                 <button
@@ -958,7 +1043,7 @@ export default function PlayBankSidebar({
                   disabled={selectedPlayIds.size === 0}
                   className="flex-1 px-3 py-2 bg-emerald-500 text-white rounded text-sm font-semibold hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  Add to Install ({selectedPlayIds.size})
+                  Add ({selectedPlayIds.size})
                 </button>
               ) : (
                 <button
@@ -969,6 +1054,90 @@ export default function PlayBankSidebar({
                   {batchSelectLabel} ({selectedPlayIds.size})
                 </button>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Destination Selector Modal */}
+        {showDestinationSelector && (
+          <div
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+            onClick={() => {
+              setShowDestinationSelector(false);
+              setPendingBatchPlays([]);
+            }}
+          >
+            <div
+              className="bg-white rounded-lg shadow-xl w-full max-w-sm"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="p-4 border-b border-slate-200">
+                <h3 className="font-semibold text-slate-900">Add {pendingBatchPlays.length} Plays To...</h3>
+              </div>
+              <div className="p-2 space-y-1">
+                <button
+                  onClick={() => handleDestinationSelect('install')}
+                  className="w-full px-4 py-3 text-left rounded-lg hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition-colors"
+                >
+                  <div className="font-medium">Install Manager</div>
+                  <div className="text-xs text-slate-500">Add to this week's install list</div>
+                </button>
+                <button
+                  onClick={() => handleDestinationSelect('wristband')}
+                  className="w-full px-4 py-3 text-left rounded-lg hover:bg-purple-50 text-slate-700 hover:text-purple-700 transition-colors"
+                >
+                  <div className="font-medium">Wristband Builder</div>
+                  <div className="text-xs text-slate-500">Fill empty slots until full</div>
+                </button>
+                <button
+                  onClick={() => handleDestinationSelect('practice-script')}
+                  className="w-full px-4 py-3 text-left rounded-lg hover:bg-orange-50 text-slate-700 hover:text-orange-700 transition-colors"
+                >
+                  <div className="font-medium">Practice Scripts</div>
+                  <div className="text-xs text-slate-500">Add to current script segment</div>
+                </button>
+                <div className="border-t border-slate-200 my-2" />
+                <div className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase">Game Planner</div>
+                <button
+                  onClick={() => handleDestinationSelect('gameplan-quicklist')}
+                  className="w-full px-4 py-3 text-left rounded-lg hover:bg-sky-50 text-slate-700 hover:text-sky-700 transition-colors"
+                >
+                  <div className="font-medium">Situations & Scripts</div>
+                  <div className="text-xs text-slate-500">Add to quick lists for assignment</div>
+                </button>
+                <button
+                  onClick={() => handleDestinationSelect('gameplan-byplayer')}
+                  className="w-full px-4 py-3 text-left rounded-lg hover:bg-sky-50 text-slate-700 hover:text-sky-700 transition-colors"
+                >
+                  <div className="font-medium">By Player</div>
+                  <div className="text-xs text-slate-500">Add to selected player's plays</div>
+                </button>
+                <button
+                  onClick={() => handleDestinationSelect('gameplan-byplaytype')}
+                  className="w-full px-4 py-3 text-left rounded-lg hover:bg-sky-50 text-slate-700 hover:text-sky-700 transition-colors"
+                >
+                  <div className="font-medium">By Play Type</div>
+                  <div className="text-xs text-slate-500">Organize by bucket and concept</div>
+                </button>
+                <button
+                  onClick={() => handleDestinationSelect('gameplan-fzdnd')}
+                  className="w-full px-4 py-3 text-left rounded-lg hover:bg-sky-50 text-slate-700 hover:text-sky-700 transition-colors"
+                >
+                  <div className="font-medium">Field Zone D&D</div>
+                  <div className="text-xs text-slate-500">Add to selected zone</div>
+                </button>
+              </div>
+              <div className="p-3 border-t border-slate-200">
+                <button
+                  onClick={() => {
+                    setShowDestinationSelector(false);
+                    setPendingBatchPlays([]);
+                  }}
+                  className="w-full px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -23,7 +23,6 @@ export default function SheetView({
   onRemovePlayFromSet,
   getPlaysForSet,
   getGridPlays,
-  getWristbandLabel,
   getPlayDisplayName,
   draggedCell,
   setDraggedCell,
@@ -156,18 +155,8 @@ export default function SheetView({
                     wordBreak: 'break-word'
                   }} title={play ? getPlayCall(play) : ''}>
                     {play ? (
-                      <span style={{ display: 'inline', lineHeight: '1.2' }}>
-                        <span style={{ fontWeight: '500' }}>{getPlayDisplayName(play)}</span>
-                        {getWristbandLabel(play) && (
-                          <span style={{
-                            marginLeft: '3px',
-                            fontWeight: 'bold',
-                            color: '#3b82f6',
-                            fontSize: '0.85em'
-                          }}>
-                            {getWristbandLabel(play)}
-                          </span>
-                        )}
+                      <span style={{ display: 'inline', lineHeight: '1.2', fontWeight: '500' }}>
+                        {getPlayDisplayName(play)}
                       </span>
                     ) : (slot.type === 'GAP' ? '' : '-')}
                   </div>
@@ -230,17 +219,7 @@ export default function SheetView({
                     fontSize: '0.65rem',
                     wordBreak: 'break-word'
                   }}>
-                    {getPlayCall(play)}
-                    {getWristbandLabel(play) && (
-                      <span style={{
-                        marginLeft: '3px',
-                        fontSize: '0.85em',
-                        color: '#3b82f6',
-                        fontWeight: 'bold'
-                      }}>
-                        {getWristbandLabel(play)}
-                      </span>
-                    )}
+                    {getPlayDisplayName(play)}
                   </span>
                 ) : (
                   <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>
@@ -293,17 +272,7 @@ export default function SheetView({
                   fontSize: '0.65rem',
                   wordBreak: 'break-word'
                 }}>
-                  {playLeft.name}
-                  {getWristbandLabel(playLeft) && (
-                    <span style={{
-                      marginLeft: '3px',
-                      fontSize: '0.85em',
-                      color: '#3b82f6',
-                      fontWeight: 'bold'
-                    }}>
-                      {getWristbandLabel(playLeft)}
-                    </span>
-                  )}
+                  {getPlayDisplayName(playLeft)}
                 </span>
               ) : (
                 <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>
@@ -326,17 +295,7 @@ export default function SheetView({
                   fontSize: '0.65rem',
                   wordBreak: 'break-word'
                 }}>
-                  {playRight.name}
-                  {getWristbandLabel(playRight) && (
-                    <span style={{
-                      marginLeft: '3px',
-                      fontSize: '0.85em',
-                      color: '#3b82f6',
-                      fontWeight: 'bold'
-                    }}>
-                      {getWristbandLabel(playRight)}
-                    </span>
-                  )}
+                  {getPlayDisplayName(playRight)}
                 </span>
               ) : (
                 <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>+</span>

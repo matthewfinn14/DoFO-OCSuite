@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { ChevronDown, ChevronRight, GripVertical, Star, Hash } from 'lucide-react';
+import { ChevronDown, ChevronRight, GripVertical, Star } from 'lucide-react';
 import { getPlayCall } from '../../utils/playDisplay';
 
 export default function InstallView({
@@ -9,7 +9,7 @@ export default function InstallView({
   setupConfig,
   isLocked,
   onUpdateGamePlan,
-  getWristbandLabel
+  getPlayDisplayName
 }) {
   const [expandedBuckets, setExpandedBuckets] = useState({});
   const [expandedFamilies, setExpandedFamilies] = useState({});
@@ -374,20 +374,12 @@ export default function InstallView({
                                     />
                                   )}
 
-                                  {/* Play Name */}
+                                  {/* Play Name with Wristband */}
                                   <div className="flex-1 min-w-0">
                                     <div className="font-medium text-white truncate">
-                                      {getPlayCall(play)}
+                                      {getPlayDisplayName ? getPlayDisplayName(play) : getPlayCall(play)}
                                     </div>
                                   </div>
-
-                                  {/* Wristband Slot */}
-                                  {getWristbandLabel(play) && (
-                                    <span className="flex items-center gap-1 px-2 py-0.5 bg-sky-500/20 text-sky-400 text-xs rounded flex-shrink-0">
-                                      <Hash size={10} />
-                                      {getWristbandLabel(play)}
-                                    </span>
-                                  )}
                                 </div>
                               );
                             })}

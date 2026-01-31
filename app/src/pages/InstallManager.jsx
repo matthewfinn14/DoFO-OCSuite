@@ -37,16 +37,12 @@ function PlayCard({ play, isNew, isPriority, onToggleNew, onRemove, isLight }) {
         </div>
       )}
 
-      {/* Play Call (Formation + Name) with Wristband Slot */}
-      <div className="flex items-center gap-2 pr-5">
+      {/* Play Call (Formation + Name + Wristband Slot) */}
+      <div className="pr-5">
         <div className={`text-sm font-medium truncate ${isLight ? 'text-gray-900' : 'text-white'}`}>
           {play.formation ? `${play.formation} ${play.name}` : play.name}
+          {getWristbandDisplay(play) && ` ${getWristbandDisplay(play)}`}
         </div>
-        {getWristbandDisplay(play) && (
-          <span className="text-xs font-bold text-sky-600 bg-sky-100 px-1.5 py-0.5 rounded flex-shrink-0">
-            {getWristbandDisplay(play)}
-          </span>
-        )}
       </div>
 
       {/* Bucket/Category info */}

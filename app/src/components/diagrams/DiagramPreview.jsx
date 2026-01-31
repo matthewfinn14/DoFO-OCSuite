@@ -131,13 +131,14 @@ export default function DiagramPreview({
   }, [elements]);
 
   // Use content-fitted viewBox or default
-  // For wiz-skill with fillContainer (wristband cells), use fixed viewBox with side padding
-  // The padding ensures players don't get cut off when paper is trimmed
-  const viewBox = (isWizSkill && fillContainer)
-    ? '-10 0 920 320'  // 10px padding on each side (920 = 900 + 20)
+  // For wiz-skill mode, ALWAYS use full canvas viewBox to maintain background alignment
+  // For wiz-skill with fillContainer (wristband cells), add side padding for trimming
+  // For wiz-oline, use content-fitted bounds for better preview
+  const viewBox = isWizSkill
+    ? (fillContainer ? '-10 0 920 320' : '0 0 900 320')  // Always use full canvas for wiz-skill
     : (bounds
       ? `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`
-      : (isWizSkill ? '0 0 900 320' : '0 0 900 600'));
+      : '0 0 900 600');
 
   if (!elements || elements.length === 0) {
     if (fillContainer) {
@@ -309,13 +310,18 @@ export default function DiagramPreview({
     );
   }
 
+  // Support responsive width (when width is "100%" or similar string)
+  const isResponsive = typeof width === 'string' && width.includes('%');
+  const aspectRatio = isWizSkill ? '900 / 320' : '900 / 600';
+
   return (
     <div
       onClick={onClick}
       className="border border-slate-500 rounded overflow-hidden shadow-sm hover:border-sky-400 transition-colors"
       style={{
         width,
-        height,
+        height: isResponsive ? 'auto' : height,
+        aspectRatio: isResponsive ? aspectRatio : undefined,
         cursor: onClick ? 'pointer' : 'default',
         backgroundColor: isWizSkill ? '#1e293b' : 'white'
       }}

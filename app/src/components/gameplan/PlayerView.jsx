@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { ChevronDown, ChevronRight, GripVertical, Hash, User, X, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, GripVertical, User, X, Plus, Trash2 } from 'lucide-react';
 import { getPlayCall } from '../../utils/playDisplay';
 
 // Default positions for offense (used if no setupConfig)
@@ -41,7 +41,7 @@ export default function PlayerView({
   setupConfig,
   isLocked,
   onUpdateGamePlan,
-  getWristbandLabel
+  getPlayDisplayName
 }) {
   const [expandedPositions, setExpandedPositions] = useState({});
   const [draggedPlay, setDraggedPlay] = useState(null);
@@ -520,14 +520,8 @@ export default function PlayerView({
                                           <GripVertical size={12} className="text-slate-600 flex-shrink-0" />
                                         )}
                                         <span className="flex-1 truncate text-white">
-                                          {getPlayCall(play)}
+                                          {getPlayDisplayName ? getPlayDisplayName(play) : getPlayCall(play)}
                                         </span>
-                                        {getWristbandLabel(play) && (
-                                          <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-sky-500/20 text-sky-400 text-xs rounded flex-shrink-0">
-                                            <Hash size={8} />
-                                            {getWristbandLabel(play)}
-                                          </span>
-                                        )}
                                         {!isLocked && (
                                           <button
                                             onClick={(e) => {

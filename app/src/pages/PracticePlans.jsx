@@ -167,7 +167,7 @@ const generateScriptRows = (duration, existingScript = []) => {
 };
 
 // Play Call Autocomplete Input Component
-function PlayCallAutocomplete({ id, value, playId, plays, onSelectPlay, onChangeText, onClear, placeholder = "Play Call..." }) {
+function PlayCallAutocomplete({ id, value, playId, plays, onSelectPlay, onChangeText, onClear, placeholder = "Play Call...", isLight = false }) {
   const [inputValue, setInputValue] = useState(value || '');
   const [showDropdown, setShowDropdown] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -252,7 +252,7 @@ function PlayCallAutocomplete({ id, value, playId, plays, onSelectPlay, onChange
           onKeyDown={handleKeyDown}
           onFocus={() => inputValue.length > 0 && setShowDropdown(true)}
           placeholder={placeholder}
-          className="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs placeholder-slate-500"
+          className={`flex-1 px-2 py-1 border rounded text-xs ${isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-slate-700 border-slate-600 text-white placeholder-slate-500'}`}
           aria-label="Play call"
         />
         {(inputValue || playId) && (
@@ -264,7 +264,7 @@ function PlayCallAutocomplete({ id, value, playId, plays, onSelectPlay, onChange
               setShowDropdown(false);
               onClear();
             }}
-            className="p-0.5 text-slate-500 hover:text-red-400"
+            className={`p-0.5 ${isLight ? 'text-gray-400 hover:text-red-500' : 'text-slate-500 hover:text-red-400'}`}
           >
             <X size={12} />
           </button>
@@ -275,22 +275,19 @@ function PlayCallAutocomplete({ id, value, playId, plays, onSelectPlay, onChange
       {showDropdown && filteredPlays.length > 0 && (
         <div
           ref={dropdownRef}
-          className="absolute z-50 left-0 right-0 mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-lg max-h-48 overflow-y-auto"
+          className={`absolute z-50 left-0 right-0 mt-1 border rounded-lg shadow-lg max-h-48 overflow-y-auto ${isLight ? 'bg-white border-gray-200' : 'bg-slate-800 border-slate-600'}`}
         >
           {filteredPlays.map((play, idx) => (
             <button
               key={play.id}
               onClick={() => handleSelect(play)}
-              className={`w-full px-3 py-2 text-left text-xs hover:bg-slate-700 ${idx === focusedIndex ? 'bg-slate-700' : ''
-                }`}
+              className={`w-full px-3 py-2 text-left text-xs ${isLight
+                ? `hover:bg-gray-100 ${idx === focusedIndex ? 'bg-gray-100' : ''}`
+                : `hover:bg-slate-700 ${idx === focusedIndex ? 'bg-slate-700' : ''}`
+              }`}
             >
-              <div className="flex items-center gap-2">
-                <span className="text-white font-medium">{getPlayCall(play)}</span>
-                {getWristbandDisplay(play) && (
-                  <span className="text-xs font-bold text-sky-300 bg-sky-900/50 px-1 py-0.5 rounded">
-                    {getWristbandDisplay(play)}
-                  </span>
-                )}
+              <div className={`font-medium ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                {getPlayCall(play)}{getWristbandDisplay(play) ? ` ${getWristbandDisplay(play)}` : ''}
               </div>
             </button>
           ))}
@@ -890,14 +887,15 @@ function FocusMultiSelect({
 }
 
 // Print Settings Modal
-function PrintSettingsModal({ staff, positionGroups, practicePlans, weekName, onClose }) {
+function PrintSettingsModal({ staff, positionGroups, practicePlans, weekName, currentDay, onClose }) {
   const [selectedCoach, setSelectedCoach] = useState('ALL');
+  // Initialize with only the current day selected
   const [selectedDays, setSelectedDays] = useState({
-    Monday: true,
-    Tuesday: true,
-    Wednesday: true,
-    Thursday: true,
-    Friday: true
+    Monday: currentDay === 'Monday',
+    Tuesday: currentDay === 'Tuesday',
+    Wednesday: currentDay === 'Wednesday',
+    Thursday: currentDay === 'Thursday',
+    Friday: currentDay === 'Friday'
   });
 
   const toggleDay = (day) => {
@@ -988,12 +986,28 @@ function PrintSettingsModal({ staff, positionGroups, practicePlans, weekName, on
               <span className="text-sm font-medium text-slate-300">
                 Days to Print
               </span>
-              <button
-                onClick={selectAllDays}
-                className="text-xs text-sky-400 hover:text-sky-300"
-              >
-                Select All
-              </button>
+              <div className="flex items-center gap-3">
+                {currentDay && (
+                  <button
+                    onClick={() => setSelectedDays({
+                      Monday: currentDay === 'Monday',
+                      Tuesday: currentDay === 'Tuesday',
+                      Wednesday: currentDay === 'Wednesday',
+                      Thursday: currentDay === 'Thursday',
+                      Friday: currentDay === 'Friday'
+                    })}
+                    className="text-xs text-slate-400 hover:text-slate-300"
+                  >
+                    Only {DAY_ABBREV[currentDay]}
+                  </button>
+                )}
+                <button
+                  onClick={selectAllDays}
+                  className="text-xs text-sky-400 hover:text-sky-300"
+                >
+                  Select All
+                </button>
+              </div>
             </div>
             <div className="grid grid-cols-5 gap-2">
               {DAYS.map(day => {
@@ -1681,7 +1695,7 @@ export default function PracticePlans() {
   const viewParam = searchParams.get('view'); // 'script' or null
   const navigate = useNavigate();
   const { weeks, updateWeek, setupConfig, updateSetupConfig, staff, settings, activeLevelId, playsArray, plays } = useSchool();
-  const { startBatchSelect, quickAddRequest, setHighlightFocuses } = usePlayBank();
+  const { startBatchSelect, quickAddRequest, setHighlightFocuses, batchAddEvent, clearBatchAddEvent } = usePlayBank();
 
   // Theme detection
   const theme = settings?.theme || 'dark';
@@ -2173,6 +2187,76 @@ export default function PracticePlans() {
     }
   }, [currentPlan, updateSegment]);
 
+  // Handle batch add event from Play Bank sidebar
+  useEffect(() => {
+    if (!batchAddEvent || batchAddEvent.destination !== 'practice-script') return;
+
+    // Get first segment with script enabled
+    const scriptSegments = currentPlan?.segments?.filter(s => s.hasScript) || [];
+    if (scriptSegments.length === 0) {
+      alert('No script segments available. Enable scripting on a segment first.');
+      clearBatchAddEvent();
+      return;
+    }
+
+    // Use the first script segment (could be enhanced to let user pick)
+    const segment = scriptSegments[0];
+    const currentScript = segment.script || [];
+    const playIds = batchAddEvent.playIds;
+
+    // Get empty script rows
+    const emptyRowIndices = currentScript
+      .map((row, idx) => (!row.playId && !row.playName) ? idx : -1)
+      .filter(idx => idx !== -1);
+
+    // Check if we have enough slots
+    const availableSlots = emptyRowIndices.length;
+    const playsToAdd = playIds.length;
+
+    if (availableSlots < playsToAdd) {
+      const addMore = window.confirm(
+        `Only ${availableSlots} empty slots available, but ${playsToAdd} plays selected.\n\n` +
+        `Add ${availableSlots} plays and create ${playsToAdd - availableSlots} new rows?\n\n` +
+        `Click OK to add all, or Cancel to add only ${availableSlots}.`
+      );
+
+      if (!addMore && availableSlots === 0) {
+        clearBatchAddEvent();
+        return;
+      }
+    }
+
+    // Fill empty rows with selected plays
+    let newScript = [...currentScript];
+    let playIndex = 0;
+
+    emptyRowIndices.forEach(rowIdx => {
+      if (playIndex < playIds.length) {
+        const play = plays[playIds[playIndex]];
+        newScript[rowIdx] = {
+          ...newScript[rowIdx],
+          playId: playIds[playIndex],
+          playName: formatPlayCall(play)
+        };
+        playIndex++;
+      }
+    });
+
+    // If more plays than empty rows, add new rows
+    while (playIndex < playIds.length) {
+      const play = plays[playIds[playIndex]];
+      newScript.push({
+        ...createScriptRow(newScript.length),
+        playId: playIds[playIndex],
+        playName: formatPlayCall(play)
+      });
+      playIndex++;
+    }
+
+    updateSegment(segment.id, 'script', newScript);
+    clearBatchAddEvent();
+  }, [batchAddEvent, currentPlan, plays, updateSegment, clearBatchAddEvent, formatPlayCall]);
+
   // Filter plays for play selector
   const filteredPlays = useMemo(() => {
     const phasePlays = playsArray.filter(p =>
@@ -2420,13 +2504,13 @@ export default function PracticePlans() {
 
               {/* Print Section */}
               <div className="flex flex-col gap-1">
-                <label htmlFor="header-print-coach-filter" className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Print For</label>
+                <label htmlFor="header-print-coach-filter" className={`text-[0.65rem] uppercase tracking-wide text-center ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Print For</label>
                 <div className="flex items-center gap-2">
                   <select
                     id="header-print-coach-filter"
                     value={coachFilter}
                     onChange={e => setCoachFilter(e.target.value)}
-                    className="h-8 px-2 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                    className={`h-8 px-2 border rounded text-sm ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
                   >
                     <option value="ALL">All</option>
                     <option value="GENERAL">General</option>
@@ -2436,7 +2520,7 @@ export default function PracticePlans() {
                   </select>
                   <button
                     onClick={() => setShowPrintModal(true)}
-                    className="h-8 flex items-center gap-2 px-3 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors"
+                    className={`h-8 flex items-center gap-2 px-3 rounded-lg transition-colors ${isLight ? 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50' : 'bg-slate-600 text-white hover:bg-slate-500'}`}
                   >
                     <Printer size={16} />
                     Print
@@ -2455,12 +2539,9 @@ export default function PracticePlans() {
             <span className="font-bold px-2 py-0.5 bg-white text-indigo-700 rounded text-xs uppercase tracking-wide shadow-sm">Stamping Mode</span>
             <span className="text-sm flex items-center gap-2">
               Click any play call slot to assign
-              <span className="font-semibold bg-indigo-700 px-2 py-0.5 rounded border border-indigo-500 flex items-center gap-1">
-                {getWristbandDisplay && getWristbandDisplay(stagedPlay) ? (
-                  <span className="text-[0.65rem] bg-sky-400 text-sky-950 px-1 rounded font-bold">#{getWristbandDisplay(stagedPlay)}</span>
-                ) : null}
-                {stagedPlay.name}
-                {stagedPlay.formation && <span className="opacity-75 font-normal text-xs">({stagedPlay.formation})</span>}
+              <span className="font-semibold bg-indigo-700 px-2 py-0.5 rounded border border-indigo-500">
+                {stagedPlay.name}{getWristbandDisplay(stagedPlay) ? ` ${getWristbandDisplay(stagedPlay)}` : ''}
+                {stagedPlay.formation && <span className="opacity-75 font-normal text-xs ml-1">({stagedPlay.formation})</span>}
               </span>
             </span>
           </div>
@@ -3007,11 +3088,11 @@ export default function PracticePlans() {
           /* Script Mode - Full Script Tables */
           <div className="space-y-6">
             {currentPlan.segments.filter(s => s.hasScript).length === 0 ? (
-              <div className="bg-slate-800 rounded-lg p-6">
+              <div className={`rounded-lg p-6 ${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800'}`}>
                 <div className="text-center py-12">
-                  <FileText size={48} className="text-slate-500 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-white mb-2">No Scripts Enabled</h3>
-                  <p className="text-slate-400 text-sm max-w-md mx-auto">
+                  <FileText size={48} className={`mx-auto mb-4 ${isLight ? 'text-gray-400' : 'text-slate-500'}`} />
+                  <h3 className={`text-lg font-medium mb-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>No Scripts Enabled</h3>
+                  <p className={`text-sm max-w-md mx-auto ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
                     Enable scripting for segments in the Plans tab using the "Script" checkbox, then return here to build out play-by-play scripts.
                   </p>
                 </div>
@@ -3040,25 +3121,25 @@ export default function PracticePlans() {
                   }
 
                   return (
-                    <div key={seg.id} className="bg-slate-800 rounded-lg overflow-hidden">
+                    <div key={seg.id} className={`rounded-lg overflow-hidden ${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800'}`}>
                       {/* Segment Header */}
-                      <div className="flex items-center justify-between px-4 py-3 bg-slate-700/50 border-b border-slate-600">
+                      <div className={`flex items-center justify-between px-4 py-3 border-b ${isLight ? 'bg-gray-50 border-gray-200' : 'bg-slate-700/50 border-slate-600'}`}>
                         <div className="flex items-center gap-3">
-                          <span className="text-sky-400 font-mono font-semibold">{segTime}</span>
-                          <span className="text-white font-semibold">{seg.type || 'NEW SEGMENT'}</span>
-                          <span className="text-slate-400 text-sm">({seg.duration || 0} min)</span>
+                          <span className="text-sky-500 font-mono font-semibold">{segTime}</span>
+                          <span className={`font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>{seg.type || 'NEW SEGMENT'}</span>
+                          <span className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>({seg.duration || 0} min)</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleBatchAddToScript(seg.id)}
-                            className="flex items-center gap-1 px-2 py-1 text-sm text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 rounded"
+                            className={`flex items-center gap-1 px-2 py-1 text-sm rounded ${isLight ? 'text-emerald-600 hover:text-emerald-700 bg-emerald-50' : 'text-emerald-400 hover:text-emerald-300 bg-emerald-500/10'}`}
                           >
                             <CheckSquare size={14} />
                             Batch Add
                           </button>
                           <button
                             onClick={() => addScriptRow(seg.id)}
-                            className="flex items-center gap-1 px-2 py-1 text-sm text-sky-400 hover:text-sky-300"
+                            className={`flex items-center gap-1 px-2 py-1 text-sm ${isLight ? 'text-sky-600 hover:text-sky-700' : 'text-sky-400 hover:text-sky-300'}`}
                           >
                             <Plus size={14} />
                             Add Row
@@ -3070,7 +3151,7 @@ export default function PracticePlans() {
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                           <thead>
-                            <tr className="border-b border-slate-700 text-slate-400 text-xs uppercase">
+                            <tr className={`border-b text-xs uppercase ${isLight ? 'border-gray-200 text-gray-500' : 'border-slate-700 text-slate-400'}`}>
                               <th className="px-2 py-2 text-center w-10">#</th>
                               <th className="px-2 py-2 text-center w-16">Hash</th>
                               <th className="px-2 py-2 text-center w-12">Dn</th>
@@ -3086,14 +3167,14 @@ export default function PracticePlans() {
                             {(seg.script || script).map((row, idx) => {
                               const play = row.playId ? getPlay(row.playId) : null;
                               return (
-                                <tr key={row.id} className="border-b border-slate-700/50 hover:bg-slate-700/30">
-                                  <td className="px-2 py-2 text-center text-slate-500">{idx + 1}</td>
+                                <tr key={row.id} className={`border-b ${isLight ? 'border-gray-100 hover:bg-gray-50' : 'border-slate-700/50 hover:bg-slate-700/30'}`}>
+                                  <td className={`px-2 py-2 text-center ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>{idx + 1}</td>
                                   <td className="px-2 py-2 text-center">
                                     <select
                                       id={`script-${seg.id}-${row.id}-hash`}
                                       value={row.hash || 'M'}
                                       onChange={(e) => updateScriptRow(seg.id, row.id, 'hash', e.target.value)}
-                                      className="w-full px-1 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs text-center"
+                                      className={`w-14 pl-2 pr-1 py-1 border rounded text-xs ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
                                       aria-label="Hash mark"
                                     >
                                       <option value="L">L</option>
@@ -3104,19 +3185,21 @@ export default function PracticePlans() {
                                     </select>
                                   </td>
                                   <td className="px-2 py-2 text-center">
-                                    <select
+                                    <input
                                       id={`script-${seg.id}-${row.id}-down`}
+                                      type="text"
+                                      inputMode="numeric"
+                                      maxLength={1}
                                       value={row.dn || ''}
-                                      onChange={(e) => updateScriptRow(seg.id, row.id, 'dn', e.target.value)}
-                                      className="w-full px-1 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs text-center"
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (val === '' || /^[1-4]$/.test(val)) {
+                                          updateScriptRow(seg.id, row.id, 'dn', val);
+                                        }
+                                      }}
+                                      className={`w-full px-1 py-1 border rounded text-xs text-center ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
                                       aria-label="Down"
-                                    >
-                                      <option value=""></option>
-                                      <option value="1">1</option>
-                                      <option value="2">2</option>
-                                      <option value="3">3</option>
-                                      <option value="4">4</option>
-                                    </select>
+                                    />
                                   </td>
                                   <td className="px-2 py-2 text-center">
                                     <input
@@ -3125,7 +3208,7 @@ export default function PracticePlans() {
                                       value={row.dist || ''}
                                       onChange={(e) => updateScriptRow(seg.id, row.id, 'dist', e.target.value)}
                                       placeholder=""
-                                      className="w-full px-1 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs text-center"
+                                      className={`w-full px-1 py-1 border rounded text-xs text-center ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
                                       aria-label="Distance"
                                     />
                                   </td>
@@ -3136,7 +3219,7 @@ export default function PracticePlans() {
                                       value={row.situation || ''}
                                       onChange={(e) => updateScriptRow(seg.id, row.id, 'situation', e.target.value)}
                                       placeholder="Situation"
-                                      className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs placeholder-slate-500"
+                                      className={`w-full px-2 py-1 border rounded text-xs ${isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-slate-700 border-slate-600 text-white placeholder-slate-500'}`}
                                       aria-label="Situation"
                                     />
                                   </td>
@@ -3144,7 +3227,7 @@ export default function PracticePlans() {
                                     className="px-2 py-2"
                                     onDragOver={(e) => {
                                       e.preventDefault();
-                                      e.currentTarget.style.background = '#334155';
+                                      e.currentTarget.style.background = isLight ? '#e0f2fe' : '#334155';
                                     }}
                                     onDragLeave={(e) => {
                                       e.currentTarget.style.background = 'transparent';
@@ -3196,6 +3279,7 @@ export default function PracticePlans() {
                                       value={row.playName || ''}
                                       playId={row.playId}
                                       plays={playsArray}
+                                      isLight={isLight}
                                       onSelectPlay={(play) => {
                                         updateScriptRowFields(seg.id, row.id, {
                                           playId: play.id,
@@ -3221,7 +3305,7 @@ export default function PracticePlans() {
                                       value={row.defense || ''}
                                       onChange={(e) => updateScriptRow(seg.id, row.id, 'defense', e.target.value)}
                                       placeholder="Defense"
-                                      className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs placeholder-slate-500"
+                                      className={`w-full px-2 py-1 border rounded text-xs ${isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-slate-700 border-slate-600 text-white placeholder-slate-500'}`}
                                       aria-label="Defense"
                                     />
                                   </td>
@@ -3232,7 +3316,7 @@ export default function PracticePlans() {
                                       value={row.notes || ''}
                                       onChange={(e) => updateScriptRow(seg.id, row.id, 'notes', e.target.value)}
                                       placeholder="Add Note..."
-                                      className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs placeholder-slate-500"
+                                      className={`w-full px-2 py-1 border rounded text-xs ${isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-slate-700 border-slate-600 text-white placeholder-slate-500'}`}
                                       aria-label="Notes"
                                     />
                                   </td>
@@ -3246,14 +3330,14 @@ export default function PracticePlans() {
                                           newScript.splice(idx + 1, 0, newRow);
                                           updateSegment(seg.id, 'script', newScript);
                                         }}
-                                        className="p-1 text-slate-500 hover:text-sky-400"
+                                        className={`p-1 ${isLight ? 'text-gray-400 hover:text-sky-500' : 'text-slate-500 hover:text-sky-400'}`}
                                         title="Insert row"
                                       >
                                         <Plus size={12} />
                                       </button>
                                       <button
                                         onClick={() => deleteScriptRow(seg.id, row.id)}
-                                        className="p-1 text-slate-500 hover:text-red-400"
+                                        className={`p-1 ${isLight ? 'text-gray-400 hover:text-red-500' : 'text-slate-500 hover:text-red-400'}`}
                                         title="Delete row"
                                       >
                                         <X size={12} />
@@ -3292,6 +3376,7 @@ export default function PracticePlans() {
           positionGroups={positionGroups}
           practicePlans={practicePlans}
           weekName={week?.name || ''}
+          currentDay={selectedDay}
           onClose={() => setShowPrintModal(false)}
         />
       )}
@@ -3318,23 +3403,23 @@ export default function PracticePlans() {
 
       {/* Play Selector Modal */}
       {showPlaySelector && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 rounded-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-slate-800">
-              <h3 className="text-lg font-semibold text-white">Select Play</h3>
+        <div className={`fixed inset-0 flex items-center justify-center z-50 p-4 ${isLight ? 'bg-black/50' : 'bg-black/70'}`}>
+          <div className={`rounded-xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col ${isLight ? 'bg-white' : 'bg-slate-900'}`}>
+            <div className={`flex items-center justify-between p-4 border-b ${isLight ? 'border-gray-200' : 'border-slate-800'}`}>
+              <h3 className={`text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>Select Play</h3>
               <button
                 onClick={() => {
                   setShowPlaySelector(false);
                   setActiveScriptSegmentId(null);
                   setActiveScriptRowId(null);
                 }}
-                className="p-2 text-slate-400 hover:text-white"
+                className={`p-2 ${isLight ? 'text-gray-400 hover:text-gray-600' : 'text-slate-400 hover:text-white'}`}
               >
                 <X size={20} />
               </button>
             </div>
 
-            <div className="p-4 border-b border-slate-800">
+            <div className={`p-4 border-b ${isLight ? 'border-gray-200' : 'border-slate-800'}`}>
               <div className="flex gap-3">
                 <div className="relative flex-1">
                   <input
@@ -3343,7 +3428,7 @@ export default function PracticePlans() {
                     value={playSearchTerm}
                     onChange={e => setPlaySearchTerm(e.target.value)}
                     placeholder="Search plays..."
-                    className="w-full px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500"
+                    className={`w-full px-4 py-2 border rounded-lg ${isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-slate-800 border-slate-700 text-white placeholder-slate-500'}`}
                     autoFocus
                     aria-label="Search plays"
                   />
@@ -3352,7 +3437,7 @@ export default function PracticePlans() {
                   id="play-selector-phase"
                   value={playFilterPhase}
                   onChange={e => setPlayFilterPhase(e.target.value)}
-                  className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                  className={`px-3 py-2 border rounded-lg ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-800 border-slate-700 text-white'}`}
                   aria-label="Filter by phase"
                 >
                   <option value="OFFENSE">Offense</option>
@@ -3364,7 +3449,7 @@ export default function PracticePlans() {
 
             <div className="flex-1 overflow-y-auto p-4">
               {filteredPlays.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">
+                <div className={`text-center py-8 ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
                   <p>No plays found</p>
                 </div>
               ) : (
@@ -3373,18 +3458,13 @@ export default function PracticePlans() {
                     <button
                       key={play.id}
                       onClick={() => selectPlayForRow(play)}
-                      className="p-3 bg-slate-800 rounded-lg hover:bg-slate-700 text-left transition-colors"
+                      className={`p-3 rounded-lg text-left transition-colors ${isLight ? 'bg-gray-50 hover:bg-gray-100 border border-gray-200' : 'bg-slate-800 hover:bg-slate-700'}`}
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-white">{getPlayCall(play)}</span>
-                        {getWristbandDisplay(play) && (
-                          <span className="text-xs font-bold text-sky-300 bg-sky-900/50 px-1 py-0.5 rounded">
-                            {getWristbandDisplay(play)}
-                          </span>
-                        )}
+                      <div className={`font-medium ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                        {getPlayCall(play)}{getWristbandDisplay(play) ? ` ${getWristbandDisplay(play)}` : ''}
                       </div>
                       {play.bucket && (
-                        <div className="text-sm text-slate-500 mt-1">
+                        <div className={`text-sm mt-1 ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
                           <span>{play.bucket}</span>
                         </div>
                       )}

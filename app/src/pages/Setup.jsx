@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
 import { useAuth } from '../context/AuthContext';
@@ -37,7 +37,11 @@ import {
   Target,
   ArrowRightLeft,
   ClipboardCheck,
-  Star
+  Star,
+  Dumbbell,
+  Video,
+  ChevronRight,
+  Watch
 } from 'lucide-react';
 import PlayDiagramEditor from '../components/diagrams/PlayDiagramEditor';
 import DiagramPreview from '../components/diagrams/DiagramPreview';
@@ -692,6 +696,14 @@ export default function Setup() {
       needsSave = true;
     }
 
+    // Drills Library - initialize empty structure if not present
+    if (!config?.drillsLibrary) {
+      updated.drillsLibrary = {
+        positionDrills: {},
+        schemeDrills: {}
+      };
+    }
+
     updated._needsDefaultSave = needsSave;
     return updated;
   };
@@ -878,7 +890,8 @@ export default function Setup() {
       return [
         { id: 'position-groups', label: 'Position Groups', icon: Users },
         { id: 'segment-types', label: 'Segment Types', icon: Layers },
-        { id: 'segment-focus', label: 'Segment Focus', icon: Target }
+        { id: 'segment-focus', label: 'Segment Focus', icon: Target },
+        { id: 'drills-library', label: 'Skills & Drills', icon: Dumbbell }
       ];
     }
     // Check if in basic mode
@@ -1404,6 +1417,13 @@ export default function Setup() {
               }}
               onUpdateFamilies={(families) => updateLocal('formationFamilies', families)}
               positionColors={localConfig.positionColors || {}}
+              positionNames={localConfig.positionNames || {}}
+              hiddenPositions={localConfig.hiddenPositions?.OFFENSE || []}
+              customPositions={localConfig.customPositions?.OFFENSE || []}
+              customDefaultPositions={localConfig.defaultFormationPositions || {}}
+              onSaveDefaultPositions={(positions) => updateLocal('defaultFormationPositions', positions)}
+              customFamilyCategories={localConfig.customFamilyCategories || []}
+              onUpdateCategories={(categories) => updateLocal('customFamilyCategories', categories)}
               isLight={isLight}
             />
           )}
@@ -1549,6 +1569,17 @@ export default function Setup() {
               specialSituations={localConfig.specialSituations || []}
               shiftMotions={localConfig.shiftMotions || []}
               qcPlayPurposes={localConfig.qcPlayPurposes || []}
+              onUpdate={updateLocal}
+              isLight={isLight}
+            />
+          )}
+
+          {/* Skills & Drills Library Tab */}
+          {activeTab === 'drills-library' && isPractice && (
+            <DrillsLibraryTab
+              drillsLibrary={localConfig.drillsLibrary || { positionDrills: {}, schemeDrills: {} }}
+              positionGroups={localConfig.positionGroups || {}}
+              playBuckets={localConfig.playBuckets || []}
               onUpdate={updateLocal}
               isLight={isLight}
             />
@@ -2201,10 +2232,19 @@ function PersonnelTab({ personnelGroupings, positions, positionNames, positionCo
 }
 
 // Formations Tab Component
-function FormationsTab({ phase, formations, personnelGroupings, formationFamilies = [], onUpdate, onUpdateFamilies, positionColors = {}, isLight = false }) {
+function FormationsTab({ phase, formations, personnelGroupings, formationFamilies = [], onUpdate, onUpdateFamilies, positionColors = {}, positionNames = {}, hiddenPositions = [], customPositions = [], customDefaultPositions = {}, onSaveDefaultPositions, customFamilyCategories = [], onUpdateCategories, isLight = false }) {
   const [showFamiliesSection, setShowFamiliesSection] = useState(true);
   const [editingFormationId, setEditingFormationId] = useState(null);
+  const [showCreateEditor, setShowCreateEditor] = useState(false); // For creating new formations from scratch
   const isOffense = phase === 'OFFENSE';
+
+  // Compute available offense positions (same logic as SchoolContext)
+  const offensePositions = (() => {
+    const defaults = ['QB', 'RB', 'FB', 'WR', 'TE', 'X', 'Y', 'Z', 'H', 'F', 'A', 'B'];
+    const visible = defaults.filter(p => !hiddenPositions.includes(p));
+    const customKeys = customPositions.map(p => p.key).filter(Boolean);
+    return [...visible, ...customKeys];
+  })();
 
   // Get the formation being edited
   const editingFormation = editingFormationId ? formations.find(f => f.id === editingFormationId) : null;
@@ -2241,21 +2281,41 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
     const playerElements = elements.filter(el => el.type === 'player');
     const positions = playerElements.map(el => {
       const point = el.points[0];
-      return {
+      const pos = {
         label: el.label,
         x: Math.round((point.x / 900) * 100 * 10) / 10, // Convert to percentage
         y: Math.round((point.y / 320) * 100 * 10) / 10,
-        shape: el.shape,
-        variant: el.variant,
-        color: el.color,
-        fontSize: el.fontSize,
-        groupId: el.groupId ? 'grouped' : undefined
+        shape: el.shape || 'circle',
+        variant: el.variant || 'filled'
       };
+      // Only include optional fields if they have values (Firebase doesn't allow undefined)
+      if (el.color) pos.color = el.color;
+      if (el.fontSize) pos.fontSize = el.fontSize;
+      if (el.groupId) pos.groupId = 'grouped';
+      return pos;
     });
 
     // Update the formation with positions
     updateFormation(editingFormationId, { positions });
     setEditingFormationId(null);
+  };
+
+  // Handle "Save As" new formation from WIZ editor (creates a new formation)
+  const handleSaveAsNewFormation = (newFormation) => {
+    // newFormation comes from PlayDiagramEditor's saveFormationTemplate with { name, personnel, positions }
+    const formation = {
+      id: `form_${Date.now()}`,
+      name: newFormation.name,
+      personnel: newFormation.personnel || '',
+      families: [],
+      positions: newFormation.positions,
+      phase,
+      createdAt: new Date().toISOString()
+    };
+    onUpdate([...formations, formation]);
+    // Close the editor after saving
+    setEditingFormationId(null);
+    setShowCreateEditor(false);
   };
 
   // Get initial elements for the WIZ editor based on formation
@@ -2281,39 +2341,107 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
     return null;
   };
 
+  // Default family category definitions
+  const DEFAULT_FAMILY_CATEGORIES = [
+    { id: 'distribution', name: 'WR Distribution', description: 'Receiver count by side (2x2, 3x1, etc.)', isDefault: true },
+    { id: 'exchange', name: 'QB Alignment', description: 'QB-Center exchange type', isDefault: true },
+    { id: 'backfield', name: 'Backfield', description: 'RB/FB positioning', isDefault: true },
+    { id: 'te', name: 'TE Positioning', description: 'Tight end alignment', isDefault: true },
+    { id: 'grouping', name: 'WR Groupings', description: 'Receiver formations (Trips, Bunch, etc.)', isDefault: true },
+    { id: 'strength', name: 'Strength', description: 'Formation strength call', isDefault: true },
+    { id: 'trade', name: 'Trade', description: 'OL trade formations', isDefault: true },
+    { id: 'type', name: 'Formation Type', description: 'Open/Closed surface', isDefault: true },
+    { id: 'other', name: 'Other', description: 'Miscellaneous tags', isDefault: true },
+  ];
+
+  // Merge default and custom categories
+  const FAMILY_CATEGORIES = useMemo(() => {
+    const custom = customFamilyCategories || [];
+    return [...DEFAULT_FAMILY_CATEGORIES, ...custom];
+  }, [customFamilyCategories]);
+
+  // State for add category modal
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryDescription, setNewCategoryDescription] = useState('');
+
+  const addCategory = () => {
+    if (!newCategoryName.trim()) return;
+    const newCategory = {
+      id: `cat_${Date.now()}`,
+      name: newCategoryName.trim(),
+      description: newCategoryDescription.trim() || `Custom category: ${newCategoryName.trim()}`,
+      isDefault: false
+    };
+    onUpdateCategories([...(customFamilyCategories || []), newCategory]);
+    setShowAddCategoryModal(false);
+    setNewCategoryName('');
+    setNewCategoryDescription('');
+  };
+
+  const deleteCategory = (categoryId) => {
+    const category = FAMILY_CATEGORIES.find(c => c.id === categoryId);
+    if (category?.isDefault) {
+      alert('Cannot delete default categories.');
+      return;
+    }
+    if (!confirm(`Delete "${category?.name}" category? Families in this category will be moved to "Other".`)) return;
+
+    // Move families in this category to 'other'
+    const updatedFamilies = formationFamilies.map(f =>
+      f.category === categoryId ? { ...f, category: 'other' } : f
+    );
+    onUpdateFamilies(updatedFamilies);
+
+    // Remove the category
+    onUpdateCategories((customFamilyCategories || []).filter(c => c.id !== categoryId));
+  };
+
   // Default formation families organized by category
   const DEFAULT_FAMILIES = [
-    // Receiver Distribution (numbers)
+    // WR Distribution
     { id: 'family_2x2', name: '2x2', color: '#3b82f6', category: 'distribution' },
     { id: 'family_3x1', name: '3x1', color: '#8b5cf6', category: 'distribution' },
     { id: 'family_2x1', name: '2x1', color: '#06b6d4', category: 'distribution' },
     { id: 'family_3x2', name: '3x2', color: '#6366f1', category: 'distribution' },
-    // QB-Center Exchange
+    // QB Alignment
     { id: 'family_under', name: 'Under Center', color: '#ef4444', category: 'exchange' },
     { id: 'family_gun', name: 'Gun', color: '#22c55e', category: 'exchange' },
     { id: 'family_pistol', name: 'Pistol', color: '#f59e0b', category: 'exchange' },
-    // TE Alignment
+    // Backfield
+    { id: 'family_i', name: 'I-Form', color: '#7c3aed', category: 'backfield' },
+    { id: 'family_split', name: 'Split Backs', color: '#0891b2', category: 'backfield' },
+    { id: 'family_offset', name: 'Offset', color: '#65a30d', category: 'backfield' },
+    // TE Positioning
     { id: 'family_yon', name: 'Y On', color: '#ec4899', category: 'te' },
     { id: 'family_yoff', name: 'Y Off', color: '#14b8a6', category: 'te' },
     { id: 'family_nub', name: 'Nub', color: '#f97316', category: 'te' },
     { id: 'family_wing', name: 'Wing', color: '#a855f7', category: 'te' },
-    // Groupings
+    { id: 'family_flexte', name: 'Flex TE', color: '#06b6d4', category: 'te' },
+    // WR Groupings
     { id: 'family_trips', name: 'Trips', color: '#0ea5e9', category: 'grouping' },
     { id: 'family_twins', name: 'Twins', color: '#84cc16', category: 'grouping' },
     { id: 'family_bunch', name: 'Bunch', color: '#f43f5e', category: 'grouping' },
     { id: 'family_stack', name: 'Stack', color: '#7c3aed', category: 'grouping' },
     { id: 'family_empty', name: 'Empty', color: '#64748b', category: 'grouping' },
-    // Direction/Side
-    { id: 'family_right', name: 'Right', color: '#059669', category: 'direction' },
-    { id: 'family_left', name: 'Left', color: '#dc2626', category: 'direction' },
-    // Strength (formation strength)
-    { id: 'family_str_right', name: 'Strength Right', color: '#0891b2', category: 'strength' },
-    { id: 'family_str_left', name: 'Strength Left', color: '#7c2d12', category: 'strength' },
+    // Strength
+    { id: 'family_strong', name: 'Strong', color: '#059669', category: 'strength' },
+    { id: 'family_weak', name: 'Weak', color: '#dc2626', category: 'strength' },
     { id: 'family_balanced', name: 'Balanced', color: '#6b7280', category: 'strength' },
+    // Trade
+    { id: 'family_trade', name: 'Trade', color: '#b45309', category: 'trade' },
+    { id: 'family_tackle_over', name: 'Tackle Over', color: '#7c2d12', category: 'trade' },
+    { id: 'family_unbalanced', name: 'Unbalanced', color: '#991b1b', category: 'trade' },
     // Formation Type
     { id: 'family_open', name: 'Open', color: '#0d9488', category: 'type' },
-    { id: 'family_closed', name: 'Closed', color: '#b45309', category: 'type' },
+    { id: 'family_closed', name: 'Closed', color: '#78350f', category: 'type' },
   ];
+
+  // State for add family modal
+  const [showAddFamilyModal, setShowAddFamilyModal] = useState(false);
+  const [newFamilyName, setNewFamilyName] = useState('');
+  const [newFamilyCategory, setNewFamilyCategory] = useState('other');
+  const [newFamilyColor, setNewFamilyColor] = useState('#3b82f6');
 
   const loadDefaultFamilies = () => {
     if (formationFamilies.length > 0 && !confirm('This will add default families to your existing list. Continue?')) return;
@@ -2323,16 +2451,29 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
     onUpdateFamilies([...formationFamilies, ...newFamilies]);
   };
 
+  // Group families by category
+  const familiesByCategory = useMemo(() => {
+    const grouped = {};
+    FAMILY_CATEGORIES.forEach(cat => {
+      grouped[cat.id] = formationFamilies.filter(f => (f.category || 'other') === cat.id);
+    });
+    return grouped;
+  }, [formationFamilies]);
+
   // Family management
   const addFamily = () => {
-    const name = prompt('Family name:');
-    if (!name) return;
+    if (!newFamilyName.trim()) return;
     const newFamily = {
       id: `family_${Date.now()}`,
-      name,
-      color: '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')
+      name: newFamilyName.trim(),
+      color: newFamilyColor,
+      category: newFamilyCategory
     };
     onUpdateFamilies([...formationFamilies, newFamily]);
+    setShowAddFamilyModal(false);
+    setNewFamilyName('');
+    setNewFamilyCategory('other');
+    setNewFamilyColor('#3b82f6');
   };
 
   const deleteFamily = (id) => {
@@ -2394,54 +2535,236 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
                 )}
               </div>
 
-              <div className="flex flex-wrap gap-2 mb-4">
-                {formationFamilies.map(family => (
-                  <div
-                    key={family.id}
-                    className="group flex items-center gap-1.5 px-2 py-1 rounded-lg border"
-                    style={{ backgroundColor: family.color + '20', borderColor: family.color }}
-                  >
-                    <input
-                      id={`family-color-${family.id}`}
-                      type="color"
-                      value={family.color}
-                      onChange={(e) => updateFamily(family.id, { color: e.target.value })}
-                      aria-label={`${family.name} color`}
-                      className="w-4 h-4 rounded cursor-pointer border-0"
-                    />
-                    <input
-                      id={`family-name-${family.id}`}
-                      type="text"
-                      value={family.name}
-                      onChange={(e) => updateFamily(family.id, { name: e.target.value })}
-                      aria-label="Family name"
-                      className={`bg-transparent text-sm font-medium border-none focus:outline-none w-20 ${isLight ? 'text-gray-800' : 'text-white'}`}
-                    />
-                    <button
-                      onClick={() => deleteFamily(family.id)}
-                      className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-opacity"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))}
+              {/* Families grouped by category */}
+              <div className="space-y-3">
+                {FAMILY_CATEGORIES.map(category => {
+                  const categoryFamilies = familiesByCategory[category.id] || [];
+                  if (categoryFamilies.length === 0 && formationFamilies.length > 0) return null;
+
+                  return (
+                    <div key={category.id} className={`p-2 rounded-lg ${isLight ? 'bg-gray-50' : 'bg-slate-700/30'}`}>
+                      <div className="flex items-center justify-between mb-2 group">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-semibold uppercase tracking-wide ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                            {category.name}
+                          </span>
+                          {!category.isDefault && (
+                            <span className="text-[10px] px-1.5 py-0.5 bg-purple-500/20 text-purple-400 rounded">Custom</span>
+                          )}
+                          <span className={`text-xs ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
+                            {category.description}
+                          </span>
+                        </div>
+                        {!category.isDefault && (
+                          <button
+                            onClick={() => deleteCategory(category.id)}
+                            className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-opacity p-1"
+                            title="Delete category"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {categoryFamilies.map(family => (
+                          <div
+                            key={family.id}
+                            className="group flex items-center gap-1 px-2 py-0.5 rounded border text-sm"
+                            style={{ backgroundColor: family.color + '20', borderColor: family.color }}
+                          >
+                            <input
+                              id={`family-color-${family.id}`}
+                              type="color"
+                              value={family.color}
+                              onChange={(e) => updateFamily(family.id, { color: e.target.value })}
+                              aria-label={`${family.name} color`}
+                              className="w-3 h-3 rounded cursor-pointer border-0"
+                            />
+                            <input
+                              id={`family-name-${family.id}`}
+                              type="text"
+                              value={family.name}
+                              onChange={(e) => updateFamily(family.id, { name: e.target.value })}
+                              aria-label="Family name"
+                              className={`bg-transparent text-xs font-medium border-none focus:outline-none w-16 ${isLight ? 'text-gray-800' : 'text-white'}`}
+                            />
+                            <select
+                              value={family.category || 'other'}
+                              onChange={(e) => updateFamily(family.id, { category: e.target.value })}
+                              aria-label="Family category"
+                              className={`opacity-0 group-hover:opacity-100 w-4 h-4 text-[10px] bg-transparent border-none cursor-pointer transition-opacity ${isLight ? 'text-gray-500' : 'text-slate-400'}`}
+                              title="Change category"
+                            >
+                              {FAMILY_CATEGORIES.map(cat => (
+                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                              ))}
+                            </select>
+                            <button
+                              onClick={() => deleteFamily(family.id)}
+                              className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-opacity"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ))}
+                        {categoryFamilies.length === 0 && (
+                          <span className={`text-xs italic ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
+                            No {category.name.toLowerCase()} families yet
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-3 mt-4">
                 <button
-                  onClick={addFamily}
-                  className={`flex items-center gap-1 px-3 py-1 rounded-lg text-sm ${isLight ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+                  onClick={() => setShowAddFamilyModal(true)}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm ${isLight ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
                 >
                   <Plus size={14} /> Add Family
                 </button>
+                <button
+                  onClick={() => setShowAddCategoryModal(true)}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm ${isLight ? 'bg-purple-100 text-purple-600 hover:bg-purple-200' : 'bg-purple-900/30 text-purple-400 hover:bg-purple-900/50'}`}
+                >
+                  <Plus size={14} /> Add Category
+                </button>
+                {formationFamilies.length === 0 ? (
+                  <span className={`text-xs italic ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
+                    Click "Load Defaults" above to get started
+                  </span>
+                ) : (
+                  <button
+                    onClick={loadDefaultFamilies}
+                    className="text-xs text-amber-500 hover:text-amber-400 underline"
+                  >
+                    + Add more default families
+                  </button>
+                )}
               </div>
 
-              {formationFamilies.length === 0 ? (
-                <p className={`text-xs italic ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>No families defined yet. Click "Load Defaults" above or add custom families.</p>
-              ) : (
-                <button
-                  onClick={loadDefaultFamilies}
-                  className="text-xs text-amber-500 hover:text-amber-400 underline"
-                >
-                  + Add more default families
-                </button>
+              {/* Add Family Modal */}
+              {showAddFamilyModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                  <div className={`rounded-lg shadow-xl w-80 ${isLight ? 'bg-white' : 'bg-slate-800'}`}>
+                    <div className={`p-4 border-b ${isLight ? 'border-gray-200' : 'border-slate-700'}`}>
+                      <h4 className={`font-semibold ${isLight ? 'text-gray-800' : 'text-white'}`}>Add Formation Family</h4>
+                    </div>
+                    <div className="p-4 space-y-4">
+                      <div>
+                        <label className={`block text-xs font-medium mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                          Family Name
+                        </label>
+                        <input
+                          type="text"
+                          value={newFamilyName}
+                          onChange={(e) => setNewFamilyName(e.target.value)}
+                          placeholder="e.g., Trips, Gun, Strong..."
+                          className={`w-full px-3 py-2 rounded border text-sm ${isLight ? 'bg-white border-gray-300' : 'bg-slate-700 border-slate-600 text-white'}`}
+                          autoFocus
+                        />
+                      </div>
+                      <div>
+                        <label className={`block text-xs font-medium mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                          Category
+                        </label>
+                        <select
+                          value={newFamilyCategory}
+                          onChange={(e) => setNewFamilyCategory(e.target.value)}
+                          className={`w-full px-3 py-2 rounded border text-sm ${isLight ? 'bg-white border-gray-300' : 'bg-slate-700 border-slate-600 text-white'}`}
+                        >
+                          {FAMILY_CATEGORIES.map(cat => (
+                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={`block text-xs font-medium mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                          Color
+                        </label>
+                        <input
+                          type="color"
+                          value={newFamilyColor}
+                          onChange={(e) => setNewFamilyColor(e.target.value)}
+                          className="w-full h-8 rounded cursor-pointer"
+                        />
+                      </div>
+                    </div>
+                    <div className={`p-4 border-t flex justify-end gap-2 ${isLight ? 'border-gray-200' : 'border-slate-700'}`}>
+                      <button
+                        onClick={() => { setShowAddFamilyModal(false); setNewFamilyName(''); }}
+                        className={`px-3 py-1.5 rounded text-sm ${isLight ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={addFamily}
+                        disabled={!newFamilyName.trim()}
+                        className="px-3 py-1.5 bg-sky-600 text-white rounded text-sm hover:bg-sky-700 disabled:opacity-50"
+                      >
+                        Add Family
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Add Category Modal */}
+              {showAddCategoryModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                  <div className={`rounded-lg shadow-xl w-80 ${isLight ? 'bg-white' : 'bg-slate-800'}`}>
+                    <div className={`p-4 border-b ${isLight ? 'border-gray-200' : 'border-slate-700'}`}>
+                      <h4 className={`font-semibold ${isLight ? 'text-gray-800' : 'text-white'}`}>Add Custom Category</h4>
+                      <p className={`text-xs mt-1 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                        Create a new category to organize formation families
+                      </p>
+                    </div>
+                    <div className="p-4 space-y-4">
+                      <div>
+                        <label className={`block text-xs font-medium mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                          Category Name
+                        </label>
+                        <input
+                          type="text"
+                          value={newCategoryName}
+                          onChange={(e) => setNewCategoryName(e.target.value)}
+                          placeholder="e.g., Tempo, Personnel Sets, Motion Type..."
+                          className={`w-full px-3 py-2 rounded border text-sm ${isLight ? 'bg-white border-gray-300' : 'bg-slate-700 border-slate-600 text-white'}`}
+                          autoFocus
+                        />
+                      </div>
+                      <div>
+                        <label className={`block text-xs font-medium mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                          Description (optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={newCategoryDescription}
+                          onChange={(e) => setNewCategoryDescription(e.target.value)}
+                          placeholder="Brief description of this category"
+                          className={`w-full px-3 py-2 rounded border text-sm ${isLight ? 'bg-white border-gray-300' : 'bg-slate-700 border-slate-600 text-white'}`}
+                        />
+                      </div>
+                    </div>
+                    <div className={`p-4 border-t flex justify-end gap-2 ${isLight ? 'border-gray-200' : 'border-slate-700'}`}>
+                      <button
+                        onClick={() => { setShowAddCategoryModal(false); setNewCategoryName(''); setNewCategoryDescription(''); }}
+                        className={`px-3 py-1.5 rounded text-sm ${isLight ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={addCategory}
+                        disabled={!newCategoryName.trim()}
+                        className="px-3 py-1.5 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 disabled:opacity-50"
+                      >
+                        Add Category
+                      </button>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           )}
@@ -2459,12 +2782,23 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
                 : `Define your ${phaseLabel.toLowerCase()} and link them to personnel packages.`}
             </p>
           </div>
-          <button
-            onClick={addFormation}
-            className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700"
-          >
-            <Plus size={16} /> Add {phase === 'DEFENSE' ? 'Front' : phase === 'SPECIAL_TEAMS' ? 'Package' : 'Formation'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={addFormation}
+              className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700"
+            >
+              <Plus size={16} /> Add {phase === 'DEFENSE' ? 'Front' : phase === 'SPECIAL_TEAMS' ? 'Package' : 'Formation'}
+            </button>
+            {isOffense && (
+              <button
+                onClick={() => setShowCreateEditor(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                title="Open diagram editor to create and save formations"
+              >
+                <Grid size={16} /> Create with Diagram
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -2564,49 +2898,46 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
         )}
       </div>
 
-      {/* WIZ Formation Editor Modal */}
+      {/* WIZ Formation Editor Modal - Edit Existing Formation */}
       {editingFormationId && editingFormation && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className={`w-full max-w-5xl rounded-xl overflow-hidden flex flex-col max-h-[90vh] ${isLight ? 'bg-white' : 'bg-slate-900'}`}>
-            {/* Modal Header */}
-            <div className={`flex items-center justify-between px-6 py-4 border-b ${isLight ? 'border-gray-200' : 'border-slate-700'}`}>
-              <div>
-                <h2 className={`text-lg font-bold ${isLight ? 'text-gray-800' : 'text-white'}`}>
-                  Set Formation Diagram: {editingFormation.name}
-                </h2>
-                <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
-                  Position players to define this formation template
-                </p>
-              </div>
-              <button
-                onClick={() => setEditingFormationId(null)}
-                className={`p-2 rounded-lg ${isLight ? 'hover:bg-gray-100 text-gray-500' : 'hover:bg-slate-800 text-slate-400'}`}
-              >
-                <X size={24} />
-              </button>
-            </div>
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60]">
+          <div className="bg-slate-800 rounded-lg w-[95vw] h-[95vh] overflow-hidden">
+            <PlayDiagramEditor
+              mode="wiz-skill"
+              initialData={{ elements: getInitialElements() }}
+              personnelGroupings={personnelGroupings}
+              formations={formations}
+              positionColors={positionColors}
+              positionNames={positionNames}
+              offensePositions={offensePositions}
+              customDefaultPositions={customDefaultPositions}
+              onSaveDefaultPositions={onSaveDefaultPositions}
+              playName={`Formation: ${editingFormation.name}`}
+              onSave={({ elements }) => handleSaveFormationDiagram(elements)}
+              onSaveFormation={handleSaveAsNewFormation}
+              onCancel={() => setEditingFormationId(null)}
+            />
+          </div>
+        </div>
+      )}
 
-            {/* WIZ Editor */}
-            <div className="flex-1 overflow-auto p-4">
-              <PlayDiagramEditor
-                mode="wiz-skill"
-                initialData={{ elements: getInitialElements() }}
-                personnelGroupings={personnelGroupings}
-                formations={formations}
-                positionColors={positionColors}
-                onSave={({ elements }) => handleSaveFormationDiagram(elements)}
-              />
-            </div>
-
-            {/* Modal Footer */}
-            <div className={`flex items-center justify-end gap-3 px-6 py-4 border-t ${isLight ? 'border-gray-200 bg-gray-50' : 'border-slate-700 bg-slate-800/50'}`}>
-              <button
-                onClick={() => setEditingFormationId(null)}
-                className={`px-4 py-2 rounded-lg ${isLight ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
-              >
-                Cancel
-              </button>
-            </div>
+      {/* WIZ Formation Editor Modal - Create New Formations */}
+      {showCreateEditor && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60]">
+          <div className="bg-slate-800 rounded-lg w-[95vw] h-[95vh] overflow-hidden">
+            <PlayDiagramEditor
+              mode="wiz-skill"
+              personnelGroupings={personnelGroupings}
+              formations={formations}
+              positionColors={positionColors}
+              positionNames={positionNames}
+              offensePositions={offensePositions}
+              customDefaultPositions={customDefaultPositions}
+              onSaveDefaultPositions={onSaveDefaultPositions}
+              playName="Formation Builder"
+              onSaveFormation={handleSaveAsNewFormation}
+              onCancel={() => setShowCreateEditor(false)}
+            />
           </div>
         </div>
       )}
@@ -4754,6 +5085,13 @@ function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupCo
         </div>
       )}
 
+      {/* Wristband Abbreviations Section */}
+      <WristbandAbbreviationsSection
+        phase={phase}
+        setupConfig={setupConfig}
+        onUpdate={onUpdate}
+      />
+
       {/* Teach from Example Modal */}
       <TeachPlayCallModal
         isOpen={showTeachModal}
@@ -4763,6 +5101,314 @@ function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupCo
         termLibrary={termLibrary}
         onUpdate={onUpdate}
       />
+    </div>
+  );
+}
+
+// Wristband Abbreviations Section Component
+function WristbandAbbreviationsSection({ phase, setupConfig, onUpdate }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [searchFilter, setSearchFilter] = useState('');
+
+  // Get all abbreviations
+  const abbreviations = setupConfig?.wristbandAbbreviations || {};
+
+  // Collect all terms from various sources
+  const allTerms = useMemo(() => {
+    const terms = [];
+    const config = setupConfig || {};
+
+    // Formations
+    (config.formations || []).forEach(f => {
+      if (f.name && f.phase === phase) {
+        terms.push({ term: f.name, category: 'Formation', source: 'formations' });
+      }
+    });
+
+    // Formation Families (Offense only)
+    if (phase === 'OFFENSE') {
+      (config.formationFamilies || []).forEach(f => {
+        if (f.name) {
+          terms.push({ term: f.name, category: 'Family', source: 'formationFamilies' });
+        }
+      });
+    }
+
+    // Personnel Groupings
+    (config.personnelGroupings || []).forEach(p => {
+      const name = p.name || p.code;
+      if (name) {
+        terms.push({ term: name, category: 'Personnel', source: 'personnelGroupings' });
+      }
+    });
+
+    // Shifts/Motions (Offense only)
+    if (phase === 'OFFENSE') {
+      (config.shiftMotions || []).forEach(m => {
+        if (m.name) {
+          terms.push({ term: m.name, category: 'Motion', source: 'shiftMotions' });
+        }
+      });
+    }
+
+    // Play Buckets
+    (config.playBuckets || []).forEach(b => {
+      if (b.name && b.phase === phase) {
+        terms.push({ term: b.name, category: 'Bucket', source: 'playBuckets' });
+      }
+    });
+
+    // Concept Groups
+    (config.conceptGroups || []).forEach(c => {
+      if (c.name && c.phase === phase) {
+        terms.push({ term: c.name, category: 'Concept', source: 'conceptGroups' });
+      }
+    });
+
+    // Read Types (Offense only)
+    if (phase === 'OFFENSE') {
+      (config.readTypes || []).forEach(r => {
+        const name = r.name || r;
+        if (name) {
+          terms.push({ term: name, category: 'Read Type', source: 'readTypes' });
+        }
+      });
+    }
+
+    // Pass Protections (Offense only)
+    if (phase === 'OFFENSE') {
+      (config.passProtections || []).forEach(p => {
+        const name = p.name || p;
+        if (name) {
+          terms.push({ term: name, category: 'Protection', source: 'passProtections' });
+        }
+      });
+    }
+
+    // Run Blocking (Offense only)
+    if (phase === 'OFFENSE') {
+      (config.runBlocking || []).forEach(r => {
+        const name = r.name || r;
+        if (name) {
+          terms.push({ term: name, category: 'Run Scheme', source: 'runBlocking' });
+        }
+      });
+    }
+
+    // Term Library custom terms
+    const termLibrary = config.termLibrary?.[phase] || {};
+    Object.entries(termLibrary).forEach(([categoryId, categoryTerms]) => {
+      (categoryTerms || []).forEach(t => {
+        if (t.label) {
+          terms.push({ term: t.label, category: categoryId, source: 'termLibrary' });
+        }
+      });
+    });
+
+    // Remove duplicates
+    const seen = new Set();
+    return terms.filter(t => {
+      const key = t.term.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).sort((a, b) => a.term.localeCompare(b.term));
+  }, [setupConfig, phase]);
+
+  // Filter terms
+  const filteredTerms = searchFilter
+    ? allTerms.filter(t =>
+        t.term.toLowerCase().includes(searchFilter.toLowerCase()) ||
+        t.category.toLowerCase().includes(searchFilter.toLowerCase())
+      )
+    : allTerms;
+
+  // Group terms by category
+  const termsByCategory = useMemo(() => {
+    const grouped = {};
+    filteredTerms.forEach(t => {
+      if (!grouped[t.category]) grouped[t.category] = [];
+      grouped[t.category].push(t);
+    });
+    return grouped;
+  }, [filteredTerms]);
+
+  // Update abbreviation
+  const updateAbbreviation = (term, abbrev) => {
+    const newAbbreviations = { ...abbreviations };
+    if (abbrev.trim()) {
+      newAbbreviations[term] = abbrev.trim();
+    } else {
+      delete newAbbreviations[term];
+    }
+    onUpdate('wristbandAbbreviations', newAbbreviations);
+  };
+
+  // Auto-generate common abbreviations
+  const autoGenerateAbbreviations = () => {
+    if (!confirm('This will generate abbreviations for terms that don\'t have one. Existing abbreviations will not be changed. Continue?')) return;
+
+    const newAbbreviations = { ...abbreviations };
+
+    allTerms.forEach(({ term }) => {
+      if (newAbbreviations[term]) return; // Skip if already has abbreviation
+
+      // Generate abbreviation based on common patterns
+      let abbrev = '';
+
+      // Common replacements
+      const replacements = {
+        'Right': 'RT',
+        'Left': 'LT',
+        'Under Center': 'UC',
+        'Pistol': 'PST',
+        'Shotgun': 'GUN',
+        'Gun': 'GUN',
+        'Trips': 'TRP',
+        'Twins': 'TWN',
+        'Bunch': 'BN',
+        'Stack': 'STK',
+        'Empty': 'EMP',
+        'Strong': 'STR',
+        'Weak': 'WK',
+        'Inside': 'IN',
+        'Outside': 'OUT',
+        'Zone': 'ZN',
+        'Power': 'PWR',
+        'Counter': 'CTR',
+        'Sweep': 'SWP',
+        'Screen': 'SCR',
+        'Quick': 'QK',
+        'Play Action': 'PA',
+        'Sprint Out': 'SO',
+        'Boot': 'BT',
+        'Draw': 'DRW',
+        'Slant': 'SL',
+        'Curl': 'CRL',
+        'Out': 'OUT',
+        'Corner': 'CNR',
+        'Post': 'PST',
+        'Dig': 'DIG',
+        'Seam': 'SM',
+        'Wheel': 'WHL',
+        'Flat': 'FLT',
+        'Check': 'CHK',
+        'Release': 'REL'
+      };
+
+      // Check for exact match first
+      if (replacements[term]) {
+        abbrev = replacements[term];
+      } else {
+        // Try to build abbreviation from words
+        const words = term.split(/\s+/);
+        if (words.length === 1) {
+          // Single word - take first 3 letters
+          abbrev = term.substring(0, 3).toUpperCase();
+        } else {
+          // Multiple words - take first letter of each, or first 2 letters if only 2 words
+          abbrev = words.map((w, i) => {
+            // Check if this word has a known replacement
+            for (const [key, val] of Object.entries(replacements)) {
+              if (w.toLowerCase() === key.toLowerCase()) {
+                return val;
+              }
+            }
+            return words.length <= 2 ? w.substring(0, 2).toUpperCase() : w[0].toUpperCase();
+          }).join('');
+        }
+      }
+
+      if (abbrev && abbrev !== term) {
+        newAbbreviations[term] = abbrev;
+      }
+    });
+
+    onUpdate('wristbandAbbreviations', newAbbreviations);
+  };
+
+  // Count how many have abbreviations
+  const abbrevCount = allTerms.filter(t => abbreviations[t.term]).length;
+
+  return (
+    <div className="mt-8 border-t border-slate-700 pt-6">
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700 hover:bg-slate-700/50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <Watch size={20} className="text-amber-500" />
+          <div className="text-left">
+            <h3 className="font-semibold text-white">Wristband Abbreviations</h3>
+            <p className="text-xs text-slate-400">
+              Define shortened versions of terms for wristband space constraints
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-slate-500">
+            {abbrevCount} of {allTerms.length} terms abbreviated
+          </span>
+          {isExpanded ? <ChevronDown size={18} className="text-slate-400" /> : <ChevronRight size={18} className="text-slate-400" />}
+        </div>
+      </button>
+
+      {isExpanded && (
+        <div className="mt-4 p-4 bg-slate-800/30 rounded-lg border border-slate-700">
+          {/* Controls */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-1">
+              <input
+                type="text"
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+                placeholder="Search terms..."
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-slate-400"
+              />
+            </div>
+            <button
+              onClick={autoGenerateAbbreviations}
+              className="px-4 py-2 bg-amber-600 text-white text-sm rounded hover:bg-amber-700"
+            >
+              Auto-Generate
+            </button>
+          </div>
+
+          {/* Terms by category */}
+          {Object.keys(termsByCategory).length === 0 ? (
+            <div className="text-center py-8 text-slate-400">
+              <p>No terms found. Add formations, motions, concepts, etc. to see them here.</p>
+            </div>
+          ) : (
+            <div className="space-y-4 max-h-[400px] overflow-y-auto">
+              {Object.entries(termsByCategory).sort(([a], [b]) => a.localeCompare(b)).map(([category, terms]) => (
+                <div key={category}>
+                  <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">{category}</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                    {terms.map(({ term }) => (
+                      <div key={term} className="flex items-center gap-2 bg-slate-700/50 rounded px-3 py-1.5">
+                        <span className="flex-1 text-sm text-white truncate" title={term}>{term}</span>
+                        <span className="text-slate-500">→</span>
+                        <input
+                          type="text"
+                          value={abbreviations[term] || ''}
+                          onChange={(e) => updateAbbreviation(term, e.target.value)}
+                          placeholder="abbrev"
+                          className="w-20 px-2 py-1 bg-slate-600 border border-slate-500 rounded text-xs text-white placeholder-slate-400 text-center"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <p className="mt-4 text-xs text-slate-500">
+            Tip: Abbreviations are used on wristbands when the full term doesn't fit. Leave blank to use the full term.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -5610,6 +6256,782 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Equipment presets for drills
+const EQUIPMENT_PRESETS = [
+  'cones', 'bags', 'sled', 'tackling dummy', 'agility ladder',
+  'resistance bands', 'medicine ball', 'blocking pad', 'footballs'
+];
+
+// Difficulty levels for position drills
+const DIFFICULTY_LEVELS = [
+  { id: 'basic', label: 'Basic', color: 'bg-emerald-500' },
+  { id: 'intermediate', label: 'Intermediate', color: 'bg-amber-500' },
+  { id: 'advanced', label: 'Advanced', color: 'bg-red-500' }
+];
+
+// Phase options for drill library (O/D/K only, no Competition)
+const DRILL_PHASES = [
+  { id: 'OFFENSE', label: 'Offense', color: 'bg-blue-600' },
+  { id: 'DEFENSE', label: 'Defense', color: 'bg-red-600' },
+  { id: 'SPECIAL_TEAMS', label: 'Special Teams', color: 'bg-amber-600' }
+];
+
+// Skills & Drills Library Tab Component
+function DrillsLibraryTab({ drillsLibrary, positionGroups, playBuckets, onUpdate, isLight = false }) {
+  const [activePhase, setActivePhase] = useState('OFFENSE');
+  const [expandedGroups, setExpandedGroups] = useState({});
+  const [expandedBuckets, setExpandedBuckets] = useState({});
+  const [showDrillModal, setShowDrillModal] = useState(null); // { type: 'position' | 'scheme', groupId, bucketId, drill? }
+
+  // Get position groups for current phase
+  const currentPositionGroups = positionGroups[activePhase] || [];
+
+  // Get play buckets for current phase (scheme drills)
+  const currentBuckets = (playBuckets || []).filter(b => b.phase === activePhase);
+
+  // Toggle group expansion
+  const toggleGroup = (groupId) => {
+    setExpandedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
+
+  // Toggle bucket expansion
+  const toggleBucket = (bucketId) => {
+    setExpandedBuckets(prev => ({ ...prev, [bucketId]: !prev[bucketId] }));
+  };
+
+  // Get drills for a position group and difficulty level
+  const getPositionDrills = (groupId, difficulty) => {
+    return drillsLibrary.positionDrills?.[groupId]?.[difficulty] || [];
+  };
+
+  // Get drills for a scheme (bucket/concept)
+  const getSchemeDrills = (bucketId) => {
+    return drillsLibrary.schemeDrills?.[bucketId] || [];
+  };
+
+  // Add a new position drill
+  const addPositionDrill = (groupId, drill) => {
+    const currentDrills = drillsLibrary.positionDrills?.[groupId]?.[drill.difficulty] || [];
+    const newDrill = {
+      ...drill,
+      id: `drill_${Date.now()}`
+    };
+
+    const updated = {
+      ...drillsLibrary,
+      positionDrills: {
+        ...drillsLibrary.positionDrills,
+        [groupId]: {
+          ...(drillsLibrary.positionDrills?.[groupId] || {}),
+          [drill.difficulty]: [...currentDrills, newDrill]
+        }
+      }
+    };
+    onUpdate('drillsLibrary', updated);
+  };
+
+  // Update a position drill
+  const updatePositionDrill = (groupId, originalDifficulty, drill) => {
+    // If difficulty changed, we need to move the drill
+    if (originalDifficulty !== drill.difficulty) {
+      // Remove from old difficulty
+      const oldDrills = (drillsLibrary.positionDrills?.[groupId]?.[originalDifficulty] || [])
+        .filter(d => d.id !== drill.id);
+      // Add to new difficulty
+      const newDrills = [...(drillsLibrary.positionDrills?.[groupId]?.[drill.difficulty] || []), drill];
+
+      const updated = {
+        ...drillsLibrary,
+        positionDrills: {
+          ...drillsLibrary.positionDrills,
+          [groupId]: {
+            ...(drillsLibrary.positionDrills?.[groupId] || {}),
+            [originalDifficulty]: oldDrills,
+            [drill.difficulty]: newDrills
+          }
+        }
+      };
+      onUpdate('drillsLibrary', updated);
+    } else {
+      // Same difficulty, just update in place
+      const currentDrills = drillsLibrary.positionDrills?.[groupId]?.[drill.difficulty] || [];
+      const updated = {
+        ...drillsLibrary,
+        positionDrills: {
+          ...drillsLibrary.positionDrills,
+          [groupId]: {
+            ...(drillsLibrary.positionDrills?.[groupId] || {}),
+            [drill.difficulty]: currentDrills.map(d => d.id === drill.id ? drill : d)
+          }
+        }
+      };
+      onUpdate('drillsLibrary', updated);
+    }
+  };
+
+  // Delete a position drill
+  const deletePositionDrill = (groupId, difficulty, drillId) => {
+    if (!confirm('Delete this drill?')) return;
+    const currentDrills = drillsLibrary.positionDrills?.[groupId]?.[difficulty] || [];
+    const updated = {
+      ...drillsLibrary,
+      positionDrills: {
+        ...drillsLibrary.positionDrills,
+        [groupId]: {
+          ...(drillsLibrary.positionDrills?.[groupId] || {}),
+          [difficulty]: currentDrills.filter(d => d.id !== drillId)
+        }
+      }
+    };
+    onUpdate('drillsLibrary', updated);
+  };
+
+  // Add a scheme drill
+  const addSchemeDrill = (bucketId, drill) => {
+    const currentDrills = drillsLibrary.schemeDrills?.[bucketId] || [];
+    const newDrill = {
+      ...drill,
+      id: `drill_${Date.now()}`
+    };
+
+    const updated = {
+      ...drillsLibrary,
+      schemeDrills: {
+        ...drillsLibrary.schemeDrills,
+        [bucketId]: [...currentDrills, newDrill]
+      }
+    };
+    onUpdate('drillsLibrary', updated);
+  };
+
+  // Update a scheme drill
+  const updateSchemeDrill = (bucketId, drill) => {
+    const currentDrills = drillsLibrary.schemeDrills?.[bucketId] || [];
+    const updated = {
+      ...drillsLibrary,
+      schemeDrills: {
+        ...drillsLibrary.schemeDrills,
+        [bucketId]: currentDrills.map(d => d.id === drill.id ? drill : d)
+      }
+    };
+    onUpdate('drillsLibrary', updated);
+  };
+
+  // Delete a scheme drill
+  const deleteSchemeDrill = (bucketId, drillId) => {
+    if (!confirm('Delete this drill?')) return;
+    const currentDrills = drillsLibrary.schemeDrills?.[bucketId] || [];
+    const updated = {
+      ...drillsLibrary,
+      schemeDrills: {
+        ...drillsLibrary.schemeDrills,
+        [bucketId]: currentDrills.filter(d => d.id !== drillId)
+      }
+    };
+    onUpdate('drillsLibrary', updated);
+  };
+
+  // Handle save from modal
+  const handleSaveDrill = (drill) => {
+    const { type, groupId, bucketId, originalDifficulty } = showDrillModal;
+
+    if (type === 'position') {
+      if (showDrillModal.drill) {
+        updatePositionDrill(groupId, originalDifficulty, drill);
+      } else {
+        addPositionDrill(groupId, drill);
+      }
+    } else {
+      if (showDrillModal.drill) {
+        updateSchemeDrill(bucketId, drill);
+      } else {
+        addSchemeDrill(bucketId, drill);
+      }
+    }
+    setShowDrillModal(null);
+  };
+
+  // Render a single drill item
+  const DrillItem = ({ drill, onEdit, onDelete, showPositionGroups = false }) => {
+    // Get position group abbreviations for scheme drills
+    const getGroupAbbrevs = () => {
+      if (!showPositionGroups || !drill.positionGroupIds?.length) return null;
+      const abbrevs = drill.positionGroupIds.map(gid => {
+        const group = currentPositionGroups.find(g => g.id === gid);
+        return group?.abbrev || gid;
+      });
+      return abbrevs.join(', ');
+    };
+
+    return (
+      <div className={`flex items-center justify-between px-3 py-2 rounded-lg group ${isLight ? 'bg-gray-50 hover:bg-gray-100' : 'bg-slate-700/30 hover:bg-slate-700/50'}`}>
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <span className={`font-medium truncate ${isLight ? 'text-gray-900' : 'text-white'}`}>
+            {drill.name}
+          </span>
+          {showPositionGroups && drill.positionGroupIds?.length > 0 && (
+            <span className={`text-xs px-2 py-0.5 rounded ${isLight ? 'bg-sky-100 text-sky-700' : 'bg-sky-900/50 text-sky-300'}`}>
+              {getGroupAbbrevs()}
+            </span>
+          )}
+          <span className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+            {drill.duration} min
+          </span>
+          {drill.videoUrl && (
+            <Video size={14} className={`${isLight ? 'text-sky-600' : 'text-sky-400'}`} />
+          )}
+        </div>
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={() => onEdit(drill)}
+            className={`p-1.5 rounded ${isLight ? 'hover:bg-gray-200 text-gray-600' : 'hover:bg-slate-600 text-slate-300'}`}
+          >
+            <Edit3 size={14} />
+          </button>
+          <button
+            onClick={() => onDelete(drill.id)}
+            className="p-1.5 rounded text-red-400 hover:text-red-300 hover:bg-red-500/10"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h3 className={`text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>Skills & Drills Library</h3>
+        <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+          Organize drills by position group (with difficulty levels) and by scheme (tied to play buckets).
+        </p>
+      </div>
+
+      {/* Phase Selector */}
+      <div className="flex gap-2 mb-6">
+        {DRILL_PHASES.map(p => (
+          <button
+            key={p.id}
+            onClick={() => setActivePhase(p.id)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activePhase === p.id
+                ? `${p.color} text-white`
+                : isLight
+                  ? 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
+                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Position Drills Section */}
+      <div className={`mb-8 p-4 rounded-lg border ${isLight ? 'bg-white border-gray-200' : 'bg-slate-800/50 border-slate-700'}`}>
+        <h4 className={`text-base font-semibold mb-4 ${isLight ? 'text-gray-900' : 'text-white'}`}>
+          Position Drills
+        </h4>
+
+        {currentPositionGroups.length === 0 ? (
+          <div className={`text-center py-8 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+            <Users size={32} className="mx-auto mb-2 opacity-50" />
+            <p>No position groups defined for {DRILL_PHASES.find(p => p.id === activePhase)?.label}.</p>
+            <p className="text-sm mt-1">Add position groups in the Position Groups tab first.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {currentPositionGroups.map(group => {
+              const isExpanded = expandedGroups[group.id];
+              const totalDrills = DIFFICULTY_LEVELS.reduce((sum, level) =>
+                sum + getPositionDrills(group.id, level.id).length, 0
+              );
+
+              return (
+                <div key={group.id} className={`rounded-lg border overflow-hidden ${isLight ? 'border-gray-200' : 'border-slate-600'}`}>
+                  {/* Group Header */}
+                  <div
+                    onClick={() => toggleGroup(group.id)}
+                    className={`flex items-center justify-between px-4 py-3 cursor-pointer ${isLight ? 'bg-gray-50 hover:bg-gray-100' : 'bg-slate-700/50 hover:bg-slate-700'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <ChevronRight
+                        size={18}
+                        className={`transition-transform ${isExpanded ? 'rotate-90' : ''} ${isLight ? 'text-gray-500' : 'text-slate-400'}`}
+                      />
+                      <span className="bg-sky-500 text-white px-2 py-0.5 rounded text-xs font-bold">
+                        {group.abbrev}
+                      </span>
+                      <span className={`font-medium ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                        {group.name}
+                      </span>
+                      <span className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                        ({totalDrills} drill{totalDrills !== 1 ? 's' : ''})
+                      </span>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowDrillModal({ type: 'position', groupId: group.id });
+                      }}
+                      className="flex items-center gap-1 px-3 py-1 bg-sky-600 text-white text-sm rounded hover:bg-sky-700 transition-colors"
+                    >
+                      <Plus size={14} /> Add Drill
+                    </button>
+                  </div>
+
+                  {/* Expanded Content - Drills by Difficulty */}
+                  {isExpanded && (
+                    <div className={`px-4 py-3 ${isLight ? 'bg-white' : 'bg-slate-800/30'}`}>
+                      {DIFFICULTY_LEVELS.map(level => {
+                        const drills = getPositionDrills(group.id, level.id);
+                        return (
+                          <div key={level.id} className="mb-4 last:mb-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className={`${level.color} text-white text-xs font-bold px-2 py-0.5 rounded`}>
+                                {level.label.toUpperCase()}
+                              </span>
+                              <span className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                                ({drills.length})
+                              </span>
+                            </div>
+                            {drills.length > 0 ? (
+                              <div className="space-y-1 ml-4">
+                                {drills.map(drill => (
+                                  <DrillItem
+                                    key={drill.id}
+                                    drill={drill}
+                                    onEdit={(d) => setShowDrillModal({
+                                      type: 'position',
+                                      groupId: group.id,
+                                      drill: d,
+                                      originalDifficulty: level.id
+                                    })}
+                                    onDelete={(id) => deletePositionDrill(group.id, level.id, id)}
+                                  />
+                                ))}
+                              </div>
+                            ) : (
+                              <p className={`text-sm ml-4 italic ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
+                                No drills added yet
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Scheme Drills Section */}
+      <div className={`p-4 rounded-lg border ${isLight ? 'bg-white border-gray-200' : 'bg-slate-800/50 border-slate-700'}`}>
+        <h4 className={`text-base font-semibold mb-4 ${isLight ? 'text-gray-900' : 'text-white'}`}>
+          Scheme Drills
+        </h4>
+
+        {currentBuckets.length === 0 ? (
+          <div className={`text-center py-8 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+            <Tag size={32} className="mx-auto mb-2 opacity-50" />
+            <p>No play buckets defined for {DRILL_PHASES.find(p => p.id === activePhase)?.label}.</p>
+            <p className="text-sm mt-1">Add play buckets in the Define Play Buckets tab first.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {currentBuckets.map(bucket => {
+              const isExpanded = expandedBuckets[bucket.id];
+              const drills = getSchemeDrills(bucket.id);
+
+              return (
+                <div key={bucket.id} className={`rounded-lg border overflow-hidden ${isLight ? 'border-gray-200' : 'border-slate-600'}`}>
+                  {/* Bucket Header */}
+                  <div
+                    onClick={() => toggleBucket(bucket.id)}
+                    className={`flex items-center justify-between px-4 py-3 cursor-pointer ${isLight ? 'bg-gray-50 hover:bg-gray-100' : 'bg-slate-700/50 hover:bg-slate-700'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <ChevronRight
+                        size={18}
+                        className={`transition-transform ${isExpanded ? 'rotate-90' : ''} ${isLight ? 'text-gray-500' : 'text-slate-400'}`}
+                      />
+                      <span
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: bucket.color || '#94a3b8' }}
+                      />
+                      <span className={`font-medium ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                        {bucket.label}
+                      </span>
+                      <span className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                        ({drills.length} drill{drills.length !== 1 ? 's' : ''})
+                      </span>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowDrillModal({ type: 'scheme', bucketId: bucket.id });
+                      }}
+                      className="flex items-center gap-1 px-3 py-1 bg-sky-600 text-white text-sm rounded hover:bg-sky-700 transition-colors"
+                    >
+                      <Plus size={14} /> Add Drill
+                    </button>
+                  </div>
+
+                  {/* Expanded Content - Scheme Drills */}
+                  {isExpanded && (
+                    <div className={`px-4 py-3 ${isLight ? 'bg-white' : 'bg-slate-800/30'}`}>
+                      {drills.length > 0 ? (
+                        <div className="space-y-1">
+                          {drills.map(drill => (
+                            <DrillItem
+                              key={drill.id}
+                              drill={drill}
+                              showPositionGroups={true}
+                              onEdit={(d) => setShowDrillModal({
+                                type: 'scheme',
+                                bucketId: bucket.id,
+                                drill: d
+                              })}
+                              onDelete={(id) => deleteSchemeDrill(bucket.id, id)}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <p className={`text-sm italic ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
+                          No drills added yet
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Add/Edit Drill Modal */}
+      {showDrillModal && (
+        <DrillModal
+          isOpen={true}
+          type={showDrillModal.type}
+          drill={showDrillModal.drill}
+          positionGroups={currentPositionGroups}
+          isLight={isLight}
+          onSave={handleSaveDrill}
+          onClose={() => setShowDrillModal(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Drill Add/Edit Modal Component
+function DrillModal({ isOpen, type, drill, positionGroups, isLight, onSave, onClose }) {
+  const [name, setName] = useState(drill?.name || '');
+  const [description, setDescription] = useState(drill?.description || '');
+  const [difficulty, setDifficulty] = useState(drill?.difficulty || 'basic');
+  const [videoUrl, setVideoUrl] = useState(drill?.videoUrl || '');
+  const [duration, setDuration] = useState(drill?.duration || 5);
+  const [equipment, setEquipment] = useState(drill?.equipment || []);
+  const [selectedPositionGroupIds, setSelectedPositionGroupIds] = useState(drill?.positionGroupIds || []);
+  const [newEquipment, setNewEquipment] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    const drillData = {
+      id: drill?.id,
+      name: name.trim(),
+      description: description.trim(),
+      videoUrl: videoUrl.trim(),
+      duration: parseInt(duration) || 5,
+      equipment,
+      ...(type === 'position' ? { difficulty } : { positionGroupIds: selectedPositionGroupIds })
+    };
+
+    onSave(drillData);
+  };
+
+  const addEquipment = (item) => {
+    if (item && !equipment.includes(item)) {
+      setEquipment([...equipment, item]);
+    }
+    setNewEquipment('');
+  };
+
+  const removeEquipment = (item) => {
+    setEquipment(equipment.filter(e => e !== item));
+  };
+
+  const togglePositionGroup = (groupId) => {
+    if (selectedPositionGroupIds.includes(groupId)) {
+      setSelectedPositionGroupIds(selectedPositionGroupIds.filter(id => id !== groupId));
+    } else {
+      setSelectedPositionGroupIds([...selectedPositionGroupIds, groupId]);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className={`w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-lg shadow-xl ${isLight ? 'bg-white' : 'bg-slate-800'}`}>
+        <div className={`sticky top-0 flex items-center justify-between px-6 py-4 border-b ${isLight ? 'bg-white border-gray-200' : 'bg-slate-800 border-slate-700'}`}>
+          <h3 className={`text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+            {drill ? 'Edit' : 'Add'} {type === 'position' ? 'Position' : 'Scheme'} Drill
+          </h3>
+          <button
+            onClick={onClose}
+            className={`p-1 rounded ${isLight ? 'hover:bg-gray-100 text-gray-500' : 'hover:bg-slate-700 text-slate-400'}`}
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {/* Drill Name */}
+          <div>
+            <label className={`block text-sm font-medium mb-1 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+              Drill Name *
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g., Stance Check, IZ Footwork"
+              className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                isLight
+                  ? 'bg-white border-gray-300 text-gray-900'
+                  : 'bg-slate-700 border-slate-600 text-white'
+              }`}
+              required
+            />
+          </div>
+
+          {/* Difficulty Level (Position drills only) */}
+          {type === 'position' && (
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+                Difficulty Level
+              </label>
+              <div className="flex gap-2">
+                {DIFFICULTY_LEVELS.map(level => (
+                  <button
+                    key={level.id}
+                    type="button"
+                    onClick={() => setDifficulty(level.id)}
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      difficulty === level.id
+                        ? `${level.color} text-white`
+                        : isLight
+                          ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    }`}
+                  >
+                    {level.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Position Groups (Scheme drills only) */}
+          {type === 'scheme' && (
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+                Position Groups
+              </label>
+              <p className={`text-xs mb-2 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                Which position groups work on this scheme drill?
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {positionGroups.map(group => (
+                  <button
+                    key={group.id}
+                    type="button"
+                    onClick={() => togglePositionGroup(group.id)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      selectedPositionGroupIds.includes(group.id)
+                        ? 'bg-sky-600 text-white'
+                        : isLight
+                          ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    }`}
+                  >
+                    {group.abbrev}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Description */}
+          <div>
+            <label className={`block text-sm font-medium mb-1 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+              Description
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Describe how to run the drill, coaching points, progressions..."
+              rows={3}
+              className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-sky-500 resize-none ${
+                isLight
+                  ? 'bg-white border-gray-300 text-gray-900'
+                  : 'bg-slate-700 border-slate-600 text-white'
+              }`}
+            />
+          </div>
+
+          {/* Video URL */}
+          <div>
+            <label className={`block text-sm font-medium mb-1 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+              Video URL
+            </label>
+            <input
+              type="url"
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+              placeholder="YouTube, Hudl, etc."
+              className={`w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                isLight
+                  ? 'bg-white border-gray-300 text-gray-900'
+                  : 'bg-slate-700 border-slate-600 text-white'
+              }`}
+            />
+          </div>
+
+          {/* Duration */}
+          <div>
+            <label className={`block text-sm font-medium mb-1 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+              Duration (minutes)
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="120"
+              value={duration}
+              onChange={(e) => setDuration(e.target.value)}
+              className={`w-24 px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                isLight
+                  ? 'bg-white border-gray-300 text-gray-900'
+                  : 'bg-slate-700 border-slate-600 text-white'
+              }`}
+            />
+          </div>
+
+          {/* Equipment */}
+          <div>
+            <label className={`block text-sm font-medium mb-1 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+              Equipment Needed
+            </label>
+
+            {/* Selected Equipment Tags */}
+            {equipment.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-2">
+                {equipment.map(item => (
+                  <span
+                    key={item}
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded text-sm ${
+                      isLight ? 'bg-gray-100 text-gray-700' : 'bg-slate-700 text-slate-200'
+                    }`}
+                  >
+                    {item}
+                    <button
+                      type="button"
+                      onClick={() => removeEquipment(item)}
+                      className="hover:text-red-400"
+                    >
+                      <X size={14} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Equipment Presets */}
+            <div className="flex flex-wrap gap-1 mb-2">
+              {EQUIPMENT_PRESETS.filter(e => !equipment.includes(e)).map(item => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => addEquipment(item)}
+                  className={`px-2 py-1 rounded text-xs ${
+                    isLight
+                      ? 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'
+                      : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700 border border-slate-600'
+                  }`}
+                >
+                  + {item}
+                </button>
+              ))}
+            </div>
+
+            {/* Custom Equipment Input */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newEquipment}
+                onChange={(e) => setNewEquipment(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addEquipment(newEquipment);
+                  }
+                }}
+                placeholder="Add custom equipment..."
+                className={`flex-1 px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-sky-500 ${
+                  isLight
+                    ? 'bg-white border-gray-300 text-gray-900'
+                    : 'bg-slate-700 border-slate-600 text-white'
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => addEquipment(newEquipment)}
+                className={`px-3 py-2 rounded-lg ${
+                  isLight
+                    ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+              >
+                <Plus size={18} />
+              </button>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className={`px-4 py-2 rounded-lg ${
+                isLight
+                  ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!name.trim()}
+              className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {drill ? 'Save Changes' : 'Save Drill'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

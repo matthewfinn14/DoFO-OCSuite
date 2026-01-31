@@ -626,13 +626,8 @@ export default function PracticeScriptBuilder() {
                                           onClick={() => openPlayDetails(row.playId)}
                                           className="text-sky-400 hover:text-sky-300 hover:underline text-left truncate"
                                         >
-                                          {play.name}
+                                          {play.name}{getWristbandDisplay(play) ? ` ${getWristbandDisplay(play)}` : ''}
                                         </button>
-                                        {getWristbandDisplay(play) && (
-                                          <span className="text-xs font-bold text-sky-300 bg-sky-900/50 px-1 py-0.5 rounded">
-                                            {getWristbandDisplay(play)}
-                                          </span>
-                                        )}
                                         <button
                                           onClick={() => clearScriptRow(segment.id, row.id)}
                                           className="p-0.5 text-slate-500 hover:text-red-400"
@@ -729,13 +724,8 @@ export default function PracticeScriptBuilder() {
                               <GripVertical size={14} className="text-slate-600" />
 
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-white">{play.name}</span>
-                                  {getWristbandDisplay(play) && (
-                                    <span className="text-xs font-bold text-sky-300 bg-sky-900/50 px-1 py-0.5 rounded">
-                                      {getWristbandDisplay(play)}
-                                    </span>
-                                  )}
+                                <div className="font-medium text-white">
+                                  {play.name}{getWristbandDisplay(play) ? ` ${getWristbandDisplay(play)}` : ''}
                                 </div>
                                 <div className="text-sm text-slate-500">
                                   {play.formation}
@@ -876,13 +866,8 @@ export default function PracticeScriptBuilder() {
                       }}
                       className="p-3 bg-slate-800 rounded-lg hover:bg-slate-700 text-left"
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-white">{play.name}</span>
-                        {getWristbandDisplay(play) && (
-                          <span className="text-xs font-bold text-sky-300 bg-sky-900/50 px-1 py-0.5 rounded">
-                            {getWristbandDisplay(play)}
-                          </span>
-                        )}
+                      <div className="font-medium text-white">
+                        {play.name}{getWristbandDisplay(play) ? ` ${getWristbandDisplay(play)}` : ''}
                       </div>
                       <div className="text-sm text-slate-500 mt-1">
                         {play.formation && <span>{play.formation}</span>}

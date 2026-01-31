@@ -256,7 +256,7 @@ export default function GamePlan() {
   const [playDragOverBox, setPlayDragOverBox] = useState(null);
 
   // Batch Add State
-  const { startBatchSelect, cancelBatchSelect, quickAddRequest } = usePlayBank();
+  const { startBatchSelect, cancelBatchSelect, quickAddRequest, batchAddEvent, clearBatchAddEvent } = usePlayBank();
   const [isTargetingBox, setIsTargetingBox] = useState(false);
   const [pendingBatchPlays, setPendingBatchPlays] = useState([]);
 
@@ -273,6 +273,74 @@ export default function GamePlan() {
       setIsTargetingBox(true);
     }
   }, [quickAddRequest, editingBox]);
+
+  // Handle Batch Add Event from PlayBank sidebar
+  useEffect(() => {
+    if (!batchAddEvent) return;
+
+    const { destination, playIds } = batchAddEvent;
+
+    // Handle Game Planner destinations
+    if (destination === 'gameplan-quicklist') {
+      // Add to the currently editing box's quick list, or add to all boxes' quick lists
+      if (editingBox) {
+        // Add to currently open box's quick list
+        const newGamePlan = { ...gamePlan };
+        const set = newGamePlan.sets?.find(s => s.id === editingBox.box?.setId);
+        if (set) {
+          set.playIds = [...new Set([...(set.playIds || []), ...playIds])];
+          handleUpdateGamePlan(newGamePlan);
+        }
+      } else {
+        // No box is open - add plays to all boxes' quick lists so they're available
+        // when user opens any box for editing
+        const newGamePlan = { ...gamePlan };
+        const newSets = [...(newGamePlan.sets || [])];
+
+        // Get all box setIds from the current sheet layout
+        const allSetIds = [];
+        (gamePlanLayouts.CALL_SHEET?.sections || []).forEach(section => {
+          (section.boxes || []).forEach(box => {
+            if (box.setId) allSetIds.push(box.setId);
+          });
+        });
+
+        // Add plays to each box's quick list (playIds)
+        allSetIds.forEach(setId => {
+          let setIndex = newSets.findIndex(s => s.id === setId);
+          if (setIndex === -1) {
+            newSets.push({ id: setId, playIds: [...playIds] });
+          } else {
+            const existingSet = { ...newSets[setIndex] };
+            existingSet.playIds = [...new Set([...(existingSet.playIds || []), ...playIds])];
+            newSets[setIndex] = existingSet;
+          }
+        });
+
+        newGamePlan.sets = newSets;
+        handleUpdateGamePlan(newGamePlan);
+
+        // Also enter targeting mode so user can click a specific box to fill cells
+        setPendingBatchPlays(playIds);
+        setIsTargetingBox(true);
+      }
+      clearBatchAddEvent();
+    } else if (destination === 'gameplan-byplayer') {
+      // Switch to By Player tab
+      setActiveTab('byPlayer');
+      clearBatchAddEvent();
+    } else if (destination === 'gameplan-byplaytype') {
+      // Switch to By Play Type tab
+      setActiveTab('byPlayType');
+      clearBatchAddEvent();
+    } else if (destination === 'gameplan-fzdnd') {
+      // Switch to FZDnD tab and enter targeting mode
+      setActiveTab('fzdnd');
+      setPendingBatchPlays(playIds);
+      setIsTargetingBox(true);
+      clearBatchAddEvent();
+    }
+  }, [batchAddEvent, editingBox, gamePlan, gamePlanLayouts, handleUpdateGamePlan, clearBatchAddEvent]);
 
   // Add Section modal state
   const [showAddSectionModal, setShowAddSectionModal] = useState(false);
@@ -972,12 +1040,13 @@ export default function GamePlan() {
     }
   }, [isTargetingBox, pendingBatchPlays, batchAssignPlaysToBox, cancelBatchSelect]);
 
-  // Get play display name
-
+  // Get play display name (includes wristband slot if assigned)
   const getPlayDisplayName = useCallback((play) => {
     if (!play) return '';
-    // Always include formation with the play name
-    return getPlayCall(play);
+    // Always include formation with the play name, and wristband slot if assigned
+    const playCall = getPlayCall(play);
+    const wristband = getWristbandDisplay(play);
+    return wristband ? `${playCall} ${wristband}` : playCall;
   }, []);
 
   // Print handler
@@ -1165,7 +1234,6 @@ export default function GamePlan() {
             onRemovePlayFromSet={handleRemovePlayFromSet}
             getPlaysForSet={getPlaysForSet}
             getGridPlays={getGridPlays}
-            getWristbandLabel={getWristbandLabel}
             getPlayDisplayName={getPlayDisplayName}
             draggedCell={draggedCell}
             setDraggedCell={setDraggedCell}
@@ -1191,7 +1259,7 @@ export default function GamePlan() {
             onUpdateCustomZone={updateCustomZone}
             onUpdateCustomColumns={updateCustomColumns}
             onAddPlayToSet={handleAddPlayToSet}
-            getWristbandLabel={getWristbandLabel}
+            getPlayDisplayName={getPlayDisplayName}
           />
         )}
 
@@ -1212,7 +1280,7 @@ export default function GamePlan() {
             onUpdateFormationName={handleUpdateFormationName}
             onAddPlayToSet={handleAddPlayToSet}
             onRemovePlayFromSet={handleRemovePlayFromSet}
-            getWristbandLabel={getWristbandLabel}
+            getPlayDisplayName={getPlayDisplayName}
           />
         )}
 
@@ -1224,7 +1292,7 @@ export default function GamePlan() {
             setupConfig={setupConfig}
             isLocked={isLocked}
             onUpdateGamePlan={handleUpdateGamePlan}
-            getWristbandLabel={getWristbandLabel}
+            getPlayDisplayName={getPlayDisplayName}
           />
         )}
 
@@ -1238,7 +1306,7 @@ export default function GamePlan() {
             setupConfig={setupConfig}
             isLocked={isLocked}
             onUpdateGamePlan={handleUpdateGamePlan}
-            getWristbandLabel={getWristbandLabel}
+            getPlayDisplayName={getPlayDisplayName}
           />
         )}
       </div>
@@ -1263,7 +1331,7 @@ export default function GamePlan() {
           onAssignPlayToCell={handleAssignPlayToCell}
           onRemovePlayFromCell={handleRemovePlayFromCell}
           getPlaysForSet={getPlaysForSet}
-          getWristbandLabel={getWristbandLabel}
+          getPlayDisplayName={getPlayDisplayName}
         />
       )}
 

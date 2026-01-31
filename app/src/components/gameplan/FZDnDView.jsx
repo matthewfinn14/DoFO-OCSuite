@@ -31,7 +31,7 @@ export default function FZDnDView({
   onUpdateCustomZone,
   onUpdateCustomColumns,
   onAddPlayToSet,
-  getWristbandLabel
+  getPlayDisplayName
 }) {
   const [autocomplete, setAutocomplete] = useState({ zoneId: null, rowIdx: null, colIdx: null, query: '' });
   const [wbAutocomplete, setWbAutocomplete] = useState({ playId: null, query: '' });
@@ -398,20 +398,8 @@ export default function FZDnDView({
                                         textOverflow: 'ellipsis',
                                         whiteSpace: 'nowrap'
                                       }}>
-                                        {getPlayCall(play)}
+                                        {getPlayDisplayName ? getPlayDisplayName(play) : getPlayCall(play)}
                                       </span>
-                                      {getWristbandLabel(play) && (
-                                        <span style={{
-                                          fontSize: '0.75rem',
-                                          color: '#3b82f6',
-                                          fontWeight: 'bold',
-                                          background: '#dbeafe',
-                                          padding: '0 4px',
-                                          borderRadius: '4px'
-                                        }}>
-                                          {getWristbandLabel(play)}
-                                        </span>
-                                      )}
                                     </div>
                                     {!isLocked && (
                                       <button

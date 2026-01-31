@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { X, Search, Trash2, GripVertical, ChevronUp, ChevronDown, ArrowRight, Plus, Hash, CheckSquare } from 'lucide-react';
+import { X, Search, Trash2, GripVertical, ChevronUp, ChevronDown, ArrowRight, Plus, CheckSquare } from 'lucide-react';
 import { usePlayBank } from '../../context/PlayBankContext';
 import { getPlayCall } from '../../utils/playDisplay';
 
@@ -18,7 +18,7 @@ export default function BoxEditorModal({
   onAssignPlayToCell,
   onRemovePlayFromCell,
   getPlaysForSet,
-  getWristbandLabel
+  getPlayDisplayName
 }) {
   const { startBatchSelect } = usePlayBank();
   const [localBox, setLocalBox] = useState({ ...box });
@@ -451,26 +451,10 @@ export default function BoxEditorModal({
                 >
                   <div>
                     <div style={{ fontWeight: '500', color: '#1e293b', fontSize: '0.875rem' }}>
-                      {getPlayCall(play)}
+                      {getPlayDisplayName ? getPlayDisplayName(play) : getPlayCall(play)}
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    {getWristbandLabel && getWristbandLabel(play) && (
-                      <span style={{
-                        fontSize: '0.7rem',
-                        color: '#3b82f6',
-                        fontWeight: '600',
-                        background: '#eff6ff',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '2px'
-                      }}>
-                        <Hash size={10} />
-                        {getWristbandLabel(play)}
-                      </span>
-                    )}
                     <Plus size={16} className="text-sky-500" />
                   </div>
                 </div>
@@ -612,23 +596,9 @@ export default function BoxEditorModal({
                         overflow: 'hidden',
                         textOverflow: 'ellipsis'
                       }}>
-                        {getPlayCall(play)}
+                        {getPlayDisplayName ? getPlayDisplayName(play) : getPlayCall(play)}
                       </div>
                     </div>
-
-                    {getWristbandLabel && getWristbandLabel(play) && (
-                      <span style={{
-                        fontSize: '0.65rem',
-                        color: '#3b82f6',
-                        fontWeight: '600',
-                        background: '#eff6ff',
-                        padding: '2px 5px',
-                        borderRadius: '3px',
-                        flexShrink: 0
-                      }}>
-                        #{getWristbandLabel(play)}
-                      </span>
-                    )}
 
                     {!isLocked && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -817,17 +787,8 @@ export default function BoxEditorModal({
                   {leftPlay ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
                       <span style={{ fontWeight: '500', color: '#1e293b', fontSize: '0.85rem' }}>
-                        {leftPlay.name}
+                        {getPlayDisplayName ? getPlayDisplayName(leftPlay) : leftPlay.name}
                       </span>
-                      {getWristbandLabel && getWristbandLabel(leftPlay) && (
-                        <span style={{
-                          fontSize: '0.65rem',
-                          color: '#3b82f6',
-                          fontWeight: '600'
-                        }}>
-                          #{getWristbandLabel(leftPlay)}
-                        </span>
-                      )}
                       {!isLocked && (
                         <button
                           onClick={() => handleRemoveFromScriptRow(rowIdx, 'left')}
@@ -899,17 +860,8 @@ export default function BoxEditorModal({
                     {rightPlay ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
                         <span style={{ fontWeight: '500', color: '#1e293b', fontSize: '0.85rem' }}>
-                          {rightPlay.name}
+                          {getPlayDisplayName ? getPlayDisplayName(rightPlay) : rightPlay.name}
                         </span>
-                        {getWristbandLabel && getWristbandLabel(rightPlay) && (
-                          <span style={{
-                            fontSize: '0.65rem',
-                            color: '#3b82f6',
-                            fontWeight: '600'
-                          }}>
-                            #{getWristbandLabel(rightPlay)}
-                          </span>
-                        )}
                         {!isLocked && (
                           <button
                             onClick={() => handleRemoveFromScriptRow(rowIdx, 'right')}
@@ -1108,18 +1060,8 @@ export default function BoxEditorModal({
                           overflow: 'hidden',
                           textOverflow: 'ellipsis'
                         }}>
-                          {getPlayCall(play)}
+                          {getPlayDisplayName ? getPlayDisplayName(play) : getPlayCall(play)}
                         </span>
-                        {getWristbandLabel && getWristbandLabel(play) && (
-                          <span style={{
-                            fontSize: '0.6rem',
-                            color: '#3b82f6',
-                            fontWeight: '600',
-                            flexShrink: 0
-                          }}>
-                            #{getWristbandLabel(play)}
-                          </span>
-                        )}
                         {!isLocked && (
                           <button
                             onClick={(e) => {

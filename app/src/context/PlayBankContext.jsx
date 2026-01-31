@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 
 const PlayBankContext = createContext(null);
 
@@ -16,6 +16,27 @@ export function PlayBankProvider({ children }) {
 
   // Quick Add Event (Event-based communication)
   const [quickAddRequest, setQuickAddRequest] = useState(null);
+
+  // Batch Add Destination Event
+  const [batchAddEvent, setBatchAddEvent] = useState(null);
+
+  // Listen for batch add events from PlayBankSidebar
+  useEffect(() => {
+    const handleBatchAdd = (e) => {
+      setBatchAddEvent({
+        playIds: e.detail.playIds,
+        destination: e.detail.destination,
+        timestamp: Date.now()
+      });
+    };
+    window.addEventListener('playbank-batch-add', handleBatchAdd);
+    return () => window.removeEventListener('playbank-batch-add', handleBatchAdd);
+  }, []);
+
+  // Clear batch add event after it's been processed
+  const clearBatchAddEvent = useCallback(() => {
+    setBatchAddEvent(null);
+  }, []);
 
   const triggerQuickAdd = useCallback((playId) => {
     setQuickAddRequest({
@@ -91,7 +112,11 @@ export function PlayBankProvider({ children }) {
 
         // Focus highlights for Script mode
         highlightFocuses,
-        setHighlightFocuses
+        setHighlightFocuses,
+
+        // Batch add destination event
+        batchAddEvent,
+        clearBatchAddEvent
       }}
     >
       {children}

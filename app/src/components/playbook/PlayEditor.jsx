@@ -38,13 +38,19 @@ export default function PlayEditor({
   const positionColors = useMemo(() => setupConfig?.positionColors || {}, [setupConfig?.positionColors]);
   const positionNames = useMemo(() => setupConfig?.positionNames || {}, [setupConfig?.positionNames]);
   const personnelGroupings = useMemo(() => setupConfig?.personnelGroupings || [], [setupConfig?.personnelGroupings]);
+  const customDefaultPositions = useMemo(() => setupConfig?.defaultFormationPositions || {}, [setupConfig?.defaultFormationPositions]);
 
   // Handler to save a new formation template
   const handleSaveFormation = useCallback((newFormation) => {
     const existingFormations = setupConfig?.formations || [];
     const updatedFormations = [...existingFormations, newFormation];
-    updateSetupConfig('formations', updatedFormations);
+    updateSetupConfig({ formations: updatedFormations });
   }, [setupConfig?.formations, updateSetupConfig]);
+
+  // Handler to save custom default positions
+  const handleSaveDefaultPositions = useCallback((positions) => {
+    updateSetupConfig({ defaultFormationPositions: positions });
+  }, [updateSetupConfig]);
 
   // Get offense positions (non-OL) from setup config for WIZ Skill editor
   const offensePositions = useMemo(() => {
@@ -1461,8 +1467,7 @@ export default function PlayEditor({
                       <DiagramPreview
                         elements={formData.wizSkillData}
                         mode="wiz-skill"
-                        width={200}
-                        height={118}
+                        width="100%"
                         onClick={() => setShowSkillEditor(true)}
                       />
                       <div className="flex gap-2">
@@ -1999,6 +2004,8 @@ export default function PlayEditor({
               offensePositions={offensePositions}
               positionColors={positionColors}
               positionNames={positionNames}
+              customDefaultPositions={customDefaultPositions}
+              onSaveDefaultPositions={handleSaveDefaultPositions}
               playName={formData.formation ? `${formData.formation} ${formData.name}` : formData.name}
               onSaveFormation={handleSaveFormation}
               onSave={(data) => {

@@ -58,14 +58,15 @@ const getZigZagPath = (points) => {
 
 const COLORS = ['#000000', '#ef4444', '#3b82f6', '#22c55e', '#f97316', '#facc15', '#8b5cf6', '#ec4899', '#06b6d4'];
 
-// Default position colors
+// Default position colors (fallback only - user's positionColors from setup take precedence)
 const DEFAULT_POSITION_COLORS = {
   'C': '#64748b', 'G': '#64748b', 'T': '#64748b',
   'LT': '#64748b', 'LG': '#64748b', 'RG': '#64748b', 'RT': '#64748b',
   'QB': '#1e3a5f', 'Q': '#1e3a5f',
-  'RB': '#3b82f6', 'B': '#3b82f6',
+  'RB': '#3b82f6', 'FB': '#6366f1',
   'X': '#a855f7', 'Z': '#22c55e', 'Y': '#eab308',
-  'A': '#ef4444', 'F': '#f97316', 'H': '#06b6d4'
+  'A': '#f97316', 'B': '#3b82f6', 'F': '#f97316', 'H': '#06b6d4',
+  'TE': '#84cc16', 'WR': '#a855f7'
 };
 
 // Default WIZ OL Formation - C centered on canvas (450, 300 for 900x600 viewBox)
@@ -109,7 +110,7 @@ const getWizSkillFormation = (positionColors = {}, positionNames = {}, skillPosi
   const wizCenter = 450; // 900/2 for wiz-card viewBox
   const wizLos = 210;    // LOS position
   const initialSize = 32; // OL text size
-  const spacing = 75;    // OL spacing
+  const spacing = 38;    // OL spacing (tighter gaps)
   const olY = wizLos;    // OL on the LOS
 
   const cOL = '#64748b';
@@ -149,6 +150,7 @@ export default function PlayDiagramEditor({
   onSaveAs,
   onCancel,
   onSaveFormation, // Callback to save a new formation template
+  onSaveDefaultPositions, // Callback to save custom default positions
   mode = 'wiz-oline',
   readOnly = false,
   formations = [],
@@ -156,6 +158,7 @@ export default function PlayDiagramEditor({
   offensePositions = [], // Available offense positions from setup
   positionColors = {},
   positionNames = {},
+  customDefaultPositions = {}, // User's custom default positions { positionKey: { x, y } }
   playName = '' // Optional play name to display in toolbar
 }) {
   const isWizSkill = mode === 'wiz-skill';
@@ -165,17 +168,22 @@ export default function PlayDiagramEditor({
   const viewBox = isWizSkill ? '0 0 900 320' : '0 0 900 600';
   const aspectRatio = isWizSkill ? '900 / 320' : '900 / 600';
 
-  // Get available skill positions from positionNames (non-OL positions)
+  // Get available skill positions (non-OL positions)
   const OL_POSITIONS = ['LT', 'LG', 'C', 'RG', 'RT'];
 
-  // Derive skill positions from positionNames keys (user's defined positions)
-  const positionNameKeys = Object.keys(positionNames || {});
-  const availableSkillPositions = positionNameKeys.length > 0
-    ? positionNameKeys.filter(p => !OL_POSITIONS.includes(p))
-    : DEFAULT_SKILL_POSITIONS;
+  // Use offensePositions if provided (from setup config), otherwise fall back to positionNames keys or defaults
+  const availableSkillPositions = offensePositions.length > 0
+    ? offensePositions.filter(p => !OL_POSITIONS.includes(p))
+    : (Object.keys(positionNames || {}).length > 0
+      ? Object.keys(positionNames).filter(p => !OL_POSITIONS.includes(p))
+      : DEFAULT_SKILL_POSITIONS);
 
-  // Track selected personnel grouping
-  const [selectedPersonnelId, setSelectedPersonnelId] = useState('');
+  // Find base personnel grouping (marked with isBase) for default formation
+  const basePersonnel = personnelGroupings.find(p => p.isBase) || personnelGroupings[0];
+  const baseSkillPositions = basePersonnel?.positions?.filter(p => !['LT', 'LG', 'C', 'RG', 'RT'].includes(p)) || DEFAULT_SKILL_POSITIONS;
+
+  // Track selected personnel grouping - default to base personnel if available
+  const [selectedPersonnelId, setSelectedPersonnelId] = useState(basePersonnel?.id || '');
 
   // Initialize with data or default formation
   const [elements, setElements] = useState(() => {
@@ -183,10 +191,9 @@ export default function PlayDiagramEditor({
       return initialData.elements;
     }
     if (isWizSkill) {
-      // Use positions from positionNames if available, otherwise default
-      const posKeys = Object.keys(positionNames || {});
-      const defaultSkillPos = posKeys.length > 0
-        ? posKeys.filter(p => !['LT', 'LG', 'C', 'RG', 'RT'].includes(p))
+      // Use base personnel positions if available, otherwise fall back to defaults
+      const defaultSkillPos = baseSkillPositions.length > 0
+        ? baseSkillPositions
         : DEFAULT_SKILL_POSITIONS;
       return getWizSkillFormation(positionColors, positionNames, defaultSkillPos);
     }
@@ -292,15 +299,17 @@ export default function PlayDiagramEditor({
     // ViewBox is 900x320 for wiz-skill
     const positions = playerElements.map(el => {
       const point = el.points[0];
-      return {
+      const pos = {
         label: el.label,
         x: Math.round((point.x / 900) * 100 * 10) / 10, // Round to 1 decimal
         y: Math.round((point.y / 320) * 100 * 10) / 10,
-        shape: el.shape,
-        variant: el.variant,
-        fontSize: el.fontSize,
-        groupId: el.groupId ? 'grouped' : undefined // Mark as grouped but don't preserve specific ID
+        shape: el.shape || 'circle',
+        variant: el.variant || 'filled'
       };
+      // Only include optional fields if they have values (Firebase doesn't allow undefined)
+      if (el.fontSize) pos.fontSize = el.fontSize;
+      if (el.groupId) pos.groupId = 'grouped';
+      return pos;
     });
 
     // Get personnel code from selected grouping
@@ -727,14 +736,90 @@ export default function PlayDiagramEditor({
     updateElements(flippedElements);
   };
 
-  // Reset to default formation
+  // Reset to default formation (uses selected personnel or base personnel)
   const resetFormation = () => {
     if (!confirm('Reset to default formation? This will clear your current diagram.')) return;
+    // If a personnel is selected, use its positions; otherwise use base personnel
+    const selectedGrouping = personnelGroupings.find(g => g.id === selectedPersonnelId);
+    const positionsToUse = selectedGrouping
+      ? selectedGrouping.positions.filter(p => !OL_POSITIONS.includes(p))
+      : baseSkillPositions;
     const defaultFormation = isWizSkill
-      ? getWizSkillFormation(positionColors, positionNames, availableSkillPositions)
+      ? getWizSkillFormation(positionColors, positionNames, positionsToUse.length > 0 ? positionsToUse : DEFAULT_SKILL_POSITIONS)
       : getDefaultWizOLFormation();
     setElements(defaultFormation);
     updateHistory(defaultFormation);
+  };
+
+  // Snap all players to their default positions (keeps routes/lines intact)
+  // Uses customDefaultPositions if set, otherwise falls back to SKILL_POSITION_PLACEMENTS
+  const snapToDefaultPositions = () => {
+    const wizCenter = 450;
+    const wizLos = 210;
+    const olSpacing = 38;
+
+    const newElements = elements.map(el => {
+      if (el.type !== 'player') return el; // Keep lines/routes as-is
+
+      // Get the position key (use positionKey if available, otherwise label)
+      const posKey = el.positionKey || el.label;
+
+      // Check for custom default position first
+      if (customDefaultPositions[posKey]) {
+        const customPos = customDefaultPositions[posKey];
+        return { ...el, points: [{ x: customPos.x, y: customPos.y }] };
+      }
+
+      // OL positions (text-only shape)
+      if (el.shape === 'text-only') {
+        // Check custom defaults for OL too
+        if (customDefaultPositions[el.label]) {
+          const customPos = customDefaultPositions[el.label];
+          return { ...el, points: [{ x: customPos.x, y: customPos.y }] };
+        }
+
+        let defaultPos = { x: wizCenter, y: wizLos };
+        if (el.label === 'C') defaultPos = { x: wizCenter, y: wizLos };
+        else if (el.label === 'G' || el.label === 'LG') {
+          const isLeftG = el.points[0].x < wizCenter;
+          defaultPos = { x: isLeftG ? wizCenter - olSpacing : wizCenter + olSpacing, y: wizLos };
+        }
+        else if (el.label === 'RG') defaultPos = { x: wizCenter + olSpacing, y: wizLos };
+        else if (el.label === 'T' || el.label === 'LT') {
+          const isLeftT = el.points[0].x < wizCenter;
+          defaultPos = { x: isLeftT ? wizCenter - (olSpacing * 2) : wizCenter + (olSpacing * 2), y: wizLos };
+        }
+        else if (el.label === 'RT') defaultPos = { x: wizCenter + (olSpacing * 2), y: wizLos };
+
+        return { ...el, points: [defaultPos] };
+      }
+
+      // Skill positions - fall back to SKILL_POSITION_PLACEMENTS
+      const defaultPos = SKILL_POSITION_PLACEMENTS[posKey] || SKILL_POSITION_PLACEMENTS[el.label];
+      if (defaultPos) {
+        return { ...el, points: [{ x: defaultPos.x, y: defaultPos.y }] };
+      }
+
+      return el; // Keep position if no default found
+    });
+
+    setElements(newElements);
+    updateHistory(newElements);
+  };
+
+  // Save current player positions as the new custom defaults
+  const setAsDefaultPositions = () => {
+    if (!onSaveDefaultPositions) return;
+
+    const defaults = {};
+    elements.forEach(el => {
+      if (el.type !== 'player') return;
+      const posKey = el.positionKey || el.label;
+      const point = el.points[0];
+      defaults[posKey] = { x: Math.round(point.x), y: Math.round(point.y) };
+    });
+
+    onSaveDefaultPositions(defaults);
   };
 
   // Toggle custom blocker (for wiz-oline)
@@ -805,6 +890,9 @@ export default function PlayDiagramEditor({
       const isInteractionTool = selectedTool === 'select' || selectedTool === 'delete';
       const pointerEvents = isInteractionTool ? 'all' : 'none';
 
+      // Always use latest color from positionColors, falling back to stored color or defaults
+      const effectiveColor = positionColors[el.label] || el.color || DEFAULT_POSITION_COLORS[el.label] || '#3b82f6';
+
       if (el.shape === 'text-only') {
         const tSize = el.fontSize || (isWizOline ? 170 : 24);
         return (
@@ -845,7 +933,7 @@ export default function PlayDiagramEditor({
               textAnchor="middle"
               fontSize={tSize}
               fontWeight="bold"
-              fill={el.color || 'black'}
+              fill={effectiveColor}
               style={{ pointerEvents: 'none', userSelect: 'none', fontFamily: 'Arial, sans-serif' }}
             >
               {positionNames[el.label] || el.label}
@@ -858,9 +946,9 @@ export default function PlayDiagramEditor({
       const size = 30;
       const isRect = el.shape === 'square';
       const isFilled = el.variant === 'filled';
-      const fillColor = isFilled ? el.color : 'white';
-      const strokeColor = el.color;
-      const textColor = isFilled ? 'white' : el.color;
+      const fillColor = isFilled ? effectiveColor : 'white';
+      const strokeColor = effectiveColor;
+      const textColor = isFilled ? 'white' : effectiveColor;
 
       return (
         <g
@@ -1055,20 +1143,13 @@ export default function PlayDiagramEditor({
                   onChange={(e) => {
                     if (e.target.value) {
                       applyPersonnelGrouping(e.target.value);
-                    } else {
-                      // Reset to default personnel (from positionNames)
-                      setSelectedPersonnelId('');
-                      const newElements = getWizSkillFormation(positionColors, positionNames, availableSkillPositions);
-                      setElements(newElements);
-                      updateHistory(newElements);
                     }
                   }}
                   className="px-2 py-1 text-xs bg-purple-600 border border-purple-500 rounded text-white font-medium"
                 >
-                  <option value="">Default (11)</option>
                   {personnelGroupings.map(g => (
                     <option key={g.id} value={g.id}>
-                      {g.code ? `${g.code} - ${g.name}` : g.name}
+                      {g.code ? `${g.code} - ${g.name}` : g.name}{g.isBase ? ' (Base)' : ''}
                     </option>
                   ))}
                 </select>
@@ -1113,19 +1194,28 @@ export default function PlayDiagramEditor({
                     </button>
                   )}
                   <button
-                    onClick={resetFormation}
-                    className="px-2 py-1 text-xs bg-slate-600 text-slate-200 rounded hover:bg-slate-500"
-                    title="Reset to default formation"
+                    onClick={snapToDefaultPositions}
+                    className="px-2 py-1 text-xs bg-sky-600 text-white rounded hover:bg-sky-500"
+                    title="Snap all players to their default starting positions (keeps routes)"
                   >
-                    Reset
+                    Snap Default
                   </button>
+                  {onSaveDefaultPositions && (
+                    <button
+                      onClick={setAsDefaultPositions}
+                      className="px-2 py-1 text-xs bg-amber-600 text-white rounded hover:bg-amber-500"
+                      title="Save current positions as YOUR default (will be used by Snap Default)"
+                    >
+                      Set Default
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="w-px h-8 bg-slate-600" />
             </>
           )}
 
-          {/* WIZ Skill: Add Player */}
+          {/* WIZ Skill: Add/Remove Player */}
           {isWizSkill && (
             <>
               <div className="flex flex-col items-center relative">
@@ -1153,6 +1243,20 @@ export default function PlayDiagramEditor({
                     </div>
                   </div>
                 )}
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="text-[9px] text-slate-400 font-medium">Remove</span>
+                <button
+                  onClick={() => setSelectedTool(selectedTool === 'delete' ? 'select' : 'delete')}
+                  className={`px-2 py-1 text-xs rounded flex items-center gap-1 ${
+                    selectedTool === 'delete'
+                      ? 'bg-red-600 text-white'
+                      : 'bg-red-900/50 text-red-300 hover:bg-red-800/50'
+                  }`}
+                  title={selectedTool === 'delete' ? 'Click a player to remove, or click here to cancel' : 'Click to enable remove mode'}
+                >
+                  <Minus size={14} /> Player
+                </button>
               </div>
               <div className="w-px h-8 bg-slate-600" />
             </>
@@ -1545,10 +1649,12 @@ export default function PlayDiagramEditor({
                   onChange={(e) => setNewFormationPersonnel(e.target.value)}
                   className="w-full px-3 py-2 text-sm bg-slate-700 border border-slate-600 rounded text-white"
                 >
-                  <option value="">Default (11 Personnel)</option>
+                  {personnelGroupings.length === 0 && (
+                    <option value="">Default</option>
+                  )}
                   {personnelGroupings.map(g => (
                     <option key={g.id} value={g.id}>
-                      {g.code ? `${g.code} - ${g.name}` : g.name}
+                      {g.code ? `${g.code} - ${g.name}` : g.name}{g.isBase ? ' (Base)' : ''}
                     </option>
                   ))}
                 </select>

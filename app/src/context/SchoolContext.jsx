@@ -778,6 +778,18 @@ export function SchoolProvider({ children }) {
    */
   const playsArray = Object.values(plays);
 
+  /**
+   * Get offense positions (non-OL skill positions) from setup config
+   */
+  const offensePositions = (() => {
+    const hidden = setupConfig?.hiddenPositions?.OFFENSE || [];
+    const custom = setupConfig?.customPositions?.OFFENSE || [];
+    const defaults = ['QB', 'RB', 'FB', 'WR', 'TE', 'X', 'Y', 'Z', 'H', 'F', 'A', 'B'];
+    const visible = defaults.filter(p => !hidden.includes(p));
+    const customKeys = custom.map(p => p.key).filter(Boolean);
+    return [...visible, ...customKeys];
+  })();
+
     /**
    * Get active sub-level object
    */
@@ -789,6 +801,7 @@ export function SchoolProvider({ children }) {
     roster,
     plays,
     playsArray,
+    offensePositions,
     staff,
     weeks,
     depthCharts,

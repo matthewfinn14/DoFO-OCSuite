@@ -50,7 +50,7 @@ export default function MatrixView({
   onUpdateFormationName,
   onAddPlayToSet,
   onRemovePlayFromSet,
-  getWristbandLabel
+  getPlayDisplayName
 }) {
   const [autocomplete, setAutocomplete] = useState({ setId: null, query: '' });
 
@@ -120,18 +120,8 @@ export default function MatrixView({
               whiteSpace: 'nowrap',
               flex: 1
             }}>
-              {getPlayCall(play)}
+              {getPlayDisplayName ? getPlayDisplayName(play) : getPlayCall(play)}
             </span>
-            {getWristbandLabel(play) && (
-              <span style={{
-                fontSize: '0.6rem',
-                color: '#3b82f6',
-                fontWeight: 'bold',
-                marginLeft: '4px'
-              }}>
-                {getWristbandLabel(play)}
-              </span>
-            )}
             {!isLocked && (
               <button
                 onClick={() => onRemovePlayFromSet(setId, play.id)}

@@ -103,7 +103,9 @@ export default function WristbandBuilder() {
     selectedPlayId: contextSelectedPlayId,
     startSingleSelect,
     clearSelectedPlay,
-    stopSingleSelect
+    stopSingleSelect,
+    batchAddEvent,
+    clearBatchAddEvent
   } = usePlayBank();
 
   // State
@@ -123,12 +125,70 @@ export default function WristbandBuilder() {
     return () => stopSingleSelect();
   }, [startSingleSelect, stopSingleSelect]);
 
+  // Handle Batch Add Event from PlayBank sidebar
+  useEffect(() => {
+    if (!batchAddEvent || batchAddEvent.destination !== 'wristband') return;
+
+    const { playIds } = batchAddEvent;
+
+    // Get current slots and find empty ones
+    const currentSlots = { ...(currentCard.slots || {}) };
+    const emptySlots = slots.filter(slot => !currentSlots[slot]?.playId && !slotMap[slot]);
+
+    // Determine wristband type
+    const wristbandType = currentCard.type === 'wiz' ? 'wiz' : currentCard.type === 'mini-scripts' ? 'mini' : 'standard';
+
+    // Assign plays to empty slots in order (until full)
+    let addedCount = 0;
+    playIds.forEach((playId, index) => {
+      if (index < emptySlots.length) {
+        const slot = emptySlots[index];
+        currentSlots[slot] = { playId };
+
+        // Also update the play object with wristband info
+        updatePlay(playId, {
+          wristbandSlot: slot,
+          wristbandType: wristbandType
+        });
+        addedCount++;
+      }
+    });
+
+    // Update card settings with new slots
+    if (addedCount > 0) {
+      const newWristbandSettings = {
+        ...(currentWeek?.wristbandSettings || {}),
+        [selectedLevel]: {
+          ...wristbandSettings,
+          [activeCardId]: { ...currentCard, slots: currentSlots }
+        }
+      };
+      updateWeek(currentWeek.id, { wristbandSettings: newWristbandSettings });
+    }
+
+    // Notify user if some plays couldn't fit
+    if (addedCount < playIds.length) {
+      const remaining = playIds.length - addedCount;
+      alert(`Added ${addedCount} plays to wristband. ${remaining} plays couldn't fit - card is full.`);
+    }
+
+    clearBatchAddEvent();
+  }, [batchAddEvent, clearBatchAddEvent, slots, currentCard, slotMap, updatePlay, currentWeek, selectedLevel, wristbandSettings, activeCardId, updateWeek]);
+
   // Handler to save a new formation template
   const handleSaveFormation = useCallback((newFormation) => {
     const existingFormations = setupConfig?.formations || [];
     const updatedFormations = [...existingFormations, newFormation];
-    updateSetupConfig('formations', updatedFormations);
+    updateSetupConfig({ formations: updatedFormations });
   }, [setupConfig?.formations, updateSetupConfig]);
+
+  // Custom default positions for formation building
+  const customDefaultPositions = useMemo(() => setupConfig?.defaultFormationPositions || {}, [setupConfig]);
+
+  // Handler to save custom default positions
+  const handleSaveDefaultPositions = useCallback((positions) => {
+    updateSetupConfig({ defaultFormationPositions: positions });
+  }, [updateSetupConfig]);
 
   // Get current week
   const currentWeek = useMemo(() => {
@@ -611,6 +671,8 @@ export default function WristbandBuilder() {
               offensePositions={offensePositions}
               positionColors={positionColors}
               positionNames={positionNames}
+              customDefaultPositions={customDefaultPositions}
+              onSaveDefaultPositions={handleSaveDefaultPositions}
               playName={editingSkillPlay.formation ? `${editingSkillPlay.formation} ${editingSkillPlay.name}` : editingSkillPlay.name}
               onSaveFormation={handleSaveFormation}
               onSave={handleSaveSkillDiagram}
