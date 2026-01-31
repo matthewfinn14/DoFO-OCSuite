@@ -5723,7 +5723,6 @@ function SegmentFocusTab({
 }) {
   const [selectedPhase, setSelectedPhase] = useState('O');
   const [selectedTypeId, setSelectedTypeId] = useState(null);
-  const [activeSource, setActiveSource] = useState('situations');
   const [customName, setCustomName] = useState('');
 
   // Get segment types for selected phase
@@ -5789,8 +5788,6 @@ function SegmentFocusTab({
     }
   };
 
-  const sourceItems = activeSource !== 'custom' ? getSourceItems(activeSource) : [];
-
   // Check if item is already added to selected type
   const isAdded = (itemId, source) => {
     return currentFocusItems.some(f => f.id === itemId && f.source === source);
@@ -5826,13 +5823,6 @@ function SegmentFocusTab({
   // Remove focus item
   const removeFocusItem = (itemId, source) => {
     updateFocusItems(currentFocusItems.filter(f => !(f.id === itemId && f.source === source)));
-  };
-
-  // Import all from source
-  const importAllFromSource = () => {
-    const newItems = sourceItems.filter(item => !isAdded(item.id, item.source));
-    if (newItems.length === 0) return;
-    updateFocusItems([...currentFocusItems, ...newItems]);
   };
 
   // Group current focus by source for display
@@ -5988,125 +5978,96 @@ function SegmentFocusTab({
                 </div>
               )}
 
-              {/* Source Tabs */}
-              <div className={`flex flex-wrap border-b ${isLight ? 'bg-gray-50 border-gray-200' : 'bg-slate-800/50 border-slate-600'}`}>
-                {availableSources.map(source => {
+              {/* All Sources - Scrollable List */}
+              <div className="p-4 max-h-[500px] overflow-y-auto space-y-4">
+                <p className={`text-sm mb-2 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                  Click items to add them as focus options for this segment type:
+                </p>
+
+                {availableSources.filter(s => s.id !== 'custom').map(source => {
                   const Icon = source.icon;
-                  const itemCount = source.id !== 'custom' ? getSourceItems(source.id).length : 0;
+                  const items = getSourceItems(source.id);
+
                   return (
-                    <button
-                      key={source.id}
-                      onClick={() => setActiveSource(source.id)}
-                      className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors ${
-                        activeSource === source.id
-                          ? 'bg-sky-600 text-white'
-                          : isLight
-                            ? 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                            : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
-                      }`}
-                    >
-                      <Icon size={12} />
-                      {source.label}
-                      {itemCount > 0 && source.id !== 'custom' && (
-                        <span className={`ml-1 px-1 py-0.5 rounded text-[10px] ${
-                          activeSource === source.id
-                            ? 'bg-sky-500'
-                            : isLight ? 'bg-gray-200 text-gray-600' : 'bg-slate-600'
-                        }`}>
-                          {itemCount}
-                        </span>
-                      )}
-                    </button>
+                    <div key={source.id} className={`border rounded-lg overflow-hidden ${isLight ? 'border-gray-200' : 'border-slate-600'}`}>
+                      {/* Category Header */}
+                      <div className={`flex items-center justify-between px-3 py-2 ${isLight ? 'bg-gray-50' : 'bg-slate-700/50'}`}>
+                        <div className={`flex items-center gap-2 text-sm font-medium ${isLight ? 'text-gray-700' : 'text-white'}`}>
+                          <Icon size={14} />
+                          {source.label}
+                          <span className={`px-1.5 py-0.5 rounded text-xs ${isLight ? 'bg-gray-200 text-gray-600' : 'bg-slate-600 text-slate-300'}`}>
+                            {items.length}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Category Items */}
+                      <div className="p-2">
+                        {items.length > 0 ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {items.map(item => {
+                              const added = isAdded(item.id, item.source);
+                              return (
+                                <button
+                                  key={`${item.id}-${item.source}`}
+                                  onClick={() => !added && addFocusItem(item)}
+                                  disabled={added}
+                                  className={`px-2.5 py-1 rounded text-xs transition-colors ${
+                                    added
+                                      ? isLight
+                                        ? 'bg-emerald-100 text-emerald-600 cursor-default'
+                                        : 'bg-emerald-500/20 text-emerald-400 cursor-default'
+                                      : isLight
+                                        ? 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-sky-300'
+                                        : 'bg-slate-700 text-white hover:bg-slate-600'
+                                  }`}
+                                >
+                                  {added && <Check size={10} className="inline mr-1" />}
+                                  {item.name}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className={`text-xs italic py-1 ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
+                            No items defined yet
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   );
                 })}
-              </div>
 
-              {/* Source Content */}
-              <div className="p-4">
-                {activeSource === 'custom' ? (
-                  <div>
-                    <label className={`text-sm mb-3 block ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
-                      Add a custom focus item:
-                    </label>
+                {/* Custom Focus Input */}
+                <div className={`border rounded-lg overflow-hidden ${isLight ? 'border-gray-200' : 'border-slate-600'}`}>
+                  <div className={`flex items-center gap-2 px-3 py-2 ${isLight ? 'bg-gray-50' : 'bg-slate-700/50'}`}>
+                    <Plus size={14} className={isLight ? 'text-gray-700' : 'text-white'} />
+                    <span className={`text-sm font-medium ${isLight ? 'text-gray-700' : 'text-white'}`}>Custom</span>
+                  </div>
+                  <div className="p-2">
                     <div className="flex gap-2">
                       <input
                         type="text"
                         value={customName}
                         onChange={(e) => setCustomName(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && addCustomFocus()}
-                        placeholder="e.g., Red Zone, 2-Min Drill, Goal Line..."
-                        className={`flex-1 px-3 py-2 border rounded-md text-sm ${
+                        placeholder="Add custom focus..."
+                        className={`flex-1 px-2.5 py-1.5 border rounded text-xs ${
                           isLight
-                            ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                            ? 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
                             : 'bg-slate-800 border-slate-600 text-white placeholder-slate-500'
                         }`}
                       />
                       <button
                         onClick={addCustomFocus}
                         disabled={!customName.trim()}
-                        className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                        className="px-3 py-1.5 bg-emerald-600 text-white rounded text-xs hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Add
                       </button>
                     </div>
                   </div>
-                ) : sourceItems.length > 0 ? (
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
-                        Click items to add them as focus options:
-                      </p>
-                      <button
-                        onClick={importAllFromSource}
-                        disabled={sourceItems.every(item => isAdded(item.id, item.source))}
-                        className={`text-xs px-2 py-1 rounded disabled:opacity-50 ${
-                          isLight
-                            ? 'bg-sky-100 text-sky-600 hover:bg-sky-200'
-                            : 'bg-sky-500/20 text-sky-400 hover:bg-sky-500/30'
-                        }`}
-                      >
-                        Import All
-                      </button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {sourceItems.map(item => {
-                        const added = isAdded(item.id, item.source);
-                        return (
-                          <button
-                            key={`${item.id}-${item.source}`}
-                            onClick={() => !added && addFocusItem(item)}
-                            disabled={added}
-                            className={`px-3 py-1.5 rounded text-sm transition-colors ${
-                              added
-                                ? isLight
-                                  ? 'bg-emerald-100 text-emerald-600 cursor-default'
-                                  : 'bg-emerald-500/20 text-emerald-400 cursor-default'
-                                : isLight
-                                  ? 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
-                                  : 'bg-slate-700 text-white hover:bg-slate-600'
-                            }`}
-                          >
-                            {added && <Check size={12} className="inline mr-1" />}
-                            {item.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : (
-                  <div className={`text-center py-8 ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
-                    <p>No items defined in this category yet.</p>
-                    <p className="text-sm mt-1">
-                      {selectedPhase === 'O'
-                        ? `Add them in Offense Setup → ${FOCUS_SOURCES.find(s => s.id === activeSource)?.label || activeSource}`
-                        : selectedPhase === 'D'
-                          ? 'Add them in Defense Setup'
-                          : selectedPhase === 'K'
-                            ? 'Add them in Special Teams Setup'
-                            : 'Add them in your phase setup'}
-                    </p>
-                  </div>
-                )}
+                </div>
               </div>
             </div>
           )}
