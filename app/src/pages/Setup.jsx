@@ -555,22 +555,6 @@ export default function Setup() {
   };
   const [activeTab, setActiveTab] = useState(() => urlTab || getDefaultTab(phase));
 
-  // UI state
-  const [saving, setSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState('saved'); // 'saved' | 'unsaved' | 'saving' | 'error'
-  const [error, setError] = useState(null);
-
-  // Local state for editing (to avoid constant Firebase writes)
-  const [localConfig, setLocalConfig] = useState(setupConfig);
-  const initialConfigRef = useRef(null);
-  const autosaveTimeoutRef = useRef(null);
-
-  // Track if there are unsaved changes
-  const hasUnsavedChanges = useCallback(() => {
-    if (!initialConfigRef.current) return false;
-    return JSON.stringify(localConfig) !== JSON.stringify(initialConfigRef.current);
-  }, [localConfig]);
-
   // Default position groups
   const DEFAULT_POSITION_GROUPS = {
     OFFENSE: [
@@ -595,19 +579,38 @@ export default function Setup() {
     ]
   };
 
+  // Helper to add defaults to config if position groups are empty
+  const getConfigWithDefaults = (config) => {
+    const posGroups = config?.positionGroups || {};
+    const hasAnyGroups = posGroups.OFFENSE?.length || posGroups.DEFENSE?.length || posGroups.SPECIAL_TEAMS?.length;
+    if (hasAnyGroups) return config;
+    return {
+      ...config,
+      positionGroups: DEFAULT_POSITION_GROUPS
+    };
+  };
+
+  // UI state
+  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState('saved'); // 'saved' | 'unsaved' | 'saving' | 'error'
+  const [error, setError] = useState(null);
+
+  // Local state for editing (to avoid constant Firebase writes) - initialize with defaults
+  const [localConfig, setLocalConfig] = useState(() => getConfigWithDefaults(setupConfig));
+  const initialConfigRef = useRef(null);
+  const autosaveTimeoutRef = useRef(null);
+
+  // Track if there are unsaved changes
+  const hasUnsavedChanges = useCallback(() => {
+    if (!initialConfigRef.current) return false;
+    return JSON.stringify(localConfig) !== JSON.stringify(initialConfigRef.current);
+  }, [localConfig]);
+
   // Sync local config when setupConfig changes from Firebase
   useEffect(() => {
-    // Initialize position groups with defaults if empty
-    let configWithDefaults = setupConfig;
+    const configWithDefaults = getConfigWithDefaults(setupConfig);
     const posGroups = setupConfig?.positionGroups || {};
     const needsDefaults = !posGroups.OFFENSE?.length && !posGroups.DEFENSE?.length && !posGroups.SPECIAL_TEAMS?.length;
-
-    if (needsDefaults) {
-      configWithDefaults = {
-        ...setupConfig,
-        positionGroups: DEFAULT_POSITION_GROUPS
-      };
-    }
 
     setLocalConfig(configWithDefaults);
     initialConfigRef.current = configWithDefaults;
