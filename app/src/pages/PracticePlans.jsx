@@ -26,7 +26,8 @@ import {
   Layers,
   Link2,
   CheckSquare,
-  ExternalLink
+  ExternalLink,
+  HelpCircle
 } from 'lucide-react';
 
 // Days of the week
@@ -1386,6 +1387,7 @@ export default function PracticePlans() {
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
   const [showImportTemplateModal, setShowImportTemplateModal] = useState(false);
+  const [showPlanHelp, setShowPlanHelp] = useState(false);
   const [viewingLevelId, setViewingLevelId] = useState(null); // For Program view to see other levels
   const [showPlaySelector, setShowPlaySelector] = useState(false);
   const [activeScriptSegmentId, setActiveScriptSegmentId] = useState(null);
@@ -1812,7 +1814,7 @@ export default function PracticePlans() {
     const newSegment = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
       type: '',
-      duration: 10,
+      duration: currentPlan.defaultSegmentDuration || 10,
       phase: 'ALL',
       situation: '',
       contact: '',
@@ -2068,16 +2070,64 @@ export default function PracticePlans() {
         {mode === 'plan' ? (
           <div className="max-w-6xl mx-auto space-y-6">
             {/* Plan Controls */}
-            <div className="flex flex-wrap items-center gap-4 p-4 bg-slate-800 rounded-lg">
+            <div className={`flex flex-wrap items-center gap-4 p-4 rounded-lg ${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800'}`}>
+              {/* Help Button */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowPlanHelp(!showPlanHelp)}
+                  className={`w-6 h-6 flex items-center justify-center rounded-full transition-colors ${
+                    showPlanHelp
+                      ? 'bg-sky-500 text-white'
+                      : isLight
+                        ? 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'
+                        : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-white'
+                  }`}
+                  title="How to use Practice Planner"
+                >
+                  <HelpCircle size={14} />
+                </button>
+                {showPlanHelp && (
+                  <div className={`absolute left-0 top-8 z-50 w-80 p-4 rounded-lg shadow-xl border ${isLight ? 'bg-white border-gray-200' : 'bg-slate-700 border-slate-600'}`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className={`font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>Practice Plan Setup</h4>
+                      <button onClick={() => setShowPlanHelp(false)} className={`p-1 rounded ${isLight ? 'hover:bg-gray-100' : 'hover:bg-slate-600'}`}>
+                        <X size={14} className={isLight ? 'text-gray-500' : 'text-slate-400'} />
+                      </button>
+                    </div>
+                    <div className={`text-xs space-y-3 ${isLight ? 'text-gray-600' : 'text-slate-300'}`}>
+                      <p>
+                        This practice planner was designed around <strong>ElectroMech segment timers</strong> commonly used in football programs. The timer officially starts after warmups are complete.
+                      </p>
+                      <p>
+                        <strong>Period 0 (Warmup)</strong> is separate because we don't start the official practice clock until the team is warmed up and ready to go. Use the warmup notes to outline your pre-practice routine.
+                      </p>
+                      <p>
+                        <strong>Settings explained:</strong>
+                      </p>
+                      <ul className={`list-disc list-inside space-y-1 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                        <li><strong>Start Time</strong> – When warmups begin</li>
+                        <li><strong>Transition Time</strong> – Time between periods for water, rotation</li>
+                        <li><strong>New Period</strong> – Default duration when adding segments</li>
+                        <li><strong>2-Platoon</strong> – Split offense/defense focus columns</li>
+                        <li><strong>Script</strong> – Check to add a play script to that period</li>
+                      </ul>
+                      <p className={`pt-2 border-t ${isLight ? 'border-gray-200 text-gray-500' : 'border-slate-600 text-slate-400'}`}>
+                        Tip: Use the <strong>+</strong> button on the right side of any row number to insert a new period between existing ones.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* View Level Selector (Program view only - to see varsity or sub-level plans) */}
               {hasMultipleLevels && !activeLevelId && (
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="plan-view-level" className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Level</label>
+                  <label htmlFor="plan-view-level" className={`text-[0.65rem] uppercase tracking-wide text-center ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Level</label>
                   <select
                     id="plan-view-level"
                     value={viewingLevelId || 'varsity'}
                     onChange={e => setViewingLevelId(e.target.value === 'varsity' ? null : e.target.value)}
-                    className="h-8 px-2 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                    className={`h-8 px-2 border rounded text-sm ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
                   >
                     <option value="varsity">Varsity</option>
                     {programLevels.map(level => (
@@ -2090,16 +2140,16 @@ export default function PracticePlans() {
               {/* Timer Source (only show for sub-levels, not varsity or program view) */}
               {hasMultipleLevels && activeLevelId && (
                 <div className="flex flex-col gap-1">
-                  <label htmlFor="plan-timer-source" className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Timer Sync</label>
+                  <label htmlFor="plan-timer-source" className={`text-[0.65rem] uppercase tracking-wide text-center ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Timer Sync</label>
                   <div className="h-8 flex items-center gap-1.5">
-                    <Link2 size={14} className="text-slate-400" />
+                    <Link2 size={14} className={isLight ? 'text-gray-400' : 'text-slate-400'} />
                     <select
                       id="plan-timer-source"
                       value={currentPlan.timerSource || 'own'}
                       onChange={e => updateCurrentPlan({ timerSource: e.target.value })}
                       className={`h-8 px-2 border rounded text-sm ${currentPlan.timerSource && currentPlan.timerSource !== 'own'
                         ? 'bg-purple-500/20 border-purple-500/30 text-purple-300'
-                        : 'bg-slate-700 border-slate-600 text-white'
+                        : isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'
                         }`}
                     >
                       <option value="own">Own Timer</option>
@@ -2114,97 +2164,115 @@ export default function PracticePlans() {
 
               {/* Start Time */}
               <div className="flex flex-col gap-1">
-                <label htmlFor="plan-start-time" className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Start Time</label>
+                <label htmlFor="plan-start-time" className={`text-[0.65rem] uppercase tracking-wide text-center ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Start Time</label>
                 <input
                   id="plan-start-time"
                   type="time"
                   value={currentPlan.startTime || '15:30'}
                   onChange={e => updateCurrentPlan({ startTime: e.target.value })}
-                  className="h-8 px-2 bg-slate-700 border border-slate-600 rounded text-white text-sm [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-inner-spin-button]:hidden"
+                  className={`h-8 px-2 border rounded text-sm [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-inner-spin-button]:hidden ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
                   disabled={currentPlan.timerSource && currentPlan.timerSource !== 'own'}
                 />
               </div>
 
               {/* End Time */}
               <div className="flex flex-col gap-1">
-                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">End Time</span>
-                <div className="h-8 px-2 flex items-center bg-slate-700 border border-slate-600 rounded text-white text-sm">
+                <span className={`text-[0.65rem] uppercase tracking-wide text-center ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>End Time</span>
+                <div className={`h-8 px-2 flex items-center border rounded text-sm ${isLight ? 'bg-gray-50 border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}>
                   {endTime}
                 </div>
               </div>
 
               {/* Duration Display */}
               <div className="flex flex-col gap-1">
-                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Duration</span>
-                <div className="h-8 px-2 flex items-center bg-slate-900 rounded text-sm font-medium text-white">
+                <span className={`text-[0.65rem] uppercase tracking-wide text-center ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Practice Length</span>
+                <div className={`h-8 px-2 flex items-center rounded text-sm font-medium ${isLight ? 'bg-gray-100 text-gray-900' : 'bg-slate-900 text-white'}`}>
                   {totalDuration} min
                 </div>
               </div>
 
               {/* Transition Time */}
-              <div className="flex flex-col gap-1 border-l border-slate-700 pl-3" title="Time between segments for transitions">
-                <span className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Transition</span>
+              <div className={`flex flex-col gap-1 border-l pl-3 ${isLight ? 'border-gray-200' : 'border-slate-700'}`} title="Time between segments for transitions">
+                <span className={`text-[0.65rem] uppercase tracking-wide text-center ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Transition Time</span>
                 <div className="flex items-center gap-1">
                   <input
                     id="plan-transition-minutes"
                     type="number"
                     value={currentPlan.transitionTime || 0}
                     onChange={e => updateCurrentPlan({ transitionTime: Math.max(0, parseInt(e.target.value) || 0) })}
-                    className="w-10 h-8 px-1 bg-slate-700 border border-slate-600 rounded text-white text-sm text-center"
+                    className={`w-10 h-8 px-1 border rounded text-sm text-center ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
                     min="0"
                     max="59"
                     aria-label="Transition minutes"
                   />
-                  <span className="text-xs text-slate-500">min</span>
+                  <span className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>min</span>
                   <input
                     id="plan-transition-seconds"
                     type="number"
                     value={currentPlan.transitionSeconds || 0}
                     onChange={e => updateCurrentPlan({ transitionSeconds: Math.max(0, Math.min(59, parseInt(e.target.value) || 0)) })}
-                    className="w-10 h-8 px-1 bg-slate-700 border border-slate-600 rounded text-white text-sm text-center"
+                    className={`w-10 h-8 px-1 border rounded text-sm text-center ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
                     min="0"
                     max="59"
                     aria-label="Transition seconds"
                   />
-                  <span className="text-xs text-slate-500">sec</span>
+                  <span className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>sec</span>
                 </div>
               </div>
 
-              {/* Options Group */}
-              <div className="flex flex-col gap-2 border-l border-slate-700 pl-3">
-                <label htmlFor="plan-two-platoon" className="flex items-center gap-1.5 cursor-pointer">
+              {/* Default Period Length */}
+              <div className={`flex flex-col gap-1 border-l pl-3 ${isLight ? 'border-gray-200' : 'border-slate-700'}`} title="Default duration for new segments">
+                <span className={`text-[0.65rem] uppercase tracking-wide text-center ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>New Period</span>
+                <div className="flex items-center gap-1">
+                  <input
+                    id="plan-default-duration"
+                    type="number"
+                    value={currentPlan.defaultSegmentDuration || 10}
+                    onChange={e => updateCurrentPlan({ defaultSegmentDuration: Math.max(1, parseInt(e.target.value) || 10) })}
+                    className={`w-12 h-8 px-1 border rounded text-sm text-center ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
+                    min="1"
+                    aria-label="Default segment duration"
+                  />
+                  <span className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>min</span>
+                </div>
+              </div>
+
+              {/* 2-Platoon Toggle */}
+              <div className={`flex flex-col gap-1 border-l pl-3 ${isLight ? 'border-gray-200' : 'border-slate-700'}`}>
+                <span className={`text-[0.65rem] uppercase tracking-wide text-center ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>2-Platoon</span>
+                <label htmlFor="plan-two-platoon" className="h-8 flex items-center justify-center cursor-pointer">
                   <input
                     id="plan-two-platoon"
                     type="checkbox"
                     checked={currentPlan.isTwoPlatoon || false}
                     onChange={e => updateCurrentPlan({ isTwoPlatoon: e.target.checked })}
-                    className="rounded border-slate-600 bg-slate-700 text-sky-500"
+                    className={`w-5 h-5 rounded text-sky-500 ${isLight ? 'border-gray-300 bg-white' : 'border-slate-600 bg-slate-700'}`}
                   />
-                  <span className="text-sm text-slate-300">2-Platoon</span>
                 </label>
-                <label htmlFor="plan-period-zero" className="flex items-center gap-1.5 cursor-pointer">
+              </div>
+
+              {/* Period 0 Warmup Toggle */}
+              <div className={`flex flex-col gap-1 border-l pl-3 ${isLight ? 'border-gray-200' : 'border-slate-700'}`}>
+                <span className={`text-[0.65rem] uppercase tracking-wide text-center ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Per. 0 Warmup</span>
+                <label htmlFor="plan-period-zero" className="h-8 flex items-center justify-center cursor-pointer">
                   <input
                     id="plan-period-zero"
                     type="checkbox"
                     checked={currentPlan.showPeriodZero !== false}
                     onChange={e => updateCurrentPlan({ showPeriodZero: e.target.checked })}
-                    className="rounded border-slate-600 bg-slate-700 text-sky-500"
+                    className={`w-5 h-5 rounded text-sky-500 ${isLight ? 'border-gray-300 bg-white' : 'border-slate-600 bg-slate-700'}`}
                   />
-                  <span className="text-sm text-slate-300 flex flex-col leading-tight">
-                    <span>Period 0</span>
-                    <span>Warmup</span>
-                  </span>
                 </label>
               </div>
 
               {/* Filter Group */}
-              <div className="flex flex-col gap-1 border-l border-slate-700 pl-3">
-                <label htmlFor="plan-coach-filter" className="text-[0.65rem] text-slate-500 uppercase tracking-wide text-center">Filter</label>
+              <div className={`flex flex-col gap-1 border-l pl-3 ${isLight ? 'border-gray-200' : 'border-slate-700'}`}>
+                <label htmlFor="plan-coach-filter" className={`text-[0.65rem] uppercase tracking-wide text-center ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Filter</label>
                 <select
                   id="plan-coach-filter"
                   value={coachFilter}
                   onChange={e => setCoachFilter(e.target.value)}
-                  className="h-8 px-2 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                  className={`h-8 px-2 border rounded text-sm ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
                 >
                   <option value="ALL">All Staff</option>
                   {(staff || []).map(s => (
@@ -2215,39 +2283,39 @@ export default function PracticePlans() {
             </div>
 
             {/* Pre-Practice Notes */}
-            <div className="p-4 bg-slate-800 rounded-lg">
-              <label htmlFor="pre-practice-notes" className="block text-sm font-medium text-slate-300 mb-2">Pre-Practice Notes</label>
+            <div className={`p-4 rounded-lg ${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800'}`}>
+              <label htmlFor="pre-practice-notes" className={`block text-sm font-medium mb-2 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>Pre-Practice Notes</label>
               <textarea
                 id="pre-practice-notes"
                 value={currentPlan.prePracticeNotes || ''}
                 onChange={e => updateCurrentPlan({ prePracticeNotes: e.target.value })}
                 placeholder="Announcements, weather, focus points..."
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 text-sm resize-none"
+                className={`w-full px-3 py-2 border rounded-lg text-sm resize-none ${isLight ? 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-slate-700 border-slate-600 text-white placeholder-slate-500'}`}
                 rows={2}
               />
             </div>
 
             {/* Segments Table */}
-            <div className="bg-slate-800 rounded-lg overflow-hidden">
+            <div className={`rounded-lg overflow-hidden ${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800'}`}>
               <table className="w-full">
                 <thead>
-                  <tr className="border-b-2 border-slate-600 text-slate-400 text-xs uppercase">
+                  <tr className={`border-b-2 text-xs uppercase ${isLight ? 'border-gray-200 text-gray-500' : 'border-slate-600 text-slate-400'}`}>
                     <th className="px-3 py-3 text-center w-12">#</th>
                     {hasMultipleLevels && <th className="px-3 py-3 text-center w-20">Levels</th>}
                     <th className="px-3 py-3 text-center w-20">Time</th>
-                    <th className="px-3 py-3 text-center w-16">Dur</th>
+                    <th className="px-3 py-3 text-center w-16">Duration</th>
                     <th className="px-3 py-3 text-center w-16">Phase</th>
-                    <th className="px-3 py-3 text-left w-36">Type</th>
+                    <th className="px-3 py-3 text-center w-36">Type</th>
                     {currentPlan.isTwoPlatoon ? (
                       <>
-                        <th className="px-3 py-3 text-left">Offense Focus</th>
-                        <th className="px-3 py-3 text-left">Defense Focus</th>
+                        <th className="px-3 py-3 text-center">Offense Focus</th>
+                        <th className="px-3 py-3 text-center">Defense Focus</th>
                       </>
                     ) : (
-                      <th className="px-3 py-3 text-left">Focus</th>
+                      <th className="px-3 py-3 text-center">Focus</th>
                     )}
                     <th className="px-3 py-3 text-center w-28">Contact</th>
-                    <th className="px-3 py-3 text-left w-40">Notes</th>
+                    <th className="px-3 py-3 text-center w-40">Notes</th>
                     <th className="px-3 py-3 text-center w-20">Script</th>
                     <th className="px-3 py-3 text-center w-16"></th>
                   </tr>
@@ -2256,15 +2324,18 @@ export default function PracticePlans() {
                   {/* Warmup Row (Period 0) */}
                   {currentPlan.showPeriodZero !== false && (
                     <tr
-                      className={`border-b border-slate-700 ${selectedSegmentId === 'WARMUP' ? 'bg-sky-500/10' : 'bg-slate-800/50'
-                        } cursor-pointer hover:bg-slate-700/50`}
+                      className={`border-b cursor-pointer ${
+                        isLight
+                          ? `border-gray-200 ${selectedSegmentId === 'WARMUP' ? 'bg-sky-50' : 'bg-gray-50/50'} hover:bg-gray-100`
+                          : `border-slate-700 ${selectedSegmentId === 'WARMUP' ? 'bg-sky-500/10' : 'bg-slate-800/50'} hover:bg-slate-700/50`
+                      }`}
                       onClick={() => setSelectedSegmentId('WARMUP')}
                     >
-                      <td className="px-3 py-3 text-center">
-                        <span className="text-sky-400 font-bold">0</span>
+                      <td className="px-3 py-2 text-center">
+                        <span className="text-sky-400 font-bold text-xs">0</span>
                       </td>
                       {hasMultipleLevels && (
-                        <td className="px-3 py-3 text-center">
+                        <td className="px-3 py-2 text-center">
                           <SegmentLevelsSelector
                             segment={{ id: 'warmup', levels: currentPlan.warmupLevels }}
                             programLevels={programLevels}
@@ -2272,31 +2343,31 @@ export default function PracticePlans() {
                           />
                         </td>
                       )}
-                      <td className="px-3 py-3 text-center text-slate-300 text-sm">
+                      <td className={`px-3 py-2 text-center text-xs ${isLight ? 'text-gray-600' : 'text-slate-300'}`}>
                         {currentPlan.startTime ? (() => {
                           const [h, m] = currentPlan.startTime.split(':').map(Number);
                           const hours = h % 12 || 12;
                           return `${hours}:${m.toString().padStart(2, '0')}`;
                         })() : ''}
                       </td>
-                      <td className="px-3 py-3 text-center">
+                      <td className="px-3 py-2 text-center">
                         <input
                           id="warmup-duration"
                           type="number"
                           value={currentPlan.warmupDuration || 0}
                           onChange={e => updateCurrentPlan({ warmupDuration: parseInt(e.target.value) || 0 })}
                           onClick={e => e.stopPropagation()}
-                          className="w-14 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm text-center"
+                          className={`w-14 h-7 px-2 border rounded text-xs text-center ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
                           aria-label="Warmup duration"
                         />
                       </td>
-                      <td className="px-3 py-3 text-center">
+                      <td className="px-3 py-2 text-center">
                         <select
                           id="warmup-phase"
                           value={currentPlan.warmupPhase || 'ALL'}
                           onChange={e => updateCurrentPlan({ warmupPhase: e.target.value })}
                           onClick={e => e.stopPropagation()}
-                          className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs"
+                          className={`h-7 px-2 border rounded text-xs ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
                           aria-label="Warmup phase"
                         >
                           {PHASES.map(p => (
@@ -2304,99 +2375,27 @@ export default function PracticePlans() {
                           ))}
                         </select>
                       </td>
-                      <td className="px-3 py-3 text-slate-400 italic text-sm">Warmup</td>
-                      {currentPlan.isTwoPlatoon ? (
-                        <>
-                          <td className="px-3 py-3">
-                            <select
-                              id="warmup-offense-focus"
-                              value={currentPlan.warmupOffenseFocus || ''}
-                              onChange={e => updateCurrentPlan({ warmupOffenseFocus: e.target.value })}
-                              onClick={e => e.stopPropagation()}
-                              className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
-                              aria-label="Warmup offense focus"
-                            >
-                              <option value="">-- Offense --</option>
-                              {getFocusItemsForType('O', currentPlan.warmupType).map(f => (
-                                <option key={f.id || f.name} value={f.name}>{f.name}</option>
-                              ))}
-                            </select>
-                          </td>
-                          <td className="px-3 py-3">
-                            <select
-                              id="warmup-defense-focus"
-                              value={currentPlan.warmupDefenseFocus || ''}
-                              onChange={e => updateCurrentPlan({ warmupDefenseFocus: e.target.value })}
-                              onClick={e => e.stopPropagation()}
-                              className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
-                              aria-label="Warmup defense focus"
-                            >
-                              <option value="">-- Defense --</option>
-                              {getFocusItemsForType('D', currentPlan.warmupType).map(f => (
-                                <option key={f.id || f.name} value={f.name}>{f.name}</option>
-                              ))}
-                            </select>
-                          </td>
-                        </>
-                      ) : (
-                        <td className="px-3 py-3">
-                          <select
-                            id="warmup-situation"
-                            value={currentPlan.warmupSituation || ''}
-                            onChange={e => updateCurrentPlan({ warmupSituation: e.target.value })}
-                            onClick={e => e.stopPropagation()}
-                            className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
-                            aria-label="Warmup situation"
-                          >
-                            <option value="">-- Select Focus --</option>
-                            {getFocusItemsForType('C', currentPlan.warmupType).map(f => (
-                              <option key={f.id || f.name} value={f.name}>{f.name}</option>
-                            ))}
-                          </select>
-                        </td>
-                      )}
-                      <td className="px-3 py-3 text-center">
-                        <select
-                          id="warmup-contact"
-                          value={currentPlan.warmupContact || ''}
-                          onChange={e => updateCurrentPlan({ warmupContact: e.target.value })}
-                          onClick={e => e.stopPropagation()}
-                          className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs"
-                          aria-label="Warmup contact level"
-                        >
-                          {CONTACT_LEVELS.map(c => (
-                            <option key={c.value} value={c.value}>{c.label}</option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-3 py-3">
+                      <td className={`px-3 py-2 italic text-xs ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>Warmup</td>
+                      {/* Warmup spans Focus, Contact, Notes, and Script columns */}
+                      <td colSpan={currentPlan.isTwoPlatoon ? 5 : 4} className="px-3 py-2">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setNotesModalSegmentId('WARMUP');
                           }}
-                          className={`w-full px-2 py-1.5 text-left text-sm rounded border transition-colors truncate ${hasNotes(currentPlan.warmupNotes)
+                          className={`w-full h-7 px-3 text-left text-xs rounded border transition-colors truncate ${hasNotes(currentPlan.warmupNotes)
                             ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
-                            : 'bg-slate-700/50 border-slate-600 text-slate-500 italic'
+                            : isLight
+                              ? 'bg-gray-100 border-gray-300 text-gray-500 italic'
+                              : 'bg-slate-700/50 border-slate-600 text-slate-500 italic'
                             }`}
                         >
                           {hasNotes(currentPlan.warmupNotes)
-                            ? getNotesPreview(currentPlan.warmupNotes) || 'View notes...'
-                            : 'Add notes...'}
+                            ? getNotesPreview(currentPlan.warmupNotes) || 'View warmup routine...'
+                            : 'Add warmup routine/notes...'}
                         </button>
                       </td>
-                      <td className="px-3 py-3 text-center">
-                        <input
-                          id="warmup-has-script"
-                          type="checkbox"
-                          checked={currentPlan.warmupHasScript || false}
-                          onChange={e => updateCurrentPlan({ warmupHasScript: e.target.checked })}
-                          onClick={e => e.stopPropagation()}
-                          className="rounded border-slate-600 bg-slate-700 text-sky-500"
-                          aria-label="Warmup has script"
-                        />
-                      </td>
-                      <td className="px-3 py-3"></td>
+                      <td className="px-3 py-2"></td>
                     </tr>
                   )}
 
@@ -2404,27 +2403,28 @@ export default function PracticePlans() {
                   {currentPlan.segments.map((seg, index) => (
                     <tr
                       key={seg.id}
-                      className={`border-b border-slate-700 ${selectedSegmentId === seg.id ? 'bg-sky-500/10' : ''
-                        } cursor-pointer hover:bg-slate-700/50`}
+                      className={`border-b cursor-pointer ${
+                        isLight
+                          ? `border-gray-200 ${selectedSegmentId === seg.id ? 'bg-sky-50' : ''} hover:bg-gray-100`
+                          : `border-slate-700 ${selectedSegmentId === seg.id ? 'bg-sky-500/10' : ''} hover:bg-slate-700/50`
+                      }`}
                       onClick={() => setSelectedSegmentId(seg.id)}
                     >
-                      <td className="px-3 py-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <span className="text-sky-400 font-bold">{index + 1}</span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              addSegment(index);
-                            }}
-                            className="w-5 h-5 flex items-center justify-center text-slate-500 hover:text-sky-400 hover:bg-slate-600 rounded"
-                            title="Insert segment below"
-                          >
-                            <Plus size={12} />
-                          </button>
-                        </div>
+                      <td className="px-3 py-2 text-center relative">
+                        <span className="text-sky-400 font-bold text-xs">{index + 1}</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addSegment(index);
+                          }}
+                          className={`absolute right-1 top-1/2 -translate-y-1/2 w-4 h-4 flex items-center justify-center rounded opacity-70 hover:opacity-100 ${isLight ? 'text-gray-500 hover:text-sky-500 hover:bg-gray-200' : 'text-slate-400 hover:text-sky-400 hover:bg-slate-600'}`}
+                          title="Insert segment below"
+                        >
+                          <Plus size={10} />
+                        </button>
                       </td>
                       {hasMultipleLevels && (
-                        <td className="px-3 py-3 text-center">
+                        <td className="px-3 py-2 text-center">
                           <SegmentLevelsSelector
                             segment={seg}
                             programLevels={programLevels}
@@ -2432,27 +2432,27 @@ export default function PracticePlans() {
                           />
                         </td>
                       )}
-                      <td className="px-3 py-3 text-center text-slate-300 text-sm">
+                      <td className={`px-3 py-2 text-center text-xs ${isLight ? 'text-gray-600' : 'text-slate-300'}`}>
                         {getSegmentStartTime(index)}
                       </td>
-                      <td className="px-3 py-3 text-center">
+                      <td className="px-3 py-2 text-center">
                         <input
                           id={`segment-${seg.id}-duration`}
                           type="number"
                           value={seg.duration || 0}
                           onChange={e => updateSegment(seg.id, 'duration', parseInt(e.target.value) || 0)}
                           onClick={e => e.stopPropagation()}
-                          className="w-14 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm text-center"
+                          className={`w-14 h-7 px-2 border rounded text-xs text-center ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
                           aria-label="Segment duration"
                         />
                       </td>
-                      <td className="px-3 py-3 text-center">
+                      <td className="px-3 py-2 text-center">
                         <select
                           id={`segment-${seg.id}-phase`}
                           value={seg.phase || 'ALL'}
                           onChange={e => updateSegment(seg.id, 'phase', e.target.value)}
                           onClick={e => e.stopPropagation()}
-                          className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs"
+                          className={`h-7 px-2 border rounded text-xs ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
                           aria-label="Segment phase"
                         >
                           {PHASES.map(p => (
@@ -2460,13 +2460,13 @@ export default function PracticePlans() {
                           ))}
                         </select>
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="px-3 py-2">
                         <select
                           id={`segment-${seg.id}-type`}
                           value={seg.type || ''}
                           onChange={e => updateSegment(seg.id, 'type', e.target.value)}
                           onClick={e => e.stopPropagation()}
-                          className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                          className={`w-full h-7 px-2 border rounded text-xs ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
                           aria-label="Segment type"
                         >
                           <option value="">-- Select Type --</option>
@@ -2477,13 +2477,13 @@ export default function PracticePlans() {
                       </td>
                       {currentPlan.isTwoPlatoon ? (
                         <>
-                          <td className="px-3 py-3">
+                          <td className="px-3 py-2">
                             <select
                               id={`segment-${seg.id}-offense-focus`}
                               value={seg.offenseFocus || ''}
                               onChange={e => updateSegment(seg.id, 'offenseFocus', e.target.value)}
                               onClick={e => e.stopPropagation()}
-                              className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                              className={`w-full h-7 px-2 border rounded text-xs ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
                               aria-label="Segment offense focus"
                             >
                               <option value="">-- Offense --</option>
@@ -2492,13 +2492,13 @@ export default function PracticePlans() {
                               ))}
                             </select>
                           </td>
-                          <td className="px-3 py-3">
+                          <td className="px-3 py-2">
                             <select
                               id={`segment-${seg.id}-defense-focus`}
                               value={seg.defenseFocus || ''}
                               onChange={e => updateSegment(seg.id, 'defenseFocus', e.target.value)}
                               onClick={e => e.stopPropagation()}
-                              className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                              className={`w-full h-7 px-2 border rounded text-xs ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
                               aria-label="Segment defense focus"
                             >
                               <option value="">-- Defense --</option>
@@ -2509,13 +2509,13 @@ export default function PracticePlans() {
                           </td>
                         </>
                       ) : (
-                        <td className="px-3 py-3">
+                        <td className="px-3 py-2">
                           <select
                             id={`segment-${seg.id}-situation`}
                             value={seg.situation || ''}
                             onChange={e => updateSegment(seg.id, 'situation', e.target.value)}
                             onClick={e => e.stopPropagation()}
-                            className="w-full px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                            className={`w-full h-7 px-2 border rounded text-xs ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
                             aria-label="Segment situation"
                           >
                             <option value="">-- Select Focus --</option>
@@ -2525,13 +2525,13 @@ export default function PracticePlans() {
                           </select>
                         </td>
                       )}
-                      <td className="px-3 py-3 text-center">
+                      <td className="px-3 py-2 text-center">
                         <select
                           id={`segment-${seg.id}-contact`}
                           value={seg.contact || ''}
                           onChange={e => updateSegment(seg.id, 'contact', e.target.value)}
                           onClick={e => e.stopPropagation()}
-                          className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-xs"
+                          className={`h-7 px-2 border rounded text-xs ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
                           aria-label="Segment contact level"
                         >
                           {CONTACT_LEVELS.map(c => (
@@ -2539,15 +2539,17 @@ export default function PracticePlans() {
                           ))}
                         </select>
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="px-3 py-2">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             setNotesModalSegmentId(seg.id);
                           }}
-                          className={`w-full px-2 py-1.5 text-left text-sm rounded border transition-colors truncate ${hasNotes(seg.notes)
+                          className={`w-full h-7 px-2 text-left text-xs rounded border transition-colors truncate ${hasNotes(seg.notes)
                             ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
-                            : 'bg-slate-700/50 border-slate-600 text-slate-500 italic'
+                            : isLight
+                              ? 'bg-gray-100 border-gray-300 text-gray-500 italic'
+                              : 'bg-slate-700/50 border-slate-600 text-slate-500 italic'
                             }`}
                         >
                           {hasNotes(seg.notes)
@@ -2555,24 +2557,24 @@ export default function PracticePlans() {
                             : 'Add notes...'}
                         </button>
                       </td>
-                      <td className="px-3 py-3 text-center">
+                      <td className="px-3 py-2 text-center">
                         <input
                           id={`segment-${seg.id}-has-script`}
                           type="checkbox"
                           checked={seg.hasScript || false}
                           onChange={e => updateSegment(seg.id, 'hasScript', e.target.checked)}
                           onClick={e => e.stopPropagation()}
-                          className="rounded border-slate-600 bg-slate-700 text-sky-500"
+                          className={`rounded text-sky-500 ${isLight ? 'border-gray-300 bg-white' : 'border-slate-600 bg-slate-700'}`}
                           aria-label="Segment has script"
                         />
                       </td>
-                      <td className="px-3 py-3 text-center">
+                      <td className="px-3 py-2 text-center">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             removeSegment(seg.id);
                           }}
-                          className="p-1 text-slate-500 hover:text-red-400 hover:bg-slate-600 rounded"
+                          className={`p-1 rounded ${isLight ? 'text-gray-400 hover:text-red-500 hover:bg-gray-200' : 'text-slate-500 hover:text-red-400 hover:bg-slate-600'}`}
                         >
                           <Trash2 size={14} />
                         </button>
@@ -2583,10 +2585,10 @@ export default function PracticePlans() {
               </table>
 
               {/* Add Segment Button */}
-              <div className="p-4 border-t border-slate-700">
+              <div className={`p-4 border-t ${isLight ? 'border-gray-200' : 'border-slate-700'}`}>
                 <button
                   onClick={() => addSegment()}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors border-2 border-dashed border-slate-600"
+                  className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg transition-colors border-2 border-dashed ${isLight ? 'bg-gray-50 text-gray-600 hover:bg-gray-100 border-gray-300' : 'bg-slate-700 text-slate-300 hover:bg-slate-600 border-slate-600'}`}
                 >
                   <Plus size={18} />
                   Add Segment
@@ -2595,14 +2597,14 @@ export default function PracticePlans() {
             </div>
 
             {/* Post-Practice Notes */}
-            <div className="p-4 bg-slate-800 rounded-lg">
-              <label htmlFor="post-practice-notes" className="block text-sm font-medium text-slate-300 mb-2">Post-Practice Notes</label>
+            <div className={`p-4 rounded-lg ${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800'}`}>
+              <label htmlFor="post-practice-notes" className={`block text-sm font-medium mb-2 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>Post-Practice Notes</label>
               <textarea
                 id="post-practice-notes"
                 value={currentPlan.postPracticeNotes || ''}
                 onChange={e => updateCurrentPlan({ postPracticeNotes: e.target.value })}
                 placeholder="Post-practice thoughts, ideas for tomorrow, things that went well or need work..."
-                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-500 text-sm resize-none"
+                className={`w-full px-3 py-2 border rounded-lg text-sm resize-none ${isLight ? 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-slate-700 border-slate-600 text-white placeholder-slate-500'}`}
                 rows={3}
               />
             </div>
