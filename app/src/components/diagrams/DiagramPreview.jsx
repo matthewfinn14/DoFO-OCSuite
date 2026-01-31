@@ -215,6 +215,80 @@ export default function DiagramPreview({
         );
       }
 
+      // Shape rendering (star, lock, arrows)
+      if (el.type === 'shape') {
+        const { x, y } = el.points[0];
+        const shapeColor = el.color || '#000000';
+        const size = 30;
+
+        let shapeElement = null;
+
+        if (el.shapeType === 'star') {
+          const outerR = size;
+          const innerR = size * 0.4;
+          const points = [];
+          for (let i = 0; i < 10; i++) {
+            const r = i % 2 === 0 ? outerR : innerR;
+            const angle = (Math.PI / 2) + (i * Math.PI / 5);
+            points.push(`${x + r * Math.cos(angle)},${y - r * Math.sin(angle)}`);
+          }
+          shapeElement = <polygon points={points.join(' ')} fill={shapeColor} />;
+        } else if (el.shapeType === 'lock') {
+          const lockWidth = size * 1.2;
+          const lockHeight = size * 0.9;
+          const shackleWidth = size * 0.6;
+          const shackleHeight = size * 0.5;
+          shapeElement = (
+            <g>
+              <path
+                d={`M ${x - shackleWidth/2} ${y - lockHeight/2}
+                    A ${shackleWidth/2} ${shackleHeight} 0 0 1 ${x + shackleWidth/2} ${y - lockHeight/2}`}
+                fill="none"
+                stroke={shapeColor}
+                strokeWidth="4"
+                strokeLinecap="round"
+              />
+              <rect
+                x={x - lockWidth/2}
+                y={y - lockHeight/2 + 2}
+                width={lockWidth}
+                height={lockHeight}
+                rx="3"
+                fill={shapeColor}
+              />
+              <circle cx={x} cy={y} r="4" fill="white" />
+              <rect x={x - 2} y={y} width="4" height="8" fill="white" />
+            </g>
+          );
+        } else if (el.shapeType === 'arrow-left') {
+          const arrowLen = size * 1.5;
+          const arrowHead = size * 0.6;
+          shapeElement = (
+            <g>
+              <line x1={x + arrowLen/2} y1={y} x2={x - arrowLen/2 + arrowHead} y2={y} stroke={shapeColor} strokeWidth="4" />
+              <polygon
+                points={`${x - arrowLen/2},${y} ${x - arrowLen/2 + arrowHead},${y - arrowHead/2} ${x - arrowLen/2 + arrowHead},${y + arrowHead/2}`}
+                fill={shapeColor}
+              />
+            </g>
+          );
+        } else if (el.shapeType === 'arrow-right') {
+          const arrowLen = size * 1.5;
+          const arrowHead = size * 0.6;
+          shapeElement = (
+            <g>
+              <line x1={x - arrowLen/2} y1={y} x2={x + arrowLen/2 - arrowHead} y2={y} stroke={shapeColor} strokeWidth="4" />
+              <polygon
+                points={`${x + arrowLen/2},${y} ${x + arrowLen/2 - arrowHead},${y - arrowHead/2} ${x + arrowLen/2 - arrowHead},${y + arrowHead/2}`}
+                fill={shapeColor}
+              />
+            </g>
+          );
+        }
+
+        return <g key={key}>{shapeElement}</g>;
+      }
+
       // Polyline
       if (!el.points || el.points.length < 2) return null;
 

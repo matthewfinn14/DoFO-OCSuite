@@ -58,6 +58,14 @@ const getZigZagPath = (points) => {
 
 const COLORS = ['#000000', '#ef4444', '#3b82f6', '#22c55e', '#f97316', '#facc15', '#8b5cf6', '#ec4899', '#06b6d4'];
 
+// Available shapes for the shape tool
+const SHAPES = [
+  { id: 'star', label: 'Star (Read)', icon: '★' },
+  { id: 'lock', label: 'Lock', icon: '🔒' },
+  { id: 'arrow-left', label: 'Arrow Left', icon: '←' },
+  { id: 'arrow-right', label: 'Arrow Right', icon: '→' },
+];
+
 // Default position colors (fallback only - user's positionColors from setup take precedence)
 const DEFAULT_POSITION_COLORS = {
   'C': '#64748b', 'G': '#64748b', 'T': '#64748b',
@@ -208,6 +216,7 @@ export default function PlayDiagramEditor({
   const [lineStyle, setLineStyle] = useState('solid');
   const [lineWidth, setLineWidth] = useState(7);
   const [endType, setEndType] = useState(isWizOline ? 't' : 'arrow'); // T-block for OL, arrow for skill
+  const [selectedShape, setSelectedShape] = useState('star'); // Shape to place when using shape tool
 
   // Text Size State for Wiz OL
   const [wizTextSize, setWizTextSize] = useState(isWizOline ? 170 : 24);
@@ -618,6 +627,20 @@ export default function PlayDiagramEditor({
           segmentStyles: [...(prev.segmentStyles || []), lineStyle]
         }));
       }
+    }
+
+    // Shape placement
+    if (selectedTool === 'shape') {
+      const newShape = {
+        id: Date.now(),
+        type: 'shape',
+        shapeType: selectedShape,
+        points: [point],
+        color: color
+      };
+      const newElements = [...elements, newShape];
+      setElements(newElements);
+      updateHistory(newElements);
     }
   };
 
@@ -1051,6 +1074,106 @@ export default function PlayDiagramEditor({
           >
             {positionNames[el.label] || el.label}
           </text>
+        </g>
+      );
+    }
+
+    // Shape rendering (star, lock, arrows)
+    if (el.type === 'shape') {
+      const { x, y } = el.points[0];
+      const isSelected = selectedIds.has(el.id);
+      const isInteractionTool = selectedTool === 'select' || selectedTool === 'delete';
+      const pointerEvents = isInteractionTool ? 'all' : 'none';
+      const shapeColor = el.color || '#000000';
+      const size = 30;
+
+      let shapeElement = null;
+
+      if (el.shapeType === 'star') {
+        // 5-pointed star
+        const outerR = size;
+        const innerR = size * 0.4;
+        const points = [];
+        for (let i = 0; i < 10; i++) {
+          const r = i % 2 === 0 ? outerR : innerR;
+          const angle = (Math.PI / 2) + (i * Math.PI / 5);
+          points.push(`${x + r * Math.cos(angle)},${y - r * Math.sin(angle)}`);
+        }
+        shapeElement = <polygon points={points.join(' ')} fill={shapeColor} />;
+      } else if (el.shapeType === 'lock') {
+        // Padlock shape
+        const lockWidth = size * 1.2;
+        const lockHeight = size * 0.9;
+        const shackleWidth = size * 0.6;
+        const shackleHeight = size * 0.5;
+        shapeElement = (
+          <g>
+            {/* Shackle (arc) */}
+            <path
+              d={`M ${x - shackleWidth/2} ${y - lockHeight/2}
+                  A ${shackleWidth/2} ${shackleHeight} 0 0 1 ${x + shackleWidth/2} ${y - lockHeight/2}`}
+              fill="none"
+              stroke={shapeColor}
+              strokeWidth="4"
+              strokeLinecap="round"
+            />
+            {/* Lock body */}
+            <rect
+              x={x - lockWidth/2}
+              y={y - lockHeight/2 + 2}
+              width={lockWidth}
+              height={lockHeight}
+              rx="3"
+              fill={shapeColor}
+            />
+            {/* Keyhole */}
+            <circle cx={x} cy={y} r="4" fill="white" />
+            <rect x={x - 2} y={y} width="4" height="8" fill="white" />
+          </g>
+        );
+      } else if (el.shapeType === 'arrow-left') {
+        // Horizontal left arrow
+        const arrowLen = size * 1.5;
+        const arrowHead = size * 0.6;
+        shapeElement = (
+          <g>
+            <line x1={x + arrowLen/2} y1={y} x2={x - arrowLen/2 + arrowHead} y2={y} stroke={shapeColor} strokeWidth="4" />
+            <polygon
+              points={`${x - arrowLen/2},${y} ${x - arrowLen/2 + arrowHead},${y - arrowHead/2} ${x - arrowLen/2 + arrowHead},${y + arrowHead/2}`}
+              fill={shapeColor}
+            />
+          </g>
+        );
+      } else if (el.shapeType === 'arrow-right') {
+        // Horizontal right arrow
+        const arrowLen = size * 1.5;
+        const arrowHead = size * 0.6;
+        shapeElement = (
+          <g>
+            <line x1={x - arrowLen/2} y1={y} x2={x + arrowLen/2 - arrowHead} y2={y} stroke={shapeColor} strokeWidth="4" />
+            <polygon
+              points={`${x + arrowLen/2},${y} ${x + arrowLen/2 - arrowHead},${y - arrowHead/2} ${x + arrowLen/2 - arrowHead},${y + arrowHead/2}`}
+              fill={shapeColor}
+            />
+          </g>
+        );
+      }
+
+      return (
+        <g
+          key={el.id}
+          onMouseDown={(e) => !isPreview && handleElementMouseDown(e, el.id)}
+          onClick={(e) => { e.stopPropagation(); !isPreview && handleClickElement(el.id); }}
+          style={{
+            cursor: selectedTool === 'delete' ? 'pointer' : (isPreview ? 'default' : 'move'),
+            opacity: isPreview ? 0.8 : 1,
+            pointerEvents
+          }}
+        >
+          {isSelected && !isPreview && (
+            <circle cx={x} cy={y} r={size + 5} fill="none" stroke="#2563eb" strokeWidth="2" strokeDasharray="4,2" />
+          )}
+          {shapeElement}
         </g>
       );
     }
@@ -1565,6 +1688,31 @@ export default function PlayDiagramEditor({
 
           <div className="w-px h-8 bg-slate-600" />
 
+          {/* Shapes - Dropdown */}
+          <div className="flex flex-col items-center">
+            <span className="text-[9px] text-slate-400 font-medium">Shapes</span>
+            <div className="flex items-center gap-1">
+              <select
+                value={selectedShape}
+                onChange={(e) => { setSelectedShape(e.target.value); setSelectedTool('shape'); }}
+                className="px-2 py-1 text-xs bg-slate-600 border border-slate-500 rounded text-white cursor-pointer"
+              >
+                {SHAPES.map(s => (
+                  <option key={s.id} value={s.id}>{s.icon} {s.label}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => setSelectedTool('shape')}
+                className={`px-2 py-1 text-xs rounded ${selectedTool === 'shape' ? 'bg-emerald-500 text-white' : 'bg-slate-600 text-slate-200 hover:bg-slate-500'}`}
+                title="Click on canvas to place shape"
+              >
+                Place
+              </button>
+            </div>
+          </div>
+
+          <div className="w-px h-8 bg-slate-600" />
+
           {/* Flip */}
           <div className="flex flex-col items-center">
             <span className="text-[9px] text-slate-400 font-medium">Mirror</span>
@@ -1645,6 +1793,8 @@ export default function PlayDiagramEditor({
       <div className="bg-slate-700 text-slate-400 text-xs text-center py-1 border-b border-slate-600">
         {selectedTool === 'line'
           ? 'Click to start • Click to add corners • Double-click to finish'
+          : selectedTool === 'shape'
+          ? 'Click to place shape • Use Color dropdown to change color'
           : 'Drag to move • Select + Delete to remove'}
       </div>
 
@@ -1679,7 +1829,7 @@ export default function PlayDiagramEditor({
             onDoubleClick={handleDoubleClick}
             onMouseLeave={handleMouseUp}
             style={{
-              cursor: selectedTool === 'delete' ? 'not-allowed' : (selectedTool === 'line' ? 'crosshair' : 'default'),
+              cursor: selectedTool === 'delete' ? 'not-allowed' : ((selectedTool === 'line' || selectedTool === 'shape') ? 'crosshair' : 'default'),
               aspectRatio: isWizSkill ? '950 / 600' : undefined
             }}
           >
