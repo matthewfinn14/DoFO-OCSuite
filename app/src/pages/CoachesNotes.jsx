@@ -67,26 +67,50 @@ export default function CoachesNotes() {
   const positionGroups = setupConfig?.positionGroups || { OFFENSE: [], DEFENSE: [], SPECIAL_TEAMS: [] };
 
   // Build list of position groups with their assigned staff (show all groups, not just ones with coaches)
+  // Supports both old coachId (string) and new coachIds (array) formats
   const positionGroupEntries = useMemo(() => {
     const entries = [];
 
     ['OFFENSE', 'DEFENSE', 'SPECIAL_TEAMS'].forEach(phase => {
       const phaseGroups = positionGroups[phase] || [];
       phaseGroups.forEach(group => {
-        const staffMember = group.coachId ? staff?.find(s => s.id === group.coachId) : null;
+        // Get all coach IDs (support both old and new format)
+        const coachIds = group.coachIds?.length > 0
+          ? group.coachIds
+          : (group.coachId ? [group.coachId] : []);
 
-        entries.push({
-          id: `pg_${group.id}`,
-          groupId: group.id,
-          staffId: staffMember?.id || null,
-          // Display name: coach name if assigned, otherwise group name
-          name: staffMember?.name || group.name,
-          displayLabel: staffMember?.name || group.name,
-          groupName: group.name,
-          groupAbbrev: group.abbrev,
-          phase,
-          hasCoach: !!staffMember
-        });
+        if (coachIds.length > 0) {
+          // Create an entry for each assigned coach
+          coachIds.forEach((coachId, idx) => {
+            const staffMember = staff?.find(s => s.id === coachId);
+            if (staffMember) {
+              entries.push({
+                id: `pg_${group.id}_${coachId}`,
+                groupId: group.id,
+                staffId: staffMember.id,
+                name: staffMember.name,
+                displayLabel: staffMember.name,
+                groupName: group.name,
+                groupAbbrev: group.abbrev,
+                phase,
+                hasCoach: true
+              });
+            }
+          });
+        } else {
+          // No coaches assigned - show group without coach
+          entries.push({
+            id: `pg_${group.id}`,
+            groupId: group.id,
+            staffId: null,
+            name: group.name,
+            displayLabel: group.name,
+            groupName: group.name,
+            groupAbbrev: group.abbrev,
+            phase,
+            hasCoach: false
+          });
+        }
       });
     });
 
@@ -196,20 +220,29 @@ export default function CoachesNotes() {
   };
 
   // Get groups that have coach assignments or Big 3 set
+  // Supports both old coachId (string) and new coachIds (array) formats
   const activePositionGroups = useMemo(() => {
     const groups = [];
 
     ['OFFENSE', 'DEFENSE', 'SPECIAL_TEAMS'].forEach(phase => {
       const phaseGroups = positionGroups[phase] || [];
       phaseGroups.forEach(group => {
-        // Include if has coach assigned or has Big 3 items
+        // Get all coach IDs (support both old and new format)
+        const coachIds = group.coachIds?.length > 0
+          ? group.coachIds
+          : (group.coachId ? [group.coachId] : []);
+        const hasCoaches = coachIds.length > 0;
         const hasBig3 = group.big3 && group.big3.some(b => b);
-        if (group.coachId || hasBig3) {
-          const coach = staff?.find(s => s.id === group.coachId);
+
+        if (hasCoaches || hasBig3) {
+          const coachNames = coachIds
+            .map(id => staff?.find(s => s.id === id)?.name)
+            .filter(Boolean);
           groups.push({
             ...group,
             phase,
-            coachName: coach?.name || null
+            coachName: coachNames.length > 0 ? coachNames.join(', ') : null,
+            coachNames // Array of coach names
           });
         }
       });

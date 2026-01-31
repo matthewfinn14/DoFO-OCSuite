@@ -328,11 +328,15 @@ function SegmentNotesModal({ segment, staff, positionGroups, onUpdateNotes, onCl
     // Add individual staff
     (staff || []).forEach(s => {
       const name = s.name.replace(/\s+/g, '');
+      // Support both old positionGroup (string) and new positionGroups (array)
+      const posGroupDisplay = s.positionGroups?.length > 0
+        ? s.positionGroups.join(', ')
+        : s.positionGroup || '';
       options.push({
         type: 'person',
         value: `@${name}`,
         label: `@${s.name}`,
-        description: s.role || s.positionGroup || ''
+        description: s.role || posGroupDisplay
       });
     });
 
@@ -1144,8 +1148,11 @@ function LegacySegmentNotesModal({ segment, staff, onUpdateNotes, onClose }) {
                     <tr key={coach.id} className="border-b border-slate-700">
                       <td className="px-4 py-3">
                         <label htmlFor={`legacy-notes-coach-${coach.id}`} className="font-medium text-slate-200">{coach.name}</label>
-                        {coach.positionGroup && (
-                          <span className="ml-2 text-xs text-slate-500">({coach.positionGroup})</span>
+                        {/* Support both old positionGroup (string) and new positionGroups (array) */}
+                        {(coach.positionGroups?.length > 0 || coach.positionGroup) && (
+                          <span className="ml-2 text-xs text-slate-500">
+                            ({coach.positionGroups?.length > 0 ? coach.positionGroups.join(', ') : coach.positionGroup})
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -1897,8 +1904,13 @@ export default function PracticePlans() {
         groups.add(groupLabel);
       });
     });
-    // Also collect from staff position assignments
+    // Also collect from staff position assignments (support both old and new format)
     (staff || []).forEach(s => {
+      // Handle new positionGroups array
+      if (s.positionGroups?.length > 0) {
+        s.positionGroups.forEach(pg => groups.add(pg));
+      }
+      // Handle old positionGroup string
       if (s.positionGroup) groups.add(s.positionGroup);
     });
     return Array.from(groups).sort();

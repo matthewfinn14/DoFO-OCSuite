@@ -558,24 +558,24 @@ export default function Setup() {
   // Default position groups
   const DEFAULT_POSITION_GROUPS = {
     OFFENSE: [
-      { id: 'grp_qb', name: 'Quarterbacks', abbrev: 'QB', positions: [], coachId: '', big3: ['', '', ''] },
-      { id: 'grp_rb', name: 'Running Backs', abbrev: 'RB', positions: [], coachId: '', big3: ['', '', ''] },
-      { id: 'grp_wr', name: 'Wide Receivers', abbrev: 'WR', positions: [], coachId: '', big3: ['', '', ''] },
-      { id: 'grp_te', name: 'Tight Ends', abbrev: 'TE', positions: [], coachId: '', big3: ['', '', ''] },
-      { id: 'grp_ol', name: 'Offensive Line', abbrev: 'OL', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_qb', name: 'Quarterbacks', abbrev: 'QB', positions: [], coachIds: [], big3: ['', '', ''] },
+      { id: 'grp_rb', name: 'Running Backs', abbrev: 'RB', positions: [], coachIds: [], big3: ['', '', ''] },
+      { id: 'grp_wr', name: 'Wide Receivers', abbrev: 'WR', positions: [], coachIds: [], big3: ['', '', ''] },
+      { id: 'grp_te', name: 'Tight Ends', abbrev: 'TE', positions: [], coachIds: [], big3: ['', '', ''] },
+      { id: 'grp_ol', name: 'Offensive Line', abbrev: 'OL', positions: [], coachIds: [], big3: ['', '', ''] },
     ],
     DEFENSE: [
-      { id: 'grp_dl', name: 'Defensive Line', abbrev: 'DL', positions: [], coachId: '', big3: ['', '', ''] },
-      { id: 'grp_lb', name: 'Linebackers', abbrev: 'LB', positions: [], coachId: '', big3: ['', '', ''] },
-      { id: 'grp_db', name: 'Defensive Backs', abbrev: 'DB', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_dl', name: 'Defensive Line', abbrev: 'DL', positions: [], coachIds: [], big3: ['', '', ''] },
+      { id: 'grp_lb', name: 'Linebackers', abbrev: 'LB', positions: [], coachIds: [], big3: ['', '', ''] },
+      { id: 'grp_db', name: 'Defensive Backs', abbrev: 'DB', positions: [], coachIds: [], big3: ['', '', ''] },
     ],
     SPECIAL_TEAMS: [
-      { id: 'grp_ko', name: 'Kickoff', abbrev: 'KO', positions: [], coachId: '', big3: ['', '', ''] },
-      { id: 'grp_kor', name: 'Kickoff Return', abbrev: 'KOR', positions: [], coachId: '', big3: ['', '', ''] },
-      { id: 'grp_punt', name: 'Punt', abbrev: 'PUNT', positions: [], coachId: '', big3: ['', '', ''] },
-      { id: 'grp_pr', name: 'Punt Return', abbrev: 'PR', positions: [], coachId: '', big3: ['', '', ''] },
-      { id: 'grp_fg', name: 'FG / PAT', abbrev: 'FG', positions: [], coachId: '', big3: ['', '', ''] },
-      { id: 'grp_fgb', name: 'FG Block', abbrev: 'FGB', positions: [], coachId: '', big3: ['', '', ''] },
+      { id: 'grp_ko', name: 'Kickoff', abbrev: 'KO', positions: [], coachIds: [], big3: ['', '', ''] },
+      { id: 'grp_kor', name: 'Kickoff Return', abbrev: 'KOR', positions: [], coachIds: [], big3: ['', '', ''] },
+      { id: 'grp_punt', name: 'Punt', abbrev: 'PUNT', positions: [], coachIds: [], big3: ['', '', ''] },
+      { id: 'grp_pr', name: 'Punt Return', abbrev: 'PR', positions: [], coachIds: [], big3: ['', '', ''] },
+      { id: 'grp_fg', name: 'FG / PAT', abbrev: 'FG', positions: [], coachIds: [], big3: ['', '', ''] },
+      { id: 'grp_fgb', name: 'FG Block', abbrev: 'FGB', positions: [], coachIds: [], big3: ['', '', ''] },
     ]
   };
 
@@ -719,8 +719,15 @@ export default function Setup() {
     delete configWithDefaults._needsDefaultSave;
 
     setLocalConfig(configWithDefaults);
-    initialConfigRef.current = configWithDefaults;
-    setSaveStatus(needsDefaults ? 'unsaved' : 'saved');
+    // If defaults were added, keep initialConfigRef as the original config
+    // so hasUnsavedChanges() returns true and triggers autosave
+    if (needsDefaults) {
+      initialConfigRef.current = setupConfig;
+      setSaveStatus('unsaved');
+    } else {
+      initialConfigRef.current = configWithDefaults;
+      setSaveStatus('saved');
+    }
   }, [setupConfig]);
 
   // Autosave with debounce (3 seconds after last change)
@@ -1368,6 +1375,7 @@ export default function Setup() {
               positionGroups={localConfig.positionGroups || {}}
               staff={staff || []}
               onUpdate={updateLocal}
+              isLight={isLight}
             />
           )}
 
@@ -1781,45 +1789,13 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
 }
 
 // Position Groups Tab Component
-function PositionGroupsTab({ phase, positionGroups, staff, onUpdate }) {
-  const groups = positionGroups[phase] || [];
-
-  // Default position groups by phase
-  const DEFAULT_GROUPS = {
-    OFFENSE: [
-      { id: 'grp_qb', name: 'Quarterbacks', abbrev: 'QB', positions: [], coachId: '', big3: ['', '', ''] },
-      { id: 'grp_rb', name: 'Running Backs', abbrev: 'RB', positions: [], coachId: '', big3: ['', '', ''] },
-      { id: 'grp_wr', name: 'Wide Receivers', abbrev: 'WR', positions: [], coachId: '', big3: ['', '', ''] },
-      { id: 'grp_te', name: 'Tight Ends', abbrev: 'TE', positions: [], coachId: '', big3: ['', '', ''] },
-      { id: 'grp_ol', name: 'Offensive Line', abbrev: 'OL', positions: [], coachId: '', big3: ['', '', ''] },
-    ],
-    DEFENSE: [
-      { id: 'grp_dl', name: 'Defensive Line', abbrev: 'DL', positions: [], coachId: '', big3: ['', '', ''] },
-      { id: 'grp_lb', name: 'Linebackers', abbrev: 'LB', positions: [], coachId: '', big3: ['', '', ''] },
-      { id: 'grp_db', name: 'Defensive Backs', abbrev: 'DB', positions: [], coachId: '', big3: ['', '', ''] },
-    ],
-    SPECIAL_TEAMS: [
-      { id: 'grp_ko', name: 'Kickoff', abbrev: 'KO', positions: [], coachId: '', big3: ['', '', ''] },
-      { id: 'grp_kor', name: 'Kickoff Return', abbrev: 'KOR', positions: [], coachId: '', big3: ['', '', ''] },
-      { id: 'grp_punt', name: 'Punt', abbrev: 'PUNT', positions: [], coachId: '', big3: ['', '', ''] },
-      { id: 'grp_pr', name: 'Punt Return', abbrev: 'PR', positions: [], coachId: '', big3: ['', '', ''] },
-      { id: 'grp_fg', name: 'FG / PAT', abbrev: 'FG', positions: [], coachId: '', big3: ['', '', ''] },
-      { id: 'grp_fgb', name: 'FG Block', abbrev: 'FGB', positions: [], coachId: '', big3: ['', '', ''] },
-    ]
-  };
-
-  const loadDefaults = () => {
-    const defaults = DEFAULT_GROUPS[phase] || [];
-    if (groups.length > 0 && !confirm('This will add default groups to your existing list. Continue?')) return;
-    // Only add groups that don't already exist (by abbrev)
-    const existingAbbrevs = groups.map(g => g.abbrev?.toUpperCase());
-    const newGroups = defaults.filter(d => !existingAbbrevs.includes(d.abbrev));
-    if (newGroups.length === 0) {
-      alert('All default groups already exist.');
-      return;
-    }
-    onUpdate('positionGroups', { ...positionGroups, [phase]: [...groups, ...newGroups] });
-  };
+function PositionGroupsTab({ phase, positionGroups, staff, onUpdate, isLight = false }) {
+  // Position groups are organized by O/D/K, so when viewing from Practice Setup (phase='PRACTICE'),
+  // we need our own phase selector
+  const [selectedODKPhase, setSelectedODKPhase] = useState('OFFENSE');
+  const [openCoachDropdown, setOpenCoachDropdown] = useState(null); // Track which group's dropdown is open
+  const activePhase = phase === 'PRACTICE' ? selectedODKPhase : phase;
+  const groups = positionGroups[activePhase] || [];
 
   const addGroup = () => {
     const name = prompt('New position group name:');
@@ -1830,21 +1806,45 @@ function PositionGroupsTab({ phase, positionGroups, staff, onUpdate }) {
       name,
       abbrev,
       positions: [],
-      coachId: '',
+      coachIds: [], // Array of coach IDs (multi-select)
       big3: ['', '', '']
     };
-    onUpdate('positionGroups', { ...positionGroups, [phase]: [...groups, newGroup] });
+    onUpdate('positionGroups', { ...positionGroups, [activePhase]: [...groups, newGroup] });
+  };
+
+  // Helper to get coach IDs (supports both old coachId and new coachIds format)
+  const getCoachIds = (group) => {
+    if (group.coachIds?.length > 0) return group.coachIds;
+    if (group.coachId) return [group.coachId];
+    return [];
+  };
+
+  // Get coach names for display
+  const getCoachNames = (group) => {
+    const ids = getCoachIds(group);
+    return ids.map(id => staff?.find(s => s.id === id)?.name).filter(Boolean);
+  };
+
+  // Toggle coach selection
+  const toggleCoach = (groupId, coachId) => {
+    const group = groups.find(g => g.id === groupId);
+    if (!group) return;
+    const currentIds = getCoachIds(group);
+    const newIds = currentIds.includes(coachId)
+      ? currentIds.filter(id => id !== coachId)
+      : [...currentIds, coachId];
+    updateGroup(groupId, { coachIds: newIds, coachId: '' }); // Clear old coachId field
   };
 
   const deleteGroup = (id) => {
     if (!confirm('Delete this group?')) return;
-    onUpdate('positionGroups', { ...positionGroups, [phase]: groups.filter(g => g.id !== id) });
+    onUpdate('positionGroups', { ...positionGroups, [activePhase]: groups.filter(g => g.id !== id) });
   };
 
   const updateGroup = (id, updates) => {
     onUpdate('positionGroups', {
       ...positionGroups,
-      [phase]: groups.map(g => g.id === id ? { ...g, ...updates } : g)
+      [activePhase]: groups.map(g => g.id === id ? { ...g, ...updates } : g)
     });
   };
 
@@ -1852,84 +1852,147 @@ function PositionGroupsTab({ phase, positionGroups, staff, onUpdate }) {
     <div>
       <div className="flex justify-between items-center mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-white">Position Groups</h3>
-          <p className="text-slate-400 text-sm">Assign coaches and set Big 3 focus points for each group.</p>
+          <h3 className={`text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>Position Groups</h3>
+          <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>Assign coaches and set Big 3 focus points for each group.</p>
         </div>
-        <div className="flex items-center gap-2">
-          {groups.length === 0 && (
-            <button
-              onClick={loadDefaults}
-              className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
-            >
-              Load Defaults
-            </button>
-          )}
-          <button
-            onClick={addGroup}
-            className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700"
-          >
-            <Plus size={16} /> Add Group
-          </button>
-        </div>
+        <button
+          onClick={addGroup}
+          className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700"
+        >
+          <Plus size={16} /> Add Group
+        </button>
       </div>
 
+      {/* Phase selector when viewing from Practice Setup */}
+      {phase === 'PRACTICE' && (
+        <div className="flex gap-2 mb-4">
+          {[
+            { id: 'OFFENSE', label: 'Offense', color: 'bg-blue-500' },
+            { id: 'DEFENSE', label: 'Defense', color: 'bg-red-500' },
+            { id: 'SPECIAL_TEAMS', label: 'Special Teams', color: 'bg-amber-500' }
+          ].map(p => (
+            <button
+              key={p.id}
+              onClick={() => setSelectedODKPhase(p.id)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                selectedODKPhase === p.id
+                  ? `${p.color} text-white`
+                  : isLight
+                    ? 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Click-outside overlay to close dropdown */}
+      {openCoachDropdown && (
+        <div
+          className="fixed inset-0 z-0"
+          onClick={() => setOpenCoachDropdown(null)}
+        />
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {groups.map(group => (
-          <div key={group.id} className="bg-slate-700/50 rounded-lg border border-slate-600 p-4">
-            <div className="flex justify-between items-start mb-3">
-              <div className="flex-1 space-y-2">
-                <div className="flex items-center gap-2">
-                  <input
-                    id={`group-abbrev-${group.id}`}
-                    type="text"
-                    value={group.abbrev || ''}
-                    onChange={(e) => updateGroup(group.id, { abbrev: e.target.value.toUpperCase() })}
-                    aria-label="Group abbreviation"
-                    className="w-14 bg-sky-500 text-black px-2 py-1 rounded text-xs font-bold text-center uppercase"
-                    placeholder="ABB"
-                    maxLength={4}
-                  />
-                  <input
-                    id={`group-name-${group.id}`}
-                    type="text"
-                    value={group.name || ''}
-                    onChange={(e) => updateGroup(group.id, { name: e.target.value })}
-                    aria-label="Group name"
-                    className="flex-1 bg-transparent border-b border-slate-500 text-white font-semibold focus:border-sky-500 focus:outline-none px-1"
-                    placeholder="Group Name"
-                  />
-                </div>
+        {groups.map(group => {
+          const selectedCoachIds = getCoachIds(group);
+          return (
+          <div key={group.id} className={`rounded-lg border p-4 relative ${isLight ? 'bg-white border-gray-200 shadow-sm' : 'bg-slate-700/50 border-slate-600'}`}>
+            <div className="flex items-start gap-2 mb-3">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <input
+                  id={`group-abbrev-${group.id}`}
+                  type="text"
+                  value={group.abbrev || ''}
+                  onChange={(e) => updateGroup(group.id, { abbrev: e.target.value.toUpperCase() })}
+                  aria-label="Group abbreviation"
+                  className="w-14 bg-sky-500 text-white px-2 py-1 rounded text-xs font-bold text-center uppercase flex-shrink-0"
+                  placeholder="ABB"
+                  maxLength={4}
+                />
+                <input
+                  id={`group-name-${group.id}`}
+                  type="text"
+                  value={group.name || ''}
+                  onChange={(e) => updateGroup(group.id, { name: e.target.value })}
+                  aria-label="Group name"
+                  className={`flex-1 min-w-0 bg-transparent border-b font-semibold focus:border-sky-500 focus:outline-none px-1 ${isLight ? 'border-gray-300 text-gray-900' : 'border-slate-500 text-white'}`}
+                  placeholder="Group Name"
+                />
               </div>
               <button
                 onClick={() => deleteGroup(group.id)}
-                className="p-1 text-red-400 hover:text-red-300 ml-2"
+                className="p-1.5 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded flex-shrink-0"
               >
                 <Trash2 size={14} />
               </button>
             </div>
 
-            {/* Coach Selection */}
-            <div className="mb-3">
-              <label htmlFor={`group-coach-${group.id}`} className="text-xs text-slate-400 block mb-1">Coach</label>
-              <select
-                id={`group-coach-${group.id}`}
-                value={group.coachId || ''}
-                onChange={(e) => updateGroup(group.id, { coachId: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-white text-sm"
+            {/* Coach Selection - Dropdown Multi-select */}
+            <div className="mb-3 relative">
+              <span className={`text-xs block mb-1 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                Coach{selectedCoachIds.length > 1 ? 'es' : ''}
+              </span>
+              <button
+                type="button"
+                onClick={() => setOpenCoachDropdown(openCoachDropdown === group.id ? null : group.id)}
+                className={`w-full px-3 py-2 border rounded-lg text-sm text-left flex items-center justify-between ${
+                  isLight
+                    ? 'bg-white border-gray-300 text-gray-900 hover:border-gray-400'
+                    : 'bg-slate-600 border-slate-500 text-white hover:border-slate-400'
+                }`}
               >
-                <option value="">-- Select Coach --</option>
-                {staff.filter(s => !s.archived).map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
+                <span className={selectedCoachIds.length === 0 ? (isLight ? 'text-gray-400' : 'text-slate-400') : ''}>
+                  {selectedCoachIds.length === 0
+                    ? 'Select coaches...'
+                    : getCoachNames(group).join(', ')}
+                </span>
+                <ChevronDown size={14} className={`transition-transform ${openCoachDropdown === group.id ? 'rotate-180' : ''}`} />
+              </button>
+              {openCoachDropdown === group.id && (
+                <div className={`absolute z-10 mt-1 w-full border rounded-lg shadow-lg max-h-40 overflow-y-auto ${
+                  isLight ? 'bg-white border-gray-300' : 'bg-slate-700 border-slate-500'
+                }`}>
+                  {staff.filter(s => !s.archived).length === 0 ? (
+                    <p className={`text-xs italic p-3 ${isLight ? 'text-gray-400' : 'text-slate-400'}`}>
+                      No staff members defined
+                    </p>
+                  ) : (
+                    staff.filter(s => !s.archived).map(s => {
+                      const isSelected = selectedCoachIds.includes(s.id);
+                      return (
+                        <label
+                          key={s.id}
+                          className={`flex items-center gap-2 cursor-pointer px-3 py-2 ${
+                            isLight
+                              ? 'hover:bg-gray-100'
+                              : 'hover:bg-slate-600'
+                          } ${isSelected ? (isLight ? 'bg-sky-50' : 'bg-sky-500/20') : ''}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleCoach(group.id, s.id)}
+                            className="rounded border-slate-400 text-sky-500 focus:ring-sky-500"
+                          />
+                          <span className={`text-sm ${isLight ? 'text-gray-700' : 'text-white'}`}>{s.name}</span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Big 3 */}
             <div>
-              <span className="text-xs text-slate-400 block mb-1">Big 3</span>
+              <span className={`text-xs block mb-1 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>Big 3</span>
               {[0, 1, 2].map(i => (
                 <div key={i} className="flex items-center gap-2 mb-2">
-                  <span className="w-5 h-5 bg-sky-500 text-black rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
+                  <span className="w-5 h-5 bg-sky-500 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
                     {i + 1}
                   </span>
                   <input
@@ -1943,28 +2006,22 @@ function PositionGroupsTab({ phase, positionGroups, staff, onUpdate }) {
                       updateGroup(group.id, { big3: newBig3 });
                     }}
                     aria-label={`Focus point ${i + 1}`}
-                    className="flex-1 px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white text-sm"
+                    className={`flex-1 px-2 py-1 border rounded text-sm ${isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-slate-600 border-slate-500 text-white'}`}
                   />
                 </div>
               ))}
             </div>
           </div>
-        ))}
+        );
+        })}
       </div>
 
-      {groups.length === 0 ? (
-        <div className="text-center py-12 text-slate-400">
+      {groups.length === 0 && (
+        <div className={`text-center py-12 ${isLight ? 'text-gray-400' : 'text-slate-400'}`}>
           <Layers size={48} className="mx-auto mb-4 opacity-30" />
           <p>No position groups defined.</p>
-          <p className="text-sm">Click "Load Defaults" to add standard groups or "Add Group" to create custom ones.</p>
+          <p className="text-sm">Click "Add Group" to create position groups.</p>
         </div>
-      ) : (
-        <button
-          onClick={loadDefaults}
-          className="mt-4 text-xs text-amber-500 hover:text-amber-400 underline"
-        >
-          + Add more default groups
-        </button>
       )}
     </div>
   );

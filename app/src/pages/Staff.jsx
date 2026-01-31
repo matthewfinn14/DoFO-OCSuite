@@ -253,7 +253,7 @@ function StaffTab() {
       title: '',
       role: 'position_coach',
       permissionLevel: 'coach',
-      positionGroup: '',
+      positionGroups: [], // Array of position group names (multi-select)
       levelId: '',
       notes: ''
     });
@@ -310,10 +310,15 @@ function StaffTab() {
               <span className="text-slate-300">{member.phone}</span>
             </div>
           )}
-          {member.positionGroup && (
+          {/* Support both old positionGroup (string) and new positionGroups (array) */}
+          {(member.positionGroups?.length > 0 || member.positionGroup) && (
             <div className="flex items-center gap-2 text-sm">
               <UserCog size={14} className="text-slate-500" />
-              <span className="text-slate-300">{member.positionGroup}</span>
+              <span className="text-slate-300">
+                {member.positionGroups?.length > 0
+                  ? member.positionGroups.join(', ')
+                  : member.positionGroup}
+              </span>
             </div>
           )}
         </div>
@@ -582,38 +587,53 @@ function StaffTab() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="staff-position-group" className="text-sm text-slate-400 block mb-1">Position Group</label>
+                  <label className="text-sm text-slate-400 block mb-1">Position Groups</label>
                   {allPositionGroups.length > 0 ? (
-                    <select
-                      id="staff-position-group"
-                      value={editingStaff.positionGroup || ''}
-                      onChange={e => setEditingStaff({ ...editingStaff, positionGroup: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
-                    >
-                      <option value="">Select group...</option>
+                    <div className="bg-slate-800 border border-slate-700 rounded-lg p-2 max-h-40 overflow-y-auto">
                       {['OFFENSE', 'DEFENSE', 'SPECIAL_TEAMS'].map(phase => {
                         const phaseGroups = allPositionGroups.filter(g => g.phase === phase);
                         if (phaseGroups.length === 0) return null;
                         const phaseLabel = phase === 'SPECIAL_TEAMS' ? 'Special Teams' : phase.charAt(0) + phase.slice(1).toLowerCase();
+                        // Get current selections (support both old string and new array format)
+                        const currentSelections = editingStaff.positionGroups || (editingStaff.positionGroup ? [editingStaff.positionGroup] : []);
                         return (
-                          <optgroup key={phase} label={phaseLabel}>
-                            {phaseGroups.map(group => (
-                              <option key={group.id} value={group.name}>
-                                {group.name}
-                              </option>
-                            ))}
-                          </optgroup>
+                          <div key={phase} className="mb-2 last:mb-0">
+                            <div className="text-xs text-slate-500 font-medium mb-1">{phaseLabel}</div>
+                            <div className="space-y-1">
+                              {phaseGroups.map(group => {
+                                const isSelected = currentSelections.includes(group.name);
+                                return (
+                                  <label
+                                    key={group.id}
+                                    className="flex items-center gap-2 cursor-pointer hover:bg-slate-700/50 px-2 py-1 rounded"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={(e) => {
+                                        const newSelections = e.target.checked
+                                          ? [...currentSelections, group.name]
+                                          : currentSelections.filter(g => g !== group.name);
+                                        setEditingStaff({ ...editingStaff, positionGroups: newSelections, positionGroup: '' });
+                                      }}
+                                      className="rounded border-slate-600 bg-slate-700 text-sky-500 focus:ring-sky-500"
+                                    />
+                                    <span className="text-sm text-white">{group.name}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
                         );
                       })}
-                    </select>
+                    </div>
                   ) : (
                     <input
-                      id="staff-position-group"
                       type="text"
-                      value={editingStaff.positionGroup || ''}
-                      onChange={e => setEditingStaff({ ...editingStaff, positionGroup: e.target.value })}
+                      value={(editingStaff.positionGroups || []).join(', ') || editingStaff.positionGroup || ''}
+                      onChange={e => setEditingStaff({ ...editingStaff, positionGroups: e.target.value.split(',').map(s => s.trim()).filter(Boolean), positionGroup: '' })}
                       className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
-                      placeholder="e.g. Wide Receivers"
+                      placeholder="e.g. Wide Receivers, Tight Ends"
                     />
                   )}
                 </div>

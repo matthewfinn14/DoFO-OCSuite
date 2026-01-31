@@ -90,11 +90,15 @@ function PregameNotesModal({ item, staff, positionGroups, onUpdateNotes, onClose
     // Add individual staff
     (staff || []).forEach(s => {
       const name = s.name.replace(/\s+/g, '');
+      // Support both old positionGroup (string) and new positionGroups (array)
+      const posGroupDisplay = s.positionGroups?.length > 0
+        ? s.positionGroups.join(', ')
+        : s.positionGroup || '';
       options.push({
         type: 'person',
         value: `@${name}`,
         label: `@${s.name}`,
-        description: s.role || s.positionGroup || ''
+        description: s.role || posGroupDisplay
       });
     });
 
