@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { MousePointer, Minus, Trash, RotateCcw, RotateCw, Save, X, RefreshCw, Users, Plus, Group, Ungroup } from 'lucide-react';
+import { MousePointer, Minus, Trash, RotateCcw, RotateCw, Save, X, RefreshCw, Users, Plus, Group, Ungroup, HelpCircle } from 'lucide-react';
 
 // Zigzag path generator
 const getZigZagPath = (points) => {
@@ -230,6 +230,7 @@ export default function PlayDiagramEditor({
   // Formation selector state for wiz-skill
   const [selectedFormationId, setSelectedFormationId] = useState('');
   const [showAddPlayer, setShowAddPlayer] = useState(false);
+  const [showHelpLegend, setShowHelpLegend] = useState(false);
 
   // History for undo/redo
   const [history, setHistory] = useState([elements]);
@@ -1468,55 +1469,48 @@ export default function PlayDiagramEditor({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Toolbar */}
+      {/* Toolbar - Two Row Layout */}
       {!readOnly && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 py-1.5 bg-slate-800 border-b border-slate-600">
-
-          {/* Play Name Display */}
-          {playName && (
-            <>
-              <div className="flex flex-col items-center">
-                <span className="text-[9px] text-slate-400 font-medium">Play</span>
-                <div className="px-2 py-0.5 text-xs bg-sky-600 border border-sky-500 rounded text-white font-bold shadow-sm truncate max-w-[140px]">
-                  {playName}
+        <div className="bg-slate-900 border-b border-slate-700">
+          {/* Row 1: Play & Formation Controls */}
+          <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800">
+            {/* Left side: Play name + Formation controls */}
+            <div className="flex items-center gap-3">
+              {/* Play Name Badge */}
+              {playName && (
+                <div className="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-lg">
+                  <span className="text-sky-400 text-xs font-medium">PLAY</span>
+                  <span className="text-white font-semibold text-sm">
+                    {playName}
+                  </span>
                 </div>
-              </div>
-              <div className="w-px h-8 bg-slate-600" />
-            </>
-          )}
+              )}
 
-          {/* WIZ Skill: Personnel Grouping Selector */}
-          {isWizSkill && personnelGroupings.length > 0 && (
-            <>
-              <div className="flex flex-col items-center">
-                <label htmlFor="diagram-personnel-select" className="text-[9px] text-slate-400 font-medium">Personnel</label>
-                <select
-                  id="diagram-personnel-select"
-                  value={selectedPersonnelId}
-                  onChange={(e) => {
-                    if (e.target.value) {
-                      applyPersonnelGrouping(e.target.value);
-                    }
-                  }}
-                  className="px-2 py-1 text-xs bg-purple-600 border border-purple-500 rounded text-white font-medium"
-                >
-                  {personnelGroupings.map(g => (
-                    <option key={g.id} value={g.id}>
-                      {g.code ? `${g.code} - ${g.name}` : g.name}{g.isBase ? ' (Base)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="w-px h-8 bg-slate-600" />
-            </>
-          )}
+              {/* WIZ Skill: Formation Group */}
+              {isWizSkill && (
+                <div className="flex items-center gap-2">
+                  {/* Personnel Selector */}
+                  {personnelGroupings.length > 0 && (
+                    <select
+                      id="diagram-personnel-select"
+                      value={selectedPersonnelId}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          applyPersonnelGrouping(e.target.value);
+                        }
+                      }}
+                      className="px-3 py-1.5 text-xs bg-purple-700 border-2 border-black rounded text-white font-semibold focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
+                      title="Personnel Grouping"
+                    >
+                      {personnelGroupings.map(g => (
+                        <option key={g.id} value={g.id}>
+                          {g.code ? `${g.code} - ${g.name}` : g.name}{g.isBase ? ' (Base)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  )}
 
-          {/* WIZ Skill: Formation Selector & Define */}
-          {isWizSkill && (
-            <>
-              <div className="flex flex-col items-center">
-                <label htmlFor="diagram-formation-select" className="text-[9px] text-slate-400 font-medium">Formation</label>
-                <div className="flex items-center gap-1">
+                  {/* Formation Selector */}
                   {formations.length > 0 && (
                     <select
                       id="diagram-formation-select"
@@ -1527,9 +1521,10 @@ export default function PlayDiagramEditor({
                           setSelectedFormationId(e.target.value);
                         }
                       }}
-                      className="px-2 py-1 text-xs bg-slate-600 border border-slate-500 rounded text-white"
+                      className="px-3 py-1.5 text-xs bg-slate-800 border-2 border-black rounded text-white font-semibold focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                      title="Load Formation"
                     >
-                      <option value="">Load...</option>
+                      <option value="">Load Formation...</option>
                       {formations.map(f => (
                         <option key={f.id} value={f.id}>
                           {f.personnelCode ? `${f.personnelCode} ` : ''}{f.name}
@@ -1537,90 +1532,86 @@ export default function PlayDiagramEditor({
                       ))}
                     </select>
                   )}
+
+                  {/* Define Formation */}
                   {onSaveFormation && (
                     <button
                       onClick={openDefineFormationModal}
-                      className="px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-500"
+                      className="px-2 py-1.5 text-xs font-semibold bg-slate-800 text-white border-2 border-slate-500 rounded hover:bg-slate-700 transition-colors"
                       title="Save current positions as a formation template"
                     >
                       Define
                     </button>
                   )}
+
+                  {/* Snap Default */}
                   <button
                     onClick={snapToDefaultPositions}
-                    className="px-2 py-1 text-xs bg-sky-600 text-white rounded hover:bg-sky-500"
+                    className="px-2 py-1.5 text-xs font-semibold bg-slate-800 text-white border-2 border-slate-500 rounded hover:bg-slate-700 transition-colors"
                     title="Snap all players to their default starting positions (keeps routes)"
                   >
-                    Snap Default
+                    Snap
                   </button>
+
+                  {/* Set Default */}
                   {onSaveDefaultPositions && (
                     <button
                       onClick={setAsDefaultPositions}
-                      className={`px-2 py-1 text-xs text-white rounded transition-colors ${defaultsSaved ? 'bg-emerald-500' : 'bg-amber-600 hover:bg-amber-500'}`}
+                      className={`px-2 py-1.5 text-xs font-semibold border-2 rounded transition-colors ${defaultsSaved ? 'bg-emerald-500 text-white border-emerald-600' : 'bg-slate-800 text-white border-slate-600 hover:bg-slate-700'}`}
                       title="Save current positions as YOUR default (will be used by Snap Default)"
                     >
                       {defaultsSaved ? 'Saved!' : 'Set Default'}
                     </button>
                   )}
                 </div>
-              </div>
-              <div className="w-px h-8 bg-slate-600" />
-            </>
-          )}
+              )}
 
-          {/* WIZ Skill: Add/Remove Player */}
-          {isWizSkill && (
-            <>
-              <div className="flex flex-col items-center relative">
-                <span className="text-[9px] text-slate-400 font-medium">Add Player</span>
-                <button
-                  onClick={() => setShowAddPlayer(!showAddPlayer)}
-                  className="px-2 py-1 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-500 flex items-center gap-1"
-                >
-                  <Plus size={14} /> Player
-                </button>
-                {showAddPlayer && (
-                  <div className="absolute top-full left-0 mt-1 bg-slate-800 border border-slate-600 rounded-lg p-2 z-50 shadow-xl min-w-[180px]">
-                    <div className="text-[10px] text-slate-300 font-medium mb-1 px-1">Click to add position</div>
-                    <div className="grid grid-cols-3 gap-1">
-                      {skillPositionButtons.map(pos => (
-                        <button
-                          key={pos}
-                          onClick={() => addSinglePlayer(pos)}
-                          className="px-3 py-1.5 text-xs rounded hover:opacity-80 text-white font-medium"
-                          style={{ backgroundColor: positionColors[pos] || DEFAULT_POSITION_COLORS[pos] || '#3b82f6' }}
-                        >
-                          {positionNames[pos] || pos}
-                        </button>
-                      ))}
-                    </div>
+              {/* WIZ Skill: Add/Remove Player */}
+              {isWizSkill && (
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowAddPlayer(!showAddPlayer)}
+                      className="px-2 py-1.5 text-xs font-semibold bg-emerald-600 text-white border-2 border-emerald-700 rounded hover:bg-emerald-500 flex items-center gap-1 transition-colors"
+                      title="Add Player"
+                    >
+                      <Plus size={14} /> Add Player
+                    </button>
+                    {showAddPlayer && (
+                      <div className="absolute top-full left-0 mt-1 bg-slate-800 border border-slate-600 rounded-lg p-2 z-50 shadow-xl min-w-[180px]">
+                        <div className="text-[10px] text-slate-300 font-medium mb-1 px-1">Click to add position</div>
+                        <div className="grid grid-cols-3 gap-1">
+                          {skillPositionButtons.map(pos => (
+                            <button
+                              key={pos}
+                              onClick={() => addSinglePlayer(pos)}
+                              className="px-3 py-1.5 text-xs rounded hover:opacity-80 text-white font-medium"
+                              style={{ backgroundColor: positionColors[pos] || DEFAULT_POSITION_COLORS[pos] || '#3b82f6' }}
+                            >
+                              {positionNames[pos] || pos}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              <div className="flex flex-col items-center">
-                <span className="text-[9px] text-slate-400 font-medium">Remove</span>
-                <button
-                  onClick={() => setSelectedTool(selectedTool === 'delete' ? 'select' : 'delete')}
-                  className={`px-2 py-1 text-xs rounded flex items-center gap-1 ${
-                    selectedTool === 'delete'
-                      ? 'bg-red-600 text-white'
-                      : 'bg-red-900/50 text-red-300 hover:bg-red-800/50'
-                  }`}
-                  title={selectedTool === 'delete' ? 'Click a player to remove, or click here to cancel' : 'Click to enable remove mode'}
-                >
-                  <Minus size={14} /> Player
-                </button>
-              </div>
-              <div className="w-px h-8 bg-slate-600" />
-            </>
-          )}
+                  <button
+                    onClick={() => setSelectedTool(selectedTool === 'delete' ? 'select' : 'delete')}
+                    className={`px-2 py-1.5 text-xs font-semibold border-2 rounded flex items-center gap-1 transition-colors ${
+                      selectedTool === 'delete'
+                        ? 'bg-red-600 text-white border-red-700'
+                        : 'bg-red-600 text-white border-red-700 hover:bg-red-500'
+                    }`}
+                    title={selectedTool === 'delete' ? 'Click a player to remove, or click here to cancel' : 'Click to enable remove mode'}
+                  >
+                    <Minus size={14} /> Remove
+                  </button>
+                </div>
+              )}
 
-          {/* WIZ OL: Add Custom Blocker + Text Size */}
-          {isWizOline && (
-            <>
-              <div className="flex flex-col items-center">
-                <label htmlFor="diagram-blocker-input" className="text-[9px] text-slate-400 font-medium">Add Blocker</label>
-                <div className="flex items-center gap-1 bg-sky-900/50 px-2 py-1 rounded border border-sky-700">
+              {/* WIZ OL: Add Custom Blocker + Text Size */}
+              {isWizOline && (
+                <div className="flex items-center gap-1 bg-slate-800/50 px-2 py-1 rounded-lg">
                   <input
                     id="diagram-blocker-input"
                     type="text"
@@ -1628,257 +1619,39 @@ export default function PlayDiagramEditor({
                     onChange={(e) => setCustomLetterInput(e.target.value.toUpperCase())}
                     placeholder="?"
                     maxLength={2}
-                    className="w-6 px-1 text-center text-xs bg-slate-700 border border-slate-500 rounded text-white"
+                    className="w-7 px-1 py-1 text-center text-xs bg-slate-700 border border-slate-600 rounded text-white"
+                    title="Enter blocker letter"
                   />
                   <button
                     onClick={() => { if (customLetterInput) { toggleWizNode(customLetterInput); setCustomLetterInput(''); } }}
                     disabled={!customLetterInput}
-                    className="px-2 py-0.5 text-xs bg-sky-600 text-white rounded hover:bg-sky-500 disabled:opacity-50"
+                    className="px-2 py-1.5 text-xs bg-sky-600 text-white rounded hover:bg-sky-500 disabled:opacity-50 transition-colors"
+                    title="Add blocker"
                   >
                     Add
                   </button>
-                  <div className="w-px h-4 bg-sky-700 mx-1" />
-                  <button
-                    onClick={() => { const s = Math.max(50, wizTextSize - 10); setWizTextSize(s); if (selectedIds.size > 0) updateElements(elements.map(el => (selectedIds.has(el.id) && el.shape === 'text-only') ? { ...el, fontSize: s } : el)); }}
-                    className="px-1.5 py-0.5 text-xs bg-slate-600 text-white rounded hover:bg-slate-500"
-                  >-</button>
-                  <span className="text-xs text-slate-300 w-8 text-center">{wizTextSize}</span>
-                  <button
-                    onClick={() => { const s = Math.min(250, wizTextSize + 10); setWizTextSize(s); if (selectedIds.size > 0) updateElements(elements.map(el => (selectedIds.has(el.id) && el.shape === 'text-only') ? { ...el, fontSize: s } : el)); }}
-                    className="px-1.5 py-0.5 text-xs bg-slate-600 text-white rounded hover:bg-slate-500"
-                  >+</button>
+                  <div className="flex items-center gap-0.5 ml-1">
+                    <button
+                      onClick={() => { const s = Math.max(50, wizTextSize - 10); setWizTextSize(s); if (selectedIds.size > 0) updateElements(elements.map(el => (selectedIds.has(el.id) && el.shape === 'text-only') ? { ...el, fontSize: s } : el)); }}
+                      className="px-1.5 py-1 text-xs bg-slate-700 text-slate-300 rounded hover:bg-slate-600 transition-colors"
+                      title="Decrease text size"
+                    >-</button>
+                    <span className="text-xs text-slate-400 w-7 text-center">{wizTextSize}</span>
+                    <button
+                      onClick={() => { const s = Math.min(250, wizTextSize + 10); setWizTextSize(s); if (selectedIds.size > 0) updateElements(elements.map(el => (selectedIds.has(el.id) && el.shape === 'text-only') ? { ...el, fontSize: s } : el)); }}
+                      className="px-1.5 py-1 text-xs bg-slate-700 text-slate-300 rounded hover:bg-slate-600 transition-colors"
+                      title="Increase text size"
+                    >+</button>
+                  </div>
                 </div>
-              </div>
-              <div className="w-px h-8 bg-slate-600" />
-            </>
-          )}
-
-          {/* Select Button */}
-          <div className="flex flex-col items-center">
-            <span className="text-[9px] text-slate-400 font-medium">Tool</span>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setSelectedTool('select')}
-                className={`px-2 py-1 rounded flex items-center gap-1 text-xs ${selectedTool === 'select' ? 'bg-sky-600 text-white' : 'bg-slate-600 text-slate-200 hover:bg-slate-500'}`}
-                title="Select / Move"
-              >
-                <MousePointer size={14} /> Select
-              </button>
-              <button
-                onClick={handleGroup}
-                disabled={!canGroup}
-                className={`p-1 rounded ${canGroup ? 'bg-slate-600 text-slate-200 hover:bg-slate-500' : 'bg-slate-700 text-slate-500 cursor-not-allowed'}`}
-                title="Group selected elements"
-              >
-                <Group size={14} />
-              </button>
-              <button
-                onClick={handleUngroup}
-                disabled={!canUngroup}
-                className={`p-1 rounded ${canUngroup ? 'bg-slate-600 text-slate-200 hover:bg-slate-500' : 'bg-slate-700 text-slate-500 cursor-not-allowed'}`}
-                title="Ungroup selected elements"
-              >
-                <Ungroup size={14} />
-              </button>
+              )}
             </div>
-          </div>
 
-          <div className="w-px h-8 bg-slate-600" />
-
-          {/* Line Style + End Type */}
-          <div className="flex flex-col items-center">
-            <span className="text-[9px] text-slate-400 font-medium">Line Drawing</span>
-            <div className="flex items-center gap-1 bg-slate-700 px-2 py-1 rounded border border-slate-500">
-              <span className="text-xs text-amber-400 font-bold mr-1">STYLE</span>
-              {[
-                { id: 'solid', title: 'Solid Line', content: <span className="inline-block w-4 border-b-2 border-current" /> },
-                { id: 'dashed', title: 'Dashed Line', content: <span className="inline-block w-4 border-b-2 border-dashed border-current" /> },
-                { id: 'zigzag', title: 'Zigzag Line', content: <svg width="16" height="8" viewBox="0 0 16 8" className="inline-block"><path d="M0,4 L3,1 L6,7 L10,1 L13,7 L16,4" stroke="currentColor" strokeWidth="1.5" fill="none" /></svg> }
-              ].map(style => (
-                <button
-                  key={style.id}
-                  onClick={() => {
-                    setLineStyle(style.id);
-                    // If a single segment is selected, update just that segment
-                    if (selectedSegment) {
-                      updateElements(elements.map(el => {
-                        if (el.id === selectedSegment.elementId && el.type === 'poly') {
-                          const newSegStyles = [...(el.segmentStyles || [])];
-                          // Ensure array is long enough
-                          while (newSegStyles.length <= selectedSegment.segmentIndex) {
-                            newSegStyles.push(el.style || 'solid');
-                          }
-                          newSegStyles[selectedSegment.segmentIndex] = style.id;
-                          return { ...el, segmentStyles: newSegStyles };
-                        }
-                        return el;
-                      }));
-                    } else if (selectedIds.size > 0) {
-                      // If whole lines are selected, update all their segments
-                      const hasSelectedLines = elements.some(el => selectedIds.has(el.id) && el.type === 'poly');
-                      if (hasSelectedLines) {
-                        updateElements(elements.map(el =>
-                          selectedIds.has(el.id) && el.type === 'poly'
-                            ? { ...el, style: style.id, segmentStyles: (el.segmentStyles || []).map(() => style.id) }
-                            : el
-                        ));
-                      } else {
-                        setSelectedTool('line');
-                      }
-                    } else {
-                      setSelectedTool('line');
-                    }
-                  }}
-                  className={`px-2 py-1 text-xs rounded ${(selectedTool === 'line' || selectedSegment || elements.some(el => selectedIds.has(el.id) && el.type === 'poly')) && lineStyle === style.id ? 'bg-amber-500 text-white' : 'bg-slate-600 text-slate-200'}`}
-                  title={style.title}
-                >
-                  {style.content}
-                </button>
-              ))}
-              <div className="w-px h-4 bg-slate-500 mx-1" />
-              <span className="text-xs text-amber-400 font-bold mr-1">END</span>
-              {[
-                { id: 'arrow', label: '→', title: 'Arrow End' },
-                { id: 't', label: '—|', title: 'T-Block End' },
-                { id: 'dot', label: '•', title: 'Dot End' },
-                { id: 'none', label: '—', title: 'No End' }
-              ].map(opt => (
-                <button
-                  key={opt.id}
-                  onClick={() => {
-                    setEndType(opt.id);
-                    // End type applies to whole line (segment selection or line selection)
-                    if (selectedSegment) {
-                      // Update the line that contains this segment
-                      updateElements(elements.map(el =>
-                        el.id === selectedSegment.elementId && el.type === 'poly'
-                          ? { ...el, endType: opt.id }
-                          : el
-                      ));
-                    } else if (selectedIds.size > 0) {
-                      const hasSelectedLines = elements.some(el => selectedIds.has(el.id) && el.type === 'poly');
-                      if (hasSelectedLines) {
-                        updateElements(elements.map(el =>
-                          selectedIds.has(el.id) && el.type === 'poly'
-                            ? { ...el, endType: opt.id }
-                            : el
-                        ));
-                      } else {
-                        setSelectedTool('line');
-                      }
-                    } else {
-                      setSelectedTool('line');
-                    }
-                  }}
-                  className={`px-2 py-1 text-xs rounded ${(selectedTool === 'line' || selectedSegment || elements.some(el => selectedIds.has(el.id) && el.type === 'poly')) && endType === opt.id ? 'bg-amber-500 text-white' : 'bg-slate-600 text-slate-200'}`}
-                  title={opt.title}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="w-px h-8 bg-slate-600" />
-
-          {/* Colors - Dropdown */}
-          <div className="flex flex-col items-center">
-            <label htmlFor="diagram-color-select" className="text-[9px] text-slate-400 font-medium">Color</label>
-            <div className="relative">
-              <select
-                id="diagram-color-select"
-                value={color}
-                onChange={(e) => { setColor(e.target.value); if (selectedIds.size > 0) updateElements(elements.map(el => selectedIds.has(el.id) ? { ...el, color: e.target.value } : el)); }}
-                className="appearance-none pl-6 pr-4 py-1 text-xs bg-slate-600 border border-slate-500 rounded text-white cursor-pointer"
-                style={{ minWidth: '70px' }}
-              >
-                {COLORS.map(c => (
-                  <option key={c} value={c} style={{ backgroundColor: c }}>
-                    {c === '#000000' ? 'Black' : c === '#ef4444' ? 'Red' : c === '#3b82f6' ? 'Blue' : c === '#22c55e' ? 'Green' : c === '#f97316' ? 'Orange' : c === '#facc15' ? 'Yellow' : c === '#8b5cf6' ? 'Purple' : c === '#ec4899' ? 'Pink' : c === '#06b6d4' ? 'Cyan' : c}
-                  </option>
-                ))}
-              </select>
-              <div
-                className="absolute left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full pointer-events-none"
-                style={{ backgroundColor: color }}
-              />
-            </div>
-          </div>
-
-          <div className="w-px h-8 bg-slate-600" />
-
-          {/* Shapes - Dropdown */}
-          <div className="flex flex-col items-center">
-            <span className="text-[9px] text-slate-400 font-medium">Shapes</span>
-            <div className="flex items-center gap-1">
-              <select
-                value={selectedShape}
-                onChange={(e) => { setSelectedShape(e.target.value); setSelectedTool('shape'); }}
-                className="px-2 py-1 text-xs bg-slate-600 border border-slate-500 rounded text-white cursor-pointer"
-              >
-                {SHAPES.map(s => (
-                  <option key={s.id} value={s.id}>{s.icon} {s.label}</option>
-                ))}
-              </select>
-              <button
-                onClick={() => setSelectedTool('shape')}
-                className={`px-2 py-1 text-xs rounded ${selectedTool === 'shape' ? 'bg-emerald-500 text-white' : 'bg-slate-600 text-slate-200 hover:bg-slate-500'}`}
-                title="Click on canvas to place shape"
-              >
-                Place
-              </button>
-            </div>
-          </div>
-
-          <div className="w-px h-8 bg-slate-600" />
-
-          {/* Flip */}
-          <div className="flex flex-col items-center">
-            <span className="text-[9px] text-slate-400 font-medium">Mirror</span>
-            <button
-              onClick={flipFormation}
-              className="px-2 py-1 rounded bg-slate-600 text-slate-200 hover:bg-slate-500 flex items-center gap-1"
-              title="Flip Left/Right"
-            >
-              <RefreshCw size={12} /> <span className="text-xs">Flip</span>
-            </button>
-          </div>
-
-          {/* Undo/Redo/Delete */}
-          <div className="flex flex-col items-center">
-            <span className="text-[9px] text-slate-400 font-medium">History</span>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={undo}
-                disabled={historyIndex === 0}
-                className="p-2 rounded bg-slate-600 text-slate-200 hover:bg-slate-500 disabled:opacity-30"
-                title="Undo"
-              >
-                <RotateCcw size={14} />
-              </button>
-              <button
-                onClick={redo}
-                disabled={historyIndex === history.length - 1}
-                className="p-2 rounded bg-slate-600 text-slate-200 hover:bg-slate-500 disabled:opacity-30"
-                title="Redo"
-              >
-                <RotateCw size={14} />
-              </button>
-              <button
-                onClick={() => { if (selectedIds.size > 0) { updateElements(elements.filter(el => !selectedIds.has(el.id))); setSelectedIds(new Set()); } else { setSelectedTool('delete'); } }}
-                className={`p-2 rounded ${selectedTool === 'delete' ? 'bg-red-600 text-white' : 'bg-slate-600 text-red-400 hover:bg-slate-500'}`}
-                title="Delete Selected"
-              >
-                <Trash size={14} />
-              </button>
-            </div>
-          </div>
-
-          {/* Cancel, Save As & Save */}
-          <div className="flex items-center gap-2 ml-auto">
+            {/* Right side: Save buttons */}
+            <div className="flex items-center gap-2">
               <button
                 onClick={onCancel}
-                className="px-2 py-1 text-xs bg-slate-600 text-slate-200 rounded hover:bg-slate-500"
+                className="px-3 py-1.5 text-xs text-slate-400 hover:text-white transition-colors"
                 title="Cancel and close"
               >
                 Cancel
@@ -1891,7 +1664,7 @@ export default function PlayDiagramEditor({
                       onSaveAs({ elements, name: name.trim().toUpperCase() });
                     }
                   }}
-                  className="px-2 py-1 text-xs bg-purple-600 text-white rounded hover:bg-purple-500 flex items-center gap-1"
+                  className="px-3 py-1.5 text-xs bg-purple-600 text-white rounded hover:bg-purple-500 flex items-center gap-1 transition-colors"
                   title="Save as new protection/scheme"
                 >
                   <Save size={14} /> Save As
@@ -1900,19 +1673,339 @@ export default function PlayDiagramEditor({
               {onSaveAsNewPlay && isWizSkill && (
                 <button
                   onClick={openSaveAsPlayModal}
-                  className="px-2 py-1 text-xs bg-amber-600 text-white rounded hover:bg-amber-500 flex items-center gap-1"
+                  className="px-3 py-1.5 text-xs bg-amber-600 text-white rounded hover:bg-amber-500 flex items-center gap-1 transition-colors"
                   title="Save as a new play in the library"
                 >
-                  <Plus size={14} /> Save As New Play
+                  <Plus size={14} /> Save As New
                 </button>
               )}
               <button
                 onClick={() => onSave({ elements })}
-                className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-500 flex items-center gap-1 font-semibold"
+                className="px-3 py-1.5 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-500 flex items-center gap-1 font-medium transition-colors"
                 title="Save changes"
               >
                 <Save size={14} /> Save
               </button>
+            </div>
+          </div>
+
+          {/* Row 2: Drawing Tools */}
+          <div className="flex items-center justify-between px-3 py-2">
+            {/* Left side: Drawing tools */}
+            <div className="flex items-center gap-4">
+              {/* Select/Group/Flip Tools */}
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-500 font-medium mb-1 uppercase tracking-wide">Select</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setSelectedTool('select')}
+                    className={`px-2 py-1.5 rounded flex items-center gap-1 text-xs font-semibold border-2 transition-colors ${selectedTool === 'select' ? 'bg-sky-600 text-white border-sky-700' : 'bg-slate-800 text-white border-slate-600 hover:bg-slate-700'}`}
+                    title="Select / Move"
+                  >
+                    <MousePointer size={14} />
+                  </button>
+                  <button
+                    onClick={handleGroup}
+                    disabled={!canGroup}
+                    className={`px-2 py-1.5 rounded border-2 transition-colors ${canGroup ? 'bg-slate-800 text-white border-slate-600 hover:bg-slate-700' : 'bg-slate-300 text-slate-500 border-slate-400 cursor-not-allowed'}`}
+                    title="Group selected elements"
+                  >
+                    <Group size={14} />
+                  </button>
+                  <button
+                    onClick={handleUngroup}
+                    disabled={!canUngroup}
+                    className={`px-2 py-1.5 rounded border-2 transition-colors ${canUngroup ? 'bg-slate-800 text-white border-slate-600 hover:bg-slate-700' : 'bg-slate-300 text-slate-500 border-slate-400 cursor-not-allowed'}`}
+                    title="Ungroup selected elements"
+                  >
+                    <Ungroup size={14} />
+                  </button>
+                  <button
+                    onClick={flipFormation}
+                    className="px-2 py-1.5 rounded border-2 border-slate-500 bg-slate-800 text-white hover:bg-slate-700 flex items-center gap-1 text-xs font-semibold transition-colors"
+                    title="Flip Left/Right (Mirror)"
+                  >
+                    <RefreshCw size={12} /> Flip
+                  </button>
+                </div>
+              </div>
+
+              {/* Line Style Group */}
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-500 font-medium mb-1 uppercase tracking-wide">Line Style</span>
+                <div className="flex items-center gap-1">
+                  {[
+                    { id: 'solid', title: 'Solid Line', content: <span className="inline-block w-4 border-b-2 border-current" /> },
+                    { id: 'dashed', title: 'Dashed Line', content: <span className="inline-block w-4 border-b-2 border-dashed border-current" /> },
+                    { id: 'zigzag', title: 'Zigzag Line', content: <svg width="16" height="8" viewBox="0 0 16 8" className="inline-block"><path d="M0,4 L3,1 L6,7 L10,1 L13,7 L16,4" stroke="currentColor" strokeWidth="1.5" fill="none" /></svg> }
+                  ].map(style => (
+                    <button
+                      key={style.id}
+                      onClick={() => {
+                        setLineStyle(style.id);
+                        if (selectedSegment) {
+                          updateElements(elements.map(el => {
+                            if (el.id === selectedSegment.elementId && el.type === 'poly') {
+                              const newSegStyles = [...(el.segmentStyles || [])];
+                              while (newSegStyles.length <= selectedSegment.segmentIndex) {
+                                newSegStyles.push(el.style || 'solid');
+                              }
+                              newSegStyles[selectedSegment.segmentIndex] = style.id;
+                              return { ...el, segmentStyles: newSegStyles };
+                            }
+                            return el;
+                          }));
+                        } else if (selectedIds.size > 0) {
+                          const hasSelectedLines = elements.some(el => selectedIds.has(el.id) && el.type === 'poly');
+                          if (hasSelectedLines) {
+                            updateElements(elements.map(el =>
+                              selectedIds.has(el.id) && el.type === 'poly'
+                                ? { ...el, style: style.id, segmentStyles: (el.segmentStyles || []).map(() => style.id) }
+                                : el
+                            ));
+                          } else {
+                            setSelectedTool('line');
+                          }
+                        } else {
+                          setSelectedTool('line');
+                        }
+                      }}
+                      className={`px-2 py-1.5 text-xs rounded border-2 transition-colors ${(selectedTool === 'line' || selectedSegment || elements.some(el => selectedIds.has(el.id) && el.type === 'poly')) && lineStyle === style.id ? 'bg-amber-500 text-white border-amber-600 font-semibold' : 'bg-slate-800 text-white border-slate-600 hover:bg-slate-700'}`}
+                      title={style.title}
+                    >
+                      {style.content}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Line End Group */}
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-500 font-medium mb-1 uppercase tracking-wide">Line End</span>
+                <div className="flex items-center gap-1">
+                  {[
+                    { id: 'arrow', label: '→', title: 'Arrow End' },
+                    { id: 't', label: '⊥', title: 'T-Block End' },
+                    { id: 'dot', label: '•', title: 'Dot End' },
+                    { id: 'none', label: '—', title: 'No End' }
+                  ].map(opt => (
+                    <button
+                      key={opt.id}
+                      onClick={() => {
+                        setEndType(opt.id);
+                        if (selectedSegment) {
+                          updateElements(elements.map(el =>
+                            el.id === selectedSegment.elementId && el.type === 'poly'
+                              ? { ...el, endType: opt.id }
+                              : el
+                          ));
+                        } else if (selectedIds.size > 0) {
+                          const hasSelectedLines = elements.some(el => selectedIds.has(el.id) && el.type === 'poly');
+                          if (hasSelectedLines) {
+                            updateElements(elements.map(el =>
+                              selectedIds.has(el.id) && el.type === 'poly'
+                                ? { ...el, endType: opt.id }
+                                : el
+                            ));
+                          } else {
+                            setSelectedTool('line');
+                          }
+                        } else {
+                          setSelectedTool('line');
+                        }
+                      }}
+                      className={`px-2 py-1.5 text-xs rounded border-2 transition-colors ${(selectedTool === 'line' || selectedSegment || elements.some(el => selectedIds.has(el.id) && el.type === 'poly')) && endType === opt.id ? 'bg-amber-500 text-white border-amber-600 font-semibold' : 'bg-slate-800 text-white border-slate-600 hover:bg-slate-700'}`}
+                      title={opt.title}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Shapes */}
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-500 font-medium mb-1 uppercase tracking-wide">Shapes</span>
+                <div className="flex items-center gap-1">
+                  <select
+                    value={selectedShape}
+                    onChange={(e) => { setSelectedShape(e.target.value); setSelectedTool('shape'); }}
+                    className="px-2 py-1.5 text-xs font-semibold bg-slate-800 border-2 border-black rounded text-white cursor-pointer focus:ring-2 focus:ring-sky-500"
+                    title="Select Shape"
+                  >
+                    {SHAPES.map(s => (
+                      <option key={s.id} value={s.id}>{s.icon} {s.label}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => setSelectedTool('shape')}
+                    className={`px-2 py-1.5 text-xs font-semibold rounded border-2 transition-colors ${selectedTool === 'shape' ? 'bg-emerald-500 text-white border-emerald-600' : 'bg-slate-800 text-white border-slate-600 hover:bg-slate-700'}`}
+                    title="Click on canvas to place shape"
+                  >
+                    Place
+                  </button>
+                </div>
+              </div>
+
+              {/* Color Selector */}
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-500 font-medium mb-1 uppercase tracking-wide">Color</span>
+                <div className="flex items-center gap-1">
+                  <div
+                    className="w-5 h-5 rounded border-2 border-slate-500 flex-shrink-0"
+                    style={{ backgroundColor: color }}
+                  />
+                  <select
+                    id="diagram-color-select"
+                    value={color}
+                    onChange={(e) => { setColor(e.target.value); if (selectedIds.size > 0) updateElements(elements.map(el => selectedIds.has(el.id) ? { ...el, color: e.target.value } : el)); }}
+                    className="px-2 py-1.5 text-xs font-semibold bg-slate-800 border-2 border-black rounded text-white cursor-pointer focus:ring-2 focus:ring-sky-500"
+                    title="Select Color"
+                  >
+                    {COLORS.map(c => (
+                      <option key={c} value={c} style={{ backgroundColor: c }}>
+                        {c === '#000000' ? 'Black' : c === '#ef4444' ? 'Red' : c === '#3b82f6' ? 'Blue' : c === '#22c55e' ? 'Green' : c === '#f97316' ? 'Orange' : c === '#facc15' ? 'Yellow' : c === '#8b5cf6' ? 'Purple' : c === '#ec4899' ? 'Pink' : c === '#06b6d4' ? 'Cyan' : c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Right side: History + Help */}
+            <div className="flex items-center gap-4">
+              {/* History */}
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-500 font-medium mb-1 uppercase tracking-wide">History</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={undo}
+                    disabled={historyIndex === 0}
+                    className="px-2 py-1.5 rounded border-2 border-slate-400 bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    title="Undo"
+                  >
+                    <RotateCcw size={16} strokeWidth={2.5} />
+                  </button>
+                  <button
+                    onClick={redo}
+                    disabled={historyIndex === history.length - 1}
+                    className="px-2 py-1.5 rounded border-2 border-slate-400 bg-slate-800 text-white hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    title="Redo"
+                  >
+                    <RotateCw size={16} strokeWidth={2.5} />
+                  </button>
+                  <button
+                    onClick={() => { if (selectedIds.size > 0) { updateElements(elements.filter(el => !selectedIds.has(el.id))); setSelectedIds(new Set()); } else { setSelectedTool('delete'); } }}
+                    className={`px-2 py-1.5 rounded border-2 transition-colors ${selectedTool === 'delete' ? 'bg-red-600 text-white border-red-700' : 'bg-slate-800 text-red-400 border-slate-400 hover:bg-red-600 hover:text-white hover:border-red-700'}`}
+                    title="Delete Selected"
+                  >
+                    <Trash size={16} strokeWidth={2.5} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Help Button */}
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-500 font-medium mb-1 uppercase tracking-wide">Help</span>
+                <button
+                  onClick={() => setShowHelpLegend(true)}
+                  className="px-2 py-1.5 rounded border-2 border-slate-500 bg-slate-800 text-white hover:bg-slate-700 transition-colors"
+                  title="Show Help & Legend"
+                >
+                  <HelpCircle size={14} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Help Legend Modal */}
+      {showHelpLegend && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setShowHelpLegend(false)}>
+          <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4 shadow-2xl border border-slate-200" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-800">Editor Help & Legend</h3>
+              <button onClick={() => setShowHelpLegend(false)} className="text-slate-400 hover:text-slate-700">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-sm">
+              {/* Drawing Lines */}
+              <div>
+                <h4 className="text-sky-600 font-medium mb-2">Drawing Lines</h4>
+                <ul className="text-slate-600 space-y-1 ml-4 list-disc">
+                  <li>Click a line style button to start drawing</li>
+                  <li>Click on canvas to place points</li>
+                  <li>Double-click to finish the line</li>
+                  <li>Press Escape to cancel</li>
+                </ul>
+              </div>
+
+              {/* Line Styles */}
+              <div>
+                <h4 className="text-sky-600 font-medium mb-2">Line Styles</h4>
+                <div className="grid grid-cols-3 gap-2 text-slate-600">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block w-6 border-b-2 border-slate-800" />
+                    <span>Solid</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block w-6 border-b-2 border-dashed border-slate-800" />
+                    <span>Dashed</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <svg width="24" height="8" viewBox="0 0 16 8"><path d="M0,4 L3,1 L6,7 L10,1 L13,7 L16,4" stroke="#1e293b" strokeWidth="1.5" fill="none" /></svg>
+                    <span>Zigzag</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Line Ends */}
+              <div>
+                <h4 className="text-sky-600 font-medium mb-2">Line Endings</h4>
+                <div className="grid grid-cols-4 gap-2 text-slate-600">
+                  <div className="text-center">
+                    <span className="text-lg">→</span>
+                    <div className="text-xs">Arrow</div>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-lg">⊥</span>
+                    <div className="text-xs">T-Block</div>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-lg">•</span>
+                    <div className="text-xs">Dot</div>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-lg">—</span>
+                    <div className="text-xs">None</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Selection */}
+              <div>
+                <h4 className="text-sky-600 font-medium mb-2">Selection & Editing</h4>
+                <ul className="text-slate-600 space-y-1 ml-4 list-disc">
+                  <li>Click to select an element</li>
+                  <li>Drag to move selected elements</li>
+                  <li>Click + drag on empty space to box select</li>
+                  <li>Use Group/Ungroup to combine elements</li>
+                  <li>Flip mirrors the entire formation</li>
+                </ul>
+              </div>
+
+              {/* Keyboard Shortcuts */}
+              <div>
+                <h4 className="text-sky-600 font-medium mb-2">Keyboard Shortcuts</h4>
+                <div className="grid grid-cols-2 gap-2 text-slate-600">
+                  <div><kbd className="bg-slate-100 border border-slate-300 px-1.5 py-0.5 rounded text-xs font-mono">Delete</kbd> Remove selected</div>
+                  <div><kbd className="bg-slate-100 border border-slate-300 px-1.5 py-0.5 rounded text-xs font-mono">Escape</kbd> Cancel / Deselect</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
