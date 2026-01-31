@@ -11,6 +11,9 @@ export function PlayBankProvider({ children }) {
   const [singleSelectMode, setSingleSelectMode] = useState(false);
   const [selectedPlayId, setSelectedPlayId] = useState(null);
 
+  // Focus highlights for Script mode - plays matching these focuses are highlighted
+  const [highlightFocuses, setHighlightFocuses] = useState([]);
+
   // Quick Add Event (Event-based communication)
   const [quickAddRequest, setQuickAddRequest] = useState(null);
 
@@ -84,7 +87,11 @@ export function PlayBankProvider({ children }) {
         startSingleSelect,
         selectPlayForAssign,
         clearSelectedPlay,
-        stopSingleSelect
+        stopSingleSelect,
+
+        // Focus highlights for Script mode
+        highlightFocuses,
+        setHighlightFocuses
       }}
     >
       {children}

@@ -1532,7 +1532,7 @@ export default function Setup() {
           {/* Segment Focus Tab */}
           {activeTab === 'segment-focus' && isPractice && (
             <SegmentFocusTab
-              segmentFocus={localConfig.practiceSegmentFocus || {}}
+              segmentTypes={localConfig.practiceSegmentTypes || {}}
               formations={localConfig.formations || []}
               playBuckets={localConfig.playBuckets || []}
               conceptGroups={localConfig.conceptGroups || []}
@@ -1540,6 +1540,8 @@ export default function Setup() {
               lookAlikeSeries={localConfig.lookAlikeSeries || []}
               fieldZones={localConfig.fieldZones || []}
               specialSituations={localConfig.specialSituations || []}
+              shiftMotions={localConfig.shiftMotions || []}
+              qcPlayPurposes={localConfig.qcPlayPurposes || []}
               onUpdate={updateLocal}
             />
           )}
@@ -5558,10 +5560,10 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
 // Practice Segment Types Tab Component
 // Segment Types are organized by phase (O, D, K, C)
 const PRACTICE_PHASES = [
-  { id: 'O', label: 'Offense', color: 'bg-blue-600' },
-  { id: 'D', label: 'Defense', color: 'bg-red-600' },
-  { id: 'K', label: 'Special Teams', color: 'bg-amber-600' },
-  { id: 'C', label: 'Competition/Conditioning', color: 'bg-emerald-600' }
+  { id: 'O', label: 'Offense', color: 'bg-blue-600', setupPhase: 'OFFENSE' },
+  { id: 'D', label: 'Defense', color: 'bg-red-600', setupPhase: 'DEFENSE' },
+  { id: 'K', label: 'Special Teams', color: 'bg-amber-600', setupPhase: 'SPECIAL_TEAMS' },
+  { id: 'C', label: 'Competition/Conditioning', color: 'bg-emerald-600', setupPhase: null }
 ];
 
 function SegmentTypesTab({ segmentTypes, onUpdate }) {
@@ -5693,19 +5695,21 @@ function SegmentTypesTab({ segmentTypes, onUpdate }) {
 }
 
 // Segment Focus Tab Component
-// Focus items can be imported from user-defined setup data
+// Organized by Phase → Segment Type → Focus Items
 const FOCUS_SOURCES = [
-  { id: 'formations', label: 'Formations', icon: LayoutGrid },
+  { id: 'situations', label: 'Situations', icon: Target },
   { id: 'playBuckets', label: 'Play Buckets', icon: Tag },
   { id: 'conceptGroups', label: 'Concept Groups', icon: Grid },
+  { id: 'formations', label: 'Formations', icon: LayoutGrid },
+  { id: 'shiftMotions', label: 'Shifts/Motions', icon: ArrowRightLeft },
   { id: 'readTypes', label: 'Read Types', icon: Eye },
-  { id: 'lookAlikeSeries', label: 'Look-Alike Series', icon: Copy },
-  { id: 'situations', label: 'Situations', icon: Target },
+  { id: 'lookAlikeSeries', label: 'Series', icon: Copy },
+  { id: 'qcPlayPurposes', label: 'QC Purposes', icon: ClipboardCheck },
   { id: 'custom', label: 'Custom', icon: Plus }
 ];
 
 function SegmentFocusTab({
-  segmentFocus,
+  segmentTypes,
   formations,
   playBuckets,
   conceptGroups,
@@ -5713,31 +5717,61 @@ function SegmentFocusTab({
   lookAlikeSeries,
   fieldZones,
   specialSituations,
+  shiftMotions,
+  qcPlayPurposes,
   onUpdate
 }) {
-  const [activeSource, setActiveSource] = useState('formations');
+  const [selectedPhase, setSelectedPhase] = useState('O');
+  const [selectedTypeId, setSelectedTypeId] = useState(null);
+  const [activeSource, setActiveSource] = useState('situations');
   const [customName, setCustomName] = useState('');
 
-  // Get current focus items
-  const currentFocus = segmentFocus || [];
+  // Get segment types for selected phase
+  const phaseSegmentTypes = segmentTypes[selectedPhase] || [];
 
-  // Get items from source
+  // Get selected segment type
+  const selectedType = phaseSegmentTypes.find(t => t.id === selectedTypeId);
+
+  // Get current focus items for selected type
+  const currentFocusItems = selectedType?.focusItems || [];
+
+  // Get setup phase for filtering
+  const setupPhase = PRACTICE_PHASES.find(p => p.id === selectedPhase)?.setupPhase;
+
+  // Get items from source based on phase
   const getSourceItems = (sourceId) => {
     switch (sourceId) {
       case 'formations':
-        return formations.map(f => ({ id: f.id || f.name, name: f.name || f.label, source: 'formations' }));
+        return formations
+          .filter(f => !setupPhase || f.phase === setupPhase)
+          .map(f => ({ id: f.id || f.name, name: f.name || f.label, source: 'formations' }));
       case 'playBuckets':
-        return playBuckets.map(b => ({ id: b.id, name: b.label, source: 'playBuckets' }));
+        return playBuckets
+          .filter(b => !setupPhase || b.phase === setupPhase)
+          .map(b => ({ id: b.id, name: b.label, source: 'playBuckets' }));
       case 'conceptGroups':
-        return conceptGroups.map(c => ({ id: c.id, name: c.label, source: 'conceptGroups' }));
+        // Concept groups are offense-only
+        if (selectedPhase !== 'O') return [];
+        return conceptGroups.map(c => ({ id: c.id, name: c.label || c.name, source: 'conceptGroups' }));
       case 'readTypes':
+        // Read types are offense-only
+        if (selectedPhase !== 'O') return [];
         return readTypes.map(r => ({ id: r.id, name: r.name, source: 'readTypes' }));
       case 'lookAlikeSeries':
+        // Look-alike series are offense-only
+        if (selectedPhase !== 'O') return [];
         return lookAlikeSeries.map(s => ({ id: s.id, name: s.name, source: 'lookAlikeSeries' }));
       case 'situations':
-        const zones = fieldZones.map(z => ({ id: z.id || z.name, name: z.name, source: 'fieldZones' }));
-        const specials = specialSituations.map(s => ({ id: s.id || s.name, name: s.name, source: 'specialSituations' }));
+        // Combine field zones and special situations
+        const zones = (fieldZones || []).map(z => ({ id: z.id || z.name, name: z.name, source: 'fieldZones' }));
+        const specials = (specialSituations || []).map(s => ({ id: s.id || s.name, name: s.name, source: 'specialSituations' }));
         return [...zones, ...specials];
+      case 'shiftMotions':
+        // Shifts/motions are offense-only
+        if (selectedPhase !== 'O') return [];
+        return (shiftMotions || []).map(sm => ({ id: sm.id || sm.name, name: sm.name, source: 'shiftMotions' }));
+      case 'qcPlayPurposes':
+        return (qcPlayPurposes || []).map(p => ({ id: p.id || p.name, name: p.name || p.label, source: 'qcPlayPurposes' }));
       default:
         return [];
     }
@@ -5745,16 +5779,24 @@ function SegmentFocusTab({
 
   const sourceItems = activeSource !== 'custom' ? getSourceItems(activeSource) : [];
 
-  // Check if item is already added
+  // Check if item is already added to selected type
   const isAdded = (itemId, source) => {
-    return currentFocus.some(f => f.id === itemId && f.source === source);
+    return currentFocusItems.some(f => f.id === itemId && f.source === source);
+  };
+
+  // Update focus items for selected segment type
+  const updateFocusItems = (newFocusItems) => {
+    if (!selectedType) return;
+    const updatedTypes = phaseSegmentTypes.map(t =>
+      t.id === selectedTypeId ? { ...t, focusItems: newFocusItems } : t
+    );
+    onUpdate('practiceSegmentTypes', { ...segmentTypes, [selectedPhase]: updatedTypes });
   };
 
   // Add focus item
   const addFocusItem = (item) => {
     if (isAdded(item.id, item.source)) return;
-    const updated = [...currentFocus, item];
-    onUpdate('practiceSegmentFocus', updated);
+    updateFocusItems([...currentFocusItems, item]);
   };
 
   // Add custom focus item
@@ -5765,169 +5807,271 @@ function SegmentFocusTab({
       name: customName.trim(),
       source: 'custom'
     };
-    const updated = [...currentFocus, newItem];
-    onUpdate('practiceSegmentFocus', updated);
+    updateFocusItems([...currentFocusItems, newItem]);
     setCustomName('');
   };
 
   // Remove focus item
   const removeFocusItem = (itemId, source) => {
-    const updated = currentFocus.filter(f => !(f.id === itemId && f.source === source));
-    onUpdate('practiceSegmentFocus', updated);
+    updateFocusItems(currentFocusItems.filter(f => !(f.id === itemId && f.source === source)));
   };
 
   // Import all from source
   const importAllFromSource = () => {
     const newItems = sourceItems.filter(item => !isAdded(item.id, item.source));
-    if (newItems.length === 0) {
-      alert('All items from this source are already added.');
-      return;
-    }
-    const updated = [...currentFocus, ...newItems];
-    onUpdate('practiceSegmentFocus', updated);
+    if (newItems.length === 0) return;
+    updateFocusItems([...currentFocusItems, ...newItems]);
   };
 
   // Group current focus by source for display
-  const groupedFocus = currentFocus.reduce((acc, item) => {
+  const groupedFocus = currentFocusItems.reduce((acc, item) => {
     const source = item.source || 'custom';
     if (!acc[source]) acc[source] = [];
     acc[source].push(item);
     return acc;
   }, {});
 
+  // Auto-select first segment type when phase changes
+  useEffect(() => {
+    if (phaseSegmentTypes.length > 0 && !phaseSegmentTypes.find(t => t.id === selectedTypeId)) {
+      setSelectedTypeId(phaseSegmentTypes[0]?.id || null);
+    }
+  }, [selectedPhase, phaseSegmentTypes, selectedTypeId]);
+
+  // Get available sources for this phase (filter out offense-only for non-offense)
+  const availableSources = FOCUS_SOURCES.filter(source => {
+    if (selectedPhase === 'O') return true;
+    // Hide offense-only sources for other phases
+    return !['conceptGroups', 'readTypes', 'lookAlikeSeries', 'shiftMotions'].includes(source.id);
+  });
+
   return (
     <div>
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-white">Segment Focus Items</h3>
         <p className="text-slate-400 text-sm">
-          Import focus items from your setup or add custom ones. These appear as options when creating practice segments.
+          Configure focus options for each segment type. These appear as selectable focuses when building practice plans.
         </p>
       </div>
 
-      {/* Current Focus Items */}
-      {currentFocus.length > 0 && (
-        <div className="mb-6">
-          <h4 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">
-            Current Focus Items ({currentFocus.length})
+      {/* Phase Selector */}
+      <div className="flex gap-2 mb-4">
+        {PRACTICE_PHASES.map(phase => (
+          <button
+            key={phase.id}
+            onClick={() => setSelectedPhase(phase.id)}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              selectedPhase === phase.id
+                ? 'bg-sky-600 text-white'
+                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+            }`}
+          >
+            {phase.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-12 gap-4">
+        {/* Segment Types List */}
+        <div className="col-span-3 bg-slate-800/50 rounded-lg p-3">
+          <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
+            Segment Types
           </h4>
-          <div className="space-y-3">
-            {Object.entries(groupedFocus).map(([source, items]) => {
-              const sourceInfo = FOCUS_SOURCES.find(s => s.id === source) ||
-                { label: source.charAt(0).toUpperCase() + source.slice(1), icon: Tag };
-              const Icon = sourceInfo.icon;
-              return (
-                <div key={source} className="bg-slate-800/50 rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2 text-slate-400">
-                    <Icon size={14} />
-                    <span className="text-xs font-semibold uppercase">{sourceInfo.label}</span>
+          {phaseSegmentTypes.length === 0 ? (
+            <p className="text-sm text-slate-500 italic">
+              No segment types defined. Add them in the Segment Types tab.
+            </p>
+          ) : (
+            <div className="space-y-1">
+              {phaseSegmentTypes.map(type => (
+                <button
+                  key={type.id}
+                  onClick={() => setSelectedTypeId(type.id)}
+                  className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
+                    selectedTypeId === type.id
+                      ? 'bg-sky-600 text-white'
+                      : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span>{type.name}</span>
+                    {(type.focusItems?.length || 0) > 0 && (
+                      <span className={`text-xs px-1.5 py-0.5 rounded ${
+                        selectedTypeId === type.id ? 'bg-sky-500' : 'bg-slate-600'
+                      }`}>
+                        {type.focusItems.length}
+                      </span>
+                    )}
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {items.map(item => (
-                      <div
-                        key={`${item.id}-${item.source}`}
-                        className="flex items-center gap-1 px-2 py-1 bg-slate-700 rounded text-sm text-white group"
-                      >
-                        <span>{item.name}</span>
-                        <button
-                          onClick={() => removeFocusItem(item.id, item.source)}
-                          className="p-0.5 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X size={12} />
-                        </button>
-                      </div>
-                    ))}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Focus Items Configuration */}
+        <div className="col-span-9">
+          {!selectedType ? (
+            <div className="bg-slate-800/30 rounded-lg p-8 text-center text-slate-500">
+              <Target size={48} className="mx-auto mb-4 opacity-30" />
+              <p>Select a segment type to configure its focus options</p>
+            </div>
+          ) : (
+            <div className="bg-slate-800/50 rounded-lg overflow-hidden">
+              {/* Selected Type Header */}
+              <div className="px-4 py-3 bg-slate-700/50 border-b border-slate-600">
+                <h4 className="font-semibold text-white">
+                  Focus Options for: <span className="text-sky-400">{selectedType.name}</span>
+                </h4>
+                <p className="text-xs text-slate-400 mt-1">
+                  {currentFocusItems.length} focus item{currentFocusItems.length !== 1 ? 's' : ''} configured
+                </p>
+              </div>
+
+              {/* Current Focus Items */}
+              {currentFocusItems.length > 0 && (
+                <div className="p-4 border-b border-slate-600">
+                  <h5 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">
+                    Current Focus Items
+                  </h5>
+                  <div className="space-y-2">
+                    {Object.entries(groupedFocus).map(([source, items]) => {
+                      const sourceInfo = FOCUS_SOURCES.find(s => s.id === source) ||
+                        { label: source.charAt(0).toUpperCase() + source.slice(1), icon: Tag };
+                      const Icon = sourceInfo.icon;
+                      return (
+                        <div key={source} className="flex items-start gap-2">
+                          <div className="flex items-center gap-1 text-slate-500 min-w-[100px]">
+                            <Icon size={12} />
+                            <span className="text-xs">{sourceInfo.label}</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 flex-1">
+                            {items.map(item => (
+                              <div
+                                key={`${item.id}-${item.source}`}
+                                className="flex items-center gap-1 px-2 py-0.5 bg-slate-700 rounded text-xs text-white group"
+                              >
+                                <span>{item.name}</span>
+                                <button
+                                  onClick={() => removeFocusItem(item.id, item.source)}
+                                  className="p-0.5 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <X size={10} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+              )}
 
-      {/* Source Tabs */}
-      <div className="border border-slate-700 rounded-lg overflow-hidden">
-        <div className="flex flex-wrap bg-slate-800/50">
-          {FOCUS_SOURCES.map(source => {
-            const Icon = source.icon;
-            return (
-              <button
-                key={source.id}
-                onClick={() => setActiveSource(source.id)}
-                className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${activeSource === source.id
-                  ? 'bg-sky-600 text-white'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
-                  }`}
-              >
-                <Icon size={14} />
-                {source.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Source Content */}
-        <div className="p-4">
-          {activeSource === 'custom' ? (
-            <div>
-              <label htmlFor="segment-focus-custom-input" className="text-slate-400 text-sm mb-3 block">Add a custom focus item:</label>
-              <div className="flex gap-2">
-                <input
-                  id="segment-focus-custom-input"
-                  type="text"
-                  value={customName}
-                  onChange={(e) => setCustomName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addCustomFocus()}
-                  placeholder="e.g., Red Zone, 2-Min Drill, Goal Line..."
-                  className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-white placeholder-slate-500"
-                />
-                <button
-                  onClick={addCustomFocus}
-                  disabled={!customName.trim()}
-                  className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Add
-                </button>
-              </div>
-            </div>
-          ) : sourceItems.length > 0 ? (
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-slate-400 text-sm">
-                  Click items to add them as focus options:
-                </p>
-                <button
-                  onClick={importAllFromSource}
-                  className="text-xs px-2 py-1 bg-sky-500/20 text-sky-400 rounded hover:bg-sky-500/30"
-                >
-                  Import All
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {sourceItems.map(item => {
-                  const added = isAdded(item.id, item.source);
+              {/* Source Tabs */}
+              <div className="flex flex-wrap bg-slate-800/50 border-b border-slate-600">
+                {availableSources.map(source => {
+                  const Icon = source.icon;
+                  const itemCount = source.id !== 'custom' ? getSourceItems(source.id).length : 0;
                   return (
                     <button
-                      key={item.id}
-                      onClick={() => !added && addFocusItem(item)}
-                      disabled={added}
-                      className={`px-3 py-1.5 rounded text-sm transition-colors ${added
-                        ? 'bg-emerald-500/20 text-emerald-400 cursor-default'
-                        : 'bg-slate-700 text-white hover:bg-slate-600'
-                        }`}
+                      key={source.id}
+                      onClick={() => setActiveSource(source.id)}
+                      className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors ${
+                        activeSource === source.id
+                          ? 'bg-sky-600 text-white'
+                          : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                      }`}
                     >
-                      {added && <Check size={12} className="inline mr-1" />}
-                      {item.name}
+                      <Icon size={12} />
+                      {source.label}
+                      {itemCount > 0 && source.id !== 'custom' && (
+                        <span className={`ml-1 px-1 py-0.5 rounded text-[10px] ${
+                          activeSource === source.id ? 'bg-sky-500' : 'bg-slate-600'
+                        }`}>
+                          {itemCount}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
               </div>
-            </div>
-          ) : (
-            <div className="text-center py-8 text-slate-500">
-              <p>No items defined in this category yet.</p>
-              <p className="text-sm mt-1">
-                Add them in {activeSource === 'situations' ? 'Offense Setup → Define Situations' : `Offense Setup → ${FOCUS_SOURCES.find(s => s.id === activeSource)?.label}`}.
-              </p>
+
+              {/* Source Content */}
+              <div className="p-4">
+                {activeSource === 'custom' ? (
+                  <div>
+                    <label className="text-slate-400 text-sm mb-3 block">
+                      Add a custom focus item:
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={customName}
+                        onChange={(e) => setCustomName(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && addCustomFocus()}
+                        placeholder="e.g., Red Zone, 2-Min Drill, Goal Line..."
+                        className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-white placeholder-slate-500 text-sm"
+                      />
+                      <button
+                        onClick={addCustomFocus}
+                        disabled={!customName.trim()}
+                        className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                ) : sourceItems.length > 0 ? (
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-slate-400 text-sm">
+                        Click items to add them as focus options:
+                      </p>
+                      <button
+                        onClick={importAllFromSource}
+                        disabled={sourceItems.every(item => isAdded(item.id, item.source))}
+                        className="text-xs px-2 py-1 bg-sky-500/20 text-sky-400 rounded hover:bg-sky-500/30 disabled:opacity-50"
+                      >
+                        Import All
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {sourceItems.map(item => {
+                        const added = isAdded(item.id, item.source);
+                        return (
+                          <button
+                            key={`${item.id}-${item.source}`}
+                            onClick={() => !added && addFocusItem(item)}
+                            disabled={added}
+                            className={`px-3 py-1.5 rounded text-sm transition-colors ${
+                              added
+                                ? 'bg-emerald-500/20 text-emerald-400 cursor-default'
+                                : 'bg-slate-700 text-white hover:bg-slate-600'
+                            }`}
+                          >
+                            {added && <Check size={12} className="inline mr-1" />}
+                            {item.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-slate-500">
+                    <p>No items defined in this category yet.</p>
+                    <p className="text-sm mt-1">
+                      {selectedPhase === 'O'
+                        ? `Add them in Offense Setup → ${FOCUS_SOURCES.find(s => s.id === activeSource)?.label || activeSource}`
+                        : selectedPhase === 'D'
+                          ? 'Add them in Defense Setup'
+                          : selectedPhase === 'K'
+                            ? 'Add them in Special Teams Setup'
+                            : 'Add them in your phase setup'}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

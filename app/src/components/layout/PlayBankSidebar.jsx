@@ -7,7 +7,6 @@ import { getWristbandDisplay } from '../../utils/wristband';
 import {
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   Search,
   Landmark,
   Settings,
@@ -50,14 +49,14 @@ export default function PlayBankSidebar({
     selectedPlayId: contextSelectedPlayId,
     selectPlayForAssign,
     clearSelectedPlay,
-    triggerQuickAdd
+    triggerQuickAdd,
+    highlightFocuses
   } = usePlayBank();
 
   // Local state
   const [activeTab, setActiveTab] = useState('install'); // install, gameplan, usage
   const [playBankPhase, setPlayBankPhase] = useState('OFFENSE');
   const [searchTerm, setSearchTerm] = useState('');
-  const [expandedSections, setExpandedSections] = useState({});
   const [quickAddValue, setQuickAddValue] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterValue, setFilterValue] = useState('');
@@ -143,16 +142,51 @@ export default function PlayBankSidebar({
     }
   }, [filterCategory, filterValue, lookAlikeSeries]);
 
+  // Check if a play matches any of the highlight focuses (for Script mode)
+  const playMatchesHighlightFocuses = useCallback((play) => {
+    if (!highlightFocuses || highlightFocuses.length === 0) return false;
+
+    for (const focus of highlightFocuses) {
+      switch (focus.category) {
+        case 'Formations':
+          if (play.formation && play.formation.toLowerCase() === focus.name.toLowerCase()) return true;
+          if (play.formationId && play.formationId === focus.id) return true;
+          break;
+        case 'Play Buckets':
+          if (play.bucket && play.bucket.toLowerCase() === focus.name.toLowerCase()) return true;
+          if (play.bucketId && play.bucketId === focus.id) return true;
+          if (play.category && play.category.toLowerCase() === focus.name.toLowerCase()) return true;
+          break;
+        case 'Concept Groups':
+          if (play.concept && play.concept.toLowerCase() === focus.name.toLowerCase()) return true;
+          if (play.conceptId && play.conceptId === focus.id) return true;
+          if (play.conceptGroup && play.conceptGroup.toLowerCase() === focus.name.toLowerCase()) return true;
+          if (play.conceptFamily && play.conceptFamily.toLowerCase() === focus.name.toLowerCase()) return true;
+          break;
+        case 'Read Types':
+          if (play.readType && play.readType.toLowerCase() === focus.name.toLowerCase()) return true;
+          if (play.readTypeId && play.readTypeId === focus.id) return true;
+          break;
+        case 'Look-Alike Series':
+          if (play.lookAlikeSeries && play.lookAlikeSeries.toLowerCase() === focus.name.toLowerCase()) return true;
+          if (play.lookAlikeSeriesId && play.lookAlikeSeriesId === focus.id) return true;
+          // Also check if play is in the look-alike series playIds
+          const series = lookAlikeSeries.find(s => s.id === focus.id);
+          if (series && series.playIds?.includes(play.id)) return true;
+          break;
+        case 'Situations':
+          if (play.fieldZone && play.fieldZone.toLowerCase() === focus.name.toLowerCase()) return true;
+          if (play.situation && play.situation.toLowerCase() === focus.name.toLowerCase()) return true;
+          if (play.fieldZones?.some(fz => fz.toLowerCase() === focus.name.toLowerCase())) return true;
+          if (play.situations?.some(s => s.toLowerCase() === focus.name.toLowerCase())) return true;
+          break;
+      }
+    }
+    return false;
+  }, [highlightFocuses, lookAlikeSeries]);
+
   // Get current week
   const currentWeek = weeks.find(w => w.id === currentWeekId) || null;
-
-  // Toggle section expansion
-  const toggleSection = useCallback((sectionId) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [sectionId]: !prev[sectionId]
-    }));
-  }, []);
 
   // Handle drag start for plays
   const handleDragStart = useCallback((e, play) => {
@@ -160,151 +194,53 @@ export default function PlayBankSidebar({
     e.dataTransfer.effectAllowed = 'copy';
   }, []);
 
-  // Calculate play usage data organized by bucket and concept family
-  const usageData = useMemo(() => {
-    // Filter by phase first (plays without phase default to OFFENSE)
-    const filteredPlays = (playsArray || []).filter(p =>
-      !p.archived && (p.phase || 'OFFENSE') === playBankPhase && playMatchesFilter(p)
-    );
-    const query = searchTerm.toLowerCase();
-
-    // Map of filtered plays for quick lookup
-    const filteredMap = {};
-    filteredPlays.forEach(p => {
-      if (!searchTerm ||
-        p.name?.toLowerCase().includes(query) ||
-        p.formation?.toLowerCase().includes(query) ||
-        p.concept?.toLowerCase().includes(query)) {
-        filteredMap[p.id] = p;
-      }
-    });
-
-    // Filter buckets by phase (default to OFFENSE if no phase set)
-    const phaseBuckets = playBuckets.filter(bucket =>
-      (bucket.phase || 'OFFENSE') === playBankPhase
-    );
-
-    const buckets = phaseBuckets.map(bucket => {
-      // Get families from bucket.families (array of strings)
-      const bucketFamilies = bucket.families || [];
-      const families = bucketFamilies.map(familyName => {
-        // Find plays assigned to this bucket and concept family
-        const familyPlays = Object.values(filteredMap).filter(p =>
-          p.bucketId === bucket.id && p.conceptFamily === familyName
-        ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-
-        return { id: `${bucket.id}_${familyName}`, label: familyName, plays: familyPlays };
-      }).filter(f => searchTerm ? f.plays.length > 0 : true);
-
-      // Also find plays in this bucket that don't have a concept family (uncategorized)
-      const uncategorizedPlays = Object.values(filteredMap).filter(p =>
-        p.bucketId === bucket.id && !p.conceptFamily
-      ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-
-      if (uncategorizedPlays.length > 0 || (!searchTerm && families.length > 0)) {
-        families.push({ id: `${bucket.id}_uncategorized`, label: 'Uncategorized', plays: uncategorizedPlays });
-      }
-
-      const totalPlays = families.reduce((sum, f) => sum + f.plays.length, 0);
-      return { ...bucket, families, totalPlays };
-    }).filter(b => searchTerm ? b.totalPlays > 0 : true);
-
-    // Find unassigned plays (those without a bucket)
-    const unassignedPlays = Object.values(filteredMap).filter(p => {
-      if (!p.bucketId) return true;
-      // Also unassigned if its bucketId doesn't exist in setup
-      const bucketExists = playBuckets.some(bucket => bucket.id === p.bucketId);
-      return !bucketExists;
-    }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-
-    if (unassignedPlays.length > 0 || !searchTerm) {
-      buckets.push({
-        id: 'unassigned',
-        label: 'Unassigned',
-        color: '#64748b',
-        families: [{ id: 'unassigned-family', label: 'Other Plays', plays: unassignedPlays }],
-        totalPlays: unassignedPlays.length
-      });
-    }
-
-    return buckets;
-  }, [playsArray, playBuckets, searchTerm, playBankPhase, playMatchesFilter]);
-
-  // Calculate install data organized by bucket and concept family (like usageData but filtered to installed plays)
-  const installUsageData = useMemo(() => {
+  // Flat list of installed plays (no collapsibles) - sorted by bucket then name
+  const flatInstallPlays = useMemo(() => {
     const installList = currentWeek?.installList || [];
     if (installList.length === 0) return [];
 
-    // Filter by install list, phase, search, and category filter
-    const installedPlays = (playsArray || []).filter(p =>
-      !p.archived && installList.includes(p.id) && (p.phase || 'OFFENSE') === playBankPhase && playMatchesFilter(p)
-    );
     const query = searchTerm.toLowerCase();
-
-    // Map of filtered plays for quick lookup
-    const filteredMap = {};
-    installedPlays.forEach(p => {
-      if (!searchTerm ||
-        p.name?.toLowerCase().includes(query) ||
-        p.formation?.toLowerCase().includes(query) ||
-        p.concept?.toLowerCase().includes(query)) {
-        filteredMap[p.id] = p;
-      }
-    });
-
-    // Filter buckets by phase
-    const phaseBuckets = playBuckets.filter(bucket =>
-      (bucket.phase || 'OFFENSE') === playBankPhase
-    );
-
-    const buckets = phaseBuckets.map(bucket => {
-      // Get families from bucket.families (array of strings)
-      const bucketFamilies = bucket.families || [];
-      const families = bucketFamilies.map(familyName => {
-        const familyPlays = Object.values(filteredMap).filter(p =>
-          p.bucketId === bucket.id && p.conceptFamily === familyName
-        ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-
-        return { id: `${bucket.id}_${familyName}`, label: familyName, plays: familyPlays };
-      }).filter(f => f.plays.length > 0);
-
-      // Also find plays in this bucket that don't have a concept family
-      const uncategorizedPlays = Object.values(filteredMap).filter(p =>
-        p.bucketId === bucket.id && !p.conceptFamily
-      ).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-
-      if (uncategorizedPlays.length > 0) {
-        families.push({ id: `${bucket.id}_uncategorized`, label: 'Uncategorized', plays: uncategorizedPlays });
-      }
-
-      const totalPlays = families.reduce((sum, f) => sum + f.plays.length, 0);
-      return { ...bucket, families, totalPlays };
-    }).filter(b => b.totalPlays > 0);
-
-    // Find unassigned installed plays (no bucket)
-    const unassignedPlays = Object.values(filteredMap).filter(p => {
-      if (!p.bucketId) return true;
-      const bucketExists = playBuckets.some(bucket => bucket.id === p.bucketId);
-      return !bucketExists;
-    }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-
-    if (unassignedPlays.length > 0) {
-      buckets.push({
-        id: 'install-unassigned',
-        label: 'Unassigned',
-        color: '#64748b',
-        families: [{ id: 'install-unassigned-family', label: 'Other Plays', plays: unassignedPlays }],
-        totalPlays: unassignedPlays.length
+    return (playsArray || [])
+      .filter(p =>
+        !p.archived &&
+        installList.includes(p.id) &&
+        (p.phase || 'OFFENSE') === playBankPhase &&
+        playMatchesFilter(p) &&
+        (!searchTerm ||
+          p.name?.toLowerCase().includes(query) ||
+          p.formation?.toLowerCase().includes(query) ||
+          p.concept?.toLowerCase().includes(query))
+      )
+      .sort((a, b) => {
+        // Sort by bucket label, then by name
+        const bucketA = playBuckets.find(bk => bk.id === a.bucketId)?.label || 'zzz';
+        const bucketB = playBuckets.find(bk => bk.id === b.bucketId)?.label || 'zzz';
+        if (bucketA !== bucketB) return bucketA.localeCompare(bucketB);
+        return (a.name || '').localeCompare(b.name || '');
       });
-    }
-
-    return buckets;
   }, [playsArray, playBuckets, currentWeek, searchTerm, playBankPhase, playMatchesFilter]);
 
-  // Total install count for display
-  const installTotalCount = useMemo(() => {
-    return installUsageData.reduce((sum, bucket) => sum + bucket.totalPlays, 0);
-  }, [installUsageData]);
+  // Flat list of all plays (no collapsibles) - sorted by bucket then name
+  const flatAllPlays = useMemo(() => {
+    const query = searchTerm.toLowerCase();
+    return (playsArray || [])
+      .filter(p =>
+        !p.archived &&
+        (p.phase || 'OFFENSE') === playBankPhase &&
+        playMatchesFilter(p) &&
+        (!searchTerm ||
+          p.name?.toLowerCase().includes(query) ||
+          p.formation?.toLowerCase().includes(query) ||
+          p.concept?.toLowerCase().includes(query))
+      )
+      .sort((a, b) => {
+        // Sort by bucket label, then by name
+        const bucketA = playBuckets.find(bk => bk.id === a.bucketId)?.label || 'zzz';
+        const bucketB = playBuckets.find(bk => bk.id === b.bucketId)?.label || 'zzz';
+        if (bucketA !== bucketB) return bucketA.localeCompare(bucketB);
+        return (a.name || '').localeCompare(b.name || '');
+      });
+  }, [playsArray, playBuckets, searchTerm, playBankPhase, playMatchesFilter]);
 
   // Week stats
   const weekStats = useMemo(() => {
@@ -315,6 +251,34 @@ export default function PlayBankSidebar({
       newPlaysCount: newInstallIds.length,
       totalScriptSlots: 0 // TODO: calculate from scripts
     };
+  }, [currentWeek]);
+
+  // Calculate practice script usage per play per day
+  const scriptUsageByPlay = useMemo(() => {
+    const usage = {}; // { playId: { M: count, T: count, W: count, TH: count, F: count, TOT: count } }
+    const practicePlans = currentWeek?.practicePlans || {};
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    const dayAbbrev = { Monday: 'M', Tuesday: 'T', Wednesday: 'W', Thursday: 'TH', Friday: 'F' };
+
+    days.forEach(day => {
+      const plan = practicePlans[day];
+      if (!plan?.segments) return;
+
+      plan.segments.forEach(segment => {
+        if (!segment.script) return;
+        segment.script.forEach(row => {
+          if (row.playId) {
+            if (!usage[row.playId]) {
+              usage[row.playId] = { M: 0, T: 0, W: 0, TH: 0, F: 0, TOT: 0 };
+            }
+            usage[row.playId][dayAbbrev[day]]++;
+            usage[row.playId].TOT++;
+          }
+        });
+      });
+    });
+
+    return usage;
   }, [currentWeek]);
 
   // Get play call chain syntax for current phase
@@ -529,7 +493,9 @@ export default function PlayBankSidebar({
 
     const isBatchSelected = selectedPlayIds.has(play.id);
     const isSingleSelected = singleSelectMode && contextSelectedPlayId === play.id;
+    const isHighlighted = playMatchesHighlightFocuses(play);
     const wristbandSlot = getWristbandDisplay(play);
+    const usage = scriptUsageByPlay[play.id];
 
     // Determine click behavior
     const handleClick = () => {
@@ -546,133 +512,74 @@ export default function PlayBankSidebar({
     return (
       <div
         key={play.id}
-        className={`flex items-center py-1.5 px-2 border-b border-slate-100 text-sm hover:bg-slate-50 ${isClickable ? 'cursor-pointer' : 'cursor-grab'
-          } ${isBatchSelected ? 'bg-sky-50 border-sky-200' : ''} ${isSingleSelected ? 'bg-emerald-50 border-emerald-300 border-2' : ''}`}
+        className={`group flex items-center py-1 border-b text-sm hover:bg-slate-50 ${isClickable ? 'cursor-pointer' : 'cursor-grab'
+          } ${isBatchSelected ? 'bg-sky-50 border-sky-200' : ''} ${isSingleSelected ? 'bg-emerald-50 border-emerald-300 border-2' : ''} ${isHighlighted && !isBatchSelected && !isSingleSelected ? 'bg-amber-50 border-l-4 border-l-amber-400 border-b-slate-100' : 'border-slate-100'}`}
         draggable={!isClickable}
         onDragStart={(e) => !isClickable && handleDragStart(e, play)}
         onClick={handleClick}
         onDoubleClick={() => !isClickable && openPlayDetails(play.id)}
-        title={isInBatchMode ? 'Click to select' : (singleSelectMode ? 'Click to select for wristband' : 'Double-click to view details')}
+        title={isInBatchMode ? 'Click to select' : (singleSelectMode ? 'Click to select for wristband' : (isHighlighted ? 'Matches segment focus - Double-click to view details' : 'Double-click to view details'))}
       >
-        {/* Checkbox for batch mode */}
-        {isInBatchMode && (
-          <div className="mr-2 flex-shrink-0">
-            {isBatchSelected ? (
-              <CheckSquare size={16} className="text-sky-500" />
-            ) : (
-              <Square size={16} className="text-slate-400" />
-            )}
-          </div>
-        )}
-        {/* Pointer icon for single select mode */}
-        {singleSelectMode && !isInBatchMode && (
-          <div className="mr-2 flex-shrink-0">
-            {isSingleSelected ? (
-              <MousePointer size={14} className="text-emerald-500" />
-            ) : (
-              <div className="w-[14px]" />
-            )}
-          </div>
-        )}
-        <div className="flex-1 min-w-0 flex items-center justify-between">
-          <div className={`font-medium truncate ${isBatchSelected ? 'text-sky-700' : (isSingleSelected ? 'text-emerald-700' : 'text-slate-800')}`}>
+        {/* Left section: checkbox/pointer, play name, badges */}
+        <div className="flex items-center flex-1 min-w-0 pl-2">
+          {/* Checkbox for batch mode */}
+          {isInBatchMode && (
+            <div className="mr-2 flex-shrink-0">
+              {isBatchSelected ? (
+                <CheckSquare size={16} className="text-sky-500" />
+              ) : (
+                <Square size={16} className="text-slate-400" />
+              )}
+            </div>
+          )}
+          {/* Pointer icon for single select mode */}
+          {singleSelectMode && !isInBatchMode && (
+            <div className="mr-2 flex-shrink-0">
+              {isSingleSelected ? (
+                <MousePointer size={14} className="text-emerald-500" />
+              ) : (
+                <div className="w-[14px]" />
+              )}
+            </div>
+          )}
+          <div className={`flex-1 min-w-0 font-medium truncate ${isBatchSelected ? 'text-sky-700' : (isSingleSelected ? 'text-emerald-700' : 'text-slate-800')}`}>
             {playCall}
           </div>
-          {/* Quick Add Button */}
+          {/* Wristband slot indicator */}
+          {wristbandSlot && (
+            <span className="text-xs font-bold text-sky-600 bg-sky-100 px-1.5 py-0.5 rounded flex-shrink-0 ml-1">
+              {wristbandSlot}
+            </span>
+          )}
+          {play.priority && (
+            <Star size={12} className="text-amber-500 fill-amber-500 flex-shrink-0 ml-1" />
+          )}
+          {/* Quick Add Button - only show on hover when not in batch/single mode */}
           {!isInBatchMode && !singleSelectMode && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 triggerQuickAdd(play.id);
               }}
-              className="p-1 rounded-full hover:bg-slate-200 text-slate-400 hover:text-sky-600 transition-colors opacity-0 group-hover:opacity-100"
+              className="p-1 rounded-full hover:bg-slate-200 text-slate-400 hover:text-sky-600 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0 ml-1"
               title="Add to active target"
             >
               <Plus size={14} />
             </button>
           )}
         </div>
-        {/* Wristband slot indicator */}
-        {wristbandSlot && (
-          <span className="text-xs font-bold text-sky-600 bg-sky-100 px-1.5 py-0.5 rounded flex-shrink-0 ml-1">
-            {wristbandSlot}
-          </span>
-        )}
-        {play.priority && (
-          <Star size={12} className="text-amber-500 fill-amber-500 flex-shrink-0 ml-1" />
-        )}
-      </div>
-    );
-  }, [handleDragStart, openPlayDetails, isInBatchMode, selectedPlayIds, togglePlaySelection, singleSelectMode, contextSelectedPlayId, selectPlayForAssign]);
-
-  // Render bucket with concept families
-  const renderBucket = useCallback((bucket) => {
-    const isBucketExpanded = expandedSections[`bucket-${bucket.id}`];
-
-    return (
-      <div key={bucket.id} className="mb-2">
-        {/* Bucket Header */}
-        <div
-          onClick={() => toggleSection(`bucket-${bucket.id}`)}
-          className="flex items-center justify-between px-2.5 py-2 rounded cursor-pointer"
-          style={{ backgroundColor: bucket.color || '#3b82f6' }}
-        >
-          <span className="text-xs font-bold text-white uppercase tracking-wide">
-            {bucket.label}
-          </span>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-white/80">{bucket.totalPlays}</span>
-            {isBucketExpanded ? (
-              <ChevronDown size={14} className="text-white" />
-            ) : (
-              <ChevronRight size={14} className="text-white" />
-            )}
-          </div>
+        {/* Right section: Script usage counters - fixed width, always aligned */}
+        <div className="flex items-center text-[9px] font-mono flex-shrink-0 border-l border-slate-200" title="Practice script usage: M T W TH F | Total">
+          <span className={`w-5 text-center py-1 border-r border-slate-200 ${usage?.M ? 'text-slate-700 font-semibold bg-slate-50' : 'text-slate-300'}`}>{usage?.M || '-'}</span>
+          <span className={`w-5 text-center py-1 border-r border-slate-200 ${usage?.T ? 'text-slate-700 font-semibold bg-slate-50' : 'text-slate-300'}`}>{usage?.T || '-'}</span>
+          <span className={`w-5 text-center py-1 border-r border-slate-200 ${usage?.W ? 'text-slate-700 font-semibold bg-slate-50' : 'text-slate-300'}`}>{usage?.W || '-'}</span>
+          <span className={`w-5 text-center py-1 border-r border-slate-200 ${usage?.TH ? 'text-slate-700 font-semibold bg-slate-50' : 'text-slate-300'}`}>{usage?.TH || '-'}</span>
+          <span className={`w-5 text-center py-1 border-r border-slate-200 ${usage?.F ? 'text-slate-700 font-semibold bg-slate-50' : 'text-slate-300'}`}>{usage?.F || '-'}</span>
+          <span className={`w-7 text-center py-1 font-bold ${usage?.TOT ? 'text-sky-600 bg-sky-50' : 'text-slate-300'}`}>{usage?.TOT || '-'}</span>
         </div>
-
-        {/* Bucket Content */}
-        {isBucketExpanded && (
-          <div
-            className="ml-2 pl-1.5 pt-1 border-l-2"
-            style={{ borderColor: bucket.color || '#3b82f6' }}
-          >
-            {bucket.families.map(family => {
-              const isFamilyExpanded = expandedSections[`family-${family.id}`];
-
-              return (
-                <div key={family.id} className="mb-1 border border-slate-200 rounded overflow-hidden">
-                  {/* Concept Family Header */}
-                  <div
-                    onClick={() => toggleSection(`family-${family.id}`)}
-                    className="flex items-center justify-between px-2 py-1.5 bg-slate-50 cursor-pointer hover:bg-slate-100"
-                  >
-                    <span className="text-xs font-semibold text-slate-700">
-                      {family.label || family.name}
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs text-slate-500">{family.plays.length}</span>
-                      {isFamilyExpanded ? (
-                        <ChevronDown size={12} className="text-slate-400" />
-                      ) : (
-                        <ChevronRight size={12} className="text-slate-400" />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Family Plays */}
-                  {isFamilyExpanded && family.plays.length > 0 && (
-                    <div className="bg-white border-t border-slate-200">
-                      {family.plays.map(renderPlayRow)}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
     );
-  }, [expandedSections, toggleSection, renderPlayRow]);
+  }, [handleDragStart, openPlayDetails, isInBatchMode, selectedPlayIds, togglePlaySelection, singleSelectMode, contextSelectedPlayId, selectPlayForAssign, triggerQuickAdd, playMatchesHighlightFocuses, scriptUsageByPlay]);
 
   return (
     <div
@@ -945,21 +852,37 @@ export default function PlayBankSidebar({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-2 bg-white">
+        <div className="flex-1 overflow-y-auto bg-white">
           {activeTab === 'usage' && (
             <>
               {/* Batch Add to Install Button */}
               {currentWeek && !isInBatchMode && (
                 <button
                   onClick={startBatchAddToInstall}
-                  className="w-full mb-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 text-sm font-medium hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2"
+                  className="w-full px-3 py-2 bg-emerald-50 border-b border-emerald-200 text-emerald-700 text-sm font-medium hover:bg-emerald-100 transition-colors flex items-center justify-center gap-2"
                 >
                   <CheckSquare size={14} />
                   Batch Add to Install
                 </button>
               )}
-              {usageData.length > 0 ? (
-                usageData.map(renderBucket)
+              {/* Usage header with day columns */}
+              <div className="sticky top-0 bg-slate-100 border-b border-slate-300 flex items-center">
+                <span className="flex-1 text-xs font-bold text-slate-600 uppercase pl-2 py-1">
+                  Full Playbook ({flatAllPlays.length})
+                </span>
+                <div className="flex items-center text-[8px] font-bold text-slate-600 uppercase border-l border-slate-300 bg-slate-200">
+                  <span className="w-5 text-center py-1.5 border-r border-slate-300">M</span>
+                  <span className="w-5 text-center py-1.5 border-r border-slate-300">T</span>
+                  <span className="w-5 text-center py-1.5 border-r border-slate-300">W</span>
+                  <span className="w-5 text-center py-1.5 border-r border-slate-300">TH</span>
+                  <span className="w-5 text-center py-1.5 border-r border-slate-300">F</span>
+                  <span className="w-7 text-center py-1.5 bg-slate-300">TOT</span>
+                </div>
+              </div>
+              {flatAllPlays.length > 0 ? (
+                <div>
+                  {flatAllPlays.map(renderPlayRow)}
+                </div>
               ) : (
                 <div className="py-8 text-center text-slate-400 text-sm">
                   {searchTerm ? `No plays found matching "${searchTerm}"` : 'No plays in playbook'}
@@ -977,14 +900,24 @@ export default function PlayBankSidebar({
 
           {activeTab === 'install' && (
             <>
-              {installUsageData.length > 0 ? (
-                <>
-                  {/* Install header with total count */}
-                  <div className="mb-2 px-2 py-1.5 bg-emerald-500 text-white text-xs font-bold uppercase rounded">
-                    Week Install ({installTotalCount})
-                  </div>
-                  {installUsageData.map(renderBucket)}
-                </>
+              {/* Install header with day columns */}
+              <div className="sticky top-0 bg-emerald-500 flex items-center">
+                <span className="flex-1 text-xs font-bold text-white uppercase pl-2 py-1.5">
+                  Week Install ({flatInstallPlays.length})
+                </span>
+                <div className="flex items-center text-[8px] font-bold text-white uppercase border-l border-emerald-400 bg-emerald-600">
+                  <span className="w-5 text-center py-1.5 border-r border-emerald-400">M</span>
+                  <span className="w-5 text-center py-1.5 border-r border-emerald-400">T</span>
+                  <span className="w-5 text-center py-1.5 border-r border-emerald-400">W</span>
+                  <span className="w-5 text-center py-1.5 border-r border-emerald-400">TH</span>
+                  <span className="w-5 text-center py-1.5 border-r border-emerald-400">F</span>
+                  <span className="w-7 text-center py-1.5 bg-emerald-700">TOT</span>
+                </div>
+              </div>
+              {flatInstallPlays.length > 0 ? (
+                <div>
+                  {flatInstallPlays.map(renderPlayRow)}
+                </div>
               ) : (
                 <div className="py-8 text-center text-slate-400 text-sm">
                   {currentWeek

@@ -26,8 +26,10 @@ import {
   Layers,
   Link2,
   CheckSquare,
+  Square,
   ExternalLink,
-  HelpCircle
+  HelpCircle,
+  Check
 } from 'lucide-react';
 
 // Days of the week
@@ -87,6 +89,15 @@ const PHASE_TO_CONFIG_KEY = {
   'K': 'K',
   'C': 'C',
   'ALL': null // ALL phase shows types from all phases
+};
+
+// Map segment phase to setupConfig phase
+const SEGMENT_PHASE_TO_SETUP_PHASE = {
+  'O': 'OFFENSE',
+  'D': 'DEFENSE',
+  'K': 'SPECIAL_TEAMS',
+  'C': null, // Competition doesn't map to setup
+  'ALL': null
 };
 
 // Default segment types (fallback if setup is empty)
@@ -522,6 +533,354 @@ function SegmentNotesModal({ segment, staff, positionGroups, onUpdateNotes, onCl
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Focus Multi-Select Component
+// If segmentTypeFocusItems is provided (from Setup → Segment Focus), use those
+// Otherwise, auto-populate from setupConfig
+function FocusMultiSelect({
+  phase,
+  segmentType,
+  selectedFocuses = [],
+  onChange,
+  setupConfig,
+  isLight = false,
+  placeholder = "Select Focus..."
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [customInput, setCustomInput] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const dropdownRef = useRef(null);
+  const customInputRef = useRef(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Get the segment type's configured focus items (if any)
+  const segmentTypeFocusItems = useMemo(() => {
+    if (!segmentType || !setupConfig?.practiceSegmentTypes) return [];
+    const phaseTypes = setupConfig.practiceSegmentTypes[phase] || [];
+    const typeConfig = phaseTypes.find(t => t.name === segmentType);
+    return typeConfig?.focusItems || [];
+  }, [phase, segmentType, setupConfig]);
+
+  // Map source names to display categories
+  const SOURCE_TO_CATEGORY = {
+    'formations': 'Formations',
+    'playBuckets': 'Play Buckets',
+    'conceptGroups': 'Concept Groups',
+    'readTypes': 'Read Types',
+    'lookAlikeSeries': 'Series',
+    'fieldZones': 'Situations',
+    'specialSituations': 'Situations',
+    'shiftMotions': 'Shifts/Motions',
+    'qcPlayPurposes': 'QC Purposes',
+    'custom': 'Custom'
+  };
+
+  // Get all focus options grouped by category for this phase
+  const focusGroups = useMemo(() => {
+    // If segment type has configured focus items, use those
+    if (segmentTypeFocusItems.length > 0) {
+      const groups = {};
+      segmentTypeFocusItems.forEach(item => {
+        const category = SOURCE_TO_CATEGORY[item.source] || item.source || 'Other';
+        if (!groups[category]) groups[category] = [];
+        groups[category].push({
+          id: item.id,
+          name: item.name,
+          category: category,
+          source: item.source
+        });
+      });
+      return Object.entries(groups).map(([category, items]) => ({ category, items }));
+    }
+
+    // Otherwise, auto-populate from setupConfig
+    const setupPhase = SEGMENT_PHASE_TO_SETUP_PHASE[phase];
+    const groups = [];
+
+    // Formations - filtered by phase
+    const formations = (setupConfig?.formations || [])
+      .filter(f => f.phase === setupPhase)
+      .map(f => ({ id: f.id, name: f.name, category: 'Formations' }));
+    if (formations.length > 0) {
+      groups.push({ category: 'Formations', items: formations });
+    }
+
+    // Play Buckets - filtered by phase
+    const playBuckets = (setupConfig?.playBuckets || [])
+      .filter(b => b.phase === setupPhase)
+      .map(b => ({ id: b.id, name: b.label || b.name, category: 'Play Buckets' }));
+    if (playBuckets.length > 0) {
+      groups.push({ category: 'Play Buckets', items: playBuckets });
+    }
+
+    // Offense-only categories
+    if (phase === 'O') {
+      // Concept Groups
+      const conceptGroups = (setupConfig?.conceptGroups || [])
+        .map(c => ({ id: c.id, name: c.label || c.name, category: 'Concept Groups' }));
+      if (conceptGroups.length > 0) {
+        groups.push({ category: 'Concept Groups', items: conceptGroups });
+      }
+
+      // Read Types
+      const readTypes = (setupConfig?.readTypes || [])
+        .map(r => ({ id: r.id, name: r.name, category: 'Read Types' }));
+      if (readTypes.length > 0) {
+        groups.push({ category: 'Read Types', items: readTypes });
+      }
+
+      // Look-Alike Series
+      const lookAlikeSeries = (setupConfig?.lookAlikeSeries || [])
+        .map(s => ({ id: s.id, name: s.name, category: 'Series' }));
+      if (lookAlikeSeries.length > 0) {
+        groups.push({ category: 'Series', items: lookAlikeSeries });
+      }
+
+      // Situations (combines fieldZones and specialSituations)
+      const situations = [
+        ...(setupConfig?.fieldZones || []).map(f => ({ id: f.id, name: f.name, category: 'Situations' })),
+        ...(setupConfig?.specialSituations || []).map(s => ({ id: s.id, name: s.name, category: 'Situations' }))
+      ];
+      if (situations.length > 0) {
+        groups.push({ category: 'Situations', items: situations });
+      }
+    }
+
+    return groups;
+  }, [phase, segmentType, segmentTypeFocusItems, setupConfig]);
+
+  // Check if an item is selected
+  const isSelected = (category, id) => {
+    return selectedFocuses.some(f => f.category === category && f.id === id);
+  };
+
+  // Toggle item selection
+  const toggleItem = (item) => {
+    const exists = selectedFocuses.some(f => f.category === item.category && f.id === item.id);
+    if (exists) {
+      onChange(selectedFocuses.filter(f => !(f.category === item.category && f.id === item.id)));
+    } else {
+      onChange([...selectedFocuses, item]);
+    }
+  };
+
+  // Clear all
+  const clearAll = () => {
+    onChange([]);
+  };
+
+  // Add custom focus
+  const addCustomFocus = () => {
+    if (customInput.trim()) {
+      const customItem = {
+        id: `custom_${Date.now()}`,
+        name: customInput.trim(),
+        category: 'Custom'
+      };
+      onChange([...selectedFocuses, customItem]);
+      setCustomInput('');
+      setShowCustomInput(false);
+    }
+  };
+
+  // Get display text for button
+  const getButtonText = () => {
+    if (selectedFocuses.length === 0) return placeholder;
+    if (selectedFocuses.length === 1) return selectedFocuses[0].name;
+    return `${selectedFocuses.length} selected`;
+  };
+
+  // Check if there are any options available (always show since we have custom option)
+  const hasOptions = focusGroups.some(g => g.items.length > 0) || phase === 'O' || phase === 'D' || phase === 'K';
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsOpen(!isOpen);
+        }}
+        className={`w-full h-7 px-2 border rounded text-xs text-left flex items-center justify-between ${
+          isLight
+            ? 'bg-white border-gray-300 text-gray-900 hover:bg-gray-50'
+            : 'bg-slate-700 border-slate-600 text-white hover:bg-slate-600'
+        } ${selectedFocuses.length > 0 ? 'ring-1 ring-sky-500/50' : ''}`}
+      >
+        <span className={`truncate ${selectedFocuses.length === 0 ? (isLight ? 'text-gray-400' : 'text-slate-400') : ''}`}>
+          {getButtonText()}
+        </span>
+        <ChevronDown size={12} className={`flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className={`absolute z-50 left-0 right-0 mt-1 rounded-lg shadow-xl border max-h-64 overflow-y-auto ${
+          isLight
+            ? 'bg-white border-gray-200'
+            : 'bg-slate-800 border-slate-600'
+        }`}
+        style={{ minWidth: '220px' }}
+        >
+          {/* Header with Clear All */}
+          {selectedFocuses.length > 0 && (
+            <div className={`sticky top-0 px-3 py-2 border-b flex items-center justify-between ${
+              isLight ? 'bg-gray-50 border-gray-200' : 'bg-slate-700 border-slate-600'
+            }`}>
+              <span className={`text-xs ${isLight ? 'text-gray-600' : 'text-slate-300'}`}>
+                {selectedFocuses.length} selected
+              </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  clearAll();
+                }}
+                className="text-xs text-red-400 hover:text-red-300"
+              >
+                Clear All
+              </button>
+            </div>
+          )}
+
+          {/* Grouped Options */}
+          {focusGroups.map((group, groupIdx) => (
+            <div key={group.category}>
+              {/* Category Header */}
+              <div className={`px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider ${
+                isLight
+                  ? 'bg-gray-100 text-gray-500 border-y border-gray-200'
+                  : 'bg-slate-700/50 text-slate-400 border-y border-slate-600'
+              } ${groupIdx === 0 && selectedFocuses.length === 0 ? 'border-t-0' : ''}`}>
+                {group.category}
+              </div>
+              {/* Items */}
+              {group.items.map(item => (
+                <button
+                  key={`${item.category}-${item.id}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleItem(item);
+                  }}
+                  className={`w-full px-3 py-1.5 text-left text-xs flex items-center gap-2 transition-colors ${
+                    isLight
+                      ? 'hover:bg-gray-100'
+                      : 'hover:bg-slate-700'
+                  } ${isSelected(item.category, item.id) ? (isLight ? 'bg-sky-50' : 'bg-sky-900/30') : ''}`}
+                >
+                  <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                    isSelected(item.category, item.id)
+                      ? 'bg-sky-500 border-sky-500 text-white'
+                      : isLight ? 'border-gray-300' : 'border-slate-500'
+                  }`}>
+                    {isSelected(item.category, item.id) && <Check size={10} />}
+                  </div>
+                  <span className={isLight ? 'text-gray-700' : 'text-slate-200'}>{item.name}</span>
+                </button>
+              ))}
+            </div>
+          ))}
+
+          {/* Custom Focus Section */}
+          <div>
+            <div className={`px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider ${
+              isLight
+                ? 'bg-gray-100 text-gray-500 border-y border-gray-200'
+                : 'bg-slate-700/50 text-slate-400 border-y border-slate-600'
+            }`}>
+              Custom
+            </div>
+            {/* Show existing custom focuses */}
+            {selectedFocuses.filter(f => f.category === 'Custom').map(item => (
+              <button
+                key={`${item.category}-${item.id}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleItem(item);
+                }}
+                className={`w-full px-3 py-1.5 text-left text-xs flex items-center gap-2 transition-colors ${
+                  isLight ? 'hover:bg-gray-100 bg-sky-50' : 'hover:bg-slate-700 bg-sky-900/30'
+                }`}
+              >
+                <div className="w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 bg-sky-500 border-sky-500 text-white">
+                  <Check size={10} />
+                </div>
+                <span className={isLight ? 'text-gray-700' : 'text-slate-200'}>{item.name}</span>
+              </button>
+            ))}
+            {/* Add custom input */}
+            {showCustomInput ? (
+              <div className="px-3 py-2 flex items-center gap-2">
+                <input
+                  ref={customInputRef}
+                  type="text"
+                  value={customInput}
+                  onChange={(e) => setCustomInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addCustomFocus();
+                    } else if (e.key === 'Escape') {
+                      setShowCustomInput(false);
+                      setCustomInput('');
+                    }
+                  }}
+                  placeholder="Enter custom focus..."
+                  className={`flex-1 px-2 py-1 text-xs rounded border ${
+                    isLight
+                      ? 'bg-white border-gray-300 text-gray-900'
+                      : 'bg-slate-700 border-slate-600 text-white'
+                  }`}
+                  autoFocus
+                />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addCustomFocus();
+                  }}
+                  className="p-1 text-emerald-500 hover:text-emerald-400"
+                >
+                  <Check size={14} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowCustomInput(false);
+                    setCustomInput('');
+                  }}
+                  className="p-1 text-slate-400 hover:text-slate-300"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowCustomInput(true);
+                }}
+                className={`w-full px-3 py-1.5 text-left text-xs flex items-center gap-2 transition-colors ${
+                  isLight ? 'hover:bg-gray-100 text-sky-600' : 'hover:bg-slate-700 text-sky-400'
+                }`}
+              >
+                <Plus size={14} />
+                <span>Add custom focus...</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1315,7 +1674,7 @@ export default function PracticePlans() {
   const viewParam = searchParams.get('view'); // 'script' or null
   const navigate = useNavigate();
   const { weeks, updateWeek, setupConfig, updateSetupConfig, staff, settings, activeLevelId, playsArray, plays } = useSchool();
-  const { startBatchSelect, quickAddRequest } = usePlayBank();
+  const { startBatchSelect, quickAddRequest, setHighlightFocuses } = usePlayBank();
 
   // Theme detection
   const theme = settings?.theme || 'dark';
@@ -1458,6 +1817,39 @@ export default function PracticePlans() {
     prePracticeNotes: '',
     segments: []
   };
+
+  // Update PlayBank highlight focuses when in Script mode
+  // Collect all focuses from segments with scripts enabled
+  useEffect(() => {
+    if (mode === 'script' && currentPlan?.segments) {
+      const allFocuses = [];
+      currentPlan.segments
+        .filter(seg => seg.hasScript)
+        .forEach(seg => {
+          // Single column mode focuses
+          if (seg.focuses && seg.focuses.length > 0) {
+            allFocuses.push(...seg.focuses);
+          }
+          // 2-platoon mode focuses
+          if (seg.offenseFocuses && seg.offenseFocuses.length > 0) {
+            allFocuses.push(...seg.offenseFocuses);
+          }
+          if (seg.defenseFocuses && seg.defenseFocuses.length > 0) {
+            allFocuses.push(...seg.defenseFocuses);
+          }
+        });
+      // Deduplicate by category+id
+      const unique = allFocuses.filter((f, i, arr) =>
+        arr.findIndex(x => x.category === f.category && x.id === f.id) === i
+      );
+      setHighlightFocuses(unique);
+    } else {
+      // Clear highlights when not in script mode
+      setHighlightFocuses([]);
+    }
+    // Cleanup on unmount
+    return () => setHighlightFocuses([]);
+  }, [mode, currentPlan?.segments, setHighlightFocuses]);
 
   // Get all segment types organized by phase from setup or use defaults
   const allSegmentTypes = useMemo(() => {
@@ -1816,7 +2208,9 @@ export default function PracticePlans() {
       type: '',
       duration: currentPlan.defaultSegmentDuration || 10,
       phase: 'ALL',
-      situation: '',
+      focuses: [],           // New: array of selected focus items
+      offenseFocuses: [],    // New: for 2-platoon mode
+      defenseFocuses: [],    // New: for 2-platoon mode
       contact: '',
       hasScript: false,
       script: [],
@@ -2478,51 +2872,39 @@ export default function PracticePlans() {
                       {currentPlan.isTwoPlatoon ? (
                         <>
                           <td className="px-3 py-2">
-                            <select
-                              id={`segment-${seg.id}-offense-focus`}
-                              value={seg.offenseFocus || ''}
-                              onChange={e => updateSegment(seg.id, 'offenseFocus', e.target.value)}
-                              onClick={e => e.stopPropagation()}
-                              className={`w-full h-7 px-2 border rounded text-xs ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
-                              aria-label="Segment offense focus"
-                            >
-                              <option value="">-- Offense --</option>
-                              {getFocusItemsForType('O', seg.type).map(f => (
-                                <option key={f.id || f.name} value={f.name}>{f.name}</option>
-                              ))}
-                            </select>
+                            <FocusMultiSelect
+                              phase="O"
+                              segmentType={seg.type}
+                              selectedFocuses={seg.offenseFocuses || []}
+                              onChange={(focuses) => updateSegment(seg.id, 'offenseFocuses', focuses)}
+                              setupConfig={setupConfig}
+                              isLight={isLight}
+                              placeholder="Offense Focus..."
+                            />
                           </td>
                           <td className="px-3 py-2">
-                            <select
-                              id={`segment-${seg.id}-defense-focus`}
-                              value={seg.defenseFocus || ''}
-                              onChange={e => updateSegment(seg.id, 'defenseFocus', e.target.value)}
-                              onClick={e => e.stopPropagation()}
-                              className={`w-full h-7 px-2 border rounded text-xs ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
-                              aria-label="Segment defense focus"
-                            >
-                              <option value="">-- Defense --</option>
-                              {getFocusItemsForType('D', seg.type).map(f => (
-                                <option key={f.id || f.name} value={f.name}>{f.name}</option>
-                              ))}
-                            </select>
+                            <FocusMultiSelect
+                              phase="D"
+                              segmentType={seg.type}
+                              selectedFocuses={seg.defenseFocuses || []}
+                              onChange={(focuses) => updateSegment(seg.id, 'defenseFocuses', focuses)}
+                              setupConfig={setupConfig}
+                              isLight={isLight}
+                              placeholder="Defense Focus..."
+                            />
                           </td>
                         </>
                       ) : (
                         <td className="px-3 py-2">
-                          <select
-                            id={`segment-${seg.id}-situation`}
-                            value={seg.situation || ''}
-                            onChange={e => updateSegment(seg.id, 'situation', e.target.value)}
-                            onClick={e => e.stopPropagation()}
-                            className={`w-full h-7 px-2 border rounded text-xs ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
-                            aria-label="Segment situation"
-                          >
-                            <option value="">-- Select Focus --</option>
-                            {getFocusItemsForType(seg.phase, seg.type).map(f => (
-                              <option key={f.id || f.name} value={f.name}>{f.name}</option>
-                            ))}
-                          </select>
+                          <FocusMultiSelect
+                            phase={seg.phase}
+                            segmentType={seg.type}
+                            selectedFocuses={seg.focuses || []}
+                            onChange={(focuses) => updateSegment(seg.id, 'focuses', focuses)}
+                            setupConfig={setupConfig}
+                            isLight={isLight}
+                            placeholder="Select Focus..."
+                          />
                         </td>
                       )}
                       <td className="px-3 py-2 text-center">
