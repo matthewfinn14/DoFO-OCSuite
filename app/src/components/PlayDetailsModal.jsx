@@ -85,7 +85,6 @@ export default function PlayDetailsModal({
 
   // Get the bucket and concept family for display
   const bucket = playBuckets.find(b => b.id === play.bucketId);
-  const conceptFamily = conceptGroups.find(cf => cf.label === play.conceptFamily && cf.categoryId === play.bucketId);
 
   // Filter buckets by play's phase
   const phaseBuckets = playBuckets.filter(b =>
@@ -93,9 +92,8 @@ export default function PlayDetailsModal({
   );
 
   // Get concept families for selected bucket
-  const bucketConceptFamilies = play.bucketId
-    ? conceptGroups.filter(cf => cf.categoryId === play.bucketId)
-    : [];
+  // Concept groups are stored as bucket.families (array of strings)
+  const bucketConceptFamilies = bucket?.families || [];
 
   const handleTogglePriority = () => {
     onUpdatePlay?.(playId, { priority: !isPriority });
@@ -239,7 +237,7 @@ export default function PlayDetailsModal({
               )}
             </div>
             {/* Bucket and Concept Group badges */}
-            {(bucket || conceptFamily) && (
+            {(bucket || play.conceptFamily) && (
               <div className="flex gap-1 mt-1.5 flex-wrap">
                 {bucket && (
                   <span
@@ -252,13 +250,9 @@ export default function PlayDetailsModal({
                     {bucket.label}
                   </span>
                 )}
-                {conceptFamily && (
+                {play.conceptFamily && (
                   <span
-                    className="text-xs px-1.5 py-0.5 rounded font-semibold"
-                    style={{
-                      backgroundColor: conceptFamily.color || '#94a3b8',
-                      color: conceptFamily.textColor || '#fff'
-                    }}
+                    className="text-xs px-1.5 py-0.5 rounded font-semibold bg-slate-500 text-white"
                   >
                     {play.conceptFamily}
                   </span>
@@ -436,17 +430,12 @@ export default function PlayDetailsModal({
                   onChange={(e) => handleFamilyChange(e.target.value)}
                   disabled={!play.bucketId || bucketConceptFamilies.length === 0}
                   className="w-full px-2 py-1.5 text-sm bg-white border border-slate-300 rounded text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={conceptFamily ? {
-                    backgroundColor: conceptFamily.color || '#64748b',
-                    color: conceptFamily.textColor || '#fff',
-                    borderColor: conceptFamily.color || '#64748b'
-                  } : {}}
                 >
                   <option value="">
                     {!play.bucketId ? 'Select bucket first' : bucketConceptFamilies.length === 0 ? 'No groups available' : 'Select Group...'}
                   </option>
-                  {bucketConceptFamilies.map(cf => (
-                    <option key={cf.id} value={cf.label}>{cf.label}</option>
+                  {bucketConceptFamilies.map(family => (
+                    <option key={family} value={family}>{family}</option>
                   ))}
                 </select>
               ) : (
