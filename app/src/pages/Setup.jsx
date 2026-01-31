@@ -5950,28 +5950,28 @@ function SegmentFocusTab({
                       {selectedTypeFocusMode === 'all' ? 'All options available' : `${currentFocusItems.length} custom item${currentFocusItems.length !== 1 ? 's' : ''} selected`}
                     </p>
                   </div>
-                  {/* Per-Segment Toggle */}
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs ${selectedTypeFocusMode === 'all' ? (isLight ? 'text-emerald-600 font-medium' : 'text-emerald-400 font-medium') : (isLight ? 'text-gray-400' : 'text-slate-500')}`}>
-                      All
-                    </span>
+                  {/* Per-Segment Toggle - Segmented Button */}
+                  <div className={`flex rounded overflow-hidden border ${isLight ? 'border-gray-300' : 'border-slate-600'}`}>
                     <button
-                      onClick={toggleSegmentFocusMode}
-                      className={`relative w-10 h-5 rounded-full transition-colors ${
-                        selectedTypeFocusMode === 'custom'
-                          ? 'bg-sky-600'
-                          : isLight ? 'bg-emerald-500' : 'bg-emerald-600'
+                      onClick={() => selectedTypeFocusMode !== 'all' && toggleSegmentFocusMode()}
+                      className={`px-3 py-1 text-xs font-medium transition-colors ${
+                        selectedTypeFocusMode === 'all'
+                          ? 'bg-emerald-500 text-white'
+                          : isLight ? 'bg-white text-gray-500 hover:bg-gray-50' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
                       }`}
                     >
-                      <span
-                        className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                          selectedTypeFocusMode === 'custom' ? 'translate-x-5' : 'translate-x-0.5'
-                        }`}
-                      />
+                      All
                     </button>
-                    <span className={`text-xs ${selectedTypeFocusMode === 'custom' ? (isLight ? 'text-sky-600 font-medium' : 'text-sky-400 font-medium') : (isLight ? 'text-gray-400' : 'text-slate-500')}`}>
+                    <button
+                      onClick={() => selectedTypeFocusMode !== 'custom' && toggleSegmentFocusMode()}
+                      className={`px-3 py-1 text-xs font-medium transition-colors border-l ${
+                        selectedTypeFocusMode === 'custom'
+                          ? 'bg-sky-500 text-white border-sky-500'
+                          : isLight ? 'bg-white text-gray-500 hover:bg-gray-50 border-gray-300' : 'bg-slate-700 text-slate-400 hover:bg-slate-600 border-slate-600'
+                      }`}
+                    >
                       Custom
-                    </span>
+                    </button>
                   </div>
                 </div>
               </div>
