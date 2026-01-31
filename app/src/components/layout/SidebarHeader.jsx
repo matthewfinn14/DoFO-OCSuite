@@ -203,7 +203,7 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
               <img
                 src={settings.teamLogo}
                 alt="Team Logo"
-                className="h-16 w-16 object-contain rounded-lg"
+                className="h-16 w-auto object-contain"
               />
             </div>
           )}
