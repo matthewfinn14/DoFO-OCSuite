@@ -570,12 +570,12 @@ export default function PlayBankSidebar({
         </div>
         {/* Right section: Script usage counters - fixed width, always aligned */}
         <div className="flex items-center text-[9px] font-mono flex-shrink-0 border-l border-slate-200" title="Practice script usage: M T W TH F | Total">
-          <span className={`w-5 text-center py-1 border-r border-slate-200 ${usage?.M ? 'text-slate-700 font-semibold bg-slate-50' : 'text-slate-300'}`}>{usage?.M || '-'}</span>
-          <span className={`w-5 text-center py-1 border-r border-slate-200 ${usage?.T ? 'text-slate-700 font-semibold bg-slate-50' : 'text-slate-300'}`}>{usage?.T || '-'}</span>
-          <span className={`w-5 text-center py-1 border-r border-slate-200 ${usage?.W ? 'text-slate-700 font-semibold bg-slate-50' : 'text-slate-300'}`}>{usage?.W || '-'}</span>
-          <span className={`w-5 text-center py-1 border-r border-slate-200 ${usage?.TH ? 'text-slate-700 font-semibold bg-slate-50' : 'text-slate-300'}`}>{usage?.TH || '-'}</span>
-          <span className={`w-5 text-center py-1 border-r border-slate-200 ${usage?.F ? 'text-slate-700 font-semibold bg-slate-50' : 'text-slate-300'}`}>{usage?.F || '-'}</span>
-          <span className={`w-7 text-center py-1 font-bold ${usage?.TOT ? 'text-sky-600 bg-sky-50' : 'text-slate-300'}`}>{usage?.TOT || '-'}</span>
+          <span className={`w-5 text-center py-1 border-r border-slate-200 ${usage?.M ? 'text-slate-700 font-semibold' : 'text-slate-300'}`}>{usage?.M || '-'}</span>
+          <span className={`w-5 text-center py-1 border-r border-slate-200 ${usage?.T ? 'text-slate-700 font-semibold' : 'text-slate-300'}`}>{usage?.T || '-'}</span>
+          <span className={`w-5 text-center py-1 border-r border-slate-200 ${usage?.W ? 'text-slate-700 font-semibold' : 'text-slate-300'}`}>{usage?.W || '-'}</span>
+          <span className={`w-5 text-center py-1 border-r border-slate-200 ${usage?.TH ? 'text-slate-700 font-semibold' : 'text-slate-300'}`}>{usage?.TH || '-'}</span>
+          <span className={`w-5 text-center py-1 border-r border-slate-200 ${usage?.F ? 'text-slate-700 font-semibold' : 'text-slate-300'}`}>{usage?.F || '-'}</span>
+          <span className={`w-7 text-center py-1 font-bold ${usage?.TOT ? 'text-sky-600' : 'text-slate-300'}`}>{usage?.TOT || '-'}</span>
         </div>
       </div>
     );
@@ -866,17 +866,17 @@ export default function PlayBankSidebar({
                 </button>
               )}
               {/* Usage header with day columns */}
-              <div className="sticky top-0 bg-slate-100 border-b border-slate-300 flex items-center">
+              <div className="sticky top-0 bg-white border-b border-slate-200 flex items-center">
                 <span className="flex-1 text-xs font-bold text-slate-600 uppercase pl-2 py-1">
                   Full Playbook ({flatAllPlays.length})
                 </span>
-                <div className="flex items-center text-[8px] font-bold text-slate-600 uppercase border-l border-slate-300 bg-slate-200">
-                  <span className="w-5 text-center py-1.5 border-r border-slate-300">M</span>
-                  <span className="w-5 text-center py-1.5 border-r border-slate-300">T</span>
-                  <span className="w-5 text-center py-1.5 border-r border-slate-300">W</span>
-                  <span className="w-5 text-center py-1.5 border-r border-slate-300">TH</span>
-                  <span className="w-5 text-center py-1.5 border-r border-slate-300">F</span>
-                  <span className="w-7 text-center py-1.5 bg-slate-300">TOT</span>
+                <div className="flex items-center text-[8px] font-bold text-slate-500 uppercase border-l border-slate-200">
+                  <span className="w-5 text-center py-1.5 border-r border-slate-200">M</span>
+                  <span className="w-5 text-center py-1.5 border-r border-slate-200">T</span>
+                  <span className="w-5 text-center py-1.5 border-r border-slate-200">W</span>
+                  <span className="w-5 text-center py-1.5 border-r border-slate-200">TH</span>
+                  <span className="w-5 text-center py-1.5 border-r border-slate-200">F</span>
+                  <span className="w-7 text-center py-1.5 font-extrabold text-slate-600">TOT</span>
                 </div>
               </div>
               {flatAllPlays.length > 0 ? (
@@ -905,13 +905,13 @@ export default function PlayBankSidebar({
                 <span className="flex-1 text-xs font-bold text-white uppercase pl-2 py-1.5">
                   Week Install ({flatInstallPlays.length})
                 </span>
-                <div className="flex items-center text-[8px] font-bold text-white uppercase border-l border-emerald-400 bg-emerald-600">
+                <div className="flex items-center text-[8px] font-bold text-emerald-100 uppercase border-l border-emerald-400">
                   <span className="w-5 text-center py-1.5 border-r border-emerald-400">M</span>
                   <span className="w-5 text-center py-1.5 border-r border-emerald-400">T</span>
                   <span className="w-5 text-center py-1.5 border-r border-emerald-400">W</span>
                   <span className="w-5 text-center py-1.5 border-r border-emerald-400">TH</span>
                   <span className="w-5 text-center py-1.5 border-r border-emerald-400">F</span>
-                  <span className="w-7 text-center py-1.5 bg-emerald-700">TOT</span>
+                  <span className="w-7 text-center py-1.5 font-extrabold text-white">TOT</span>
                 </div>
               </div>
               {flatInstallPlays.length > 0 ? (

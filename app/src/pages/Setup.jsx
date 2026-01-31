@@ -1535,7 +1535,6 @@ export default function Setup() {
               segmentTypes={localConfig.practiceSegmentTypes || {}}
               formations={localConfig.formations || []}
               playBuckets={localConfig.playBuckets || []}
-              conceptGroups={localConfig.conceptGroups || []}
               readTypes={localConfig.readTypes || []}
               lookAlikeSeries={localConfig.lookAlikeSeries || []}
               fieldZones={localConfig.fieldZones || []}
@@ -5712,7 +5711,6 @@ function SegmentFocusTab({
   segmentTypes,
   formations,
   playBuckets,
-  conceptGroups,
   readTypes,
   lookAlikeSeries,
   fieldZones,
@@ -5750,9 +5748,21 @@ function SegmentFocusTab({
           .filter(b => !setupPhase || b.phase === setupPhase)
           .map(b => ({ id: b.id, name: b.label, source: 'playBuckets' }));
       case 'conceptGroups':
-        // Concept groups are offense-only
-        if (selectedPhase !== 'O') return [];
-        return conceptGroups.map(c => ({ id: c.id, name: c.label || c.name, source: 'conceptGroups' }));
+        // Concept groups are derived from bucket families - filter by phase
+        const phaseBuckets = playBuckets.filter(b => !setupPhase || b.phase === setupPhase);
+        const groups = [];
+        phaseBuckets.forEach(bucket => {
+          (bucket.families || []).forEach(familyName => {
+            groups.push({
+              id: `${bucket.id}_${familyName}`,
+              name: `${bucket.label}: ${familyName}`,
+              bucketId: bucket.id,
+              familyName: familyName,
+              source: 'conceptGroups'
+            });
+          });
+        });
+        return groups;
       case 'readTypes':
         // Read types are offense-only
         if (selectedPhase !== 'O') return [];
