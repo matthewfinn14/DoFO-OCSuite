@@ -1185,28 +1185,36 @@ export default function PlayDiagramEditor({
           </g>
         );
       } else if (el.shapeType === 'arrow-left') {
-        // Horizontal left arrow
-        const arrowLen = size * 1.5;
-        const arrowHead = size * 0.6;
+        // Horizontal left arrow - hollow, longer, thicker
+        const arrowLen = size * 3;
+        const arrowHead = size * 0.8;
+        const strokeW = 3;
         shapeElement = (
           <g>
-            <line x1={x + arrowLen/2} y1={y} x2={x - arrowLen/2 + arrowHead} y2={y} stroke={shapeColor} strokeWidth="4" />
+            <line x1={x + arrowLen/2} y1={y} x2={x - arrowLen/2 + arrowHead} y2={y} stroke={shapeColor} strokeWidth="6" />
             <polygon
               points={`${x - arrowLen/2},${y} ${x - arrowLen/2 + arrowHead},${y - arrowHead/2} ${x - arrowLen/2 + arrowHead},${y + arrowHead/2}`}
-              fill={shapeColor}
+              fill="none"
+              stroke={shapeColor}
+              strokeWidth={strokeW}
+              strokeLinejoin="round"
             />
           </g>
         );
       } else if (el.shapeType === 'arrow-right') {
-        // Horizontal right arrow
-        const arrowLen = size * 1.5;
-        const arrowHead = size * 0.6;
+        // Horizontal right arrow - hollow, longer, thicker
+        const arrowLen = size * 3;
+        const arrowHead = size * 0.8;
+        const strokeW = 3;
         shapeElement = (
           <g>
-            <line x1={x - arrowLen/2} y1={y} x2={x + arrowLen/2 - arrowHead} y2={y} stroke={shapeColor} strokeWidth="4" />
+            <line x1={x - arrowLen/2} y1={y} x2={x + arrowLen/2 - arrowHead} y2={y} stroke={shapeColor} strokeWidth="6" />
             <polygon
               points={`${x + arrowLen/2},${y} ${x + arrowLen/2 - arrowHead},${y - arrowHead/2} ${x + arrowLen/2 - arrowHead},${y + arrowHead/2}`}
-              fill={shapeColor}
+              fill="none"
+              stroke={shapeColor}
+              strokeWidth={strokeW}
+              strokeLinejoin="round"
             />
           </g>
         );
