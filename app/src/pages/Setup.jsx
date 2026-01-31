@@ -1241,6 +1241,7 @@ export default function Setup() {
                 updateLocal('formations', [...otherFormations, ...formations]);
               }}
               onUpdateFamilies={(families) => updateLocal('formationFamilies', families)}
+              isLight={isLight}
             />
           )}
 
@@ -1930,7 +1931,7 @@ function PersonnelTab({ personnelGroupings, positions, positionNames, positionCo
 }
 
 // Formations Tab Component
-function FormationsTab({ phase, formations, personnelGroupings, formationFamilies = [], onUpdate, onUpdateFamilies }) {
+function FormationsTab({ phase, formations, personnelGroupings, formationFamilies = [], onUpdate, onUpdateFamilies, isLight = false }) {
   const [showFamiliesSection, setShowFamiliesSection] = useState(true);
   const isOffense = phase === 'OFFENSE';
 
@@ -2041,23 +2042,23 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
     <div className="space-y-6">
       {/* Families Section (Offense only) */}
       {isOffense && (
-        <div className="bg-slate-800/50 rounded-lg border border-slate-700 overflow-hidden">
+        <div className={`rounded-lg border overflow-hidden ${isLight ? 'bg-white border-gray-200 shadow-sm' : 'bg-slate-800/50 border-slate-700'}`}>
           <button
             onClick={() => setShowFamiliesSection(!showFamiliesSection)}
-            className="w-full flex items-center justify-between p-4 text-left hover:bg-slate-700/30"
+            className={`w-full flex items-center justify-between p-4 text-left ${isLight ? 'hover:bg-gray-50' : 'hover:bg-slate-700/30'}`}
           >
             <div className="flex items-center gap-2">
-              <Layers size={18} className="text-amber-400" />
-              <span className="font-semibold text-white">Formation Families</span>
-              <span className="text-sm text-slate-400">({formationFamilies.length})</span>
+              <Layers size={18} className="text-amber-500" />
+              <span className={`font-semibold ${isLight ? 'text-gray-800' : 'text-white'}`}>Formation Families</span>
+              <span className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>({formationFamilies.length})</span>
             </div>
-            {showFamiliesSection ? <ChevronDown size={18} className="text-slate-400" /> : <ChevronUp size={18} className="text-slate-400 rotate-180" />}
+            {showFamiliesSection ? <ChevronDown size={18} className={isLight ? 'text-gray-400' : 'text-slate-400'} /> : <ChevronUp size={18} className={`rotate-180 ${isLight ? 'text-gray-400' : 'text-slate-400'}`} />}
           </button>
 
           {showFamiliesSection && (
-            <div className="p-4 border-t border-slate-700">
+            <div className={`p-4 border-t ${isLight ? 'border-gray-200' : 'border-slate-700'}`}>
               <div className="flex items-start justify-between gap-4 mb-3">
-                <p className="text-sm text-slate-400">
+                <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
                   Group formations by receiver distribution (2x2, 3x1), QB exchange (Gun, Under), TE alignment (Y On/Off, Nub), groupings (Trips, Bunch), strength (Right/Left/Balanced), or formation type (Open/Closed).
                 </p>
                 {formationFamilies.length === 0 && (
@@ -2091,7 +2092,7 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
                       value={family.name}
                       onChange={(e) => updateFamily(family.id, { name: e.target.value })}
                       aria-label="Family name"
-                      className="bg-transparent text-white text-sm font-medium border-none focus:outline-none w-20"
+                      className={`bg-transparent text-sm font-medium border-none focus:outline-none w-20 ${isLight ? 'text-gray-800' : 'text-white'}`}
                     />
                     <button
                       onClick={() => deleteFamily(family.id)}
@@ -2103,18 +2104,18 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
                 ))}
                 <button
                   onClick={addFamily}
-                  className="flex items-center gap-1 px-3 py-1 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 text-sm"
+                  className={`flex items-center gap-1 px-3 py-1 rounded-lg text-sm ${isLight ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
                 >
                   <Plus size={14} /> Add Family
                 </button>
               </div>
 
               {formationFamilies.length === 0 ? (
-                <p className="text-xs text-slate-500 italic">No families defined yet. Click "Load Defaults" above or add custom families.</p>
+                <p className={`text-xs italic ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>No families defined yet. Click "Load Defaults" above or add custom families.</p>
               ) : (
                 <button
                   onClick={loadDefaultFamilies}
-                  className="text-xs text-amber-400 hover:text-amber-300 underline"
+                  className="text-xs text-amber-500 hover:text-amber-400 underline"
                 >
                   + Add more default families
                 </button>
@@ -2128,8 +2129,8 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
       <div>
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h3 className="text-lg font-semibold text-white">{phaseLabel}</h3>
-            <p className="text-slate-400 text-sm">
+            <h3 className={`text-lg font-semibold ${isLight ? 'text-gray-800' : 'text-white'}`}>{phaseLabel}</h3>
+            <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
               {isOffense
                 ? 'Define formations and assign them to families and personnel packages.'
                 : `Define your ${phaseLabel.toLowerCase()} and link them to personnel packages.`}
@@ -2145,7 +2146,7 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {formations.map(formation => (
-            <div key={formation.id} className="bg-slate-700/50 rounded-lg border border-slate-600 p-4">
+            <div key={formation.id} className={`rounded-lg border p-4 ${isLight ? 'bg-white border-gray-200 shadow-sm' : 'bg-slate-700/50 border-slate-600'}`}>
               <div className="flex justify-between items-start mb-3">
                 <input
                   id={`formation-name-${formation.id}`}
@@ -2153,7 +2154,7 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
                   value={formation.name}
                   onChange={(e) => updateFormation(formation.id, { name: e.target.value })}
                   aria-label="Formation name"
-                  className="font-semibold text-white bg-transparent border-none focus:outline-none"
+                  className={`font-semibold bg-transparent border-none focus:outline-none ${isLight ? 'text-gray-800' : 'text-white'}`}
                 />
                 <button onClick={() => deleteFormation(formation.id)} className="text-red-400 hover:text-red-300">
                   <Trash2 size={14} />
@@ -2163,7 +2164,7 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
               {/* Family Tags (Offense only) */}
               {isOffense && formationFamilies.length > 0 && (
                 <div className="mb-3">
-                  <label className="text-xs text-slate-400 block mb-1.5">Families</label>
+                  <label className={`text-xs block mb-1.5 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>Families</label>
                   <div className="flex flex-wrap gap-1">
                     {formationFamilies.map(family => {
                       const isSelected = (formation.families || []).includes(family.id);
@@ -2172,12 +2173,12 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
                           key={family.id}
                           onClick={() => toggleFormationFamily(formation.id, family.id)}
                           className={`px-2 py-0.5 rounded text-xs font-medium transition-all ${isSelected
-                            ? 'ring-1 ring-offset-1 ring-offset-slate-700'
+                            ? `ring-1 ring-offset-1 ${isLight ? 'ring-offset-white' : 'ring-offset-slate-700'}`
                             : 'opacity-50 hover:opacity-100'
                             }`}
                           style={{
-                            backgroundColor: isSelected ? family.color : 'rgba(100,116,139,0.3)',
-                            color: isSelected ? '#fff' : '#94a3b8',
+                            backgroundColor: isSelected ? family.color : (isLight ? 'rgba(156,163,175,0.2)' : 'rgba(100,116,139,0.3)'),
+                            color: isSelected ? '#fff' : (isLight ? '#6b7280' : '#94a3b8'),
                             ringColor: family.color
                           }}
                         >
@@ -2192,12 +2193,12 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
               {/* Personnel (Offense only) */}
               {isOffense && personnelGroupings.length > 0 && (
                 <div>
-                  <label htmlFor={`formation-personnel-${formation.id}`} className="text-xs text-slate-400 block mb-1">Personnel</label>
+                  <label htmlFor={`formation-personnel-${formation.id}`} className={`text-xs block mb-1 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>Personnel</label>
                   <select
                     id={`formation-personnel-${formation.id}`}
                     value={formation.personnel || ''}
                     onChange={(e) => updateFormation(formation.id, { personnel: e.target.value })}
-                    className="w-full px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white text-sm"
+                    className={`w-full px-2 py-1 rounded text-sm ${isLight ? 'bg-gray-100 border border-gray-300 text-gray-800' : 'bg-slate-600 border border-slate-500 text-white'}`}
                   >
                     <option value="">-- Select Personnel --</option>
                     {personnelGroupings.map(p => (
@@ -2211,7 +2212,7 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
         </div>
 
         {formations.length === 0 && (
-          <div className="text-center py-12 text-slate-400">
+          <div className={`text-center py-12 ${isLight ? 'text-gray-400' : 'text-slate-400'}`}>
             <LayoutGrid size={48} className="mx-auto mb-4 opacity-30" />
             <p>No {phaseLabel.toLowerCase()} defined.</p>
           </div>
