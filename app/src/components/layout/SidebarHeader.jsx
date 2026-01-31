@@ -197,23 +197,24 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
 
       {!collapsed && (
         <>
+          {/* Team Logo - Under DoFO logo, above school name */}
+          {settings?.teamLogo && (
+            <div className="mb-3 flex justify-center">
+              <img
+                src={settings.teamLogo}
+                alt="Team Logo"
+                className="h-16 w-16 object-contain rounded-lg"
+              />
+            </div>
+          )}
 
-          {/* School Name and Logo */}
+          {/* School Name */}
           {school?.name && (
-            <div className="mb-2 flex items-center gap-2">
-              {settings?.teamLogo && (
-                <img
-                  src={settings.teamLogo}
-                  alt="School Logo"
-                  className="h-8 w-8 object-contain rounded"
-                />
-              )}
-              <div>
-                <h2 className={`text-sm font-bold leading-tight ${isLight ? 'text-gray-900' : 'text-white'}`}>
-                  {school.name}
-                </h2>
-                <span className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>{activeYear || new Date().getFullYear()}</span>
-              </div>
+            <div className="mb-2">
+              <h2 className={`text-sm font-bold leading-tight ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                {school.name}
+              </h2>
+              <span className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>{activeYear || new Date().getFullYear()}</span>
             </div>
           )}
 
