@@ -115,6 +115,7 @@ export default function SchoolOnboardingWizard() {
           createdBy: user.uid
         },
         linkedAccessRequest: user.email.toLowerCase(),
+        schoolAdminEmail: user.email.toLowerCase(),
         roster: [],
         plays: {},
         staff: [{
@@ -122,10 +123,12 @@ export default function SchoolOnboardingWizard() {
           role: 'Head Coach',
           name: user.displayName || 'Coach',
           uid: user.uid,
-          permissions: ['ADMIN']
+          permissions: ['ADMIN'],
+          isSchoolAdmin: true
         }],
         memberList: [user.email.toLowerCase()],
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        createdBy: user.uid
       };
 
       const schoolRef = await addDoc(collection(db, 'schools'), schoolData);
