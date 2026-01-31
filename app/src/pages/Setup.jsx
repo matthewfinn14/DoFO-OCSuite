@@ -579,15 +579,121 @@ export default function Setup() {
     ]
   };
 
-  // Helper to add defaults to config if position groups are empty
+  // Default Formation Families
+  const DEFAULT_FORMATION_FAMILIES = [
+    { id: 'family_2x2', name: '2x2', color: '#3b82f6', category: 'distribution' },
+    { id: 'family_3x1', name: '3x1', color: '#8b5cf6', category: 'distribution' },
+    { id: 'family_2x1', name: '2x1', color: '#06b6d4', category: 'distribution' },
+    { id: 'family_under', name: 'Under Center', color: '#ef4444', category: 'exchange' },
+    { id: 'family_gun', name: 'Gun', color: '#22c55e', category: 'exchange' },
+    { id: 'family_pistol', name: 'Pistol', color: '#f59e0b', category: 'exchange' },
+    { id: 'family_trips', name: 'Trips', color: '#0ea5e9', category: 'grouping' },
+    { id: 'family_twins', name: 'Twins', color: '#84cc16', category: 'grouping' },
+    { id: 'family_empty', name: 'Empty', color: '#64748b', category: 'grouping' },
+  ];
+
+  // Default Shifts & Motions
+  const DEFAULT_SHIFT_MOTIONS = [
+    { id: 'sm_jet', name: 'Jet', type: 'motion', color: '#ef4444' },
+    { id: 'sm_orbit', name: 'Orbit', type: 'motion', color: '#f97316' },
+    { id: 'sm_fly', name: 'Fly', type: 'motion', color: '#eab308' },
+    { id: 'sm_rocket', name: 'Rocket', type: 'motion', color: '#22c55e' },
+    { id: 'sm_return', name: 'Return', type: 'motion', color: '#14b8a6' },
+    { id: 'sm_trade', name: 'Trade', type: 'shift', color: '#8b5cf6' },
+    { id: 'sm_shift_rt', name: 'Shift Right', type: 'shift', color: '#a855f7' },
+    { id: 'sm_shift_lt', name: 'Shift Left', type: 'shift', color: '#d946ef' },
+  ];
+
+  // Default Play Buckets
+  const DEFAULT_PLAY_BUCKETS = [
+    { id: 'run', label: 'Run', color: '#3b82f6', phase: 'OFFENSE' },
+    { id: 'pass', label: 'Pass', color: '#8b5cf6', phase: 'OFFENSE' },
+    { id: 'screen', label: 'Screen', color: '#f97316', phase: 'OFFENSE' },
+    { id: 'rpo', label: 'RPO', color: '#10b981', phase: 'OFFENSE' }
+  ];
+
+  // Default Field Zones
+  const DEFAULT_FIELD_ZONES = [
+    { id: 'zone_backed', name: 'Backed Up', description: 'Own 1-10 yard line', startYard: 1, endYard: 10, color: '#ef4444', order: 1 },
+    { id: 'zone_minus', name: 'Minus Territory', description: 'Own 11-49 yard line', startYard: 11, endYard: 49, color: '#f97316', order: 2 },
+    { id: 'zone_plus', name: 'Plus Territory', description: 'Opponent 40-26 yard line', startYard: 60, endYard: 74, color: '#eab308', order: 3 },
+    { id: 'zone_fringe', name: 'Fringe', description: 'Opponent 25-21 yard line', startYard: 75, endYard: 79, color: '#84cc16', order: 4 },
+    { id: 'zone_red', name: 'Red Zone', description: 'Opponent 20-11 yard line', startYard: 80, endYard: 89, color: '#dc2626', order: 5 },
+    { id: 'zone_gold', name: 'Gold Zone', description: 'Opponent 10-4 yard line', startYard: 90, endYard: 96, color: '#f59e0b', order: 6 },
+    { id: 'zone_goal', name: 'Goal Line', description: 'Opponent 3 yard line and in', startYard: 97, endYard: 100, color: '#22c55e', order: 7 }
+  ];
+
+  // Default Down & Distance
+  const DEFAULT_DOWN_DISTANCE = [
+    { id: 'dd_1st', name: '1st Down', description: 'First down', down: '1', distanceType: 'any', order: 1 },
+    { id: 'dd_2long', name: '2nd & Long', description: '2nd down, 7+ yards', down: '2', distanceType: 'long', order: 2 },
+    { id: 'dd_2med', name: '2nd & Medium', description: '2nd down, 4-6 yards', down: '2', distanceType: 'medium', order: 3 },
+    { id: 'dd_2short', name: '2nd & Short', description: '2nd down, 1-3 yards', down: '2', distanceType: 'short', order: 4 },
+    { id: 'dd_3long', name: '3rd & Long', description: '3rd down, 7+ yards', down: '3', distanceType: 'long', order: 5 },
+    { id: 'dd_3med', name: '3rd & Medium', description: '3rd down, 4-6 yards', down: '3', distanceType: 'medium', order: 6 },
+    { id: 'dd_3short', name: '3rd & Short', description: '3rd down, 1-3 yards', down: '3', distanceType: 'short', order: 7 },
+    { id: 'dd_4th', name: '4th Down', description: 'Fourth down', down: '4', distanceType: 'any', order: 8 }
+  ];
+
+  // Default Special Situations
+  const DEFAULT_SPECIAL_SITUATIONS = [
+    { id: 'sit_2min', name: '2-Min Offense', description: 'End of half hurry-up', order: 1 },
+    { id: 'sit_4min', name: '4-Min Offense', description: 'Ball control / milk clock', order: 2 },
+    { id: 'sit_must', name: 'Must Score', description: 'Need a touchdown', order: 3 },
+    { id: 'sit_clock', name: 'Clock Running', description: 'Standard tempo', order: 4 },
+    { id: 'sit_open', name: 'Openers', description: 'First play of drive', order: 5 }
+  ];
+
+  // Helper to add defaults to config if arrays are empty
   const getConfigWithDefaults = (config) => {
+    let updated = { ...config };
+    let needsSave = false;
+
+    // Position Groups
     const posGroups = config?.positionGroups || {};
-    const hasAnyGroups = posGroups.OFFENSE?.length || posGroups.DEFENSE?.length || posGroups.SPECIAL_TEAMS?.length;
-    if (hasAnyGroups) return config;
-    return {
-      ...config,
-      positionGroups: DEFAULT_POSITION_GROUPS
-    };
+    if (!posGroups.OFFENSE?.length && !posGroups.DEFENSE?.length && !posGroups.SPECIAL_TEAMS?.length) {
+      updated.positionGroups = DEFAULT_POSITION_GROUPS;
+      needsSave = true;
+    }
+
+    // Formation Families
+    if (!config?.formationFamilies?.length) {
+      updated.formationFamilies = DEFAULT_FORMATION_FAMILIES;
+      needsSave = true;
+    }
+
+    // Shifts & Motions
+    if (!config?.shiftMotions?.length) {
+      updated.shiftMotions = DEFAULT_SHIFT_MOTIONS;
+      needsSave = true;
+    }
+
+    // Play Buckets
+    if (!config?.playBuckets?.length) {
+      updated.playBuckets = DEFAULT_PLAY_BUCKETS;
+      needsSave = true;
+    }
+
+    // Field Zones
+    if (!config?.fieldZones?.length) {
+      updated.fieldZones = DEFAULT_FIELD_ZONES;
+      needsSave = true;
+    }
+
+    // Down & Distance
+    if (!config?.downDistanceCategories?.length) {
+      updated.downDistanceCategories = DEFAULT_DOWN_DISTANCE;
+      needsSave = true;
+    }
+
+    // Special Situations
+    if (!config?.specialSituations?.length) {
+      updated.specialSituations = DEFAULT_SPECIAL_SITUATIONS;
+      needsSave = true;
+    }
+
+    updated._needsDefaultSave = needsSave;
+    return updated;
   };
 
   // UI state
@@ -609,8 +715,8 @@ export default function Setup() {
   // Sync local config when setupConfig changes from Firebase
   useEffect(() => {
     const configWithDefaults = getConfigWithDefaults(setupConfig);
-    const posGroups = setupConfig?.positionGroups || {};
-    const needsDefaults = !posGroups.OFFENSE?.length && !posGroups.DEFENSE?.length && !posGroups.SPECIAL_TEAMS?.length;
+    const needsDefaults = configWithDefaults._needsDefaultSave;
+    delete configWithDefaults._needsDefaultSave;
 
     setLocalConfig(configWithDefaults);
     initialConfigRef.current = configWithDefaults;
