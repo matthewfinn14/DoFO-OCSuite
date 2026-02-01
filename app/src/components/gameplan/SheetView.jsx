@@ -29,7 +29,11 @@ export default function SheetView({
   playDragOverBox,
   setPlayDragOverBox,
   onEditBox,
-  onBoxClick
+  onBoxClick,
+  setupConfig,
+  onFZDnDBoxDrop,
+  onMatrixBoxAdd,
+  onMatrixBoxRemove
 }) {
   const sections = layouts?.CALL_SHEET?.sections || [];
   const weekTitle = currentWeek?.name || `Week ${currentWeek?.weekNumber || ''}`;
@@ -307,6 +311,367 @@ export default function SheetView({
     );
   };
 
+  // Render FZDnD Zone box content
+  const renderFZDnDBox = (box, isPrintMode = false) => {
+    // Get zone info from setupConfig
+    const zone = setupConfig?.fieldZones?.find(z => z.id === box.zoneId);
+
+    // Get columns based on columnSource setting
+    let columns;
+    const columnSource = box.columnSource || 'downDistance';
+
+    if (columnSource === 'custom' && box.customColumns?.length > 0) {
+      columns = box.customColumns;
+    } else if (columnSource === 'playPurpose') {
+      columns = (setupConfig?.playPurposes || []).map(p => ({ id: p.id, name: p.name }));
+    } else {
+      // Default to downDistance
+      columns = [...(setupConfig?.downDistanceCategories || [])]
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+    }
+
+    const rowCount = box.rowCount || 5;
+    const rowLabels = box.rowLabels || [];
+
+    // Get plays for each cell using column ID
+    const getPlayForCell = (rowIdx, colId) => {
+      const setId = `${box.setId}_${colId}`;
+      const set = gamePlan?.sets?.find(s => s.id === setId);
+      const playId = set?.playIds?.[rowIdx];
+      return playId ? plays.find(p => p.id === playId) : null;
+    };
+
+    // Check if entire box is empty
+    const isBoxEmpty = () => {
+      for (let rowIdx = 0; rowIdx < rowCount; rowIdx++) {
+        for (const col of columns) {
+          if (getPlayForCell(rowIdx, col.id)) return false;
+        }
+      }
+      return true;
+    };
+
+    if (isPrintMode && isBoxEmpty()) {
+      return null;
+    }
+
+    const zoneColor = zone?.color || box.color || '#dc2626';
+    const cols = columns.length || 1;
+
+    return (
+      <div className="fzdnd-box-container">
+        {/* Column Headers */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: `min-content repeat(${cols}, 1fr)`,
+          gap: '0',
+          width: '100%'
+        }}>
+          {/* Corner cell */}
+          <div style={{
+            padding: '2px',
+            fontSize: '0.55rem',
+            fontWeight: 'bold',
+            color: '#94a3b8',
+            textAlign: 'center',
+            alignSelf: 'end'
+          }}>
+            #
+          </div>
+          {columns.map((col, i) => (
+            <div key={col.id} style={{
+              padding: '2px',
+              fontSize: '0.5rem',
+              fontWeight: 'bold',
+              color: '#64748b',
+              textAlign: 'center',
+              background: '#f1f5f9',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              borderRight: i < cols - 1 ? '1px solid #cbd5e1' : 'none',
+              borderBottom: '1px solid #cbd5e1'
+            }}>
+              {col.name}
+            </div>
+          ))}
+
+          {/* Data Rows */}
+          {Array.from({ length: rowCount }, (_, rowIdx) => {
+            const rowHasPlay = columns.some(col => getPlayForCell(rowIdx, col.id));
+            if (isPrintMode && !rowHasPlay) return null;
+
+            return (
+              <div key={rowIdx} style={{ display: 'contents' }}>
+                <div style={{
+                  padding: '2px',
+                  fontSize: '0.6rem',
+                  color: '#94a3b8',
+                  textAlign: 'right',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  minWidth: '15px',
+                  borderBottom: '1px dotted #f1f5f9'
+                }}>
+                  {rowLabels[rowIdx] || (rowIdx + 1)}
+                </div>
+                {columns.map((col, colIdx) => {
+                  const play = getPlayForCell(rowIdx, col.id);
+                  return (
+                    <div
+                      key={col.id}
+                      className="fzdnd-box-cell"
+                      style={{
+                        fontSize: '0.6rem',
+                        overflow: 'hidden',
+                        background: play?.priority ? '#fef08a' : (rowIdx % 2 === 1 ? '#f8fafc' : 'transparent'),
+                        padding: '2px',
+                        minHeight: '18px',
+                        color: '#334155',
+                        display: 'flex',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        borderRight: colIdx < cols - 1 ? '1px solid #e2e8f0' : 'none',
+                        borderBottom: '1px dotted #e2e8f0',
+                        wordBreak: 'break-word'
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (onFZDnDBoxDrop) {
+                          const playData = e.dataTransfer.getData('application/react-dnd');
+                          if (playData) {
+                            try {
+                              const { playId } = JSON.parse(playData);
+                              if (playId) {
+                                onFZDnDBoxDrop(box.setId, rowIdx, col.id, playId);
+                              }
+                            } catch (err) {
+                              console.error('Error parsing drop data:', err);
+                            }
+                          }
+                        }
+                      }}
+                      onDragOver={(e) => e.preventDefault()}
+                      title={play ? getPlayCall(play) : ''}
+                    >
+                      {play ? (
+                        <span style={{ display: 'inline', lineHeight: '1.2', fontWeight: '500' }}>
+                          {getPlayDisplayName(play)}
+                        </span>
+                      ) : ''}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  // Render Matrix box content
+  const renderMatrixBox = (box, isPrintMode = false) => {
+    const playTypes = box.playTypes || [
+      { id: 'strong_run', label: 'STRONG RUN' },
+      { id: 'weak_run', label: 'WEAK RUN' },
+      { id: 'quick_game', label: 'QUICK GAME' },
+      { id: 'drop_back', label: 'DROPBACK' },
+      { id: 'gadget', label: 'GADGET' }
+    ];
+    const hashGroups = box.hashGroups || [
+      { id: 'FB', label: 'BASE/INITIAL', cols: ['FB_L', 'FB_R'] },
+      { id: 'CB', label: 'BASE W/ DRESSING', cols: ['CB_L', 'CB_R'] },
+      { id: 'CU', label: 'CONVERT', cols: ['CU_L', 'CU_R'] },
+      { id: 'SO', label: 'EXPLOSIVE', cols: ['SO_L', 'SO_R'] }
+    ];
+
+    // Flatten all columns for grid layout
+    const allCols = hashGroups.flatMap(g => g.cols);
+
+    // Get plays for a cell (multiple plays allowed)
+    const getPlaysForCell = (playTypeId, colId) => {
+      const setId = `${box.setId}_${playTypeId}_${colId}`;
+      const set = gamePlan?.sets?.find(s => s.id === setId);
+      return (set?.playIds || []).map(id => plays.find(p => p.id === id)).filter(Boolean);
+    };
+
+    // Check if entire matrix is empty
+    const isMatrixEmpty = () => {
+      for (const pt of playTypes) {
+        for (const col of allCols) {
+          if (getPlaysForCell(pt.id, col).length > 0) return false;
+        }
+      }
+      return true;
+    };
+
+    if (isPrintMode && isMatrixEmpty()) {
+      return null;
+    }
+
+    return (
+      <div className="matrix-box-container" style={{ fontSize: '0.6rem' }}>
+        {/* Header Section */}
+        <div style={{ display: 'flex' }}>
+          {/* TYPE column - spans both header rows */}
+          <div style={{
+            width: '60px',
+            flexShrink: 0,
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <div style={{
+              flex: 1,
+              padding: '2px 4px',
+              fontSize: '0.5rem',
+              fontWeight: 'bold',
+              textAlign: 'center',
+              background: '#334155',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              TYPE
+            </div>
+          </div>
+
+          {/* Hash group columns */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            {/* Row 1: Group Names */}
+            <div style={{ display: 'flex' }}>
+              {hashGroups.map((group, gIdx) => (
+                <div key={group.id} style={{
+                  flex: group.cols.length,
+                  padding: '2px',
+                  fontSize: '0.45rem',
+                  fontWeight: 'bold',
+                  color: 'white',
+                  textAlign: 'center',
+                  background: '#475569',
+                  borderLeft: gIdx > 0 ? '2px solid #1e293b' : 'none',
+                  borderBottom: '1px solid #64748b'
+                }}>
+                  {group.label}
+                </div>
+              ))}
+            </div>
+
+            {/* Row 2: L/R indicators */}
+            <div style={{ display: 'flex' }}>
+              {hashGroups.map((group, gIdx) => (
+                group.cols.map((colId, cIdx) => (
+                  <div key={colId} style={{
+                    flex: 1,
+                    padding: '2px',
+                    fontSize: '0.4rem',
+                    fontWeight: 'bold',
+                    color: 'white',
+                    textAlign: 'center',
+                    background: '#64748b',
+                    borderLeft: cIdx === 0 && gIdx > 0 ? '2px solid #1e293b' : (cIdx > 0 ? '1px solid #475569' : 'none')
+                  }}>
+                    {colId.endsWith('_L') ? 'L HASH' : 'R HASH'}
+                  </div>
+                ))
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Play Type Rows */}
+        {playTypes.map((pt, ptIdx) => {
+          const rowHasPlays = allCols.some(col => getPlaysForCell(pt.id, col).length > 0);
+          if (isPrintMode && !rowHasPlays) return null;
+
+          return (
+            <div key={pt.id} style={{
+              display: 'flex',
+              borderBottom: '1px solid #e2e8f0'
+            }}>
+              {/* Play Type Label */}
+              <div style={{
+                width: '60px',
+                flexShrink: 0,
+                padding: '2px 4px',
+                fontSize: '0.5rem',
+                fontWeight: 'bold',
+                color: '#1e40af',
+                background: '#dbeafe',
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                {pt.label}
+              </div>
+
+              {/* Data Cells */}
+              {allCols.map((colId, colIdx) => {
+                const cellPlays = getPlaysForCell(pt.id, colId);
+                const groupIdx = hashGroups.findIndex(g => g.cols.includes(colId));
+                const isFirstInGroup = hashGroups[groupIdx]?.cols[0] === colId;
+
+                return (
+                  <div
+                    key={colId}
+                    className="matrix-box-cell"
+                    style={{
+                      flex: 1,
+                      padding: '2px',
+                      minHeight: '22px',
+                      background: ptIdx % 2 === 1 ? '#f8fafc' : 'white',
+                      borderLeft: isFirstInGroup && groupIdx > 0 ? '2px solid #cbd5e1' : '1px solid #e2e8f0',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '1px'
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (onMatrixBoxAdd) {
+                        const playData = e.dataTransfer.getData('application/react-dnd');
+                        if (playData) {
+                          try {
+                            const { playId } = JSON.parse(playData);
+                            if (playId) {
+                              onMatrixBoxAdd(box.setId, pt.id, colId, playId);
+                            }
+                          } catch (err) {
+                            console.error('Error parsing drop data:', err);
+                          }
+                        }
+                      }
+                    }}
+                    onDragOver={(e) => e.preventDefault()}
+                  >
+                    {cellPlays.map((p, i) => (
+                      <div key={i} style={{
+                        fontSize: '0.55rem',
+                        fontWeight: '500',
+                        color: '#1e293b',
+                        background: p.priority ? '#fef08a' : '#f1f5f9',
+                        padding: '1px 2px',
+                        borderRadius: '2px',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
+                      }} title={getPlayCall(p)}>
+                        {getPlayDisplayName(p)}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   // Render box content based on type
   const renderBoxContent = (box, isPrintMode = false) => {
     if (box.type === 'grid') {
@@ -315,6 +680,14 @@ export default function SheetView({
 
     if (box.type === 'script' && box.rows && box.rows.length > 0) {
       return renderScriptBox(box, isPrintMode);
+    }
+
+    if (box.type === 'fzdnd') {
+      return renderFZDnDBox(box, isPrintMode);
+    }
+
+    if (box.type === 'matrix') {
+      return renderMatrixBox(box, isPrintMode);
     }
 
     // Default: show plays from set
@@ -405,35 +778,13 @@ export default function SheetView({
               {weekTitle} {opponentTitle && `- ${opponentTitle}`}
             </div>
             <div style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600' }}>
-              Situations & Scripts
+              Call Sheet
             </div>
           </div>
         </div>
         <div style={{ fontSize: '0.75rem', color: '#64748b', textAlign: 'right' }}>
           {new Date().toLocaleDateString()}
         </div>
-      </div>
-
-      {/* Edit Toolbar */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
-        {!isLocked && (
-          <button
-            onClick={onToggleEditing}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '6px',
-              fontSize: '0.85rem',
-              fontWeight: '600',
-              cursor: 'pointer',
-              backgroundColor: isEditing ? '#2563eb' : 'white',
-              color: isEditing ? 'white' : '#0f172a',
-              border: isEditing ? '1px solid #2563eb' : '1px solid #94a3b8',
-              boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
-            }}
-          >
-            {isEditing ? 'Done Editing' : 'Edit Layout'}
-          </button>
-        )}
       </div>
 
       {/* Sections Grid */}

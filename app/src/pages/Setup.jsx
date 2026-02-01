@@ -4063,7 +4063,7 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
       alert('A purpose with that name already exists');
       return;
     }
-    onUpdate('playPurposes', [...existing, { id, name: name.trim(), color: '#6b7280' }]);
+    onUpdate('playPurposes', [...existing, { id, name: name.trim(), color: '#6b7280', order: existing.length + 1 }]);
   };
 
   const updatePurpose = (id, field, value) => {
@@ -4076,11 +4076,32 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
     onUpdate('playPurposes', (playPurposes || []).filter(p => p.id !== id));
   };
 
+  const reorderPurpose = (id, direction) => {
+    const sorted = [...(playPurposes || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
+    const index = sorted.findIndex(p => p.id === id);
+    if (index === -1) return;
+
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= sorted.length) return;
+
+    // Swap items
+    const temp = sorted[index];
+    sorted[index] = sorted[newIndex];
+    sorted[newIndex] = temp;
+
+    // Reassign orders
+    const reordered = sorted.map((p, i) => ({ ...p, order: i + 1 }));
+    onUpdate('playPurposes', reordered);
+  };
+
   const loadDefaultPurposes = () => {
     if (playPurposes.length > 0 && !confirm('This will add default purposes. Continue?')) return;
     const existingIds = (playPurposes || []).map(p => p.id);
-    const newPurposes = DEFAULT_PLAY_PURPOSES.filter(p => !existingIds.includes(p.id));
-    onUpdate('playPurposes', [...(playPurposes || []), ...newPurposes]);
+    const existing = playPurposes || [];
+    const newPurposes = DEFAULT_PLAY_PURPOSES
+      .filter(p => !existingIds.includes(p.id))
+      .map((p, i) => ({ ...p, order: existing.length + i + 1 }));
+    onUpdate('playPurposes', [...existing, ...newPurposes]);
   };
 
   const toggleSection = (section) => {
@@ -4261,26 +4282,57 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
               </div>
             )}
             <div className="space-y-2">
-              {playPurposes.map(purpose => (
-                <div key={purpose.id} className={`flex items-center gap-3 p-2 rounded-lg ${isLight ? 'bg-gray-50' : 'bg-slate-800'}`}>
-                  <input
-                    type="color"
-                    value={purpose.color}
-                    onChange={(e) => updatePurpose(purpose.id, 'color', e.target.value)}
-                    className="w-6 h-6 rounded cursor-pointer border-0"
-                  />
-                  <input
-                    type="text"
-                    value={purpose.name}
-                    onChange={(e) => updatePurpose(purpose.id, 'name', e.target.value)}
-                    className={`flex-1 px-3 py-1.5 rounded font-medium ${isLight ? 'bg-white border border-gray-300 text-gray-800' : 'bg-slate-700 border border-slate-600 text-white'}`}
-                  />
-                  <button
-                    onClick={() => deletePurpose(purpose.id, purpose.name)}
-                    className="text-red-400 hover:text-red-300 p-1"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+              {[...playPurposes].sort((a, b) => (a.order || 0) - (b.order || 0)).map((purpose, idx, arr) => (
+                <div key={purpose.id} className={`p-3 rounded-lg ${isLight ? 'bg-gray-50' : 'bg-slate-800'}`}>
+                  <div className="flex items-center gap-3">
+                    {/* Reorder buttons */}
+                    <div className="flex flex-col gap-0.5">
+                      <button
+                        onClick={() => reorderPurpose(purpose.id, 'up')}
+                        disabled={idx === 0}
+                        className={`p-0.5 rounded ${idx === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-slate-600'}`}
+                        title="Move up"
+                      >
+                        <ChevronUp size={14} className={isLight ? 'text-gray-500' : 'text-slate-400'} />
+                      </button>
+                      <button
+                        onClick={() => reorderPurpose(purpose.id, 'down')}
+                        disabled={idx === arr.length - 1}
+                        className={`p-0.5 rounded ${idx === arr.length - 1 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-slate-600'}`}
+                        title="Move down"
+                      >
+                        <ChevronDown size={14} className={isLight ? 'text-gray-500' : 'text-slate-400'} />
+                      </button>
+                    </div>
+                    <input
+                      type="color"
+                      value={purpose.color}
+                      onChange={(e) => updatePurpose(purpose.id, 'color', e.target.value)}
+                      className="w-6 h-6 rounded cursor-pointer border-0"
+                    />
+                    <input
+                      type="text"
+                      value={purpose.name}
+                      onChange={(e) => updatePurpose(purpose.id, 'name', e.target.value)}
+                      className={`flex-1 px-3 py-1.5 rounded font-medium ${isLight ? 'bg-white border border-gray-300 text-gray-800' : 'bg-slate-700 border border-slate-600 text-white'}`}
+                    />
+                    <button
+                      onClick={() => deletePurpose(purpose.id, purpose.name)}
+                      className="text-red-400 hover:text-red-300 p-1"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                  {/* Description */}
+                  <div className="mt-2 pl-14">
+                    <input
+                      type="text"
+                      value={purpose.description || ''}
+                      onChange={(e) => updatePurpose(purpose.id, 'description', e.target.value)}
+                      className={`w-full px-3 py-1.5 rounded text-sm ${isLight ? 'bg-white border border-gray-200 text-gray-600' : 'bg-slate-700/50 border border-slate-600 text-slate-300'}`}
+                      placeholder="Description (e.g., Base plays for base downs, look to achieve 4+ yards)"
+                    />
+                  </div>
                 </div>
               ))}
             </div>

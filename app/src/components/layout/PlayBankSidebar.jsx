@@ -1102,7 +1102,7 @@ export default function PlayBankSidebar({
                   onClick={() => handleDestinationSelect('gameplan-quicklist')}
                   className="w-full px-4 py-3 text-left rounded-lg hover:bg-sky-50 text-slate-700 hover:text-sky-700 transition-colors"
                 >
-                  <div className="font-medium">Situations & Scripts</div>
+                  <div className="font-medium">Call Sheet</div>
                   <div className="text-xs text-slate-500">Add to quick lists for assignment</div>
                 </button>
                 <button

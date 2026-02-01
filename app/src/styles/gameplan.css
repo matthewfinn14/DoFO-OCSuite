@@ -781,6 +781,46 @@
 }
 
 /* ============================================
+   FZDND BOX STYLES (for SheetView)
+   ============================================ */
+
+.fzdnd-box-container {
+  width: 100%;
+}
+
+.fzdnd-box-cell {
+  transition: background 0.15s;
+}
+
+.fzdnd-box-cell:hover {
+  background: #f1f5f9 !important;
+}
+
+.fzdnd-box-cell.drag-over {
+  background: #dbeafe !important;
+}
+
+/* ============================================
+   MATRIX BOX STYLES (for SheetView)
+   ============================================ */
+
+.matrix-box-container {
+  width: 100%;
+}
+
+.matrix-box-cell {
+  transition: background 0.15s;
+}
+
+.matrix-box-cell:hover {
+  background: #f8fafc !important;
+}
+
+.matrix-box-cell.drag-over {
+  background: #dbeafe !important;
+}
+
+/* ============================================
    PRINT STYLES
    ============================================ */
 

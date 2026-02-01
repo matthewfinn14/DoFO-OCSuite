@@ -12,13 +12,19 @@ export default function BoxEditorModal({
   isLocked,
   onClose,
   onSave,
+  onDelete,
   onAddPlayToQuickList,
   onRemovePlayFromQuickList,
   onReorderQuickList,
   onAssignPlayToCell,
   onRemovePlayFromCell,
   getPlaysForSet,
-  getPlayDisplayName
+  getPlayDisplayName,
+  setupConfig,
+  onFZDnDCellAssign,
+  onFZDnDCellRemove,
+  onMatrixCellAdd,
+  onMatrixCellRemove
 }) {
   const { startBatchSelect } = usePlayBank();
   const [localBox, setLocalBox] = useState({ ...box });
@@ -664,41 +670,137 @@ export default function BoxEditorModal({
 
     return (
       <div style={{ padding: '12px', overflowY: 'auto', height: '100%' }}>
-        <div style={{ marginBottom: '12px' }}>
-          <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500' }}>
-            Script Columns
-          </label>
-          <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-            <button
-              onClick={() => !isLocked && updateField('scriptColumns', 1)}
-              style={{
-                padding: '6px 12px',
-                borderRadius: '6px',
-                border: cols === 1 ? '2px solid #3b82f6' : '1px solid #e2e8f0',
-                background: cols === 1 ? '#eff6ff' : 'white',
-                color: cols === 1 ? '#3b82f6' : '#64748b',
-                fontWeight: cols === 1 ? '600' : '400',
-                fontSize: '0.85rem',
-                cursor: isLocked ? 'not-allowed' : 'pointer'
-              }}
-            >
-              Single Column
-            </button>
-            <button
-              onClick={() => !isLocked && updateField('scriptColumns', 2)}
-              style={{
-                padding: '6px 12px',
-                borderRadius: '6px',
-                border: cols === 2 ? '2px solid #3b82f6' : '1px solid #e2e8f0',
-                background: cols === 2 ? '#eff6ff' : 'white',
-                color: cols === 2 ? '#3b82f6' : '#64748b',
-                fontWeight: cols === 2 ? '600' : '400',
-                fontSize: '0.85rem',
-                cursor: isLocked ? 'not-allowed' : 'pointer'
-              }}
-            >
-              Left / Right Hash
-            </button>
+        <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '16px' }}>
+          {/* Column Type */}
+          <div>
+            <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500' }}>
+              Columns
+            </label>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+              <button
+                onClick={() => !isLocked && updateField('scriptColumns', 1)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: cols === 1 ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                  background: cols === 1 ? '#eff6ff' : 'white',
+                  color: cols === 1 ? '#3b82f6' : '#64748b',
+                  fontWeight: cols === 1 ? '600' : '400',
+                  fontSize: '0.85rem',
+                  cursor: isLocked ? 'not-allowed' : 'pointer'
+                }}
+              >
+                Single Column
+              </button>
+              <button
+                onClick={() => !isLocked && updateField('scriptColumns', 2)}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: cols === 2 ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                  background: cols === 2 ? '#eff6ff' : 'white',
+                  color: cols === 2 ? '#3b82f6' : '#64748b',
+                  fontWeight: cols === 2 ? '600' : '400',
+                  fontSize: '0.85rem',
+                  cursor: isLocked ? 'not-allowed' : 'pointer'
+                }}
+              >
+                Left / Right Hash
+              </button>
+            </div>
+          </div>
+
+          {/* Row Count */}
+          <div>
+            <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500' }}>
+              Rows
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  if (isLocked) return;
+                  const newCount = Math.max(1, numRows - 1);
+                  const newRows = Array(newCount).fill(null).map((_, i) => ({
+                    label: i + 1,
+                    content: scriptRows[i]?.content || null,
+                    contentRight: scriptRows[i]?.contentRight || null
+                  }));
+                  updateField('rows', newRows);
+                }}
+                disabled={isLocked || numRows <= 1}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  background: '#f8fafc',
+                  cursor: isLocked || numRows <= 1 ? 'not-allowed' : 'pointer',
+                  fontSize: '1.1rem',
+                  fontWeight: 'bold',
+                  color: '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                −
+              </button>
+              <input
+                type="number"
+                min="1"
+                max="50"
+                value={numRows}
+                disabled={isLocked}
+                onChange={(e) => {
+                  const count = Math.max(1, Math.min(50, parseInt(e.target.value) || 10));
+                  const newRows = Array(count).fill(null).map((_, i) => ({
+                    label: i + 1,
+                    content: scriptRows[i]?.content || null,
+                    contentRight: scriptRows[i]?.contentRight || null
+                  }));
+                  updateField('rows', newRows);
+                }}
+                style={{
+                  width: '50px',
+                  padding: '6px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  textAlign: 'center'
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (isLocked) return;
+                  const newCount = Math.min(50, numRows + 1);
+                  const newRows = Array(newCount).fill(null).map((_, i) => ({
+                    label: i + 1,
+                    content: scriptRows[i]?.content || null,
+                    contentRight: scriptRows[i]?.contentRight || null
+                  }));
+                  updateField('rows', newRows);
+                }}
+                disabled={isLocked || numRows >= 50}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  background: '#f8fafc',
+                  cursor: isLocked || numRows >= 50 ? 'not-allowed' : 'pointer',
+                  fontSize: '1.1rem',
+                  fontWeight: 'bold',
+                  color: '#64748b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                +
+              </button>
+            </div>
           </div>
         </div>
 
@@ -890,37 +992,6 @@ export default function BoxEditorModal({
           })}
         </div>
 
-        {/* Row count control */}
-        <div style={{ marginTop: '12px' }}>
-          <label htmlFor="box-editor-script-row-count" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500' }}>
-            Number of Rows
-          </label>
-          <input
-            id="box-editor-script-row-count"
-            type="number"
-            min="1"
-            max="30"
-            value={numRows}
-            disabled={isLocked}
-            onChange={(e) => {
-              const count = Math.max(1, Math.min(30, parseInt(e.target.value) || 10));
-              const newRows = Array(count).fill(null).map((_, i) => ({
-                label: i + 1,
-                content: scriptRows[i]?.content || null,
-                contentRight: scriptRows[i]?.contentRight || null
-              }));
-              updateField('rows', newRows);
-            }}
-            style={{
-              marginTop: '4px',
-              padding: '6px 10px',
-              border: '1px solid #e2e8f0',
-              borderRadius: '6px',
-              width: '80px',
-              fontSize: '0.875rem'
-            }}
-          />
-        </div>
       </div>
     );
   };
@@ -1104,6 +1175,427 @@ export default function BoxEditorModal({
     );
   };
 
+  // Render FZDnD Editor (right panel for fzdnd type)
+  const renderFZDnDEditor = () => {
+    // Get zone info from setupConfig
+    const zone = setupConfig?.fieldZones?.find(z => z.id === localBox.zoneId);
+    const zoneColor = zone?.color || localBox.color || '#dc2626';
+
+    // Get columns based on columnSource (matching SheetView logic)
+    let columns;
+    const columnSource = localBox.columnSource || 'downDistance';
+    if (columnSource === 'custom' && localBox.customColumns?.length > 0) {
+      columns = localBox.customColumns;
+    } else if (columnSource === 'playPurpose') {
+      columns = (setupConfig?.playPurposes || [])
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .map(p => ({ id: p.id, name: p.name }));
+    } else {
+      // Default to downDistance
+      columns = [...(setupConfig?.downDistanceCategories || [])]
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+    }
+
+    const rowCount = localBox.rowCount || 5;
+    const cols = columns.length || 1;
+
+    // Get play for a cell
+    const getPlayForCell = (rowIdx, colId) => {
+      const setId = `${localBox.setId}_${colId}`;
+      const set = gamePlan?.sets?.find(s => s.id === setId);
+      const playId = set?.playIds?.[rowIdx];
+      return playId ? plays.find(p => p.id === playId) : null;
+    };
+
+    return (
+      <div style={{ padding: '12px', overflowY: 'auto', height: '100%' }}>
+        {/* Zone Header */}
+        <div style={{
+          padding: '8px 12px',
+          background: zoneColor,
+          color: 'white',
+          fontWeight: 'bold',
+          borderRadius: '6px 6px 0 0',
+          marginBottom: '0'
+        }}>
+          {zone?.name || localBox.header}
+        </div>
+
+        {/* FZDnD Grid */}
+        <div style={{
+          border: '1px solid #e2e8f0',
+          borderTop: 'none',
+          borderRadius: '0 0 6px 6px',
+          overflow: 'hidden'
+        }}>
+          {/* Header Row */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: `40px repeat(${cols}, 1fr)`,
+            background: '#f1f5f9',
+            borderBottom: '1px solid #e2e8f0'
+          }}>
+            <div style={{
+              padding: '6px',
+              fontSize: '0.7rem',
+              fontWeight: '600',
+              color: '#94a3b8',
+              textAlign: 'center'
+            }}>
+              #
+            </div>
+            {columns.map((col, i) => (
+              <div key={col.id} style={{
+                padding: '6px',
+                fontSize: '0.7rem',
+                fontWeight: '600',
+                color: '#64748b',
+                textAlign: 'center',
+                borderLeft: '1px solid #e2e8f0',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}>
+                {col.name}
+              </div>
+            ))}
+          </div>
+
+          {/* Data Rows */}
+          {Array(rowCount).fill(null).map((_, rowIdx) => (
+            <div
+              key={rowIdx}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: `40px repeat(${cols}, 1fr)`,
+                borderBottom: rowIdx < rowCount - 1 ? '1px solid #f1f5f9' : 'none'
+              }}
+            >
+              <div style={{
+                padding: '6px',
+                fontSize: '0.75rem',
+                fontWeight: '600',
+                color: '#94a3b8',
+                textAlign: 'center',
+                background: '#fafafa'
+              }}>
+                {rowIdx + 1}
+              </div>
+              {columns.map((col, colIdx) => {
+                const play = getPlayForCell(rowIdx, col.id);
+
+                return (
+                  <div
+                    key={col.id}
+                    style={{
+                      padding: '4px 6px',
+                      borderLeft: '1px solid #e2e8f0',
+                      minHeight: '32px',
+                      fontSize: '0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      background: play?.priority ? '#fef9c3' : (rowIdx % 2 === 1 ? '#f8fafc' : 'white'),
+                      cursor: isLocked ? 'default' : 'pointer'
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.style.background = '#dbeafe';
+                    }}
+                    onDragLeave={(e) => {
+                      e.currentTarget.style.background = play?.priority ? '#fef9c3' : (rowIdx % 2 === 1 ? '#f8fafc' : 'white');
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.style.background = play?.priority ? '#fef9c3' : (rowIdx % 2 === 1 ? '#f8fafc' : 'white');
+
+                      let playId = e.dataTransfer.getData('text/plain');
+                      if (!playId) {
+                        const playData = e.dataTransfer.getData('application/react-dnd');
+                        if (playData) {
+                          try {
+                            const parsed = JSON.parse(playData);
+                            if (parsed.playId) playId = parsed.playId;
+                          } catch (err) {
+                            console.error('Error parsing drop data:', err);
+                          }
+                        }
+                      }
+
+                      if (playId && !isLocked && onFZDnDCellAssign) {
+                        onFZDnDCellAssign(localBox.setId, rowIdx, col.id, playId);
+                      }
+                    }}
+                  >
+                    {play ? (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        flex: 1,
+                        overflow: 'hidden'
+                      }}>
+                        <span style={{
+                          fontWeight: '500',
+                          color: '#1e293b',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
+                          {getPlayDisplayName ? getPlayDisplayName(play) : getPlayCall(play)}
+                        </span>
+                        {!isLocked && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onFZDnDCellRemove) {
+                                onFZDnDCellRemove(localBox.setId, rowIdx, col.id);
+                              }
+                            }}
+                            style={{
+                              marginLeft: 'auto',
+                              padding: '1px',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              color: '#ef4444',
+                              flexShrink: 0
+                            }}
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <span style={{ color: '#e2e8f0' }}>-</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+
+        {/* Help text */}
+        <div style={{
+          marginTop: '12px',
+          fontSize: '0.75rem',
+          color: '#64748b'
+        }}>
+          Drag plays from Quick List to assign them to zone cells. Go to Settings tab to change zone and row count.
+        </div>
+      </div>
+    );
+  };
+
+  // Render Matrix Editor (right panel for matrix type)
+  const renderMatrixEditor = () => {
+    const playTypes = localBox.playTypes || [
+      { id: 'strong_run', label: 'STRONG RUN' },
+      { id: 'weak_run', label: 'WEAK RUN' },
+      { id: 'quick_game', label: 'QUICK GAME' },
+      { id: 'drop_back', label: 'DROPBACK' }
+    ];
+    const hashGroups = localBox.hashGroups || [
+      { id: 'FB', label: 'BASE', cols: ['FB_L', 'FB_R'] },
+      { id: 'CU', label: 'CONVERT', cols: ['CU_L', 'CU_R'] }
+    ];
+
+    // Flatten all columns
+    const allCols = hashGroups.flatMap(g => g.cols);
+
+    // Get plays for a cell (multiple plays allowed)
+    const getPlaysForCell = (playTypeId, colId) => {
+      const setId = `${localBox.setId}_${playTypeId}_${colId}`;
+      const set = gamePlan?.sets?.find(s => s.id === setId);
+      return (set?.playIds || []).map(id => plays.find(p => p.id === id)).filter(Boolean);
+    };
+
+    return (
+      <div style={{ padding: '12px', overflowY: 'auto', height: '100%' }}>
+        {/* Formation Header */}
+        <div style={{
+          padding: '8px 12px',
+          background: localBox.color || '#3b82f6',
+          color: 'white',
+          fontWeight: 'bold',
+          borderRadius: '6px 6px 0 0',
+          marginBottom: '0'
+        }}>
+          {localBox.formationLabel || localBox.header} Matrix
+        </div>
+
+        {/* Matrix Grid */}
+        <div style={{
+          border: '1px solid #e2e8f0',
+          borderTop: 'none',
+          borderRadius: '0 0 6px 6px',
+          overflow: 'hidden'
+        }}>
+          {/* Hash Group Headers */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: `80px repeat(${allCols.length}, 1fr)`,
+            background: '#334155'
+          }}>
+            <div style={{
+              padding: '6px',
+              fontSize: '0.7rem',
+              fontWeight: '600',
+              color: 'white',
+              textAlign: 'center'
+            }}>
+              TYPE
+            </div>
+            {hashGroups.map((group, gIdx) => (
+              group.cols.map((colId, cIdx) => (
+                <div key={colId} style={{
+                  padding: '4px',
+                  fontSize: '0.65rem',
+                  fontWeight: '600',
+                  color: 'white',
+                  textAlign: 'center',
+                  background: cIdx === 0 && gIdx > 0 ? '#475569' : '#334155',
+                  borderLeft: cIdx === 0 && gIdx > 0 ? '2px solid #1e293b' : '1px solid #475569'
+                }}>
+                  {cIdx === 0 ? group.label : ''} {colId.endsWith('_L') ? 'L' : 'R'}
+                </div>
+              ))
+            ))}
+          </div>
+
+          {/* Play Type Rows */}
+          {playTypes.map((pt, ptIdx) => (
+            <div
+              key={pt.id}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: `80px repeat(${allCols.length}, 1fr)`,
+                borderBottom: ptIdx < playTypes.length - 1 ? '1px solid #e2e8f0' : 'none'
+              }}
+            >
+              <div style={{
+                padding: '6px',
+                fontSize: '0.7rem',
+                fontWeight: '600',
+                color: '#1e40af',
+                background: '#dbeafe',
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                {pt.label}
+              </div>
+              {allCols.map((colId, colIdx) => {
+                const cellPlays = getPlaysForCell(pt.id, colId);
+                const groupIdx = hashGroups.findIndex(g => g.cols.includes(colId));
+                const isFirstInGroup = hashGroups[groupIdx]?.cols[0] === colId;
+
+                return (
+                  <div
+                    key={colId}
+                    style={{
+                      padding: '4px',
+                      minHeight: '40px',
+                      background: ptIdx % 2 === 1 ? '#f8fafc' : 'white',
+                      borderLeft: isFirstInGroup && groupIdx > 0 ? '2px solid #cbd5e1' : '1px solid #e2e8f0',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '2px'
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.style.background = '#dbeafe';
+                    }}
+                    onDragLeave={(e) => {
+                      e.currentTarget.style.background = ptIdx % 2 === 1 ? '#f8fafc' : 'white';
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.style.background = ptIdx % 2 === 1 ? '#f8fafc' : 'white';
+
+                      let playId = e.dataTransfer.getData('text/plain');
+                      if (!playId) {
+                        const playData = e.dataTransfer.getData('application/react-dnd');
+                        if (playData) {
+                          try {
+                            const parsed = JSON.parse(playData);
+                            if (parsed.playId) playId = parsed.playId;
+                          } catch (err) {
+                            console.error('Error parsing drop data:', err);
+                          }
+                        }
+                      }
+
+                      if (playId && !isLocked && onMatrixCellAdd) {
+                        onMatrixCellAdd(localBox.setId, pt.id, colId, playId);
+                      }
+                    }}
+                  >
+                    {cellPlays.map((p, i) => (
+                      <div key={i} style={{
+                        fontSize: '0.7rem',
+                        fontWeight: '500',
+                        color: '#1e293b',
+                        background: p.priority ? '#fef08a' : '#f1f5f9',
+                        padding: '2px 4px',
+                        borderRadius: '3px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '4px'
+                      }}>
+                        <span style={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {getPlayDisplayName ? getPlayDisplayName(p) : getPlayCall(p)}
+                        </span>
+                        {!isLocked && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onMatrixCellRemove) {
+                                onMatrixCellRemove(localBox.setId, pt.id, colId, p.id);
+                              }
+                            }}
+                            style={{
+                              padding: '0',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              color: '#ef4444',
+                              flexShrink: 0,
+                              lineHeight: 1
+                            }}
+                          >
+                            <X size={10} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {cellPlays.length === 0 && (
+                      <span style={{ color: '#cbd5e1', fontSize: '0.65rem' }}>Drop play</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+
+        {/* Help text */}
+        <div style={{
+          marginTop: '12px',
+          fontSize: '0.75rem',
+          color: '#64748b'
+        }}>
+          Drag plays from Quick List to assign them. Multiple plays per cell allowed. Go to Settings tab to customize play types and hash groups.
+        </div>
+      </div>
+    );
+  };
+
   // Render Settings tab
   const renderSettings = () => {
     return (
@@ -1139,7 +1631,31 @@ export default function BoxEditorModal({
               <select
                 id="box-editor-box-type"
                 value={localBox.type || 'grid'}
-                onChange={(e) => updateField('type', e.target.value)}
+                onChange={(e) => {
+                  const newType = e.target.value;
+                  updateField('type', newType);
+                  // Set sensible defaults for new types
+                  if (newType === 'fzdnd' && !localBox.zoneId) {
+                    const firstZone = setupConfig?.fieldZones?.[0];
+                    if (firstZone) {
+                      updateField('zoneId', firstZone.id);
+                      updateField('header', firstZone.name);
+                      updateField('color', firstZone.color || '#dc2626');
+                    }
+                  }
+                  if (newType === 'matrix' && !localBox.formationId) {
+                    updateField('playTypes', [
+                      { id: 'strong_run', label: 'STRONG RUN' },
+                      { id: 'weak_run', label: 'WEAK RUN' },
+                      { id: 'quick_game', label: 'QUICK GAME' },
+                      { id: 'drop_back', label: 'DROPBACK' }
+                    ]);
+                    updateField('hashGroups', [
+                      { id: 'FB', label: 'BASE', cols: ['FB_L', 'FB_R'] },
+                      { id: 'CU', label: 'CONVERT', cols: ['CU_L', 'CU_R'] }
+                    ]);
+                  }
+                }}
                 disabled={isLocked}
                 style={{
                   width: '100%',
@@ -1151,6 +1667,8 @@ export default function BoxEditorModal({
               >
                 <option value="grid">Grid</option>
                 <option value="script">Script</option>
+                <option value="fzdnd">FZDnD Zone</option>
+                <option value="matrix">Matrix</option>
                 <option value="list">Simple List</option>
               </select>
             </div>
@@ -1207,43 +1725,121 @@ export default function BoxEditorModal({
                 <label htmlFor="box-editor-grid-columns" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
                   Columns
                 </label>
-                <input
-                  id="box-editor-grid-columns"
-                  type="number"
-                  min="1"
-                  max="6"
-                  value={localBox.gridColumns || 4}
-                  onChange={(e) => updateField('gridColumns', parseInt(e.target.value) || 4)}
-                  disabled={isLocked}
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    fontSize: '0.875rem'
-                  }}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => updateField('gridColumns', Math.max(1, (localBox.gridColumns || 4) - 1))}
+                    disabled={isLocked || (localBox.gridColumns || 4) <= 1}
+                    style={{
+                      width: '32px',
+                      height: '36px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      background: '#f8fafc',
+                      cursor: isLocked ? 'not-allowed' : 'pointer',
+                      fontSize: '1.1rem',
+                      fontWeight: 'bold',
+                      color: '#64748b'
+                    }}
+                  >
+                    −
+                  </button>
+                  <input
+                    id="box-editor-grid-columns"
+                    type="number"
+                    min="1"
+                    max="12"
+                    value={localBox.gridColumns || 4}
+                    onChange={(e) => updateField('gridColumns', Math.min(12, Math.max(1, parseInt(e.target.value) || 4)))}
+                    disabled={isLocked}
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      textAlign: 'center'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => updateField('gridColumns', Math.min(12, (localBox.gridColumns || 4) + 1))}
+                    disabled={isLocked || (localBox.gridColumns || 4) >= 12}
+                    style={{
+                      width: '32px',
+                      height: '36px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      background: '#f8fafc',
+                      cursor: isLocked ? 'not-allowed' : 'pointer',
+                      fontSize: '1.1rem',
+                      fontWeight: 'bold',
+                      color: '#64748b'
+                    }}
+                  >
+                    +
+                  </button>
+                </div>
               </div>
               <div>
                 <label htmlFor="box-editor-grid-rows" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
                   Rows
                 </label>
-                <input
-                  id="box-editor-grid-rows"
-                  type="number"
-                  min="1"
-                  max="10"
-                  value={localBox.gridRows || 5}
-                  onChange={(e) => updateField('gridRows', parseInt(e.target.value) || 5)}
-                  disabled={isLocked}
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    fontSize: '0.875rem'
-                  }}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => updateField('gridRows', Math.max(1, (localBox.gridRows || 5) - 1))}
+                    disabled={isLocked || (localBox.gridRows || 5) <= 1}
+                    style={{
+                      width: '32px',
+                      height: '36px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      background: '#f8fafc',
+                      cursor: isLocked ? 'not-allowed' : 'pointer',
+                      fontSize: '1.1rem',
+                      fontWeight: 'bold',
+                      color: '#64748b'
+                    }}
+                  >
+                    −
+                  </button>
+                  <input
+                    id="box-editor-grid-rows"
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={localBox.gridRows || 5}
+                    onChange={(e) => updateField('gridRows', Math.min(20, Math.max(1, parseInt(e.target.value) || 5)))}
+                    disabled={isLocked}
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      textAlign: 'center'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => updateField('gridRows', Math.min(20, (localBox.gridRows || 5) + 1))}
+                    disabled={isLocked || (localBox.gridRows || 5) >= 20}
+                    style={{
+                      width: '32px',
+                      height: '36px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      background: '#f8fafc',
+                      cursor: isLocked ? 'not-allowed' : 'pointer',
+                      fontSize: '1.1rem',
+                      fontWeight: 'bold',
+                      color: '#64748b'
+                    }}
+                  >
+                    +
+                  </button>
+                </div>
               </div>
               <div>
                 <label htmlFor="box-editor-corner-label" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
@@ -1261,7 +1857,8 @@ export default function BoxEditorModal({
                     padding: '8px',
                     border: '1px solid #e2e8f0',
                     borderRadius: '6px',
-                    fontSize: '0.875rem'
+                    fontSize: '0.875rem',
+                    height: '36px'
                   }}
                 />
               </div>
@@ -1310,30 +1907,87 @@ export default function BoxEditorModal({
                 <label htmlFor="box-editor-script-rows" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
                   Number of Rows
                 </label>
-                <input
-                  id="box-editor-script-rows"
-                  type="number"
-                  min="1"
-                  max="30"
-                  value={(localBox.rows || []).length || 10}
-                  onChange={(e) => {
-                    const count = parseInt(e.target.value) || 10;
-                    const newRows = Array(count).fill(null).map((_, i) => ({
-                      label: i + 1,
-                      content: (localBox.rows || [])[i]?.content || null,
-                      contentRight: (localBox.rows || [])[i]?.contentRight || null
-                    }));
-                    updateField('rows', newRows);
-                  }}
-                  disabled={isLocked}
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    fontSize: '0.875rem'
-                  }}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const currentCount = (localBox.rows || []).length || 10;
+                      const newCount = Math.max(1, currentCount - 1);
+                      const newRows = Array(newCount).fill(null).map((_, i) => ({
+                        label: i + 1,
+                        content: (localBox.rows || [])[i]?.content || null,
+                        contentRight: (localBox.rows || [])[i]?.contentRight || null
+                      }));
+                      updateField('rows', newRows);
+                    }}
+                    disabled={isLocked || (localBox.rows || []).length <= 1}
+                    style={{
+                      width: '32px',
+                      height: '36px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      background: '#f8fafc',
+                      cursor: isLocked ? 'not-allowed' : 'pointer',
+                      fontSize: '1.1rem',
+                      fontWeight: 'bold',
+                      color: '#64748b'
+                    }}
+                  >
+                    −
+                  </button>
+                  <input
+                    id="box-editor-script-rows"
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={(localBox.rows || []).length || 10}
+                    onChange={(e) => {
+                      const count = Math.min(50, Math.max(1, parseInt(e.target.value) || 10));
+                      const newRows = Array(count).fill(null).map((_, i) => ({
+                        label: i + 1,
+                        content: (localBox.rows || [])[i]?.content || null,
+                        contentRight: (localBox.rows || [])[i]?.contentRight || null
+                      }));
+                      updateField('rows', newRows);
+                    }}
+                    disabled={isLocked}
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      textAlign: 'center'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const currentCount = (localBox.rows || []).length || 10;
+                      const newCount = Math.min(50, currentCount + 1);
+                      const newRows = Array(newCount).fill(null).map((_, i) => ({
+                        label: i + 1,
+                        content: (localBox.rows || [])[i]?.content || null,
+                        contentRight: (localBox.rows || [])[i]?.contentRight || null
+                      }));
+                      updateField('rows', newRows);
+                    }}
+                    disabled={isLocked || (localBox.rows || []).length >= 50}
+                    style={{
+                      width: '32px',
+                      height: '36px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      background: '#f8fafc',
+                      cursor: isLocked ? 'not-allowed' : 'pointer',
+                      fontSize: '1.1rem',
+                      fontWeight: 'bold',
+                      color: '#64748b'
+                    }}
+                  >
+                    +
+                  </button>
+                </div>
               </div>
               <div>
                 <label htmlFor="box-editor-script-columns" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
@@ -1349,13 +2003,523 @@ export default function BoxEditorModal({
                     padding: '8px',
                     border: '1px solid #e2e8f0',
                     borderRadius: '6px',
-                    fontSize: '0.875rem'
+                    fontSize: '0.875rem',
+                    height: '36px'
                   }}
                 >
                   <option value={1}>Single Column</option>
                   <option value={2}>Left/Right Hash (2 columns)</option>
                 </select>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* FZDnD Zone Settings */}
+        {localBox.type === 'fzdnd' && (
+          <div style={{ marginTop: '20px' }}>
+            <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: '#334155' }}>FZDnD Zone Settings</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label htmlFor="box-editor-fzdnd-zone" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
+                  Field Zone
+                </label>
+                <select
+                  id="box-editor-fzdnd-zone"
+                  value={localBox.zoneId || ''}
+                  onChange={(e) => {
+                    const zoneId = e.target.value;
+                    const zone = setupConfig?.fieldZones?.find(z => z.id === zoneId);
+                    updateField('zoneId', zoneId);
+                    if (zone) {
+                      updateField('header', zone.name);
+                      updateField('color', zone.color || '#dc2626');
+                    }
+                  }}
+                  disabled={isLocked}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  <option value="">Select a zone...</option>
+                  {(setupConfig?.fieldZones || []).map(zone => (
+                    <option key={zone.id} value={zone.id}>{zone.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="box-editor-fzdnd-rows" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
+                  Number of Rows
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => updateField('rowCount', Math.max(1, (localBox.rowCount || 5) - 1))}
+                    disabled={isLocked || (localBox.rowCount || 5) <= 1}
+                    style={{
+                      width: '32px',
+                      height: '36px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      background: '#f8fafc',
+                      cursor: isLocked ? 'not-allowed' : 'pointer',
+                      fontSize: '1.1rem',
+                      fontWeight: 'bold',
+                      color: '#64748b'
+                    }}
+                  >
+                    −
+                  </button>
+                  <input
+                    id="box-editor-fzdnd-rows"
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={localBox.rowCount || 5}
+                    onChange={(e) => updateField('rowCount', Math.min(20, Math.max(1, parseInt(e.target.value) || 5)))}
+                    disabled={isLocked}
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      textAlign: 'center'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => updateField('rowCount', Math.min(20, (localBox.rowCount || 5) + 1))}
+                    disabled={isLocked || (localBox.rowCount || 5) >= 20}
+                    style={{
+                      width: '32px',
+                      height: '36px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      background: '#f8fafc',
+                      cursor: isLocked ? 'not-allowed' : 'pointer',
+                      fontSize: '1.1rem',
+                      fontWeight: 'bold',
+                      color: '#64748b'
+                    }}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Row Labels */}
+            <div style={{ marginTop: '12px' }}>
+              <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '8px' }}>
+                Row Labels (optional)
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {Array(localBox.rowCount || 5).fill(null).map((_, i) => (
+                  <input
+                    key={i}
+                    type="text"
+                    placeholder={`${i + 1}`}
+                    value={(localBox.rowLabels || [])[i] || ''}
+                    onChange={(e) => {
+                      const newLabels = [...(localBox.rowLabels || [])];
+                      newLabels[i] = e.target.value;
+                      updateField('rowLabels', newLabels);
+                    }}
+                    disabled={isLocked}
+                    style={{
+                      width: '50px',
+                      padding: '4px 6px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '4px',
+                      fontSize: '0.75rem',
+                      textAlign: 'center'
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Column Source */}
+            <div style={{ marginTop: '12px' }}>
+              <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '8px' }}>
+                Column Source
+              </label>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => updateField('columnSource', 'downDistance')}
+                  disabled={isLocked}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: (localBox.columnSource || 'downDistance') === 'downDistance' ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                    background: (localBox.columnSource || 'downDistance') === 'downDistance' ? '#eff6ff' : 'white',
+                    color: (localBox.columnSource || 'downDistance') === 'downDistance' ? '#3b82f6' : '#64748b',
+                    fontWeight: (localBox.columnSource || 'downDistance') === 'downDistance' ? '600' : '400',
+                    fontSize: '0.8rem',
+                    cursor: isLocked ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  Down & Distance
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateField('columnSource', 'playPurpose')}
+                  disabled={isLocked}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: localBox.columnSource === 'playPurpose' ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                    background: localBox.columnSource === 'playPurpose' ? '#eff6ff' : 'white',
+                    color: localBox.columnSource === 'playPurpose' ? '#3b82f6' : '#64748b',
+                    fontWeight: localBox.columnSource === 'playPurpose' ? '600' : '400',
+                    fontSize: '0.8rem',
+                    cursor: isLocked ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  Play Purpose
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateField('columnSource', 'custom');
+                    if (!localBox.customColumns?.length) {
+                      // Initialize with current source
+                      const source = localBox.columnSource === 'playPurpose'
+                        ? (setupConfig?.playPurposes || [])
+                        : [...(setupConfig?.downDistanceCategories || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
+                      updateField('customColumns', source.map(item => ({ id: item.id, name: item.name })));
+                    }
+                  }}
+                  disabled={isLocked}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: localBox.columnSource === 'custom' ? '2px solid #3b82f6' : '1px solid #e2e8f0',
+                    background: localBox.columnSource === 'custom' ? '#eff6ff' : 'white',
+                    color: localBox.columnSource === 'custom' ? '#3b82f6' : '#64748b',
+                    fontWeight: localBox.columnSource === 'custom' ? '600' : '400',
+                    fontSize: '0.8rem',
+                    cursor: isLocked ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  Custom
+                </button>
+              </div>
+
+              {/* Column Preview/Editor based on source */}
+              {localBox.columnSource === 'custom' ? (
+                <div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                    {(localBox.customColumns || []).map((col, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                        <input
+                          type="text"
+                          value={col.name || ''}
+                          onChange={(e) => {
+                            const newCols = [...(localBox.customColumns || [])];
+                            newCols[i] = { ...newCols[i], name: e.target.value };
+                            updateField('customColumns', newCols);
+                          }}
+                          disabled={isLocked}
+                          style={{
+                            width: '80px',
+                            padding: '4px 6px',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem'
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newCols = [...(localBox.customColumns || [])];
+                            newCols.splice(i, 1);
+                            updateField('customColumns', newCols);
+                          }}
+                          disabled={isLocked}
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            border: 'none',
+                            background: '#fee2e2',
+                            color: '#dc2626',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.7rem',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newCols = [...(localBox.customColumns || [])];
+                        newCols.push({ id: `col_${Date.now()}`, name: `Col ${newCols.length + 1}` });
+                        updateField('customColumns', newCols);
+                      }}
+                      disabled={isLocked}
+                      style={{
+                        padding: '4px 8px',
+                        border: '1px dashed #cbd5e1',
+                        background: '#f8fafc',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem',
+                        color: '#64748b',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      + Add
+                    </button>
+                  </div>
+                </div>
+              ) : localBox.columnSource === 'playPurpose' ? (
+                <div>
+                  <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '8px' }}>
+                    Using {(setupConfig?.playPurposes || []).length} play purposes from Setup
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                    {(setupConfig?.playPurposes || []).map(purpose => (
+                      <span key={purpose.id} style={{
+                        padding: '4px 8px',
+                        background: purpose.color ? `${purpose.color}20` : '#f1f5f9',
+                        borderRadius: '4px',
+                        fontSize: '0.75rem',
+                        color: purpose.color || '#475569',
+                        border: `1px solid ${purpose.color || '#e2e8f0'}`
+                      }}>
+                        {purpose.name}
+                      </span>
+                    ))}
+                    {(setupConfig?.playPurposes || []).length === 0 && (
+                      <p style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                        No play purposes defined. Go to Setup → Define Situations to add them.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '8px' }}>
+                    Using {(setupConfig?.downDistanceCategories || []).length} categories from Setup
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                    {[...(setupConfig?.downDistanceCategories || [])]
+                      .sort((a, b) => (a.order || 0) - (b.order || 0))
+                      .map(dd => (
+                        <span key={dd.id} style={{
+                          padding: '4px 8px',
+                          background: '#f1f5f9',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                          color: '#475569'
+                        }}>
+                          {dd.name}
+                        </span>
+                      ))}
+                  </div>
+                  {(setupConfig?.downDistanceCategories || []).length === 0 && (
+                    <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '4px' }}>
+                      No down/distance categories defined. Go to Setup → Define Situations to add them.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Matrix Settings */}
+        {localBox.type === 'matrix' && (
+          <div style={{ marginTop: '20px' }}>
+            <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: '#334155' }}>Matrix Settings</h4>
+
+            {/* Formation Label */}
+            <div style={{ marginBottom: '12px' }}>
+              <label htmlFor="box-editor-matrix-formation" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
+                Formation Label
+              </label>
+              <input
+                id="box-editor-matrix-formation"
+                type="text"
+                value={localBox.formationLabel || ''}
+                onChange={(e) => {
+                  updateField('formationLabel', e.target.value);
+                  updateField('formationId', e.target.value.toLowerCase().replace(/\s+/g, '_'));
+                }}
+                disabled={isLocked}
+                placeholder="e.g., 887, Trips, Empty"
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem'
+                }}
+              />
+            </div>
+
+            {/* Play Types */}
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '8px' }}>
+                Play Types (Rows)
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {(localBox.playTypes || []).map((pt, idx) => (
+                  <div key={pt.id} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      value={pt.label}
+                      onChange={(e) => {
+                        const newPlayTypes = [...(localBox.playTypes || [])];
+                        newPlayTypes[idx] = { ...pt, label: e.target.value };
+                        updateField('playTypes', newPlayTypes);
+                      }}
+                      disabled={isLocked}
+                      style={{
+                        flex: 1,
+                        padding: '6px 8px',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '4px',
+                        fontSize: '0.8rem'
+                      }}
+                    />
+                    {!isLocked && (
+                      <button
+                        onClick={() => {
+                          const newPlayTypes = (localBox.playTypes || []).filter((_, i) => i !== idx);
+                          updateField('playTypes', newPlayTypes);
+                        }}
+                        style={{
+                          padding: '4px 8px',
+                          background: '#fee2e2',
+                          border: 'none',
+                          borderRadius: '4px',
+                          color: '#dc2626',
+                          cursor: 'pointer',
+                          fontSize: '0.75rem'
+                        }}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {!isLocked && (
+                <button
+                  onClick={() => {
+                    const newId = `pt_${Date.now()}`;
+                    const newPlayTypes = [...(localBox.playTypes || []), { id: newId, label: 'NEW TYPE' }];
+                    updateField('playTypes', newPlayTypes);
+                  }}
+                  style={{
+                    marginTop: '8px',
+                    padding: '6px 12px',
+                    background: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    borderRadius: '4px',
+                    color: '#2563eb',
+                    cursor: 'pointer',
+                    fontSize: '0.8rem'
+                  }}
+                >
+                  + Add Play Type
+                </button>
+              )}
+            </div>
+
+            {/* Hash Groups */}
+            <div>
+              <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '8px' }}>
+                Hash Groups (Columns)
+              </label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {(localBox.hashGroups || []).map((group, gIdx) => (
+                  <div key={group.id} style={{
+                    padding: '8px',
+                    background: '#f8fafc',
+                    borderRadius: '6px',
+                    border: '1px solid #e2e8f0'
+                  }}>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px' }}>
+                      <input
+                        type="text"
+                        value={group.label}
+                        onChange={(e) => {
+                          const newGroups = [...(localBox.hashGroups || [])];
+                          newGroups[gIdx] = { ...group, label: e.target.value };
+                          updateField('hashGroups', newGroups);
+                        }}
+                        disabled={isLocked}
+                        placeholder="Group Label (e.g., BASE)"
+                        style={{
+                          flex: 1,
+                          padding: '4px 8px',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '4px',
+                          fontSize: '0.8rem'
+                        }}
+                      />
+                      {!isLocked && (
+                        <button
+                          onClick={() => {
+                            const newGroups = (localBox.hashGroups || []).filter((_, i) => i !== gIdx);
+                            updateField('hashGroups', newGroups);
+                          }}
+                          style={{
+                            padding: '4px 8px',
+                            background: '#fee2e2',
+                            border: 'none',
+                            borderRadius: '4px',
+                            color: '#dc2626',
+                            cursor: 'pointer',
+                            fontSize: '0.7rem'
+                          }}
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                      Columns: {group.cols.join(', ')}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {!isLocked && (
+                <button
+                  onClick={() => {
+                    const newId = `hg_${Date.now()}`;
+                    const newGroups = [...(localBox.hashGroups || []), {
+                      id: newId,
+                      label: 'NEW GROUP',
+                      cols: [`${newId}_L`, `${newId}_R`]
+                    }];
+                    updateField('hashGroups', newGroups);
+                  }}
+                  style={{
+                    marginTop: '8px',
+                    padding: '6px 12px',
+                    background: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    borderRadius: '4px',
+                    color: '#2563eb',
+                    cursor: 'pointer',
+                    fontSize: '0.8rem'
+                  }}
+                >
+                  + Add Hash Group
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -1390,21 +2554,227 @@ export default function BoxEditorModal({
               Edit: {box.header}
             </h3>
             <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-              {box.type === 'grid' ? 'Grid Box' : box.type === 'script' ? 'Script Box' : 'List Box'}
+              {box.type === 'grid' ? 'Grid Box' : box.type === 'script' ? 'Script Box' : box.type === 'fzdnd' ? 'FZDnD Zone Box' : box.type === 'matrix' ? 'Matrix Box' : 'List Box'}
             </span>
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '4px',
-              color: '#64748b'
-            }}
-          >
-            <X size={20} />
-          </button>
+
+          {/* Quick Size Controls */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {/* Grid Controls */}
+            {localBox.type === 'grid' && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Cols:</span>
+                  <button
+                    onClick={() => updateField('gridColumns', Math.max(1, (localBox.gridColumns || 4) - 1))}
+                    disabled={isLocked || (localBox.gridColumns || 4) <= 1}
+                    style={{
+                      width: '22px', height: '22px', borderRadius: '4px',
+                      border: '1px solid #e2e8f0', background: 'white',
+                      cursor: isLocked || (localBox.gridColumns || 4) <= 1 ? 'not-allowed' : 'pointer',
+                      opacity: isLocked || (localBox.gridColumns || 4) <= 1 ? 0.5 : 1,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '0.9rem', fontWeight: '600', color: '#64748b'
+                    }}
+                  >−</button>
+                  <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#1e293b', minWidth: '18px', textAlign: 'center' }}>
+                    {localBox.gridColumns || 4}
+                  </span>
+                  <button
+                    onClick={() => updateField('gridColumns', Math.min(12, (localBox.gridColumns || 4) + 1))}
+                    disabled={isLocked || (localBox.gridColumns || 4) >= 12}
+                    style={{
+                      width: '22px', height: '22px', borderRadius: '4px',
+                      border: '1px solid #e2e8f0', background: 'white',
+                      cursor: isLocked || (localBox.gridColumns || 4) >= 12 ? 'not-allowed' : 'pointer',
+                      opacity: isLocked || (localBox.gridColumns || 4) >= 12 ? 0.5 : 1,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '0.9rem', fontWeight: '600', color: '#64748b'
+                    }}
+                  >+</button>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Rows:</span>
+                  <button
+                    onClick={() => updateField('gridRows', Math.max(1, (localBox.gridRows || 5) - 1))}
+                    disabled={isLocked || (localBox.gridRows || 5) <= 1}
+                    style={{
+                      width: '22px', height: '22px', borderRadius: '4px',
+                      border: '1px solid #e2e8f0', background: 'white',
+                      cursor: isLocked || (localBox.gridRows || 5) <= 1 ? 'not-allowed' : 'pointer',
+                      opacity: isLocked || (localBox.gridRows || 5) <= 1 ? 0.5 : 1,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '0.9rem', fontWeight: '600', color: '#64748b'
+                    }}
+                  >−</button>
+                  <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#1e293b', minWidth: '18px', textAlign: 'center' }}>
+                    {localBox.gridRows || 5}
+                  </span>
+                  <button
+                    onClick={() => updateField('gridRows', Math.min(20, (localBox.gridRows || 5) + 1))}
+                    disabled={isLocked || (localBox.gridRows || 5) >= 20}
+                    style={{
+                      width: '22px', height: '22px', borderRadius: '4px',
+                      border: '1px solid #e2e8f0', background: 'white',
+                      cursor: isLocked || (localBox.gridRows || 5) >= 20 ? 'not-allowed' : 'pointer',
+                      opacity: isLocked || (localBox.gridRows || 5) >= 20 ? 0.5 : 1,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '0.9rem', fontWeight: '600', color: '#64748b'
+                    }}
+                  >+</button>
+                </div>
+              </>
+            )}
+
+            {/* Script Controls */}
+            {localBox.type === 'script' && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Cols:</span>
+                  <button
+                    onClick={() => !isLocked && updateField('scriptColumns', 1)}
+                    disabled={isLocked}
+                    style={{
+                      padding: '3px 8px', borderRadius: '4px',
+                      border: (localBox.scriptColumns || 2) === 1 ? '1px solid #3b82f6' : '1px solid #e2e8f0',
+                      background: (localBox.scriptColumns || 2) === 1 ? '#eff6ff' : 'white',
+                      color: (localBox.scriptColumns || 2) === 1 ? '#3b82f6' : '#64748b',
+                      fontWeight: '500', fontSize: '0.7rem', cursor: isLocked ? 'not-allowed' : 'pointer'
+                    }}
+                  >L</button>
+                  <button
+                    onClick={() => !isLocked && updateField('scriptColumns', 2)}
+                    disabled={isLocked}
+                    style={{
+                      padding: '3px 8px', borderRadius: '4px',
+                      border: (localBox.scriptColumns || 2) === 2 ? '1px solid #3b82f6' : '1px solid #e2e8f0',
+                      background: (localBox.scriptColumns || 2) === 2 ? '#eff6ff' : 'white',
+                      color: (localBox.scriptColumns || 2) === 2 ? '#3b82f6' : '#64748b',
+                      fontWeight: '500', fontSize: '0.7rem', cursor: isLocked ? 'not-allowed' : 'pointer'
+                    }}
+                  >L/R</button>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Rows:</span>
+                  <button
+                    onClick={() => {
+                      const newRowCount = Math.max(1, (localBox.rows?.length || 10) - 1);
+                      const currentRows = localBox.rows || [];
+                      const newRows = currentRows.slice(0, newRowCount);
+                      while (newRows.length < newRowCount) {
+                        newRows.push({ label: newRows.length + 1, content: null, contentRight: null });
+                      }
+                      setLocalBox(prev => ({ ...prev, rows: newRows }));
+                    }}
+                    disabled={isLocked || (localBox.rows?.length || 10) <= 1}
+                    style={{
+                      width: '22px', height: '22px', borderRadius: '4px',
+                      border: '1px solid #e2e8f0', background: 'white',
+                      cursor: isLocked || (localBox.rows?.length || 10) <= 1 ? 'not-allowed' : 'pointer',
+                      opacity: isLocked || (localBox.rows?.length || 10) <= 1 ? 0.5 : 1,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '0.9rem', fontWeight: '600', color: '#64748b'
+                    }}
+                  >−</button>
+                  <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#1e293b', minWidth: '18px', textAlign: 'center' }}>
+                    {localBox.rows?.length || 10}
+                  </span>
+                  <button
+                    onClick={() => {
+                      const newRowCount = Math.min(50, (localBox.rows?.length || 10) + 1);
+                      const currentRows = localBox.rows || [];
+                      const newRows = [...currentRows];
+                      while (newRows.length < newRowCount) {
+                        newRows.push({ label: newRows.length + 1, content: null, contentRight: null });
+                      }
+                      setLocalBox(prev => ({ ...prev, rows: newRows }));
+                    }}
+                    disabled={isLocked || (localBox.rows?.length || 10) >= 50}
+                    style={{
+                      width: '22px', height: '22px', borderRadius: '4px',
+                      border: '1px solid #e2e8f0', background: 'white',
+                      cursor: isLocked || (localBox.rows?.length || 10) >= 50 ? 'not-allowed' : 'pointer',
+                      opacity: isLocked || (localBox.rows?.length || 10) >= 50 ? 0.5 : 1,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '0.9rem', fontWeight: '600', color: '#64748b'
+                    }}
+                  >+</button>
+                </div>
+              </>
+            )}
+
+            {/* FZDnD Controls */}
+            {localBox.type === 'fzdnd' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Rows:</span>
+                <button
+                  onClick={() => updateField('rowCount', Math.max(1, (localBox.rowCount || 5) - 1))}
+                  disabled={isLocked || (localBox.rowCount || 5) <= 1}
+                  style={{
+                    width: '22px', height: '22px', borderRadius: '4px',
+                    border: '1px solid #e2e8f0', background: 'white',
+                    cursor: isLocked || (localBox.rowCount || 5) <= 1 ? 'not-allowed' : 'pointer',
+                    opacity: isLocked || (localBox.rowCount || 5) <= 1 ? 0.5 : 1,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.9rem', fontWeight: '600', color: '#64748b'
+                  }}
+                >−</button>
+                <span style={{ fontSize: '0.85rem', fontWeight: '600', color: '#1e293b', minWidth: '18px', textAlign: 'center' }}>
+                  {localBox.rowCount || 5}
+                </span>
+                <button
+                  onClick={() => updateField('rowCount', Math.min(20, (localBox.rowCount || 5) + 1))}
+                  disabled={isLocked || (localBox.rowCount || 5) >= 20}
+                  style={{
+                    width: '22px', height: '22px', borderRadius: '4px',
+                    border: '1px solid #e2e8f0', background: 'white',
+                    cursor: isLocked || (localBox.rowCount || 5) >= 20 ? 'not-allowed' : 'pointer',
+                    opacity: isLocked || (localBox.rowCount || 5) >= 20 ? 0.5 : 1,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.9rem', fontWeight: '600', color: '#64748b'
+                  }}
+                >+</button>
+              </div>
+            )}
+
+            {/* Delete Button */}
+            {onDelete && !isLocked && (
+              <button
+                onClick={() => {
+                  if (window.confirm(`Delete "${box.header}"?\n\nThis will permanently remove this box and all plays assigned to it. This cannot be undone.`)) {
+                    onDelete(sectionIdx, boxIdx);
+                    onClose();
+                  }
+                }}
+                title="Delete box"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  color: '#ef4444',
+                  opacity: 0.7
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
+              >
+                <Trash2 size={18} />
+              </button>
+            )}
+
+            <button
+              onClick={onClose}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
+                color: '#64748b'
+              }}
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -1462,7 +2832,10 @@ export default function BoxEditorModal({
 
               {/* Right Panel: Editor */}
               <div style={{ flex: 1, overflow: 'hidden' }}>
-                {localBox.type === 'script' ? renderScriptEditor() : renderGridEditor()}
+                {localBox.type === 'script' ? renderScriptEditor() :
+                 localBox.type === 'fzdnd' ? renderFZDnDEditor() :
+                 localBox.type === 'matrix' ? renderMatrixEditor() :
+                 renderGridEditor()}
               </div>
             </>
           ) : (
