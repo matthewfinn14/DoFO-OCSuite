@@ -83,7 +83,7 @@ function MainLayoutContent() {
         {/* Main Content */}
         <main
           className="flex-1 overflow-auto transition-all duration-300 print:!m-0 print:!p-0 print:overflow-visible"
-          style={{ marginRight: playBankOpen ? '360px' : '40px' }}
+          style={{ marginRight: playBankOpen ? '480px' : '40px' }}
         >
           {loading ? (
             <div className="flex items-center justify-center h-full">

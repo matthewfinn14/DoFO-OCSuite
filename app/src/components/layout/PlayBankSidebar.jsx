@@ -612,7 +612,7 @@ export default function PlayBankSidebar({
     return (
       <div
         key={play.id}
-        className={`group flex items-center py-1 border-b text-sm hover:bg-slate-50 ${isClickable ? 'cursor-pointer' : 'cursor-grab'
+        className={`group flex items-center py-0.5 border-b text-xs hover:bg-slate-50 ${isClickable ? 'cursor-pointer' : 'cursor-grab'
           } ${isBatchSelected ? 'bg-sky-50 border-sky-200' : ''} ${isSingleSelected ? 'bg-emerald-50 border-emerald-300 border-2' : ''} ${isHighlighted && !isBatchSelected && !isSingleSelected ? 'bg-amber-50 border-l-4 border-l-amber-400 border-b-slate-100' : 'border-slate-100'}`}
         draggable={!isClickable}
         onDragStart={(e) => !isClickable && handleDragStart(e, play)}
@@ -647,7 +647,7 @@ export default function PlayBankSidebar({
           </div>
           {/* Wristband coordinate badge */}
           {wristbandSlot && (
-            <span className="flex-shrink-0 ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-red-600 text-white rounded" title="Wristband coordinate">
+            <span className="flex-shrink-0 ml-1 px-1 py-0 text-[9px] font-bold bg-red-600 text-white rounded" title="Wristband coordinate">
               {wristbandSlot}
             </span>
           )}
@@ -669,13 +669,13 @@ export default function PlayBankSidebar({
           )}
         </div>
         {/* Right section: Script usage counters - fixed width, always aligned */}
-        <div className="flex items-center text-[9px] font-mono flex-shrink-0 border-l border-slate-200" title="Practice script usage: M T W TH F | Total">
-          <span className={`w-5 text-center py-1 border-r border-slate-200 ${usage?.M ? 'text-slate-700 font-semibold' : 'text-slate-300'}`}>{usage?.M || '-'}</span>
-          <span className={`w-5 text-center py-1 border-r border-slate-200 ${usage?.T ? 'text-slate-700 font-semibold' : 'text-slate-300'}`}>{usage?.T || '-'}</span>
-          <span className={`w-5 text-center py-1 border-r border-slate-200 ${usage?.W ? 'text-slate-700 font-semibold' : 'text-slate-300'}`}>{usage?.W || '-'}</span>
-          <span className={`w-5 text-center py-1 border-r border-slate-200 ${usage?.TH ? 'text-slate-700 font-semibold' : 'text-slate-300'}`}>{usage?.TH || '-'}</span>
-          <span className={`w-5 text-center py-1 border-r border-slate-200 ${usage?.F ? 'text-slate-700 font-semibold' : 'text-slate-300'}`}>{usage?.F || '-'}</span>
-          <span className={`w-7 text-center py-1 font-bold ${usage?.TOT ? 'text-sky-600' : 'text-slate-300'}`}>{usage?.TOT || '-'}</span>
+        <div className="flex items-center text-[8px] font-mono flex-shrink-0 border-l border-slate-200" title="Practice script usage: M T W TH F | Total">
+          <span className={`w-4 text-center py-0.5 border-r border-slate-200 ${usage?.M ? 'text-slate-700 font-semibold' : 'text-slate-300'}`}>{usage?.M || '-'}</span>
+          <span className={`w-4 text-center py-0.5 border-r border-slate-200 ${usage?.T ? 'text-slate-700 font-semibold' : 'text-slate-300'}`}>{usage?.T || '-'}</span>
+          <span className={`w-4 text-center py-0.5 border-r border-slate-200 ${usage?.W ? 'text-slate-700 font-semibold' : 'text-slate-300'}`}>{usage?.W || '-'}</span>
+          <span className={`w-5 text-center py-0.5 border-r border-slate-200 ${usage?.TH ? 'text-slate-700 font-semibold' : 'text-slate-300'}`}>{usage?.TH || '-'}</span>
+          <span className={`w-4 text-center py-0.5 border-r border-slate-200 ${usage?.F ? 'text-slate-700 font-semibold' : 'text-slate-300'}`}>{usage?.F || '-'}</span>
+          <span className={`w-6 text-center py-0.5 font-bold ${usage?.TOT ? 'text-sky-600' : 'text-slate-300'}`}>{usage?.TOT || '-'}</span>
         </div>
       </div>
     );
@@ -686,7 +686,7 @@ export default function PlayBankSidebar({
       className="fixed right-0 top-0 bottom-0 flex flex-col transition-all duration-300 ease-in-out print:hidden"
       style={{
         zIndex: 2005,
-        width: isOpen ? '360px' : '40px',
+        width: isOpen ? '480px' : '40px',
         borderLeft: '1px solid #334155',
         background: isOpen ? '#ffffff' : '#1e293b'
       }}
@@ -715,7 +715,7 @@ export default function PlayBankSidebar({
       {/* Expanded Content */}
       <div
         className="flex flex-col h-full overflow-hidden"
-        style={{ width: '360px', display: isOpen ? 'flex' : 'none' }}
+        style={{ width: '480px', display: isOpen ? 'flex' : 'none' }}
       >
         {/* Quick Navigation Links */}
         <div className="flex gap-2 p-2 bg-slate-900 border-b border-slate-700">
@@ -986,16 +986,16 @@ export default function PlayBankSidebar({
               )}
               {/* Usage header with day columns */}
               <div className="sticky top-0 bg-white border-b border-slate-200 flex items-center">
-                <span className="flex-1 text-xs font-bold text-slate-600 uppercase pl-2 py-1">
+                <span className="flex-1 text-xs font-bold text-slate-600 uppercase pl-2 py-0.5">
                   Full Playbook ({flatAllPlays.length})
                 </span>
-                <div className="flex items-center text-[8px] font-bold text-slate-500 uppercase border-l border-slate-200">
-                  <span className="w-5 text-center py-1.5 border-r border-slate-200">M</span>
-                  <span className="w-5 text-center py-1.5 border-r border-slate-200">T</span>
-                  <span className="w-5 text-center py-1.5 border-r border-slate-200">W</span>
-                  <span className="w-5 text-center py-1.5 border-r border-slate-200">TH</span>
-                  <span className="w-5 text-center py-1.5 border-r border-slate-200">F</span>
-                  <span className="w-7 text-center py-1.5 font-extrabold text-slate-600">TOT</span>
+                <div className="flex items-center text-[7px] font-bold text-slate-500 uppercase border-l border-slate-200">
+                  <span className="w-4 text-center py-1 border-r border-slate-200">M</span>
+                  <span className="w-4 text-center py-1 border-r border-slate-200">T</span>
+                  <span className="w-4 text-center py-1 border-r border-slate-200">W</span>
+                  <span className="w-5 text-center py-1 border-r border-slate-200">TH</span>
+                  <span className="w-4 text-center py-1 border-r border-slate-200">F</span>
+                  <span className="w-6 text-center py-1 font-extrabold text-slate-600">TOT</span>
                 </div>
               </div>
               {flatAllPlays.length > 0 ? (
@@ -1046,16 +1046,16 @@ export default function PlayBankSidebar({
               )}
               {/* Install header with day columns */}
               <div className="sticky top-0 bg-emerald-500 flex items-center">
-                <span className="flex-1 text-xs font-bold text-white uppercase pl-2 py-1.5">
+                <span className="flex-1 text-xs font-bold text-white uppercase pl-2 py-1">
                   Week Install ({flatInstallPlays.length})
                 </span>
-                <div className="flex items-center text-[8px] font-bold text-emerald-100 uppercase border-l border-emerald-400">
-                  <span className="w-5 text-center py-1.5 border-r border-emerald-400">M</span>
-                  <span className="w-5 text-center py-1.5 border-r border-emerald-400">T</span>
-                  <span className="w-5 text-center py-1.5 border-r border-emerald-400">W</span>
-                  <span className="w-5 text-center py-1.5 border-r border-emerald-400">TH</span>
-                  <span className="w-5 text-center py-1.5 border-r border-emerald-400">F</span>
-                  <span className="w-7 text-center py-1.5 font-extrabold text-white">TOT</span>
+                <div className="flex items-center text-[7px] font-bold text-emerald-100 uppercase border-l border-emerald-400">
+                  <span className="w-4 text-center py-1 border-r border-emerald-400">M</span>
+                  <span className="w-4 text-center py-1 border-r border-emerald-400">T</span>
+                  <span className="w-4 text-center py-1 border-r border-emerald-400">W</span>
+                  <span className="w-5 text-center py-1 border-r border-emerald-400">TH</span>
+                  <span className="w-4 text-center py-1 border-r border-emerald-400">F</span>
+                  <span className="w-6 text-center py-1 font-extrabold text-white">TOT</span>
                 </div>
               </div>
               {flatInstallPlays.length > 0 ? (
