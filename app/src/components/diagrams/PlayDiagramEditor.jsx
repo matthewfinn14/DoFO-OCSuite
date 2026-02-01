@@ -1594,27 +1594,33 @@ export default function PlayDiagramEditor({
             <div className="flex items-center gap-3">
               {/* Play Name Badge */}
               {playName && (
-                <div className="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-lg">
-                  <span className="text-sky-400 text-xs font-medium">PLAY</span>
-                  <span className="text-white font-semibold text-sm">
-                    {playName}
-                  </span>
-                </div>
+                <>
+                  <div className="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-lg">
+                    <span className="text-sky-400 text-xs font-medium">PLAY</span>
+                    <span className="text-white font-semibold text-sm">
+                      {playName}
+                    </span>
+                  </div>
+                  <div className="w-px h-8 bg-slate-600" />
+                </>
               )}
 
               {/* OL Call Text - editable for focus reference */}
               {isWizOline && (
-                <div className="flex items-center gap-2 bg-amber-700 px-3 py-1.5 rounded-lg">
-                  <span className="text-amber-200 text-xs font-medium">OL CALL</span>
-                  <input
-                    type="text"
-                    value={currentOLCall}
-                    onChange={(e) => setCurrentOLCall(e.target.value.toUpperCase())}
-                    placeholder="GREEN"
-                    className="w-24 px-2 py-0.5 text-sm font-semibold bg-amber-800 border border-amber-600 rounded text-white placeholder-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
-                    title="OL call for focus (e.g., GREEN from 888 GREEN BOOMER 1)"
-                  />
-                </div>
+                <>
+                  <div className="flex items-center gap-2 bg-amber-700 px-3 py-1.5 rounded-lg">
+                    <span className="text-amber-200 text-xs font-medium">OL CALL</span>
+                    <input
+                      type="text"
+                      value={currentOLCall}
+                      onChange={(e) => setCurrentOLCall(e.target.value.toUpperCase())}
+                      placeholder="GREEN"
+                      className="w-24 px-2 py-0.5 text-sm font-semibold bg-amber-800 border border-amber-600 rounded text-white placeholder-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                      title="OL call for focus (e.g., GREEN from 888 GREEN BOOMER 1)"
+                    />
+                  </div>
+                  <div className="w-px h-8 bg-slate-600" />
+                </>
               )}
 
               {/* WIZ Skill: Formation Group */}
@@ -1697,6 +1703,8 @@ export default function PlayDiagramEditor({
                 </div>
               )}
 
+              {isWizSkill && <div className="w-px h-8 bg-slate-600" />}
+
               {/* WIZ Skill: Add/Remove Player */}
               {isWizSkill && (
                 <div className="flex items-center gap-2">
@@ -1761,6 +1769,9 @@ export default function PlayDiagramEditor({
                   <Library size={14} /> Save As OL
                 </button>
               )}
+
+              <div className="w-px h-8 bg-slate-600" />
+
               {/* Save buttons */}
               <button
                 onClick={onCancel}
