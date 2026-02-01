@@ -1808,29 +1808,32 @@ export default function PlayDiagramEditor({
             <div className="flex items-center gap-4">
               {/* WIZ OL: Add a Letter */}
               {isWizOline && (
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-slate-500 font-medium mb-1 uppercase tracking-wide">Add a Letter</span>
-                  <div className="flex items-center gap-1">
-                    <input
-                      id="diagram-blocker-input"
-                      type="text"
-                      value={customLetterInput}
-                      onChange={(e) => setCustomLetterInput(e.target.value.toUpperCase())}
-                      placeholder="A"
-                      maxLength={2}
-                      className="w-8 px-1 py-1.5 text-center text-xs font-semibold bg-slate-800 border-2 border-black rounded text-white"
-                      title="Enter letter to add"
-                    />
-                    <button
-                      onClick={() => { if (customLetterInput) { toggleWizNode(customLetterInput); setCustomLetterInput(''); } }}
-                      disabled={!customLetterInput}
-                      className="px-2 py-1.5 text-xs font-semibold bg-sky-600 text-white border-2 border-sky-700 rounded hover:bg-sky-500 disabled:opacity-50 transition-colors"
-                      title="Add letter to canvas"
-                    >
-                      Add
-                    </button>
+                <>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-slate-500 font-medium mb-1 uppercase tracking-wide">Add a Letter</span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        id="diagram-blocker-input"
+                        type="text"
+                        value={customLetterInput}
+                        onChange={(e) => setCustomLetterInput(e.target.value.toUpperCase())}
+                        placeholder="A"
+                        maxLength={2}
+                        className="w-8 px-1 py-1.5 text-center text-xs font-semibold bg-slate-800 border-2 border-black rounded text-white"
+                        title="Enter letter to add"
+                      />
+                      <button
+                        onClick={() => { if (customLetterInput) { toggleWizNode(customLetterInput); setCustomLetterInput(''); } }}
+                        disabled={!customLetterInput}
+                        className="px-2 py-1.5 text-xs font-semibold bg-sky-600 text-white border-2 border-sky-700 rounded hover:bg-sky-500 disabled:opacity-50 transition-colors"
+                        title="Add letter to canvas"
+                      >
+                        Add
+                      </button>
+                    </div>
                   </div>
-                </div>
+                  <div className="w-px h-10 bg-slate-600" />
+                </>
               )}
 
               {/* Select/Group/Flip Tools */}
@@ -1869,6 +1872,8 @@ export default function PlayDiagramEditor({
                   </button>
                 </div>
               </div>
+
+              <div className="w-px h-10 bg-slate-600" />
 
               {/* Line Style Group */}
               <div className="flex flex-col">
@@ -1963,6 +1968,8 @@ export default function PlayDiagramEditor({
                 </div>
               </div>
 
+              <div className="w-px h-10 bg-slate-600" />
+
               {/* Shapes */}
               <div className="flex flex-col">
                 <span className="text-[10px] text-slate-500 font-medium mb-1 uppercase tracking-wide">Shapes</span>
@@ -1986,6 +1993,8 @@ export default function PlayDiagramEditor({
                   </button>
                 </div>
               </div>
+
+              <div className="w-px h-10 bg-slate-600" />
 
               {/* Color Selector */}
               <div className="flex flex-col">
@@ -2013,34 +2022,39 @@ export default function PlayDiagramEditor({
 
               {/* Add Text (WIZ SKILL only) */}
               {isWizSkill && (
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-slate-500 font-medium mb-1 uppercase tracking-wide">Add Text</span>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setSkillTextSize(Math.max(12, skillTextSize - 4))}
-                      className="px-1.5 py-1.5 text-xs font-bold bg-slate-800 text-white border-2 border-black rounded hover:bg-slate-700 transition-colors"
-                      title="Decrease text size"
-                    >
-                      −
-                    </button>
-                    <span className="text-xs text-slate-300 w-6 text-center font-medium">{skillTextSize}</span>
-                    <button
-                      onClick={() => setSkillTextSize(Math.min(72, skillTextSize + 4))}
-                      className="px-1.5 py-1.5 text-xs font-bold bg-slate-800 text-white border-2 border-black rounded hover:bg-slate-700 transition-colors"
-                      title="Increase text size"
-                    >
-                      +
-                    </button>
-                    <button
-                      onClick={() => setSelectedTool('text')}
-                      className={`px-2 py-1.5 text-xs font-semibold rounded border-2 transition-colors ${selectedTool === 'text' ? 'bg-orange-500 text-white border-orange-600' : 'bg-slate-800 text-white border-slate-600 hover:bg-slate-700'}`}
-                      title="Drag on canvas to draw text box"
-                    >
-                      Draw
-                    </button>
+                <>
+                  <div className="w-px h-10 bg-slate-600" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-slate-500 font-medium mb-1 uppercase tracking-wide">Add Text</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setSkillTextSize(Math.max(12, skillTextSize - 4))}
+                        className="px-1.5 py-1.5 text-xs font-bold bg-slate-800 text-white border-2 border-black rounded hover:bg-slate-700 transition-colors"
+                        title="Decrease text size"
+                      >
+                        −
+                      </button>
+                      <span className="text-xs text-slate-300 w-6 text-center font-medium">{skillTextSize}</span>
+                      <button
+                        onClick={() => setSkillTextSize(Math.min(72, skillTextSize + 4))}
+                        className="px-1.5 py-1.5 text-xs font-bold bg-slate-800 text-white border-2 border-black rounded hover:bg-slate-700 transition-colors"
+                        title="Increase text size"
+                      >
+                        +
+                      </button>
+                      <button
+                        onClick={() => setSelectedTool('text')}
+                        className={`px-2 py-1.5 text-xs font-semibold rounded border-2 transition-colors ${selectedTool === 'text' ? 'bg-orange-500 text-white border-orange-600' : 'bg-slate-800 text-white border-slate-600 hover:bg-slate-700'}`}
+                        title="Drag on canvas to draw text box"
+                      >
+                        Draw
+                      </button>
+                    </div>
                   </div>
-                </div>
+                </>
               )}
+
+              <div className="w-px h-10 bg-slate-600" />
 
               {/* History */}
               <div className="flex flex-col">
@@ -2071,6 +2085,8 @@ export default function PlayDiagramEditor({
                   </button>
                 </div>
               </div>
+
+              <div className="w-px h-10 bg-slate-600" />
 
               {/* Help Button */}
               <div className="flex flex-col">
