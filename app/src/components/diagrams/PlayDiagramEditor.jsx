@@ -129,12 +129,13 @@ const getWizSkillFormation = (positionColors = {}, positionNames = {}, skillPosi
   const olGroupId = `ol-group-${baseTime}`; // Group ID for OL
 
   // Always include 5 OL (grouped by default) - positionKey used for saving/restoring defaults
+  // Use user's abbreviation from positionNames, falling back to default
   const elements = [
-    { id: baseTime + 1, type: 'player', points: [{ x: wizCenter, y: olY }], color: getColor('C', cOL), label: 'C', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'C' },
-    { id: baseTime + 2, type: 'player', points: [{ x: wizCenter - spacing, y: olY }], color: getColor('LG', cOL), label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'LG' },
-    { id: baseTime + 3, type: 'player', points: [{ x: wizCenter + spacing, y: olY }], color: getColor('RG', cOL), label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'RG' },
-    { id: baseTime + 4, type: 'player', points: [{ x: wizCenter - (spacing * 2), y: olY }], color: getColor('LT', cOL), label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'LT' },
-    { id: baseTime + 5, type: 'player', points: [{ x: wizCenter + (spacing * 2), y: olY }], color: getColor('RT', cOL), label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'RT' },
+    { id: baseTime + 1, type: 'player', points: [{ x: wizCenter, y: olY }], color: getColor('C', cOL), label: positionNames['C'] || 'C', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'C' },
+    { id: baseTime + 2, type: 'player', points: [{ x: wizCenter - spacing, y: olY }], color: getColor('LG', cOL), label: positionNames['LG'] || 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'LG' },
+    { id: baseTime + 3, type: 'player', points: [{ x: wizCenter + spacing, y: olY }], color: getColor('RG', cOL), label: positionNames['RG'] || 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'RG' },
+    { id: baseTime + 4, type: 'player', points: [{ x: wizCenter - (spacing * 2), y: olY }], color: getColor('LT', cOL), label: positionNames['LT'] || 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'LT' },
+    { id: baseTime + 5, type: 'player', points: [{ x: wizCenter + (spacing * 2), y: olY }], color: getColor('RT', cOL), label: positionNames['RT'] || 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'RT' },
   ];
 
   // Add skill players based on the provided positions
@@ -616,14 +617,13 @@ export default function PlayDiagramEditor({
     const wizLos = 390;
 
     const isOL = ['C', 'LT', 'LG', 'RG', 'RT'].includes(posKey);
-    // For display, use short label (G instead of LG, T instead of LT)
-    const displayLabel = posKey === 'LG' || posKey === 'RG' ? 'G' : (posKey === 'LT' || posKey === 'RT' ? 'T' : posKey);
+    // Use user's abbreviation from positionNames, falling back to position key
     const newPlayer = {
       id: Date.now(),
       type: 'player',
       points: [{ x: wizCenter, y: wizLos + (isOL ? 0 : 60) }],
-      color: getPositionColor(posKey),
-      label: positionNames[posKey] || displayLabel,
+      color: getPositionColor(positionNames[posKey] || posKey),
+      label: positionNames[posKey] || posKey,
       shape: isOL ? 'text-only' : 'circle',
       variant: 'filled',
       fontSize: isOL ? 50 : undefined,
