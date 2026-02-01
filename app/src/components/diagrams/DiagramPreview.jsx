@@ -130,14 +130,9 @@ export default function DiagramPreview({
     };
   }, [elements]);
 
-  // Use content-fitted viewBox or default
-  // For wiz-skill mode, ALWAYS use full canvas viewBox to maintain background alignment
-  // For wiz-oline, use content-fitted bounds for better preview
-  const viewBox = isWizSkill
-    ? '0 0 950 600'  // Always use full canvas for wiz-skill (1.5:1 ratio)
-    : (bounds
-      ? `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}`
-      : '0 0 950 600');
+  // Use full canvas viewBox for consistent sizing
+  // Both wiz-skill and wiz-oline use the same canvas dimensions
+  const viewBox = '0 0 950 600';
 
   if (!elements || elements.length === 0) {
     if (fillContainer) {
@@ -219,7 +214,7 @@ export default function DiagramPreview({
       if (el.type === 'shape') {
         const { x, y } = el.points[0];
         const shapeColor = el.color || '#000000';
-        const size = 30;
+        const size = 90; // Match WIZ OL size from PlayDiagramEditor
 
         let shapeElement = null;
 
@@ -263,10 +258,10 @@ export default function DiagramPreview({
         } else if (el.shapeType === 'arrow-left') {
           const arrowLen = size * 3;
           const arrowHead = size * 0.8;
-          const strokeW = 5;
+          const strokeW = 20;
           shapeElement = (
             <g>
-              <line x1={x + arrowLen/2} y1={y} x2={x - arrowLen/2 + arrowHead} y2={y} stroke={shapeColor} strokeWidth="10" />
+              <line x1={x + arrowLen/2} y1={y} x2={x - arrowLen/2 + arrowHead} y2={y} stroke={shapeColor} strokeWidth={strokeW} strokeLinecap="round" />
               <polygon
                 points={`${x - arrowLen/2},${y} ${x - arrowLen/2 + arrowHead},${y - arrowHead/2} ${x - arrowLen/2 + arrowHead},${y + arrowHead/2}`}
                 fill="none"
@@ -279,10 +274,10 @@ export default function DiagramPreview({
         } else if (el.shapeType === 'arrow-right') {
           const arrowLen = size * 3;
           const arrowHead = size * 0.8;
-          const strokeW = 5;
+          const strokeW = 20;
           shapeElement = (
             <g>
-              <line x1={x - arrowLen/2} y1={y} x2={x + arrowLen/2 - arrowHead} y2={y} stroke={shapeColor} strokeWidth="10" />
+              <line x1={x - arrowLen/2} y1={y} x2={x + arrowLen/2 - arrowHead} y2={y} stroke={shapeColor} strokeWidth={strokeW} strokeLinecap="round" />
               <polygon
                 points={`${x + arrowLen/2},${y} ${x + arrowLen/2 - arrowHead},${y - arrowHead/2} ${x + arrowLen/2 - arrowHead},${y + arrowHead/2}`}
                 fill="none"

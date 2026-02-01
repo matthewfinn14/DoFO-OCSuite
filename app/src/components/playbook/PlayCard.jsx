@@ -132,23 +132,6 @@ export default function PlayCard({
           />
         </button>
 
-        {/* Complementary Plays button */}
-        {onOpenDetails && (
-          <button
-            onClick={handleOpenDetailsClick}
-            className={`w-6 h-6 flex items-center justify-center rounded ${
-              play.complementaryPlays?.length > 0
-                ? 'bg-emerald-500 text-white'
-                : 'bg-white/80 text-slate-600 hover:text-emerald-600'
-            }`}
-            title={play.complementaryPlays?.length > 0
-              ? `${play.complementaryPlays.length} complementary play(s) - Click to manage`
-              : 'Link complementary plays'}
-          >
-            <Handshake size={14} />
-          </button>
-        )}
-
         {/* Edit button */}
         <button
           onClick={handleEditClick}
@@ -168,9 +151,9 @@ export default function PlayCard({
             className="w-full h-32 object-cover"
           />
         ) : (
-          <div className={`h-32 flex items-center justify-center ${elements ? (diagramMode === 'wiz-skill' ? 'bg-slate-900' : 'bg-white') : 'bg-slate-800'}`}>
+          <div className={`aspect-[950/600] flex items-center justify-center ${elements ? (diagramMode === 'wiz-skill' ? 'bg-slate-900' : 'bg-white') : 'bg-slate-800'}`}>
             {elements ? (
-              <DiagramPreview elements={elements} mode={diagramMode} width="100%" height="100%" />
+              <DiagramPreview elements={elements} mode={diagramMode} width="100%" />
             ) : (
               <div className="text-slate-600 text-center">
                 <span className="text-3xl">📷</span>

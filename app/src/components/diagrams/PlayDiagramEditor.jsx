@@ -160,6 +160,8 @@ export default function PlayDiagramEditor({
   onSave,
   onSaveAs,
   onSaveAsNewPlay, // Callback to save as a new play in the library
+  onOverwritePlay, // Callback to overwrite an existing play
+  availablePlays = [], // List of existing plays for duplicate checking
   onCancel,
   onSaveFormation, // Callback to save a new formation template
   onSaveDefaultPositions, // Callback to save custom default positions
@@ -244,6 +246,7 @@ export default function PlayDiagramEditor({
   const [showSaveAsOLModal, setShowSaveAsOLModal] = useState(false);
   const [saveAsOLName, setSaveAsOLName] = useState('');
   const [saveAsOLType, setSaveAsOLType] = useState('protection'); // 'protection' | 'runBlocking'
+  const [saveAsOLDuplicateFound, setSaveAsOLDuplicateFound] = useState(false); // Show overwrite confirmation
   const [currentOLCall, setCurrentOLCall] = useState(olCallText); // Track current OL call (updates when loading from library)
 
   // History for undo/redo
@@ -358,12 +361,14 @@ export default function PlayDiagramEditor({
   const [saveAsBucketId, setSaveAsBucketId] = useState('');
   const [saveAsSyntaxValues, setSaveAsSyntaxValues] = useState({});
   const [saveAsPlayName, setSaveAsPlayName] = useState('');
+  const [saveAsPlayDuplicate, setSaveAsPlayDuplicate] = useState(null); // Existing play if duplicate found
 
   const openSaveAsPlayModal = () => {
     setSaveAsStep(playBuckets.length > 0 ? 1 : 2);
     setSaveAsBucketId('');
     setSaveAsSyntaxValues({});
     setSaveAsPlayName('');
+    setSaveAsPlayDuplicate(null);
     setShowSaveAsPlayModal(true);
   };
 
@@ -373,7 +378,7 @@ export default function PlayDiagramEditor({
     return bucket?.syntax || [];
   };
 
-  const handleSaveAsPlay = () => {
+  const handleSaveAsPlay = (forceCreate = false) => {
     const syntax = getSelectedBucketSyntax();
     let finalName = saveAsPlayName.trim().toUpperCase();
 
@@ -386,6 +391,19 @@ export default function PlayDiagramEditor({
     if (!finalName) {
       alert('Please enter a play name.');
       return;
+    }
+
+    // Check for duplicate play name
+    if (!forceCreate && availablePlays.length > 0) {
+      const existingPlay = availablePlays.find(p => {
+        const existingName = p.formation ? `${p.formation} ${p.name}`.toUpperCase() : p.name?.toUpperCase();
+        return existingName === finalName || p.name?.toUpperCase() === finalName;
+      });
+
+      if (existingPlay) {
+        setSaveAsPlayDuplicate(existingPlay);
+        return;
+      }
     }
 
     const selectedBucket = playBuckets.find(b => b.id === saveAsBucketId);
@@ -401,6 +419,19 @@ export default function PlayDiagramEditor({
     }
 
     setShowSaveAsPlayModal(false);
+    setSaveAsPlayDuplicate(null);
+  };
+
+  const handleOverwritePlay = () => {
+    if (!saveAsPlayDuplicate || !onOverwritePlay) return;
+
+    onOverwritePlay({
+      playId: saveAsPlayDuplicate.id,
+      wizSkillData: elements
+    });
+
+    setShowSaveAsPlayModal(false);
+    setSaveAsPlayDuplicate(null);
   };
 
   const openDefineFormationModal = () => {
@@ -1665,8 +1696,8 @@ export default function PlayDiagramEditor({
                     >
                       <option value="">Load Formation...</option>
                       {formations.map(f => (
-                        <option key={f.id} value={f.id}>
-                          {f.personnelCode ? `${f.personnelCode} ` : ''}{f.name}
+                        <option key={f.id} value={f.id} disabled={!f.positions?.length}>
+                          {f.personnelCode ? `${f.personnelCode} ` : ''}{f.name}{!f.positions?.length ? ' (no diagram)' : ''}
                         </option>
                       ))}
                     </select>
@@ -1679,7 +1710,7 @@ export default function PlayDiagramEditor({
                       className="px-2 py-1.5 text-xs font-semibold bg-slate-800 text-white border-2 border-slate-500 rounded hover:bg-slate-700 transition-colors"
                       title="Save current positions as a formation template"
                     >
-                      Define
+                      Define Formation
                     </button>
                   )}
 
@@ -1761,17 +1792,6 @@ export default function PlayDiagramEditor({
                 </button>
               )}
 
-              {/* WIZ OL: Save to Library */}
-              {isWizOline && onSaveToOLLibrary && (
-                <button
-                  onClick={() => setShowSaveAsOLModal(true)}
-                  className="px-3 py-1.5 text-xs font-semibold bg-purple-600 text-white border-2 border-purple-700 rounded hover:bg-purple-500 flex items-center gap-1 transition-colors"
-                  title="Save as new OL scheme in library"
-                >
-                  <Library size={14} /> Save As OL
-                </button>
-              )}
-
               <div className="w-px h-8 bg-slate-600" />
 
               {/* Save buttons */}
@@ -1782,7 +1802,7 @@ export default function PlayDiagramEditor({
               >
                 Cancel
               </button>
-              {onSaveAs && (
+              {onSaveAs && !isWizOline && (
                 <button
                   onClick={() => {
                     const name = prompt('Enter name for new protection/scheme:');
@@ -1802,16 +1822,27 @@ export default function PlayDiagramEditor({
                   className="px-3 py-1.5 text-xs bg-amber-600 text-white rounded hover:bg-amber-500 flex items-center gap-1 transition-colors"
                   title="Save as a new play in the library"
                 >
-                  <Plus size={14} /> Save As New
+                  <Plus size={14} /> Save As New Play
                 </button>
               )}
-              <button
-                onClick={() => onSave({ elements })}
-                className="px-3 py-1.5 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-500 flex items-center gap-1 font-medium transition-colors"
-                title="Save changes"
-              >
-                <Save size={14} /> Save
-              </button>
+              {/* WIZ OL: Save button opens modal to save to library */}
+              {isWizOline && onSaveToOLLibrary ? (
+                <button
+                  onClick={() => { setSaveAsOLName(currentOLCall || ''); setSaveAsOLDuplicateFound(false); setShowSaveAsOLModal(true); }}
+                  className="px-3 py-1.5 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-500 flex items-center gap-1 font-medium transition-colors"
+                  title="Save to OL Library and link to play"
+                >
+                  <Save size={14} /> Save
+                </button>
+              ) : (
+                <button
+                  onClick={() => onSave({ elements, olCall: isWizOline ? currentOLCall : undefined })}
+                  className="px-3 py-1.5 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-500 flex items-center gap-1 font-medium transition-colors"
+                  title="Save changes"
+                >
+                  <Save size={14} /> Save
+                </button>
+              )}
             </div>
           </div>
 
@@ -2365,79 +2396,157 @@ export default function PlayDiagramEditor({
 
       {/* Save As OL Modal */}
       {showSaveAsOLModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowSaveAsOLModal(false)}>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => { setShowSaveAsOLModal(false); setSaveAsOLDuplicateFound(false); }}>
           <div className="bg-slate-800 rounded-xl max-w-md w-full mx-4 shadow-2xl border border-slate-600" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-slate-700">
-              <h3 className="text-lg font-semibold text-white">Save to OL Library</h3>
-              <button onClick={() => setShowSaveAsOLModal(false)} className="text-slate-400 hover:text-white">
+              <h3 className="text-lg font-semibold text-white">
+                {saveAsOLDuplicateFound ? 'Name Already Exists' : 'Save OL Scheme'}
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">Saves to library and links to this play</p>
+              <button onClick={() => { setShowSaveAsOLModal(false); setSaveAsOLDuplicateFound(false); }} className="text-slate-400 hover:text-white">
                 <X size={20} />
               </button>
             </div>
 
             <div className="p-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Scheme Name</label>
-                <input
-                  type="text"
-                  value={saveAsOLName}
-                  onChange={(e) => setSaveAsOLName(e.target.value.toUpperCase())}
-                  placeholder="e.g., BROWN, ZONE"
-                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                  autoFocus
-                />
-              </div>
+              {saveAsOLDuplicateFound ? (
+                // Duplicate confirmation view
+                <>
+                  <div className="text-center py-2">
+                    <p className="text-amber-400 font-medium mb-2">
+                      "{saveAsOLName}" already exists in the {saveAsOLType === 'protection' ? 'Pass Protection' : 'Run Blocking'} library.
+                    </p>
+                    <p className="text-slate-400 text-sm">
+                      Would you like to overwrite it or use a different name?
+                    </p>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={() => setSaveAsOLDuplicateFound(false)}
+                      className="flex-1 px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors"
+                    >
+                      Change Name
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (onSaveToOLLibrary) {
+                          const schemeId = `ol-${Date.now()}`;
+                          onSaveToOLLibrary({
+                            elements,
+                            name: saveAsOLName.trim(),
+                            type: saveAsOLType,
+                            overwrite: true
+                          });
+                          // Also link play to this scheme
+                          if (onSave) {
+                            onSave({
+                              wizOlineRef: {
+                                id: schemeId,
+                                name: saveAsOLName.trim().toUpperCase(),
+                                type: saveAsOLType,
+                                diagramData: elements
+                              }
+                            });
+                          }
+                          setShowSaveAsOLModal(false);
+                          setSaveAsOLName('');
+                          setSaveAsOLDuplicateFound(false);
+                        }
+                      }}
+                      className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-500 transition-colors font-medium"
+                    >
+                      Overwrite
+                    </button>
+                  </div>
+                </>
+              ) : (
+                // Normal save view
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">Scheme Name</label>
+                    <input
+                      type="text"
+                      value={saveAsOLName}
+                      onChange={(e) => setSaveAsOLName(e.target.value.toUpperCase())}
+                      placeholder="e.g., BROWN, ZONE"
+                      className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                      autoFocus
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1">Type</label>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setSaveAsOLType('protection')}
-                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      saveAsOLType === 'protection'
-                        ? 'bg-sky-600 text-white'
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                    }`}
-                  >
-                    Pass Protection
-                  </button>
-                  <button
-                    onClick={() => setSaveAsOLType('runBlocking')}
-                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      saveAsOLType === 'runBlocking'
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                    }`}
-                  >
-                    Run Blocking
-                  </button>
-                </div>
-              </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">Type</label>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setSaveAsOLType('protection')}
+                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          saveAsOLType === 'protection'
+                            ? 'bg-sky-600 text-white'
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        Pass Protection
+                      </button>
+                      <button
+                        onClick={() => setSaveAsOLType('runBlocking')}
+                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          saveAsOLType === 'runBlocking'
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                        }`}
+                      >
+                        Run Blocking
+                      </button>
+                    </div>
+                  </div>
 
-              <div className="flex gap-2 pt-2">
-                <button
-                  onClick={() => setShowSaveAsOLModal(false)}
-                  className="flex-1 px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    if (saveAsOLName.trim() && onSaveToOLLibrary) {
-                      onSaveToOLLibrary({
-                        elements,
-                        name: saveAsOLName.trim(),
-                        type: saveAsOLType
-                      });
-                      setShowSaveAsOLModal(false);
-                      setSaveAsOLName('');
-                    }
-                  }}
-                  disabled={!saveAsOLName.trim()}
-                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-                >
-                  Save to Library
-                </button>
-              </div>
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={() => { setShowSaveAsOLModal(false); setSaveAsOLDuplicateFound(false); }}
+                      className="flex-1 px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (saveAsOLName.trim() && onSaveToOLLibrary) {
+                          // Check for duplicate
+                          const listToCheck = saveAsOLType === 'protection' ? olSchemes.protections : olSchemes.runBlocking;
+                          const exists = listToCheck.some(s => s.name?.toUpperCase() === saveAsOLName.trim().toUpperCase());
+
+                          if (exists) {
+                            setSaveAsOLDuplicateFound(true);
+                          } else {
+                            const schemeId = `ol-${Date.now()}`;
+                            onSaveToOLLibrary({
+                              elements,
+                              name: saveAsOLName.trim(),
+                              type: saveAsOLType
+                            });
+                            // Also link play to this scheme
+                            if (onSave) {
+                              onSave({
+                                wizOlineRef: {
+                                  id: schemeId,
+                                  name: saveAsOLName.trim().toUpperCase(),
+                                  type: saveAsOLType,
+                                  diagramData: elements
+                                }
+                              });
+                            }
+                            setShowSaveAsOLModal(false);
+                            setSaveAsOLName('');
+                          }
+                        }
+                      }}
+                      disabled={!saveAsOLName.trim()}
+                      className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -2632,116 +2741,146 @@ export default function PlayDiagramEditor({
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="bg-slate-800 rounded-lg shadow-xl w-96 overflow-hidden">
             <div className="p-4 border-b border-slate-700">
-              <h3 className="text-lg font-semibold text-white">Save As New Play</h3>
+              <h3 className="text-lg font-semibold text-white">
+                {saveAsPlayDuplicate ? 'Play Already Exists' : 'Save As New Play'}
+              </h3>
               <p className="text-sm text-slate-400 mt-1">
-                {saveAsStep === 1 ? 'Select a play bucket (optional)' : 'Enter play details'}
+                {saveAsPlayDuplicate
+                  ? 'A play with this name already exists'
+                  : saveAsStep === 1 ? 'Select a play bucket (optional)' : 'Enter play details'}
               </p>
             </div>
 
             <div className="p-4 space-y-4">
-              {/* Step 1: Bucket Selection */}
-              {saveAsStep === 1 && playBuckets.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Play Bucket</label>
-                  <select
-                    value={saveAsBucketId}
-                    onChange={(e) => setSaveAsBucketId(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
-                  >
-                    <option value="">No Bucket (Simple Name)</option>
-                    {playBuckets.map(b => (
-                      <option key={b.id} value={b.id}>{b.label || b.name}</option>
-                    ))}
-                  </select>
-                  <p className="text-xs text-slate-500 mt-1">
-                    {saveAsBucketId ? 'Play will use bucket syntax for naming' : 'You will enter a simple play name'}
+              {/* Duplicate confirmation view */}
+              {saveAsPlayDuplicate ? (
+                <div className="text-center py-2">
+                  <p className="text-amber-400 font-medium mb-2">
+                    "{saveAsPlayDuplicate.formation ? `${saveAsPlayDuplicate.formation} ${saveAsPlayDuplicate.name}` : saveAsPlayDuplicate.name}" already exists.
+                  </p>
+                  <p className="text-slate-400 text-sm">
+                    Would you like to overwrite it or use a different name?
                   </p>
                 </div>
-              )}
-
-              {/* Step 2: Syntax Fields or Simple Name */}
-              {saveAsStep === 2 && (
+              ) : (
                 <>
-                  {getSelectedBucketSyntax().length > 0 ? (
-                    <div className="space-y-3">
-                      <p className="text-xs text-amber-400 font-medium">Fill in the syntax fields:</p>
-                      {getSelectedBucketSyntax().map((field, idx) => (
-                        <div key={field.id || idx}>
-                          <label className="block text-sm font-medium text-slate-300 mb-1">
-                            {field.label || field.name || `Field ${idx + 1}`}
-                          </label>
-                          {field.options && field.options.length > 0 ? (
-                            <select
-                              value={saveAsSyntaxValues[field.id] || ''}
-                              onChange={(e) => setSaveAsSyntaxValues(prev => ({ ...prev, [field.id]: e.target.value }))}
-                              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
-                            >
-                              <option value="">Select...</option>
-                              {field.options.map((opt, i) => (
-                                <option key={i} value={typeof opt === 'string' ? opt : opt.value}>
-                                  {typeof opt === 'string' ? opt : opt.label}
-                                </option>
-                              ))}
-                            </select>
-                          ) : (
-                            <input
-                              type="text"
-                              value={saveAsSyntaxValues[field.id] || ''}
-                              onChange={(e) => setSaveAsSyntaxValues(prev => ({ ...prev, [field.id]: e.target.value }))}
-                              placeholder={field.placeholder || `Enter ${field.label || 'value'}`}
-                              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
-                            />
-                          )}
-                        </div>
-                      ))}
-                      <div className="mt-2 p-2 bg-slate-900 rounded">
-                        <span className="text-xs text-slate-400">Preview: </span>
-                        <span className="text-sm text-white font-medium">
-                          {getSelectedBucketSyntax().map(f => saveAsSyntaxValues[f.id] || '___').join(' ')}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
+                  {/* Step 1: Bucket Selection */}
+                  {saveAsStep === 1 && playBuckets.length > 0 && (
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">Play Name</label>
-                      <input
-                        type="text"
-                        value={saveAsPlayName}
-                        onChange={(e) => setSaveAsPlayName(e.target.value)}
-                        placeholder="Enter play name"
+                      <label className="block text-sm font-medium text-slate-300 mb-2">Play Bucket</label>
+                      <select
+                        value={saveAsBucketId}
+                        onChange={(e) => setSaveAsBucketId(e.target.value)}
                         className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
-                        autoFocus
-                      />
+                      >
+                        <option value="">No Bucket (Simple Name)</option>
+                        {playBuckets.map(b => (
+                          <option key={b.id} value={b.id}>{b.label || b.name}</option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {saveAsBucketId ? 'Play will use bucket syntax for naming' : 'You will enter a simple play name'}
+                      </p>
                     </div>
+                  )}
+
+                  {/* Step 2: Syntax Fields or Simple Name */}
+                  {saveAsStep === 2 && (
+                    <>
+                      {getSelectedBucketSyntax().length > 0 ? (
+                        <div className="space-y-3">
+                          <p className="text-xs text-amber-400 font-medium">Fill in the syntax fields:</p>
+                          {getSelectedBucketSyntax().map((field, idx) => (
+                            <div key={field.id || idx}>
+                              <label className="block text-sm font-medium text-slate-300 mb-1">
+                                {field.label || field.name || `Field ${idx + 1}`}
+                              </label>
+                              {field.options && field.options.length > 0 ? (
+                                <select
+                                  value={saveAsSyntaxValues[field.id] || ''}
+                                  onChange={(e) => setSaveAsSyntaxValues(prev => ({ ...prev, [field.id]: e.target.value }))}
+                                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+                                >
+                                  <option value="">Select...</option>
+                                  {field.options.map((opt, i) => (
+                                    <option key={i} value={typeof opt === 'string' ? opt : opt.value}>
+                                      {typeof opt === 'string' ? opt : opt.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={saveAsSyntaxValues[field.id] || ''}
+                                  onChange={(e) => setSaveAsSyntaxValues(prev => ({ ...prev, [field.id]: e.target.value }))}
+                                  placeholder={field.placeholder || `Enter ${field.label || 'value'}`}
+                                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+                                />
+                              )}
+                            </div>
+                          ))}
+                          <div className="mt-2 p-2 bg-slate-900 rounded">
+                            <span className="text-xs text-slate-400">Preview: </span>
+                            <span className="text-sm text-white font-medium">
+                              {getSelectedBucketSyntax().map(f => saveAsSyntaxValues[f.id] || '___').join(' ')}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <label className="block text-sm font-medium text-slate-300 mb-2">Play Name</label>
+                          <input
+                            type="text"
+                            value={saveAsPlayName}
+                            onChange={(e) => setSaveAsPlayName(e.target.value)}
+                            placeholder="Enter play name"
+                            className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+                            autoFocus
+                          />
+                        </div>
+                      )}
+                    </>
                   )}
                 </>
               )}
             </div>
 
             <div className="flex gap-2 p-4 border-t border-slate-700">
-              <button
-                onClick={() => setShowSaveAsPlayModal(false)}
-                className="flex-1 px-3 py-2 text-sm bg-slate-600 text-slate-200 rounded hover:bg-slate-500"
-              >
-                Cancel
-              </button>
-              {saveAsStep === 1 && playBuckets.length > 0 ? (
-                <button
-                  onClick={() => setSaveAsStep(2)}
-                  className="flex-1 px-3 py-2 text-sm bg-amber-600 text-white rounded hover:bg-amber-500 font-medium"
-                >
-                  Next
-                </button>
+              {saveAsPlayDuplicate ? (
+                <>
+                  <button
+                    onClick={() => setSaveAsPlayDuplicate(null)}
+                    className="flex-1 px-3 py-2 text-sm bg-slate-600 text-slate-200 rounded hover:bg-slate-500"
+                  >
+                    Change Name
+                  </button>
+                  {onOverwritePlay && (
+                    <button
+                      onClick={handleOverwritePlay}
+                      className="flex-1 px-3 py-2 text-sm bg-amber-600 text-white rounded hover:bg-amber-500 font-medium"
+                    >
+                      Overwrite
+                    </button>
+                  )}
+                </>
               ) : (
-                <button
-                  onClick={handleSaveAsPlay}
-                  disabled={getSelectedBucketSyntax().length > 0
-                    ? !getSelectedBucketSyntax().some(f => saveAsSyntaxValues[f.id])
-                    : !saveAsPlayName.trim()}
-                  className="flex-1 px-3 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                >
-                  Save to Library
-                </button>
+                <>
+                  <button
+                    onClick={() => { setShowSaveAsPlayModal(false); setSaveAsPlayDuplicate(null); }}
+                    className="flex-1 px-3 py-2 text-sm bg-slate-600 text-slate-200 rounded hover:bg-slate-500"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleSaveAsPlay()}
+                    disabled={getSelectedBucketSyntax().length > 0
+                      ? !getSelectedBucketSyntax().some(f => saveAsSyntaxValues[f.id])
+                      : !saveAsPlayName.trim()}
+                    className="flex-1 px-3 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  >
+                    Save As New Play
+                  </button>
+                </>
               )}
             </div>
           </div>

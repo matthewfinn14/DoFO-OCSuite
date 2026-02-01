@@ -116,6 +116,7 @@ export default function WristbandBuilder() {
 
   // WIZ editing state
   const [editingSkillPlay, setEditingSkillPlay] = useState(null);
+  const [editingOLPlay, setEditingOLPlay] = useState(null);
   const [showOLLibraryForPlay, setShowOLLibraryForPlay] = useState(null);
 
   // Use context's selectedPlayId for wristband assignment
@@ -401,6 +402,67 @@ export default function WristbandBuilder() {
     setEditingSkillPlay(null);
   };
 
+  // Edit WIZ OL diagram
+  const handleEditOLDiagram = (play) => {
+    if (play) {
+      setEditingOLPlay(play);
+    }
+  };
+
+  // Save WIZ OL diagram - now receives wizOlineRef from library
+  const handleSaveOLDiagram = (data) => {
+    if (editingOLPlay && updatePlay) {
+      if (data.wizOlineRef) {
+        // Saving to library - link play to the scheme
+        updatePlay(editingOLPlay.id, {
+          wizOlineRef: data.wizOlineRef,
+          wizOlineData: null, // Clear any standalone data
+          olCall: data.wizOlineRef.name
+        });
+      } else if (data.elements) {
+        // Legacy: direct save (shouldn't happen anymore)
+        updatePlay(editingOLPlay.id, {
+          wizOlineData: data.elements,
+          olCall: data.olCall || editingOLPlay.olCall
+        });
+      }
+    }
+    setEditingOLPlay(null);
+  };
+
+  // Save to OL Library (from diagram editor)
+  const handleSaveToOLLibrary = async ({ elements, name, type, overwrite = false }) => {
+    const listKey = type === 'protection' ? 'passProtections' : 'runBlocking';
+    const currentList = setupConfig?.[listKey] || [];
+
+    // Check for existing scheme with same name
+    const existingIndex = currentList.findIndex(s => s.name?.toUpperCase() === name.toUpperCase());
+
+    if (existingIndex >= 0 && !overwrite) {
+      // Name exists - this will be handled by the modal in PlayDiagramEditor
+      return { exists: true, existingScheme: currentList[existingIndex] };
+    }
+
+    const newScheme = {
+      id: overwrite && existingIndex >= 0 ? currentList[existingIndex].id : `ol-${Date.now()}`,
+      name: name.toUpperCase(),
+      diagramData: elements
+    };
+
+    let updatedList;
+    if (overwrite && existingIndex >= 0) {
+      // Replace existing
+      updatedList = [...currentList];
+      updatedList[existingIndex] = newScheme;
+    } else {
+      // Add new
+      updatedList = [...currentList, newScheme];
+    }
+
+    await updateSetupConfig({ [listKey]: updatedList });
+    return { success: true };
+  };
+
   // Handle OL library selection
   const handleSelectOLScheme = (play) => {
     if (play && !play.wizOlineRef) {
@@ -591,6 +653,7 @@ export default function WristbandBuilder() {
                   getPlayForSlot={getPlayForSlot}
                   onAssign={handleAssignSlot}
                   onClear={handleClearSlot}
+                  onEditDiagram={handleEditOLDiagram}
                   onSelectOLScheme={handleSelectOLScheme}
                   olSchemes={olSchemes}
                   selectedPlayId={selectedPlayId}
@@ -684,6 +747,24 @@ export default function WristbandBuilder() {
               onSaveFormation={handleSaveFormation}
               onSave={handleSaveSkillDiagram}
               onCancel={() => setEditingSkillPlay(null)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* WIZ OL Diagram Editor Modal */}
+      {editingOLPlay && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[60]">
+          <div className="bg-slate-800 rounded-lg w-[95vw] h-[95vh] overflow-hidden">
+            <PlayDiagramEditor
+              mode="wiz-oline"
+              initialData={editingOLPlay.wizOlineData ? { elements: editingOLPlay.wizOlineData } : null}
+              playName={editingOLPlay.formation ? `${editingOLPlay.formation} ${editingOLPlay.name}` : editingOLPlay.name}
+              olCallText={editingOLPlay.olCall || editingOLPlay.wizOlineRef?.name || ''}
+              olSchemes={olSchemes}
+              onSaveToOLLibrary={handleSaveToOLLibrary}
+              onSave={handleSaveOLDiagram}
+              onCancel={() => setEditingOLPlay(null)}
             />
           </div>
         </div>
@@ -994,21 +1075,21 @@ function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, on
               const isEditing = editingSlot === slot;
 
               // For SKILL view: show wizAbbreviation if exists, otherwise full play call
-              // For OLINE view: show OL WIZ card name (wizOlineRef.name), empty if none assigned
+              // For OLINE view: show OL call text (olCall), or library scheme name, or empty
               const fullPlayCall = play?.formation
                 ? `${play.formation} ${play.name}`
                 : (play?.name || '');
               const displayName = viewType === 'skill'
                 ? (play?.wizAbbreviation || fullPlayCall)
-                : (play?.wizOlineRef?.name || '');
+                : (play?.olCall || play?.wizOlineRef?.name || '');
 
               // Get diagram data for preview - fall back to other diagram sources
               const diagramData = viewType === 'skill'
                 ? (play?.wizSkillData || play?.rooskiSkillData || (Array.isArray(play?.diagramData) ? play?.diagramData : play?.diagramData?.elements))
-                : play?.wizOlineRef?.diagramData;
+                : (play?.wizOlineData || play?.wizOlineRef?.diagramData);
 
-              // For OLINE view without wizOlineRef, show option to select
-              const showOLSelector = viewType === 'oline' && play && !play.wizOlineRef;
+              // For OLINE view without any OL diagram, show option to select
+              const showOLSelector = viewType === 'oline' && play && !play.wizOlineRef && !play.wizOlineData?.length;
 
               return (
                 <div
@@ -1029,25 +1110,25 @@ function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, on
                   {/* Diagram area - constrained to cell */}
                   <div
                     onClick={(e) => {
-                      if (viewType === 'skill' && play && onEditDiagram) {
+                      if (play && onEditDiagram) {
                         e.stopPropagation();
-                        onEditDiagram(play);
+                        onEditDiagram(play, viewType);
                       }
                     }}
                     style={{
                       flex: 1,
                       position: 'relative',
                       background: '#f9fafb',
-                      cursor: viewType === 'skill' && play ? 'pointer' : 'default',
+                      cursor: play ? 'pointer' : 'default',
                       overflow: 'hidden',
                       minHeight: 0
                     }}
                   >
                     {diagramData?.length > 0 ? (
                       <div style={{ position: 'absolute', inset: 0 }}>
-                        <DiagramPreview elements={diagramData} fillContainer={true} mode="wiz-skill" />
+                        <DiagramPreview elements={diagramData} fillContainer={true} mode={viewType === 'skill' ? 'wiz-skill' : 'wiz-oline'} />
                       </div>
-                    ) : viewType === 'skill' && play ? (
+                    ) : play && !diagramData?.length ? (
                       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <span style={{ fontSize: '16px', opacity: 0.5 }} title="Click to edit diagram">✏️</span>
                       </div>

@@ -5901,9 +5901,7 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
     const newProt = {
       id: Date.now().toString(),
       name: name.toUpperCase(),
-      slideDirection: 'right',
-      manSide: 'left',
-      callText: '',
+      assignments: { LT: '', LG: '', C: '', RG: '', RT: '' },
       notes: '',
       diagramData: null
     };
@@ -6018,102 +6016,68 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {passProtections.map((prot, idx) => (
-            <div key={prot.id} className="bg-slate-700/50 rounded-lg border border-slate-600 p-4">
-              <div className="flex justify-between items-center mb-3">
-                <input
-                  id={`protection-name-${prot.id}`}
-                  type="text"
-                  value={prot.name}
-                  onChange={(e) => updateProtection(idx, { name: e.target.value.toUpperCase() })}
-                  className="font-bold text-lg bg-transparent border-none text-white w-24"
-                  aria-label="Protection name"
-                />
-                <button onClick={() => deleteProtection(prot.id)} className="text-red-400 hover:text-red-300">
-                  <Trash2 size={14} />
-                </button>
+            <div key={prot.id} className="rounded-lg border border-slate-600 p-3 flex gap-3">
+              {/* Left side: Diagram */}
+              <div
+                onClick={() => setEditingDiagram({ type: 'protection', index: idx })}
+                className="flex-shrink-0 w-40 h-28 rounded border border-slate-600 cursor-pointer hover:border-sky-500 transition-colors overflow-hidden"
+              >
+                {prot.diagramData && prot.diagramData.length > 0 ? (
+                  <DiagramPreview
+                    elements={prot.diagramData}
+                    width={160}
+                    height={112}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-slate-800 text-slate-500">
+                    <Image size={24} />
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <div>
-                  <label htmlFor={`protection-slide-${prot.id}`} className="text-xs text-slate-400 block mb-1">Slide Direction</label>
-                  <select
-                    id={`protection-slide-${prot.id}`}
-                    value={prot.slideDirection}
-                    onChange={(e) => updateProtection(idx, { slideDirection: e.target.value })}
-                    className="w-full px-2 py-1.5 bg-slate-600 border border-slate-500 rounded text-white text-sm"
-                  >
-                    <option value="left">Slide Left</option>
-                    <option value="right">Slide Right</option>
-                    <option value="none">No Slide</option>
-                  </select>
+              {/* Right side: Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-center mb-2">
+                  <input
+                    id={`protection-name-${prot.id}`}
+                    type="text"
+                    value={prot.name}
+                    onChange={(e) => updateProtection(idx, { name: e.target.value.toUpperCase() })}
+                    className="font-bold text-lg bg-transparent border-none text-white w-28"
+                    aria-label="Protection name"
+                  />
+                  <button onClick={() => deleteProtection(prot.id)} className="text-red-400 hover:text-red-300">
+                    <Trash2 size={14} />
+                  </button>
                 </div>
-                <div>
-                  <label htmlFor={`protection-man-side-${prot.id}`} className="text-xs text-slate-400 block mb-1">Man Side</label>
-                  <select
-                    id={`protection-man-side-${prot.id}`}
-                    value={prot.manSide}
-                    onChange={(e) => updateProtection(idx, { manSide: e.target.value })}
-                    className="w-full px-2 py-1.5 bg-slate-600 border border-slate-500 rounded text-white text-sm"
-                  >
-                    <option value="left">Man Left</option>
-                    <option value="right">Man Right</option>
-                    <option value="none">N/A</option>
-                  </select>
+
+                {/* Position Assignments */}
+                <div className="grid grid-cols-5 gap-1 mb-2">
+                  {['LT', 'LG', 'C', 'RG', 'RT'].map((pos) => (
+                    <div key={pos} className="text-center">
+                      <span className="text-[10px] text-slate-500 font-medium block">{pos}</span>
+                      <input
+                        type="text"
+                        value={prot.assignments?.[pos] || ''}
+                        onChange={(e) => updateProtection(idx, {
+                          assignments: { ...(prot.assignments || {}), [pos]: e.target.value }
+                        })}
+                        placeholder="—"
+                        className="w-full px-1 py-1 bg-transparent border border-slate-600 rounded text-white text-xs text-center focus:border-sky-500 focus:outline-none"
+                      />
+                    </div>
+                  ))}
                 </div>
-              </div>
 
-              <div className="mb-2">
-                <label htmlFor={`protection-call-text-${prot.id}`} className="text-xs text-slate-400 block mb-1">Call Text</label>
-                <input
-                  id={`protection-call-text-${prot.id}`}
-                  type="text"
-                  value={prot.callText || ''}
-                  onChange={(e) => updateProtection(idx, { callText: e.target.value })}
-                  placeholder="e.g., Slide R - Man L"
-                  className="w-full px-2 py-1.5 bg-slate-600 border border-slate-500 rounded text-white text-sm"
-                />
-              </div>
-
-              <div className="mb-3">
-                <label htmlFor={`protection-notes-${prot.id}`} className="text-xs text-slate-400 block mb-1">Notes</label>
+                {/* Notes */}
                 <textarea
                   id={`protection-notes-${prot.id}`}
                   value={prot.notes || ''}
                   onChange={(e) => updateProtection(idx, { notes: e.target.value })}
-                  placeholder="Optional notes..."
+                  placeholder="Notes..."
                   rows={2}
-                  className="w-full px-2 py-1.5 bg-slate-600 border border-slate-500 rounded text-white text-sm resize-none"
+                  className="w-full px-2 py-1 bg-transparent border border-slate-600 rounded text-white text-xs resize-none focus:border-sky-500 focus:outline-none"
                 />
-              </div>
-
-              {/* Diagram Section */}
-              <div className="pt-3 border-t border-slate-600">
-                <span className="text-xs text-slate-400 block mb-2">Blocking Diagram</span>
-                <div className="flex items-center gap-3">
-                  {prot.diagramData && prot.diagramData.length > 0 ? (
-                    <DiagramPreview
-                      elements={prot.diagramData}
-                      width={120}
-                      height={80}
-                      onClick={() => setEditingDiagram({ type: 'protection', index: idx })}
-                    />
-                  ) : (
-                    <button
-                      onClick={() => setEditingDiagram({ type: 'protection', index: idx })}
-                      className="flex items-center gap-2 px-3 py-2 bg-slate-600 text-slate-300 rounded hover:bg-slate-500 text-sm"
-                    >
-                      <Image size={14} /> Add Diagram
-                    </button>
-                  )}
-                  {prot.diagramData && prot.diagramData.length > 0 && (
-                    <button
-                      onClick={() => setEditingDiagram({ type: 'protection', index: idx })}
-                      className="text-xs text-sky-400 hover:text-sky-300"
-                    >
-                      Edit
-                    </button>
-                  )}
-                </div>
               </div>
             </div>
           ))}

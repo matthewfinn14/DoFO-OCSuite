@@ -272,10 +272,14 @@ export default function Playbook() {
   }, [playsArray, activePhase]);
 
   // Get unique formations for current phase
-  const formations = useMemo(() => {
+  // Formation names from existing plays (for filtering/display)
+  const formationNames = useMemo(() => {
     const formationSet = new Set(phasePlays.map(p => p.formation).filter(Boolean));
     return Array.from(formationSet).sort();
   }, [phasePlays]);
+
+  // Formation objects from setupConfig (for diagram editor)
+  const formations = useMemo(() => setupConfig?.formations || [], [setupConfig?.formations]);
 
   // Filter plays
   const filteredPlays = useMemo(() => {
@@ -606,7 +610,7 @@ export default function Playbook() {
               className="w-full h-[38px] px-3 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
             >
               <option value="">All</option>
-              {formations.map(f => (
+              {formationNames.map(f => (
                 <option key={f} value={f}>{f}</option>
               ))}
             </select>

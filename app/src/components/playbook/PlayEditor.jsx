@@ -1676,16 +1676,16 @@ export default function PlayEditor({
                           {formData.wizOlineRef.diagramData && (
                             <DiagramPreview
                               elements={formData.wizOlineRef.diagramData}
-                              width={180}
-                              height={120}
+                              mode="wiz-oline"
+                              width="100%"
                             />
                           )}
                         </div>
                       ) : (
                         <DiagramPreview
                           elements={formData.wizOlineData}
-                          width={200}
-                          height={133}
+                          mode="wiz-oline"
+                          width="100%"
                           onClick={() => setShowOLEditor(true)}
                         />
                       )}
@@ -2213,6 +2213,7 @@ export default function PlayEditor({
               formations={formations}
               personnelGroupings={personnelGroupings}
               playBuckets={playBuckets}
+              availablePlays={availablePlays}
               offensePositions={offensePositions}
               positionColors={positionColors}
               positionNames={positionNames}
@@ -2223,6 +2224,20 @@ export default function PlayEditor({
               onSave={(data) => {
                 setFormData(prev => ({ ...prev, wizSkillData: data.elements }));
                 setShowSkillEditor(false);
+              }}
+              onOverwritePlay={async ({ playId, wizSkillData }) => {
+                // Find and update the existing play
+                const existingPlay = availablePlays.find(p => p.id === playId);
+                if (existingPlay && onSave) {
+                  try {
+                    await onSave({ ...existingPlay, wizSkillData });
+                    setShowSkillEditor(false);
+                    alert(`Play "${existingPlay.formation ? `${existingPlay.formation} ${existingPlay.name}` : existingPlay.name}" updated!`);
+                  } catch (err) {
+                    console.error('Error overwriting play:', err);
+                    alert('Failed to overwrite play: ' + err.message);
+                  }
+                }
               }}
               onSaveAsNewPlay={async (newPlayData) => {
                 // Save current diagram to form, then create a new play
@@ -2264,33 +2279,65 @@ export default function PlayEditor({
               playName={formData.formation ? `${formData.formation} ${formData.name}` : formData.name}
               olCallText={formData.wizOlineRef?.name || ''}
               olSchemes={olSchemes}
-              onSaveToOLLibrary={({ elements: diagramElements, name, type }) => {
+              onSaveToOLLibrary={({ elements: diagramElements, name, type, overwrite }) => {
                 // Save to the OL library in setupConfig
+                const currentProtections = setupConfig?.passProtections || [];
+                const currentRunBlocking = setupConfig?.runBlocking || [];
+
                 if (type === 'protection') {
+                  const existingIndex = currentProtections.findIndex(p => p.name?.toUpperCase() === name.toUpperCase());
                   const newProt = {
-                    id: Date.now().toString(),
-                    name: name,
+                    id: overwrite && existingIndex >= 0 ? currentProtections[existingIndex].id : Date.now().toString(),
+                    name: name.toUpperCase(),
                     slideDirection: 'right',
                     manSide: 'left',
                     callText: '',
                     notes: '',
                     diagramData: diagramElements
                   };
-                  updateSetupConfig('passProtections', [...(setupConfig?.passProtections || []), newProt]);
+
+                  let updatedList;
+                  if (overwrite && existingIndex >= 0) {
+                    updatedList = [...currentProtections];
+                    updatedList[existingIndex] = newProt;
+                  } else {
+                    updatedList = [...currentProtections, newProt];
+                  }
+                  updateSetupConfig({ passProtections: updatedList });
                 } else {
+                  const existingIndex = currentRunBlocking.findIndex(s => s.name?.toUpperCase() === name.toUpperCase());
                   const newScheme = {
-                    id: Date.now().toString(),
-                    name: name,
+                    id: overwrite && existingIndex >= 0 ? currentRunBlocking[existingIndex].id : Date.now().toString(),
+                    name: name.toUpperCase(),
                     type: 'zone',
                     callText: '',
                     notes: '',
                     diagramData: diagramElements
                   };
-                  updateSetupConfig('runBlocking', [...(setupConfig?.runBlocking || []), newScheme]);
+
+                  let updatedList;
+                  if (overwrite && existingIndex >= 0) {
+                    updatedList = [...currentRunBlocking];
+                    updatedList[existingIndex] = newScheme;
+                  } else {
+                    updatedList = [...currentRunBlocking, newScheme];
+                  }
+                  updateSetupConfig({ runBlocking: updatedList });
                 }
               }}
               onSave={(data) => {
-                setFormData(prev => ({ ...prev, wizOlineData: data.elements, wizOlineRef: null }));
+                if (data.wizOlineRef) {
+                  // Saving to library - link play to the scheme
+                  setFormData(prev => ({
+                    ...prev,
+                    wizOlineRef: data.wizOlineRef,
+                    wizOlineData: null,
+                    olCall: data.wizOlineRef.name
+                  }));
+                } else if (data.elements) {
+                  // Legacy: direct save
+                  setFormData(prev => ({ ...prev, wizOlineData: data.elements, wizOlineRef: null }));
+                }
                 setShowOLEditor(false);
               }}
               onCancel={() => setShowOLEditor(false)}
