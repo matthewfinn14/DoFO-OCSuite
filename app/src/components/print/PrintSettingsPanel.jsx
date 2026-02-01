@@ -39,6 +39,8 @@ export default function PrintSettingsPanel({
         return <DepthChartSettings {...props} />;
       case 'practice_plan':
         return <PracticePlanSettings {...props} staff={staff} />;
+      case 'practice_plan_coach':
+        return <PracticePlanCoachSettings {...props} staff={staff} weekData={weekData} />;
       case 'game_plan':
         return <GamePlanSettings {...props} />;
       case 'pregame':
@@ -430,6 +432,70 @@ function PracticePlanSettings({ settings, onChange, staff, layout }) {
   );
 }
 
+// Practice plan coach view settings
+function PracticePlanCoachSettings({ settings, onChange, staff, weekData, layout }) {
+  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+  // Get days that have practice plans
+  const daysWithPlans = days.filter(day => {
+    const dayKey = day.toLowerCase();
+    const dayPlan = weekData?.practicePlans?.[dayKey] || weekData?.practicePlans?.[day];
+    return dayPlan?.segments?.length > 0;
+  });
+
+  return (
+    <>
+      <SettingsField label="Day" layout={layout} id="print-settings-coach-view-day">
+        <select
+          value={settings.day || 'Monday'}
+          onChange={(e) => onChange('day', e.target.value)}
+        >
+          {days.map(day => {
+            const hasPlan = daysWithPlans.includes(day);
+            return (
+              <option key={day} value={day}>
+                {day}{hasPlan ? '' : ' (no plan)'}
+              </option>
+            );
+          })}
+        </select>
+      </SettingsField>
+
+      <SettingsField label="Coach" layout={layout} id="print-settings-coach-view-coach">
+        <select
+          value={settings.coachId || ''}
+          onChange={(e) => onChange('coachId', e.target.value || null)}
+        >
+          <option value="">All Staff</option>
+          {(staff || []).map(coach => (
+            <option key={coach.id || coach.email} value={coach.id || coach.email}>
+              {coach.name || coach.email}
+            </option>
+          ))}
+        </select>
+      </SettingsField>
+
+      <SettingsField label="Orientation" layout={layout} id="print-settings-coach-view-orientation">
+        <select
+          value={settings.orientation || 'portrait'}
+          onChange={(e) => onChange('orientation', e.target.value)}
+        >
+          <option value="portrait">Portrait</option>
+          <option value="landscape">Landscape</option>
+        </select>
+      </SettingsField>
+
+      <SettingsCheckbox
+        id="print-settings-coach-view-include-scripts"
+        checked={settings.includeScripts !== false}
+        onChange={(e) => onChange('includeScripts', e.target.checked)}
+        label="Scripts"
+        layout={layout}
+      />
+    </>
+  );
+}
+
 // Game plan settings
 function GamePlanSettings({ settings, onChange, layout }) {
   return (
@@ -489,23 +555,12 @@ function GamePlanSettings({ settings, onChange, layout }) {
 function PreGameSettings({ settings, onChange, layout }) {
   return (
     <>
-      <SettingsField label="Game Time" layout={layout} id="print-settings-pregame-game-time">
+      <SettingsField label="Kickoff Time" layout={layout} id="print-settings-pregame-game-time">
         <input
           type="time"
           value={settings.gameTime || '19:00'}
           onChange={(e) => onChange('gameTime', e.target.value)}
         />
-      </SettingsField>
-
-      <SettingsField label="Time Format" layout={layout} id="print-settings-pregame-time-format">
-        <select
-          value={settings.timeFormat || 'actual'}
-          onChange={(e) => onChange('timeFormat', e.target.value)}
-        >
-          <option value="actual">Actual</option>
-          <option value="relative">Relative</option>
-          <option value="both">Both</option>
-        </select>
       </SettingsField>
 
       <SettingsField label="Orientation" layout={layout} id="print-settings-pregame-orientation">
@@ -530,7 +585,7 @@ function PreGameSettings({ settings, onChange, layout }) {
         id="print-settings-pregame-show-notes"
         checked={settings.showNotes !== false}
         onChange={(e) => onChange('showNotes', e.target.checked)}
-        label="Show notes"
+        label="Notes"
         layout={layout}
       />
     </>

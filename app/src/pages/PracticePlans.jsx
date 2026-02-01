@@ -4,6 +4,8 @@ import { useSchool } from '../context/SchoolContext';
 import { usePlayBank } from '../context/PlayBankContext';
 import { getWristbandDisplay } from '../utils/wristband';
 import { getPlayCall } from '../utils/playDisplay';
+import PracticePlanCoachView from '../components/print/templates/PracticePlanCoachView';
+import '../styles/print-center.css';
 import {
   ArrowLeft,
   Plus,
@@ -886,194 +888,154 @@ function FocusMultiSelect({
   );
 }
 
-// Print Settings Modal
-function PrintSettingsModal({ staff, positionGroups, practicePlans, weekName, currentDay, onClose }) {
+// Print Settings Modal - Uses Coach View layout
+function PrintSettingsModal({ staff, positionGroups, practicePlans, weekId, weekName, currentDay, onClose }) {
   const [selectedCoach, setSelectedCoach] = useState('ALL');
-  // Initialize with only the current day selected
-  const [selectedDays, setSelectedDays] = useState({
-    Monday: currentDay === 'Monday',
-    Tuesday: currentDay === 'Tuesday',
-    Wednesday: currentDay === 'Wednesday',
-    Thursday: currentDay === 'Thursday',
-    Friday: currentDay === 'Friday'
-  });
+  const [selectedDay, setSelectedDay] = useState(currentDay || 'Monday');
 
-  const toggleDay = (day) => {
-    setSelectedDays(prev => ({ ...prev, [day]: !prev[day] }));
-  };
-
-  const selectAllDays = () => {
-    setSelectedDays({
-      Monday: true,
-      Tuesday: true,
-      Wednesday: true,
-      Thursday: true,
-      Friday: true
-    });
-  };
-
-  const selectedDaysCount = Object.values(selectedDays).filter(Boolean).length;
+  const hasPlan = practicePlans[selectedDay]?.segments?.length > 0;
 
   const handlePrint = () => {
-    // Store print settings in sessionStorage for the print view to read
-    sessionStorage.setItem('printSettings', JSON.stringify({
-      coachFilter: selectedCoach,
-      days: selectedDays,
-      weekName
-    }));
     window.print();
-    onClose();
   };
 
+  // Get coachId for the template (null for ALL)
+  const coachIdForTemplate = selectedCoach === 'ALL' ? null :
+    selectedCoach.startsWith('group:') ? null : selectedCoach;
+
   return (
-    <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
-      onClick={onClose}
-    >
+    <>
+      {/* Print-only content - renders the Coach View template */}
+      <div className="pp2-print-only">
+        <PracticePlanCoachView
+          weekId={weekId}
+          day={selectedDay}
+          coachId={coachIdForTemplate}
+          orientation="portrait"
+          includeScripts={true}
+        />
+      </div>
+
+      {/* Modal UI - hidden when printing */}
       <div
-        className="bg-slate-800 rounded-lg shadow-xl w-full max-w-md"
-        onClick={e => e.stopPropagation()}
+        className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 no-print"
+        onClick={onClose}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
-          <div className="flex items-center gap-3">
-            <Printer size={20} className="text-sky-400" />
-            <h3 className="text-lg font-semibold text-white">Print Practice Planner</h3>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 text-slate-400 hover:text-white hover:bg-slate-700 rounded"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 space-y-6">
-          {/* Coach Filter */}
-          <div>
-            <label htmlFor="print-coach-filter" className="block text-sm font-medium text-slate-300 mb-2">
-              Print for Coach
-            </label>
-            <select
-              id="print-coach-filter"
-              value={selectedCoach}
-              onChange={e => setSelectedCoach(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+        <div
+          className="bg-slate-800 rounded-lg shadow-xl w-full max-w-md"
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
+            <div className="flex items-center gap-3">
+              <Printer size={20} className="text-sky-400" />
+              <h3 className="text-lg font-semibold text-white">Print Practice Plan</h3>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1 text-slate-400 hover:text-white hover:bg-slate-700 rounded"
             >
-              <option value="ALL">All Staff (Master View)</option>
-              <optgroup label="Position Groups">
-                {(positionGroups || []).map(pg => (
-                  <option key={pg} value={`group:${pg}`}>@{pg} - Position Group</option>
-                ))}
-              </optgroup>
-              <optgroup label="Individual Coaches">
-                {(staff || []).map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </optgroup>
-            </select>
-            <p className="text-xs text-slate-500 mt-1">
-              {selectedCoach === 'ALL'
-                ? 'Shows all notes and full details'
-                : 'Shows @all notes plus notes mentioning this coach/group'}
-            </p>
+              <X size={20} />
+            </button>
           </div>
 
-          {/* Day Selection */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-slate-300">
-                Days to Print
-              </span>
-              <div className="flex items-center gap-3">
-                {currentDay && (
-                  <button
-                    onClick={() => setSelectedDays({
-                      Monday: currentDay === 'Monday',
-                      Tuesday: currentDay === 'Tuesday',
-                      Wednesday: currentDay === 'Wednesday',
-                      Thursday: currentDay === 'Thursday',
-                      Friday: currentDay === 'Friday'
-                    })}
-                    className="text-xs text-slate-400 hover:text-slate-300"
-                  >
-                    Only {DAY_ABBREV[currentDay]}
-                  </button>
-                )}
-                <button
-                  onClick={selectAllDays}
-                  className="text-xs text-sky-400 hover:text-sky-300"
-                >
-                  Select All
-                </button>
+          {/* Content */}
+          <div className="p-6 space-y-6">
+            {/* Coach Filter */}
+            <div>
+              <label htmlFor="print-coach-filter" className="block text-sm font-medium text-slate-300 mb-2">
+                Print for Coach
+              </label>
+              <select
+                id="print-coach-filter"
+                value={selectedCoach}
+                onChange={e => setSelectedCoach(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white"
+              >
+                <option value="ALL">All Staff (Master View)</option>
+                <optgroup label="Individual Coaches">
+                  {(staff || []).map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </optgroup>
+              </select>
+              <p className="text-xs text-slate-500 mt-1">
+                {selectedCoach === 'ALL'
+                  ? 'Shows all notes and full details'
+                  : 'Shows Big 3 focus and coach-specific notes'}
+              </p>
+            </div>
+
+            {/* Day Selection */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">
+                Day to Print
+              </label>
+              <div className="grid grid-cols-5 gap-2">
+                {DAYS.map(day => {
+                  const dayHasPlan = practicePlans[day]?.segments?.length > 0;
+                  return (
+                    <button
+                      key={day}
+                      onClick={() => setSelectedDay(day)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${selectedDay === day
+                        ? 'bg-sky-600 text-white'
+                        : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                        } ${!dayHasPlan ? 'opacity-50' : ''}`}
+                    >
+                      {DAY_ABBREV[day]}
+                      {dayHasPlan && <span className="block text-xs opacity-75">{practicePlans[day].segments.length} seg</span>}
+                    </button>
+                  );
+                })}
               </div>
             </div>
-            <div className="grid grid-cols-5 gap-2">
-              {DAYS.map(day => {
-                const hasPlan = practicePlans[day]?.segments?.length > 0;
-                return (
-                  <button
-                    key={day}
-                    onClick={() => toggleDay(day)}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${selectedDays[day]
-                      ? 'bg-sky-600 text-white'
-                      : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
-                      } ${!hasPlan ? 'opacity-50' : ''}`}
-                  >
-                    {DAY_ABBREV[day]}
-                    {hasPlan && <span className="block text-xs opacity-75">{practicePlans[day].segments.length} seg</span>}
-                  </button>
-                );
-              })}
+
+            {/* Summary */}
+            <div className="bg-slate-900 rounded-lg p-4">
+              <p className="text-sm text-slate-400">
+                Printing <span className="text-white font-medium">{selectedDay}</span>
+                {selectedCoach !== 'ALL' && (
+                  <span> for <span className="text-sky-400">
+                    {staff?.find(s => s.id === selectedCoach)?.name || selectedCoach}
+                  </span></span>
+                )}
+                {!hasPlan && <span className="text-amber-400 ml-2">(no segments)</span>}
+              </p>
             </div>
           </div>
 
-          {/* Summary */}
-          <div className="bg-slate-900 rounded-lg p-4">
-            <p className="text-sm text-slate-400">
-              <span className="text-white font-medium">{selectedDaysCount}</span> day(s) will be printed
-              {selectedCoach !== 'ALL' && (
-                <span> for <span className="text-sky-400">
-                  {selectedCoach.startsWith('group:')
-                    ? `@${selectedCoach.replace('group:', '')}`
-                    : staff?.find(s => s.id === selectedCoach)?.name || selectedCoach}
-                </span></span>
-              )}
-            </p>
+          {/* Print Center Link */}
+          <div className="px-6 pb-2">
+            <Link
+              to="/print?template=practice_plan"
+              className="flex items-center gap-2 text-sky-400 hover:text-sky-300 text-sm"
+            >
+              <ExternalLink size={14} />
+              Open Print Center for more options
+            </Link>
+          </div>
+
+          {/* Footer */}
+          <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-700">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handlePrint}
+              disabled={!hasPlan}
+              className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <Printer size={16} />
+              Print
+            </button>
           </div>
         </div>
-
-        {/* Print Center Link */}
-        <div className="px-6 pb-2">
-          <Link
-            to="/print?template=practice_plan"
-            className="flex items-center gap-2 text-sky-400 hover:text-sky-300 text-sm"
-          >
-            <ExternalLink size={14} />
-            Open in Print Center for more options
-          </Link>
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-700">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handlePrint}
-            disabled={selectedDaysCount === 0}
-            className="px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            <Printer size={16} />
-            Print
-          </button>
-        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -2783,7 +2745,7 @@ export default function PracticePlans() {
             </div>
 
             {/* Segments Table */}
-            <div className={`rounded-lg overflow-hidden ${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800'}`}>
+            <div className={`rounded-lg ${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800'}`}>
               <table className="w-full">
                 <thead>
                   <tr className={`border-b-2 text-xs uppercase ${isLight ? 'border-gray-200 text-gray-500' : 'border-slate-600 text-slate-400'}`}>
@@ -3121,7 +3083,7 @@ export default function PracticePlans() {
                   }
 
                   return (
-                    <div key={seg.id} className={`rounded-lg overflow-hidden ${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800'}`}>
+                    <div key={seg.id} className={`rounded-lg ${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800'}`}>
                       {/* Segment Header */}
                       <div className={`flex items-center justify-between px-4 py-3 border-b ${isLight ? 'bg-gray-50 border-gray-200' : 'bg-slate-700/50 border-slate-600'}`}>
                         <div className="flex items-center gap-3">
@@ -3375,6 +3337,7 @@ export default function PracticePlans() {
           staff={staff}
           positionGroups={positionGroups}
           practicePlans={practicePlans}
+          weekId={weekId}
           weekName={week?.name || ''}
           currentDay={selectedDay}
           onClose={() => setShowPrintModal(false)}

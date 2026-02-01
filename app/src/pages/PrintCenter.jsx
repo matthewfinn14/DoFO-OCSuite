@@ -27,8 +27,10 @@ import WristbandPrint from '../components/print/templates/WristbandPrint';
 import CoachWristbandPrint from '../components/print/templates/CoachWristbandPrint';
 import DepthChartPrint from '../components/print/templates/DepthChartPrint';
 import PracticePlanPrint from '../components/print/templates/PracticePlanPrint';
+import PracticePlanCoachView from '../components/print/templates/PracticePlanCoachView';
 import GamePlanPrint from '../components/print/templates/GamePlanPrint';
 import PreGamePrint from '../components/print/templates/PreGamePrint';
+import PreGameCoachView from '../components/print/templates/PreGameCoachView';
 import RosterPrint from '../components/print/templates/RosterPrint';
 import PlaybookPrint from '../components/print/templates/PlaybookPrint';
 
@@ -101,6 +103,21 @@ const PRINT_TEMPLATES = [
     orientation: 'landscape'
   },
   {
+    id: 'practice_plan_coach',
+    name: 'Practice Plan (Coach View)',
+    description: '2-page coach-specific practice plan with Big 3 focus and scripts',
+    icon: ClipboardList,
+    category: 'practice',
+    component: PracticePlanCoachView,
+    defaultSettings: {
+      day: 'Monday',
+      coachId: null,
+      orientation: 'portrait',
+      includeScripts: true
+    },
+    orientation: 'portrait'
+  },
+  {
     id: 'game_plan',
     name: 'Game Plan',
     description: 'Call sheets and game strategy',
@@ -122,10 +139,9 @@ const PRINT_TEMPLATES = [
     description: 'Game day schedule checklist',
     icon: Clock,
     category: 'gameday',
-    component: PreGamePrint,
+    component: PreGameCoachView,
     defaultSettings: {
       gameTime: '19:00',
-      timeFormat: 'both',
       includeCheckboxes: true,
       showNotes: true,
       orientation: 'portrait'
@@ -201,6 +217,8 @@ export default function PrintCenter() {
     const weekParam = searchParams.get('week');
     const formatParam = searchParams.get('format');
     const viewModeParam = searchParams.get('viewMode');
+    const dayParam = searchParams.get('day');
+    const coachParam = searchParams.get('coach');
 
     if (templateParam) {
       const template = PRINT_TEMPLATES.find(t => t.id === templateParam);
@@ -209,7 +227,9 @@ export default function PrintCenter() {
         setPrintSettings({
           ...template.defaultSettings,
           ...(formatParam ? { format: formatParam } : {}),
-          ...(viewModeParam ? { viewMode: viewModeParam } : {})
+          ...(viewModeParam ? { viewMode: viewModeParam } : {}),
+          ...(dayParam ? { day: dayParam } : {}),
+          ...(coachParam ? { coachId: coachParam } : {})
         });
       }
     }

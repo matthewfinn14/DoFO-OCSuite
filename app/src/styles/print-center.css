@@ -821,3 +821,741 @@
     break-inside: avoid;
   }
 }
+
+/* ============================================
+   PRACTICE PLAN COACH VIEW (PP2) STYLES
+   2-page coach-specific layout
+   ============================================ */
+
+/* Container */
+.pp2-container {
+  background: white;
+  color: black;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 9pt;
+  padding: 0.25in;
+  min-height: 100%;
+}
+
+.pp2-container.pp2-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: #666;
+}
+
+/* Page Layout */
+.pp2-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-height: calc(10.5in - 0.5in); /* Letter height minus margins for portrait */
+}
+
+.pp2-container.pp2-landscape .pp2-page {
+  min-height: calc(8in - 0.5in); /* Landscape height */
+}
+
+/* Header */
+.pp2-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0;
+  border-bottom: 2px solid #1e293b;
+  margin-bottom: 0.25rem;
+}
+
+.pp2-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.pp2-logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pp2-logo {
+  height: 40px;
+  width: auto;
+  max-width: 80px;
+  object-fit: contain;
+}
+
+.pp2-logo-emoji {
+  font-size: 2rem;
+}
+
+.pp2-header-title-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.pp2-day-badge {
+  font-size: 14pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #1e293b;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.pp2-week-info {
+  font-size: 10pt;
+  color: #475569;
+  font-weight: 600;
+}
+
+.pp2-header-right {
+  text-align: right;
+}
+
+.pp2-start-time {
+  font-size: 11pt;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+/* Coach Info Bar - 3 columns */
+.pp2-coach-info {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  padding: 0.375rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  margin-bottom: 0.25rem;
+}
+
+.pp2-info-box {
+  padding: 0.25rem 0.375rem;
+}
+
+.pp2-info-box h4 {
+  font-size: 7pt;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #64748b;
+  margin: 0 0 0.125rem 0;
+  letter-spacing: 0.025em;
+}
+
+.pp2-coach-name {
+  font-size: 9pt;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.pp2-position-groups {
+  font-size: 8pt;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.pp2-big3-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pp2-big3-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.25rem;
+  font-size: 8pt;
+}
+
+.pp2-big3-num {
+  width: 14px;
+  height: 14px;
+  background: #0ea5e9;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7pt;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.pp2-big3-text {
+  color: #1e293b;
+  line-height: 1.3;
+}
+
+.pp2-goals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.pp2-goal-item {
+  font-size: 8pt;
+  color: #1e293b;
+  line-height: 1.2;
+}
+
+.pp2-empty-text {
+  font-size: 8pt;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* Schedule Section */
+.pp2-schedule-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.pp2-section-title {
+  font-size: 9pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #1e293b;
+  padding: 0.25rem 0.375rem;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-bottom: none;
+  letter-spacing: 0.025em;
+}
+
+/* Schedule Grid */
+.pp2-schedule {
+  display: grid;
+  grid-template-columns:
+    35px    /* # */
+    55px    /* Time */
+    40px    /* Duration */
+    minmax(80px, 120px)   /* Segment Type */
+    35px    /* Phase */
+    minmax(80px, 1fr)     /* Focus */
+    55px    /* Contact */
+    minmax(100px, 1fr);   /* Notes */
+  font-size: 8pt;
+  border: 1px solid #cbd5e1;
+}
+
+.pp2-schedule-header {
+  display: contents;
+}
+
+.pp2-schedule-header > div {
+  background: #1e293b;
+  color: white;
+  font-weight: 600;
+  padding: 0.25rem 0.25rem;
+  border-right: 1px solid #334155;
+  font-size: 7pt;
+  text-transform: uppercase;
+}
+
+.pp2-schedule-header > div:last-child {
+  border-right: none;
+}
+
+.pp2-schedule-row {
+  display: contents;
+}
+
+.pp2-schedule-row > div {
+  padding: 0.2rem 0.25rem;
+  border-bottom: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+}
+
+.pp2-schedule-row > div:last-child {
+  border-right: none;
+}
+
+.pp2-schedule-row > div:first-child {
+  font-weight: 600;
+  justify-content: center;
+}
+
+.pp2-schedule-row > div:nth-child(2),
+.pp2-schedule-row > div:nth-child(3),
+.pp2-schedule-row > div:nth-child(5),
+.pp2-schedule-row > div:nth-child(7) {
+  justify-content: center;
+  text-align: center;
+}
+
+.pp2-warmup-num {
+  color: #f59e0b;
+  font-weight: 700;
+}
+
+.pp2-segment-type {
+  font-weight: 500;
+}
+
+.pp2-notes-cell {
+  font-size: 7pt;
+  line-height: 1.2;
+  color: #475569;
+}
+
+/* Phase Color Coding */
+.pp2-phase-o {
+  background-color: #fef3c7 !important;
+  color: #92400e;
+}
+
+.pp2-phase-d {
+  background-color: #dbeafe !important;
+  color: #1e40af;
+}
+
+.pp2-phase-k {
+  background-color: #dcfce7 !important;
+  color: #166534;
+}
+
+.pp2-phase-c {
+  background-color: #f3e8ff !important;
+  color: #7c3aed;
+}
+
+/* Scripts Container */
+.pp2-scripts-container {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Script Section - should not break mid-script */
+.pp2-script-section {
+  break-inside: avoid;
+  page-break-inside: avoid;
+  border: 1px solid #475569;
+  background: white;
+}
+
+.pp2-script-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #475569;
+  color: white;
+  padding: 0.25rem 0.5rem;
+  font-size: 8pt;
+  font-weight: 600;
+}
+
+.pp2-script-title {
+  text-transform: uppercase;
+}
+
+.pp2-script-duration {
+  font-weight: 400;
+}
+
+/* Script Grid */
+.pp2-script-grid {
+  display: grid;
+  grid-template-columns:
+    25px    /* # */
+    35px    /* Hash */
+    30px    /* Dn */
+    40px    /* Dist */
+    70px    /* Situation */
+    minmax(100px, 1fr)     /* Play Call */
+    50px    /* Defense */
+    minmax(80px, 1fr);     /* Notes */
+  font-size: 7pt;
+}
+
+.pp2-script-row {
+  display: contents;
+}
+
+.pp2-script-row > div {
+  padding: 0.125rem 0.25rem;
+  border-bottom: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+}
+
+.pp2-script-row > div:last-child {
+  border-right: none;
+}
+
+.pp2-script-row-header > div {
+  background: #f1f5f9;
+  font-weight: 600;
+  font-size: 6pt;
+  text-transform: uppercase;
+  justify-content: center;
+  border-bottom: 1px solid #94a3b8;
+}
+
+.pp2-script-row > div:first-child {
+  font-weight: 600;
+  justify-content: center;
+}
+
+.pp2-script-row > div:nth-child(2),
+.pp2-script-row > div:nth-child(3),
+.pp2-script-row > div:nth-child(4),
+.pp2-script-row > div:nth-child(7) {
+  justify-content: center;
+  text-align: center;
+}
+
+.pp2-play-call {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.pp2-script-notes {
+  font-size: 6pt;
+  line-height: 1.2;
+  color: #64748b;
+}
+
+/* Print-only wrapper - hidden on screen, visible when printing */
+.pp2-print-only,
+.pg2-print-only {
+  display: none !important;
+}
+
+/* ============================================
+   PRE-GAME COACH VIEW (PG2) STYLES
+   Professional single-page layout
+   ============================================ */
+
+/* Container */
+.pg2-container {
+  background: white;
+  color: black;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 9pt;
+  padding: 0.25in;
+  min-height: 100%;
+}
+
+.pg2-container.pg2-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: #666;
+}
+
+.pg2-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* Header */
+.pg2-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.25rem 0;
+  border-bottom: 2px solid #1e293b;
+  margin-bottom: 0.25rem;
+}
+
+.pg2-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.pg2-logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pg2-logo {
+  height: 40px;
+  width: auto;
+  max-width: 80px;
+  object-fit: contain;
+}
+
+.pg2-logo-emoji {
+  font-size: 2rem;
+}
+
+.pg2-header-title-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.pg2-title {
+  font-size: 14pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #1e293b;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.pg2-week-info {
+  font-size: 10pt;
+  color: #475569;
+  font-weight: 600;
+}
+
+.pg2-header-right {
+  text-align: right;
+}
+
+.pg2-kickoff-time {
+  font-size: 12pt;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.pg2-game-date {
+  font-size: 9pt;
+  color: #64748b;
+}
+
+/* Info Bar */
+.pg2-info-bar {
+  display: flex;
+  gap: 1.5rem;
+  padding: 0.375rem 0.5rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  margin-bottom: 0.25rem;
+}
+
+.pg2-info-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.pg2-info-label {
+  font-size: 7pt;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.025em;
+}
+
+.pg2-info-value {
+  font-size: 9pt;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* Timeline Section */
+.pg2-timeline-section {
+  flex: 1;
+}
+
+.pg2-section-title {
+  font-size: 9pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #1e293b;
+  padding: 0.25rem 0.375rem;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-bottom: none;
+  letter-spacing: 0.025em;
+}
+
+/* Timeline Grid */
+.pg2-timeline {
+  display: grid;
+  grid-template-columns:
+    30px    /* Checkbox */
+    65px    /* Time */
+    60px    /* Countdown */
+    1fr     /* Activity */
+    100px   /* Responsible */
+    minmax(80px, 1fr);  /* Notes */
+  font-size: 8pt;
+  border: 1px solid #cbd5e1;
+}
+
+.pg2-timeline.no-checkbox {
+  grid-template-columns:
+    65px    /* Time */
+    60px    /* Countdown */
+    1fr     /* Activity */
+    100px   /* Responsible */
+    minmax(80px, 1fr);  /* Notes */
+}
+
+.pg2-timeline.no-notes {
+  grid-template-columns:
+    30px    /* Checkbox */
+    65px    /* Time */
+    60px    /* Countdown */
+    1fr     /* Activity */
+    100px;  /* Responsible */
+}
+
+.pg2-timeline-header {
+  display: contents;
+}
+
+.pg2-timeline-header > div {
+  background: #1e293b;
+  color: white;
+  font-weight: 600;
+  padding: 0.25rem 0.375rem;
+  border-right: 1px solid #334155;
+  font-size: 7pt;
+  text-transform: uppercase;
+}
+
+.pg2-timeline-header > div:last-child {
+  border-right: none;
+}
+
+.pg2-timeline-row {
+  display: contents;
+}
+
+.pg2-timeline-row > div {
+  padding: 0.25rem 0.375rem;
+  border-bottom: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+}
+
+.pg2-timeline-row > div:last-child {
+  border-right: none;
+}
+
+.pg2-checkbox-cell {
+  justify-content: center;
+}
+
+.pg2-checkbox {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #475569;
+  border-radius: 2px;
+}
+
+.pg2-time-cell {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.pg2-countdown-cell {
+  font-size: 7pt;
+  color: #64748b;
+  justify-content: center;
+}
+
+.pg2-kickoff-badge {
+  background: #dc2626 !important;
+  color: white !important;
+  font-weight: 700 !important;
+  border-radius: 2px;
+  padding: 0.125rem 0.25rem !important;
+}
+
+.pg2-kickoff-row > div {
+  background: #fef2f2;
+}
+
+.pg2-kickoff-row .pg2-time-cell,
+.pg2-kickoff-row .pg2-activity-cell {
+  font-weight: 700;
+  color: #dc2626;
+}
+
+.pg2-post-kickoff > div {
+  background: #f0fdf4;
+}
+
+.pg2-activity-cell {
+  font-weight: 500;
+}
+
+.pg2-owner-cell {
+  font-size: 7pt;
+  color: #64748b;
+}
+
+.pg2-notes-cell {
+  font-size: 7pt;
+  color: #64748b;
+  line-height: 1.2;
+}
+
+/* Print-specific styles */
+@media print {
+  /* Show the print-only wrappers */
+  .pp2-print-only,
+  .pg2-print-only {
+    display: block !important;
+  }
+
+  /* Make pre-game view overlay everything when printing */
+  .pg2-container {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    z-index: 99999 !important;
+    background: white !important;
+    padding: 0.25in !important;
+    margin: 0 !important;
+  }
+
+  /* Make coach view overlay everything when printing */
+  .pp2-container {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    z-index: 99999 !important;
+    background: white !important;
+    padding: 0.25in !important;
+    margin: 0 !important;
+  }
+
+  .pp2-page {
+    min-height: auto;
+  }
+
+  .pp2-script-section {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Ensure colors print */
+  .pp2-phase-o,
+  .pp2-phase-d,
+  .pp2-phase-k,
+  .pp2-phase-c,
+  .pp2-big3-num,
+  .pp2-schedule-header > div,
+  .pp2-script-header,
+  .pg2-timeline-header > div,
+  .pg2-kickoff-badge,
+  .pg2-kickoff-row > div,
+  .pg2-post-kickoff > div,
+  .pg2-info-bar {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

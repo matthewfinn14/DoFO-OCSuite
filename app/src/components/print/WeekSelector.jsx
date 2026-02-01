@@ -52,11 +52,24 @@ export default function WeekSelector({
     return weeks.find(w => w.id === (selectedWeekId || currentWeekId));
   }, [weeks, selectedWeekId, currentWeekId]);
 
-  // Format week label
+  // Format week label with phase
   const getWeekLabel = (week) => {
-    const num = week.weekNumber || week.name?.match(/\d+/)?.[0] || '';
+    const phase = week.phaseName || week.phase || '';
+    const name = week.name || `Week ${week.weekNumber || week.weekNum || ''}`;
     const opponent = week.opponent || '';
-    return `Week ${num}${opponent ? ` - ${opponent}` : ''}`;
+
+    let label = '';
+    if (phase) {
+      label = `${phase} - ${name}`;
+    } else {
+      label = name;
+    }
+
+    if (opponent) {
+      label += ` vs ${opponent}`;
+    }
+
+    return label;
   };
 
   return (

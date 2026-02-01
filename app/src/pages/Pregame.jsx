@@ -1,6 +1,8 @@
 import { useState, useMemo, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
+import PreGameCoachView from '../components/print/templates/PreGameCoachView';
+import '../styles/print-center.css';
 import {
   Clock,
   CheckCircle,
@@ -834,7 +836,21 @@ export default function Pregame() {
   const progressPercent = schedule.length > 0 ? (completedCount / schedule.length) * 100 : 0;
 
   return (
-    <div className="p-6">
+    <>
+      {/* Print-only content - renders the Coach View template */}
+      <div className="pg2-print-only">
+        <PreGameCoachView
+          weekId={currentWeekId}
+          gameTime={gameTime}
+          schedule={schedule}
+          orientation="portrait"
+          includeCheckboxes={true}
+          showNotes={true}
+        />
+      </div>
+
+      {/* Main UI - hidden when printing */}
+      <div className="p-6 no-print">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -1220,6 +1236,7 @@ export default function Pregame() {
           onClose={() => setShowImportTemplateModal(false)}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
