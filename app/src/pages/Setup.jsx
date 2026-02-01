@@ -484,11 +484,12 @@ const DEFAULT_POSITIONS = {
   ]
 };
 
-// Default position colors
+// Default position colors - used across all tabs (Name Positions, Personnel, Formations, Diagrams)
 const DEFAULT_POSITION_COLORS = {
   QB: '#1e3a5f', RB: '#3b82f6', FB: '#0891b2', WR: '#a855f7', TE: '#f97316',
   LT: '#64748b', LG: '#64748b', C: '#64748b', RG: '#64748b', RT: '#64748b',
   X: '#a855f7', Y: '#22c55e', Z: '#eab308', H: '#06b6d4', F: '#f97316',
+  A: '#f97316', B: '#3b82f6',
   DE: '#ef4444', DT: '#dc2626', NT: '#b91c1c', OLB: '#f59e0b', ILB: '#fbbf24',
   MLB: '#f59e0b', CB: '#10b981', FS: '#14b8a6', SS: '#0d9488', NB: '#6ee7b7', DB: '#34d399',
   K: '#8b5cf6', P: '#8b5cf6', LS: '#64748b', KR: '#3b82f6', PR: '#3b82f6', G: '#f97316', PP: '#94a3b8'
@@ -707,6 +708,13 @@ export default function Setup() {
         positionDrills: {},
         schemeDrills: {}
       };
+    }
+
+    // Position Colors - initialize with defaults if empty
+    // This ensures all tabs (Name Positions, Personnel, Formations) show consistent colors
+    if (!config?.positionColors || Object.keys(config.positionColors).length === 0) {
+      updated.positionColors = { ...DEFAULT_POSITION_COLORS };
+      needsSave = true;
     }
 
     updated._needsDefaultSave = needsSave;
@@ -2742,7 +2750,8 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
         id: Date.now() + idx,
         type: 'player',
         points: [{ x: (pos.x / 100) * 950, y: (pos.y / 100) * 600 }],
-        color: pos.color || positionColors[pos.label] || POSITION_COLORS_DEFAULTS[pos.label] || SKILL_POSITION_FALLBACK,
+        // Always prioritize current positionColors over stored colors
+        color: positionColors[pos.label] || pos.color || POSITION_COLORS_DEFAULTS[pos.label] || SKILL_POSITION_FALLBACK,
         label: pos.label,
         shape: pos.shape || 'circle',
         variant: pos.variant || 'filled',
