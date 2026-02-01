@@ -1762,59 +1762,6 @@ export default function PlayEditor({
                     </div>
                   ) : (
                     <div className="space-y-2 flex-1 flex flex-col">
-                      {/* Search for Pre-existing OL Scheme */}
-                      {allOLSchemes.length > 0 && (
-                        <div className="relative">
-                          <label className="block text-xs text-slate-500 mb-1">Search for Pre-existing</label>
-                          <input
-                            type="text"
-                            placeholder="Search OL library..."
-                            value={olLibrarySearch}
-                            onChange={(e) => {
-                              setOlLibrarySearch(e.target.value);
-                              setShowOLLibraryDropdown(true);
-                            }}
-                            onFocus={() => setShowOLLibraryDropdown(true)}
-                            className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-500 focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                          />
-                          {showOLLibraryDropdown && filteredOLSchemes.length > 0 && (
-                            <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
-                              {filteredOLSchemes.map(scheme => (
-                                <button
-                                  key={scheme.id}
-                                  type="button"
-                                  onClick={() => {
-                                    setFormData(prev => ({
-                                      ...prev,
-                                      wizOlineRef: {
-                                        id: scheme.id,
-                                        name: scheme.name,
-                                        type: scheme.schemeType,
-                                        diagramData: scheme.diagramData
-                                      },
-                                      wizOlineData: null
-                                    }));
-                                    setOlLibrarySearch('');
-                                    setShowOLLibraryDropdown(false);
-                                  }}
-                                  className="w-full px-3 py-2 text-left text-sm text-white hover:bg-slate-700 flex items-center justify-between"
-                                >
-                                  <span className="flex items-center gap-2">
-                                    <Library size={12} className="text-amber-400" />
-                                    {scheme.name}
-                                  </span>
-                                  <span className="text-xs text-slate-500">
-                                    {scheme.schemeType === 'protection' ? 'Protection' : 'Run'}
-                                  </span>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                          {showOLLibraryDropdown && (
-                            <div className="fixed inset-0 z-40" onClick={() => setShowOLLibraryDropdown(false)} />
-                          )}
-                        </div>
-                      )}
                       <button
                         type="button"
                         onClick={() => setShowOLEditor(true)}
@@ -1823,6 +1770,58 @@ export default function PlayEditor({
                         <Edit3 size={18} />
                         Draw Diagram
                       </button>
+                      {/* Search for Pre-existing OL Scheme - between Draw Diagram and Upload Image */}
+                      <div className="relative">
+                        <label className="block text-xs text-slate-500 mb-1">Search for Pre-existing</label>
+                        <input
+                          type="text"
+                          placeholder={allOLSchemes.length > 0 ? "Search OL library..." : "No schemes in library yet"}
+                          value={olLibrarySearch}
+                          onChange={(e) => {
+                            setOlLibrarySearch(e.target.value);
+                            setShowOLLibraryDropdown(true);
+                          }}
+                          onFocus={() => allOLSchemes.length > 0 && setShowOLLibraryDropdown(true)}
+                          disabled={allOLSchemes.length === 0}
+                          className={`w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-500 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 ${allOLSchemes.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        />
+                        {showOLLibraryDropdown && filteredOLSchemes.length > 0 && (
+                          <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+                            {filteredOLSchemes.map(scheme => (
+                              <button
+                                key={scheme.id}
+                                type="button"
+                                onClick={() => {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    wizOlineRef: {
+                                      id: scheme.id,
+                                      name: scheme.name,
+                                      type: scheme.schemeType,
+                                      diagramData: scheme.diagramData
+                                    },
+                                    wizOlineData: null
+                                  }));
+                                  setOlLibrarySearch('');
+                                  setShowOLLibraryDropdown(false);
+                                }}
+                                className="w-full px-3 py-2 text-left text-sm text-white hover:bg-slate-700 flex items-center justify-between"
+                              >
+                                <span className="flex items-center gap-2">
+                                  <Library size={12} className="text-amber-400" />
+                                  {scheme.name}
+                                </span>
+                                <span className="text-xs text-slate-500">
+                                  {scheme.schemeType === 'protection' ? 'Protection' : 'Run'}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {showOLLibraryDropdown && (
+                          <div className="fixed inset-0 z-40" onClick={() => setShowOLLibraryDropdown(false)} />
+                        )}
+                      </div>
                       <label htmlFor="play-editor-wiz-oline-upload" className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-400 hover:bg-slate-700 cursor-pointer transition-colors text-sm">
                         <Upload size={14} />
                         Upload Image
