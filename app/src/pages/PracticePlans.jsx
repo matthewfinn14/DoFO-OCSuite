@@ -289,7 +289,7 @@ function PlayCallAutocomplete({ id, value, playId, plays, onSelectPlay, onChange
               }`}
             >
               <div className={`font-medium ${isLight ? 'text-gray-900' : 'text-white'}`}>
-                {getPlayCall(play)}{getWristbandDisplay(play) ? ` ${getWristbandDisplay(play)}` : ''}
+                {getPlayCall(play)}{getWristbandDisplay(play) ? ` [${getWristbandDisplay(play)}]` : ''}
               </div>
             </button>
           ))}
@@ -407,7 +407,9 @@ function SegmentNotesModal({ segment, staff, positionGroups, onUpdateNotes, onCl
   // Render note text with highlighted mentions
   const renderHighlightedText = (text) => {
     if (!text) return null;
-    const parts = text.split(/(@\w+)/g);
+    // Ensure text is a string
+    const textStr = typeof text === 'string' ? text : String(text);
+    const parts = textStr.split(/(@\w+)/g);
     return parts.map((part, i) => {
       if (part.startsWith('@')) {
         return (
@@ -2053,19 +2055,21 @@ export default function PracticePlans() {
     updateSegment(segmentId, 'script', newScript);
   }, [currentPlan, updateSegment]);
 
-  // Format Play Call string (Wristband Formation Name)
+  // Format Play Call string (Formation Name [Wristband])
   const formatPlayCall = useCallback((play) => {
     if (!play) return '';
 
     const parts = [];
-    const wb = getWristbandDisplay(play);
-    if (wb) parts.push(wb);
 
     // Check multiple properties for formation
     const formation = play.formation || play.formationId || play.front;
     if (formation) parts.push(formation.toUpperCase());
 
     parts.push(play.name);
+
+    const wb = getWristbandDisplay(play);
+    if (wb) parts.push(`[${wb}]`);
+
     return parts.join(' ');
   }, []);
 
@@ -2502,7 +2506,7 @@ export default function PracticePlans() {
             <span className="text-sm flex items-center gap-2">
               Click any play call slot to assign
               <span className="font-semibold bg-indigo-700 px-2 py-0.5 rounded border border-indigo-500">
-                {stagedPlay.name}{getWristbandDisplay(stagedPlay) ? ` ${getWristbandDisplay(stagedPlay)}` : ''}
+                {stagedPlay.name}{getWristbandDisplay(stagedPlay) ? ` [${getWristbandDisplay(stagedPlay)}]` : ''}
                 {stagedPlay.formation && <span className="opacity-75 font-normal text-xs ml-1">({stagedPlay.formation})</span>}
               </span>
             </span>
@@ -3424,7 +3428,7 @@ export default function PracticePlans() {
                       className={`p-3 rounded-lg text-left transition-colors ${isLight ? 'bg-gray-50 hover:bg-gray-100 border border-gray-200' : 'bg-slate-800 hover:bg-slate-700'}`}
                     >
                       <div className={`font-medium ${isLight ? 'text-gray-900' : 'text-white'}`}>
-                        {getPlayCall(play)}{getWristbandDisplay(play) ? ` ${getWristbandDisplay(play)}` : ''}
+                        {getPlayCall(play)}{getWristbandDisplay(play) ? ` [${getWristbandDisplay(play)}]` : ''}
                       </div>
                       {play.bucket && (
                         <div className={`text-sm mt-1 ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>

@@ -23,9 +23,12 @@ export function PlayBankProvider({ children }) {
   // Listen for batch add events from PlayBankSidebar
   useEffect(() => {
     const handleBatchAdd = (e) => {
+      const detail = e.detail || {};
       setBatchAddEvent({
-        playIds: e.detail.playIds,
-        destination: e.detail.destination,
+        playIds: detail.playIds,
+        destination: detail.destination,
+        setId: detail.setId,
+        header: detail.header,
         timestamp: Date.now()
       });
     };

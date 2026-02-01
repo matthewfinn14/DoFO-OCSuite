@@ -626,7 +626,7 @@ export default function PracticeScriptBuilder() {
                                           onClick={() => openPlayDetails(row.playId)}
                                           className="text-sky-400 hover:text-sky-300 hover:underline text-left truncate"
                                         >
-                                          {play.name}{getWristbandDisplay(play) ? ` ${getWristbandDisplay(play)}` : ''}
+                                          {play.name}{getWristbandDisplay(play) ? ` [${getWristbandDisplay(play)}]` : ''}
                                         </button>
                                         <button
                                           onClick={() => clearScriptRow(segment.id, row.id)}
@@ -725,7 +725,7 @@ export default function PracticeScriptBuilder() {
 
                               <div className="flex-1 min-w-0">
                                 <div className="font-medium text-white">
-                                  {play.name}{getWristbandDisplay(play) ? ` ${getWristbandDisplay(play)}` : ''}
+                                  {play.name}{getWristbandDisplay(play) ? ` [${getWristbandDisplay(play)}]` : ''}
                                 </div>
                                 <div className="text-sm text-slate-500">
                                   {play.formation}
@@ -867,7 +867,7 @@ export default function PracticeScriptBuilder() {
                       className="p-3 bg-slate-800 rounded-lg hover:bg-slate-700 text-left"
                     >
                       <div className="font-medium text-white">
-                        {play.name}{getWristbandDisplay(play) ? ` ${getWristbandDisplay(play)}` : ''}
+                        {play.name}{getWristbandDisplay(play) ? ` [${getWristbandDisplay(play)}]` : ''}
                       </div>
                       <div className="text-sm text-slate-500 mt-1">
                         {play.formation && <span>{play.formation}</span>}

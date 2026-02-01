@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useSchool } from '../../context/SchoolContext';
 import { usePlayDetailsModal } from '../PlayDetailsModal';
 import { usePlayBank } from '../../context/PlayBankContext';
@@ -29,6 +29,7 @@ export default function PlayBankSidebar({
   batchSelectLabel = 'Add Selected'
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { openPlayDetails } = usePlayDetailsModal();
   const {
     playsArray,
@@ -189,6 +190,59 @@ export default function PlayBankSidebar({
 
   // Get current week
   const currentWeek = weeks.find(w => w.id === currentWeekId) || null;
+
+  // Determine current page context for batch add
+  const currentPageContext = useMemo(() => {
+    const path = location.pathname;
+    if (path.includes('/practice-scripts') || path.includes('/practice')) {
+      return 'practice-scripts';
+    } else if (path.includes('/gameplan') || path.includes('/game-plan')) {
+      return 'gameplan';
+    } else if (path.includes('/wristband')) {
+      return 'wristband';
+    }
+    return 'other';
+  }, [location.pathname]);
+
+  // Get call sheet boxes for context-aware batch add
+  const callSheetBoxes = useMemo(() => {
+    const layouts = currentWeek?.gamePlanLayouts;
+    if (!layouts?.CALL_SHEET?.sections) return [];
+    const boxes = [];
+    layouts.CALL_SHEET.sections.forEach((section, sIdx) => {
+      (section.boxes || []).forEach((box, bIdx) => {
+        boxes.push({
+          sectionIdx: sIdx,
+          boxIdx: bIdx,
+          sectionTitle: section.title,
+          header: box.header,
+          setId: box.setId,
+          type: box.type
+        });
+      });
+    });
+    return boxes;
+  }, [currentWeek?.gamePlanLayouts]);
+
+  // Get practice segments for context-aware batch add
+  const practiceSegments = useMemo(() => {
+    const practicePlans = currentWeek?.practicePlans || {};
+    const segments = [];
+    Object.entries(practicePlans).forEach(([day, dayPlan]) => {
+      (dayPlan?.segments || []).forEach((segment, idx) => {
+        if (segment.scriptId || segment.type === 'team' || segment.type === 'indy') {
+          segments.push({
+            day,
+            segmentIdx: idx,
+            name: segment.name || segment.type,
+            scriptId: segment.scriptId,
+            phase: segment.phase
+          });
+        }
+      });
+    });
+    return segments;
+  }, [currentWeek?.practicePlans]);
 
   // Handle drag start for plays
   const handleDragStart = useCallback((e, play) => {
@@ -506,16 +560,16 @@ export default function PlayBankSidebar({
   }, [currentWeek, currentWeekId, updateWeek]);
 
   // Handle destination selection
-  const handleDestinationSelect = useCallback((destination) => {
+  const handleDestinationSelect = useCallback((destination, metadata = {}) => {
     if (destination === 'install') {
       addToInstall(pendingBatchPlays);
     } else {
       // Emit event for other destinations to handle
-      // The receiving component will listen for this
       window.dispatchEvent(new CustomEvent('playbank-batch-add', {
         detail: {
           playIds: pendingBatchPlays,
-          destination: destination
+          destination: destination,
+          ...metadata // Include box setId, segment info, etc.
         }
       }));
       setSelectedPlayIds(new Set());
@@ -531,13 +585,12 @@ export default function PlayBankSidebar({
   // Render a single play row
   const renderPlayRow = useCallback((play) => {
     // Build play call with formation first
-    const basePlayCall = play.formation
+    const playCall = play.formation
       ? `${play.formation} ${play.name}`
       : play.name;
 
-    // Append wristband slot to play call if assigned
+    // Get wristband slot for badge display
     const wristbandSlot = getWristbandDisplay(play);
-    const playCall = wristbandSlot ? `${basePlayCall} ${wristbandSlot}` : basePlayCall;
 
     const isBatchSelected = selectedPlayIds.has(play.id);
     const isSingleSelected = singleSelectMode && contextSelectedPlayId === play.id;
@@ -564,8 +617,8 @@ export default function PlayBankSidebar({
         draggable={!isClickable}
         onDragStart={(e) => !isClickable && handleDragStart(e, play)}
         onClick={handleClick}
-        onDoubleClick={() => !isClickable && openPlayDetails(play.id)}
-        title={isInBatchMode ? 'Click to select' : (singleSelectMode ? 'Click to select for wristband' : (isHighlighted ? 'Matches segment focus - Double-click to view details' : 'Double-click to view details'))}
+        onDoubleClick={() => openPlayDetails(play.id)}
+        title={isInBatchMode ? 'Click to select, double-click for details' : (singleSelectMode ? 'Click to select, double-click for details' : (isHighlighted ? 'Matches segment focus - Double-click to view details' : 'Double-click to view details'))}
       >
         {/* Left section: checkbox/pointer, play name, badges */}
         <div className="flex items-center flex-1 min-w-0 pl-2">
@@ -592,6 +645,12 @@ export default function PlayBankSidebar({
           <div className={`flex-1 min-w-0 font-medium truncate ${isBatchSelected ? 'text-sky-700' : (isSingleSelected ? 'text-emerald-700' : 'text-slate-800')}`}>
             {playCall}
           </div>
+          {/* Wristband coordinate badge */}
+          {wristbandSlot && (
+            <span className="flex-shrink-0 ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-red-600 text-white rounded" title="Wristband coordinate">
+              {wristbandSlot}
+            </span>
+          )}
           {play.priority && (
             <Star size={12} className="text-amber-500 fill-amber-500 flex-shrink-0 ml-1" />
           )}
@@ -1058,7 +1117,7 @@ export default function PlayBankSidebar({
           </div>
         )}
 
-        {/* Destination Selector Modal */}
+        {/* Context-Aware Destination Selector Modal */}
         {showDestinationSelector && (
           <div
             className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
@@ -1068,64 +1127,96 @@ export default function PlayBankSidebar({
             }}
           >
             <div
-              className="bg-white rounded-lg shadow-xl w-full max-w-sm"
+              className="bg-white rounded-lg shadow-xl w-full max-w-sm max-h-[80vh] flex flex-col"
               onClick={e => e.stopPropagation()}
             >
               <div className="p-4 border-b border-slate-200">
                 <h3 className="font-semibold text-slate-900">Add {pendingBatchPlays.length} Plays To...</h3>
+                {currentPageContext !== 'other' && (
+                  <p className="text-xs text-slate-500 mt-1">
+                    {currentPageContext === 'gameplan' && 'Select a Call Sheet box'}
+                    {currentPageContext === 'practice-scripts' && 'Select a practice segment'}
+                    {currentPageContext === 'wristband' && 'Adding to current wristband'}
+                  </p>
+                )}
               </div>
-              <div className="p-2 space-y-1">
-                <button
-                  onClick={() => handleDestinationSelect('install')}
-                  className="w-full px-4 py-3 text-left rounded-lg hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition-colors"
-                >
-                  <div className="font-medium">Install Manager</div>
-                  <div className="text-xs text-slate-500">Add to this week's install list</div>
-                </button>
-                <button
-                  onClick={() => handleDestinationSelect('wristband')}
-                  className="w-full px-4 py-3 text-left rounded-lg hover:bg-purple-50 text-slate-700 hover:text-purple-700 transition-colors"
-                >
-                  <div className="font-medium">Wristband Builder</div>
-                  <div className="text-xs text-slate-500">Fill empty slots until full</div>
-                </button>
-                <button
-                  onClick={() => handleDestinationSelect('practice-script')}
-                  className="w-full px-4 py-3 text-left rounded-lg hover:bg-orange-50 text-slate-700 hover:text-orange-700 transition-colors"
-                >
-                  <div className="font-medium">Practice Scripts</div>
-                  <div className="text-xs text-slate-500">Add to current script segment</div>
-                </button>
-                <div className="border-t border-slate-200 my-2" />
-                <div className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase">Game Planner</div>
-                <button
-                  onClick={() => handleDestinationSelect('gameplan-quicklist')}
-                  className="w-full px-4 py-3 text-left rounded-lg hover:bg-sky-50 text-slate-700 hover:text-sky-700 transition-colors"
-                >
-                  <div className="font-medium">Call Sheet</div>
-                  <div className="text-xs text-slate-500">Add to quick lists for assignment</div>
-                </button>
-                <button
-                  onClick={() => handleDestinationSelect('gameplan-byplayer')}
-                  className="w-full px-4 py-3 text-left rounded-lg hover:bg-sky-50 text-slate-700 hover:text-sky-700 transition-colors"
-                >
-                  <div className="font-medium">By Player</div>
-                  <div className="text-xs text-slate-500">Add to selected player's plays</div>
-                </button>
-                <button
-                  onClick={() => handleDestinationSelect('gameplan-byplaytype')}
-                  className="w-full px-4 py-3 text-left rounded-lg hover:bg-sky-50 text-slate-700 hover:text-sky-700 transition-colors"
-                >
-                  <div className="font-medium">By Play Type</div>
-                  <div className="text-xs text-slate-500">Organize by bucket and concept</div>
-                </button>
-                <button
-                  onClick={() => handleDestinationSelect('gameplan-fzdnd')}
-                  className="w-full px-4 py-3 text-left rounded-lg hover:bg-sky-50 text-slate-700 hover:text-sky-700 transition-colors"
-                >
-                  <div className="font-medium">Field Zone D&D</div>
-                  <div className="text-xs text-slate-500">Add to selected zone</div>
-                </button>
+              <div className="p-2 space-y-1 overflow-y-auto flex-1">
+                {/* Context: Game Plan - Show Call Sheet Boxes */}
+                {currentPageContext === 'gameplan' && callSheetBoxes.length > 0 ? (
+                  <>
+                    {callSheetBoxes.map((box, idx) => (
+                      <button
+                        key={`${box.sectionIdx}-${box.boxIdx}`}
+                        onClick={() => {
+                          handleDestinationSelect('gameplan-box', { setId: box.setId, header: box.header });
+                        }}
+                        className="w-full px-4 py-3 text-left rounded-lg hover:bg-sky-50 text-slate-700 hover:text-sky-700 transition-colors"
+                      >
+                        <div className="font-medium">{box.header}</div>
+                        <div className="text-xs text-slate-500">{box.sectionTitle} • {box.type}</div>
+                      </button>
+                    ))}
+                  </>
+                ) : currentPageContext === 'practice-scripts' && practiceSegments.length > 0 ? (
+                  /* Context: Practice Scripts - Show Segments */
+                  <>
+                    {practiceSegments.map((segment, idx) => (
+                      <button
+                        key={`${segment.day}-${segment.segmentIdx}`}
+                        onClick={() => {
+                          handleDestinationSelect('practice-segment', { day: segment.day, segmentIdx: segment.segmentIdx, scriptId: segment.scriptId });
+                        }}
+                        className="w-full px-4 py-3 text-left rounded-lg hover:bg-orange-50 text-slate-700 hover:text-orange-700 transition-colors"
+                      >
+                        <div className="font-medium">{segment.name}</div>
+                        <div className="text-xs text-slate-500">{segment.day} • {segment.phase || 'O'}</div>
+                      </button>
+                    ))}
+                  </>
+                ) : currentPageContext === 'wristband' ? (
+                  /* Context: Wristband - Direct Add */
+                  <button
+                    onClick={() => handleDestinationSelect('wristband')}
+                    className="w-full px-4 py-3 text-left rounded-lg hover:bg-purple-50 text-slate-700 hover:text-purple-700 transition-colors"
+                  >
+                    <div className="font-medium">Current Wristband</div>
+                    <div className="text-xs text-slate-500">Fill empty slots until full</div>
+                  </button>
+                ) : (
+                  /* Default: Show All Destinations */
+                  <>
+                    <button
+                      onClick={() => handleDestinationSelect('install')}
+                      className="w-full px-4 py-3 text-left rounded-lg hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition-colors"
+                    >
+                      <div className="font-medium">Install Manager</div>
+                      <div className="text-xs text-slate-500">Add to this week's install list</div>
+                    </button>
+                    <button
+                      onClick={() => handleDestinationSelect('wristband')}
+                      className="w-full px-4 py-3 text-left rounded-lg hover:bg-purple-50 text-slate-700 hover:text-purple-700 transition-colors"
+                    >
+                      <div className="font-medium">Wristband Builder</div>
+                      <div className="text-xs text-slate-500">Fill empty slots until full</div>
+                    </button>
+                    <button
+                      onClick={() => handleDestinationSelect('practice-script')}
+                      className="w-full px-4 py-3 text-left rounded-lg hover:bg-orange-50 text-slate-700 hover:text-orange-700 transition-colors"
+                    >
+                      <div className="font-medium">Practice Scripts</div>
+                      <div className="text-xs text-slate-500">Add to current script segment</div>
+                    </button>
+                    <div className="border-t border-slate-200 my-2" />
+                    <div className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase">Game Planner</div>
+                    <button
+                      onClick={() => handleDestinationSelect('gameplan-quicklist')}
+                      className="w-full px-4 py-3 text-left rounded-lg hover:bg-sky-50 text-slate-700 hover:text-sky-700 transition-colors"
+                    >
+                      <div className="font-medium">Call Sheet</div>
+                      <div className="text-xs text-slate-500">Add to quick lists for assignment</div>
+                    </button>
+                  </>
+                )}
               </div>
               <div className="p-3 border-t border-slate-200">
                 <button

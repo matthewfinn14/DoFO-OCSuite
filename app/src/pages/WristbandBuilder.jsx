@@ -310,6 +310,23 @@ export default function WristbandBuilder() {
   // Clear entire card
   const handleClearCard = () => {
     if (!confirm('Clear all plays from this card?')) return;
+
+    // Clear wristband info from all plays on this card
+    const cardSlots = currentCard.slots || {};
+    Object.values(cardSlots).forEach(slotData => {
+      if (slotData?.playId) {
+        updatePlay(slotData.playId, { wristbandSlot: null, wristbandType: null, wristbandColumn: null });
+      }
+    });
+
+    // Also check slotMap for plays assigned to slots in this card's range
+    slots.forEach(slot => {
+      const play = slotMap[slot];
+      if (play) {
+        updatePlay(play.id, { wristbandSlot: null, wristbandType: null, wristbandColumn: null });
+      }
+    });
+
     updateCardSettings({ slots: {}, rows: [] });
   };
 
@@ -642,6 +659,8 @@ export default function WristbandBuilder() {
                   onEditDiagram={handleEditSkillDiagram}
                   selectedPlayId={selectedPlayId}
                   updatePlay={updatePlay}
+                  positionColors={positionColors}
+                  positionNames={positionNames}
                 />
               </div>
               {/* OLINE Card - WIZ dimensions: 12cm x 8cm (4.7" x 3.15"), aspect ratio ~3:2 */}
@@ -658,6 +677,8 @@ export default function WristbandBuilder() {
                   olSchemes={olSchemes}
                   selectedPlayId={selectedPlayId}
                   updatePlay={updatePlay}
+                  positionColors={positionColors}
+                  positionNames={positionNames}
                 />
               </div>
             </div>
@@ -700,8 +721,8 @@ export default function WristbandBuilder() {
               </div>
             </div>
           ) : (
-            /* Standard Layout - landscape wristband card: 5" x 2.8", aspect ratio 25:14 */
-            <div style={{ width: '500px', height: '280px' }}>
+            /* Standard Layout - larger for editing, prints at proper dimensions */
+            <div style={{ width: '800px', height: '448px' }}>
               <SpreadsheetTable
                 slots={slots}
                 title={`${currentCard.opponent || 'OPPONENT'} ${currentCard.iteration || '1'}`}
@@ -992,7 +1013,7 @@ function SpreadsheetTable({ slots, title, cardLabel, cardColor, getPlayForSlot, 
 }
 
 // WIZ Grid Component
-function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, onEditDiagram, onSelectOLScheme, olSchemes, selectedPlayId, updatePlay }) {
+function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, onEditDiagram, onSelectOLScheme, olSchemes, selectedPlayId, updatePlay, positionColors, positionNames }) {
   const [editingSlot, setEditingSlot] = useState(null);
   const [editValue, setEditValue] = useState('');
 
@@ -1099,6 +1120,7 @@ function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, on
                 <div
                   key={slot}
                   onClick={() => isClickable && onAssign(slot)}
+                  className="group"
                   style={{
                     borderRight: cIndex < 3 ? '1px solid black' : 'none',
                     display: 'flex',
@@ -1111,6 +1133,34 @@ function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, on
                     minHeight: 0
                   }}
                 >
+                  {/* Clear button - appears on hover */}
+                  {play && onClear && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onClear(slot); }}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      style={{
+                        position: 'absolute',
+                        top: '2px',
+                        right: '2px',
+                        zIndex: 10,
+                        width: '14px',
+                        height: '14px',
+                        fontSize: '10px',
+                        background: 'rgba(239,68,68,0.9)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '2px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        lineHeight: 1
+                      }}
+                      title="Clear slot"
+                    >
+                      ×
+                    </button>
+                  )}
                   {/* Diagram area - constrained to cell */}
                   <div
                     onClick={(e) => {

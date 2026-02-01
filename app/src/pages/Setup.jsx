@@ -948,7 +948,8 @@ export default function Setup() {
 
     // Middle section - ordered by play call syntax sequence
     const savedSyntax = setupConfig?.syntax?.[phase] || [];
-    const addedTabs = new Set(); // Track which tabs we've added to avoid duplicates
+    // Track which tabs we've added to avoid duplicates - pre-populate with IDs already in top section
+    const addedTabs = new Set(tabs.filter(t => t.id).map(t => t.id));
 
     // Map sourceCategory to tab config
     const categoryToTab = {

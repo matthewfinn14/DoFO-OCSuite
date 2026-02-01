@@ -5,15 +5,10 @@ import { usePlayBank } from '../context/PlayBankContext';
 import { getWristbandDisplay } from '../utils/wristband';
 import { getPlayCall } from '../utils/playDisplay';
 import SheetView from '../components/gameplan/SheetView';
-import FZDnDView from '../components/gameplan/FZDnDView';
-import MatrixView from '../components/gameplan/MatrixView';
-import InstallView from '../components/gameplan/InstallView';
-import PlayerView from '../components/gameplan/PlayerView';
 import BoxEditorModal from '../components/gameplan/BoxEditorModal';
 import {
   List,
   Grid,
-  Map,
   Printer,
   Lock,
   Unlock,
@@ -24,8 +19,6 @@ import {
   Target,
   MapPin,
   Zap,
-  Package,
-  Users,
   ExternalLink,
   CheckSquare
 } from 'lucide-react';
@@ -246,19 +239,9 @@ export default function GamePlan() {
   const isLight = settings?.theme === 'light';
 
   // View state
-  const [activeTab, setActiveTab] = useState('sheet'); // 'sheet', 'fzdnd', 'matrix'
   const [isLocked, setIsLocked] = useState(false);
   const [isSheetEditing, setIsSheetEditing] = useState(false);
   const [editingBox, setEditingBox] = useState(null);
-
-  // Collapse state for FZDnD rows
-  const [collapsedFZDnDRows, setCollapsedFZDnDRows] = useState(new Set());
-
-  // Collapse state for Matrix
-  const [collapsedGroups, setCollapsedGroups] = useState(new Set());
-  const [collapsedHashColumns, setCollapsedHashColumns] = useState(new Set());
-  const [collapsedRows, setCollapsedRows] = useState(new Set());
-  const [editingFormationId, setEditingFormationId] = useState(null);
 
   // Drag state for Sheet view
   const [draggedCell, setDraggedCell] = useState(null);
@@ -309,7 +292,27 @@ export default function GamePlan() {
   useEffect(() => {
     if (!batchAddEvent) return;
 
-    const { destination, playIds } = batchAddEvent;
+    const { destination, playIds, setId } = batchAddEvent;
+
+    // Handle specific box selection from context-aware batch add
+    if (destination === 'gameplan-box' && setId) {
+      const newGamePlan = { ...gamePlan };
+      const newSets = [...(newGamePlan.sets || [])];
+      let setIndex = newSets.findIndex(s => s.id === setId);
+
+      if (setIndex === -1) {
+        newSets.push({ id: setId, playIds: [...playIds] });
+      } else {
+        const existingSet = { ...newSets[setIndex] };
+        existingSet.playIds = [...new Set([...(existingSet.playIds || []), ...playIds])];
+        newSets[setIndex] = existingSet;
+      }
+
+      newGamePlan.sets = newSets;
+      handleUpdateGamePlan(newGamePlan);
+      clearBatchAddEvent();
+      return;
+    }
 
     // Handle Game Planner destinations
     if (destination === 'gameplan-quicklist') {
@@ -355,20 +358,6 @@ export default function GamePlan() {
         setPendingBatchPlays(playIds);
         setIsTargetingBox(true);
       }
-      clearBatchAddEvent();
-    } else if (destination === 'gameplan-byplayer') {
-      // Switch to By Player tab
-      setActiveTab('byPlayer');
-      clearBatchAddEvent();
-    } else if (destination === 'gameplan-byplaytype') {
-      // Switch to By Play Type tab
-      setActiveTab('byPlayType');
-      clearBatchAddEvent();
-    } else if (destination === 'gameplan-fzdnd') {
-      // Switch to FZDnD tab and enter targeting mode
-      setActiveTab('fzdnd');
-      setPendingBatchPlays(playIds);
-      setIsTargetingBox(true);
       clearBatchAddEvent();
     }
   }, [batchAddEvent, editingBox, gamePlan, gamePlanLayouts, handleUpdateGamePlan, clearBatchAddEvent]);
@@ -579,46 +568,6 @@ export default function GamePlan() {
     }
   }, [gamePlanLayouts, handleUpdateLayouts, isLocked]);
 
-  // Handle play drop on FZDnD cell
-  const handleFZDnDDrop = useCallback((zoneId, rowIdx, colIdx, playId) => {
-    if (isLocked) return;
-    const setId = `fzdnd_${zoneId}_${colIdx}`;
-    let newSets = [...(gamePlan.sets || [])];
-    let setIndex = newSets.findIndex(s => s.id === setId);
-
-    if (setIndex === -1) {
-      const newSet = { id: setId, playIds: [] };
-      while (newSet.playIds.length <= rowIdx) {
-        newSet.playIds.push(null);
-      }
-      newSet.playIds[rowIdx] = playId;
-      newSets.push(newSet);
-    } else {
-      const existingSet = { ...newSets[setIndex] };
-      while (existingSet.playIds.length <= rowIdx) {
-        existingSet.playIds.push(null);
-      }
-      existingSet.playIds[rowIdx] = playId;
-      newSets[setIndex] = existingSet;
-    }
-    handleUpdateGamePlan({ ...gamePlan, sets: newSets });
-  }, [gamePlan, handleUpdateGamePlan, isLocked]);
-
-  // Remove play from FZDnD cell
-  const handleRemoveFromFZDnD = useCallback((zoneId, rowIdx, colIdx) => {
-    if (isLocked) return;
-    const setId = `fzdnd_${zoneId}_${colIdx}`;
-    let newSets = [...(gamePlan.sets || [])];
-    let setIndex = newSets.findIndex(s => s.id === setId);
-
-    if (setIndex !== -1) {
-      const existingSet = { ...newSets[setIndex] };
-      existingSet.playIds[rowIdx] = null;
-      newSets[setIndex] = existingSet;
-      handleUpdateGamePlan({ ...gamePlan, sets: newSets });
-    }
-  }, [gamePlan, handleUpdateGamePlan, isLocked]);
-
   // Handle FZDnD Box drop (for FZDnD boxes in SheetView)
   // Set ID pattern: {boxSetId}_{downDistanceId}
   const handleFZDnDBoxDrop = useCallback((boxSetId, rowIdx, ddId, playId) => {
@@ -695,79 +644,6 @@ export default function GamePlan() {
       handleUpdateGamePlan({ ...gamePlan, sets: newSets });
     }
   }, [gamePlan, handleUpdateGamePlan, isLocked]);
-
-  // Toggle FZDnD row collapse
-  const toggleFZDnDRow = useCallback((zoneId, rowIdx) => {
-    const rowKey = `${zoneId}_${rowIdx}`;
-    setCollapsedFZDnDRows(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(rowKey)) {
-        newSet.delete(rowKey);
-      } else {
-        newSet.add(rowKey);
-      }
-      return newSet;
-    });
-  }, []);
-
-  // Update zone notes
-  const updateZoneNote = useCallback((zoneId, note) => {
-    const newNotes = { ...(gamePlan.zoneNotes || {}) };
-    newNotes[zoneId] = note;
-    handleUpdateGamePlan({ ...gamePlan, zoneNotes: newNotes });
-  }, [gamePlan, handleUpdateGamePlan]);
-
-  // Update custom zone settings
-  const updateCustomZone = useCallback((zoneId, updates) => {
-    const newCustomZones = { ...(gamePlan.customZones || {}) };
-    newCustomZones[zoneId] = { ...newCustomZones[zoneId], ...updates };
-    handleUpdateGamePlan({ ...gamePlan, customZones: newCustomZones });
-  }, [gamePlan, handleUpdateGamePlan]);
-
-  // Update custom column names
-  const updateCustomColumns = useCallback((zoneId, colIdx, value) => {
-    const newCustomCols = { ...(gamePlan.customColumns || {}) };
-    newCustomCols[zoneId] = { ...(newCustomCols[zoneId] || {}), [colIdx]: value };
-    handleUpdateGamePlan({ ...gamePlan, customColumns: newCustomCols });
-  }, [gamePlan, handleUpdateGamePlan]);
-
-  // Matrix toggle functions
-  const toggleGroup = useCallback((groupId) => {
-    setCollapsedGroups(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(groupId)) {
-        newSet.delete(groupId);
-      } else {
-        newSet.add(groupId);
-      }
-      return newSet;
-    });
-  }, []);
-
-  const toggleHashColumn = useCallback((groupId, direction) => {
-    const key = `${groupId}_${direction}`;
-    setCollapsedHashColumns(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(key)) {
-        newSet.delete(key);
-      } else {
-        newSet.add(key);
-      }
-      return newSet;
-    });
-  }, []);
-
-  const toggleRow = useCallback((playTypeId) => {
-    setCollapsedRows(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(playTypeId)) {
-        newSet.delete(playTypeId);
-      } else {
-        newSet.add(playTypeId);
-      }
-      return newSet;
-    });
-  }, []);
 
   // Update formation name override
   const handleUpdateFormationName = useCallback((formationId, name) => {
@@ -1207,7 +1083,7 @@ export default function GamePlan() {
     // Always include formation with the play name, and wristband slot if assigned
     const playCall = getPlayCall(play);
     const wristband = getWristbandDisplay(play);
-    return wristband ? `${playCall} ${wristband}` : playCall;
+    return wristband ? `${playCall} [${wristband}]` : playCall;
   }, []);
 
   // Print handler
@@ -1289,8 +1165,8 @@ export default function GamePlan() {
               <span className="text-sm">{isLocked ? 'Locked' : 'Unlocked'}</span>
             </button>
 
-            {/* Edit Layout Button - Only show on Call Sheet tab */}
-            {activeTab === 'sheet' && !isLocked && (
+            {/* Edit Layout Button */}
+            {!isLocked && (
               <button
                 onClick={() => setIsSheetEditing(!isSheetEditing)}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${isSheetEditing
@@ -1331,65 +1207,11 @@ export default function GamePlan() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className={`flex rounded-lg p-1 ${isLight ? 'bg-slate-100 border border-slate-200' : 'bg-slate-800'}`}>
-          <button
-            onClick={() => setActiveTab('sheet')}
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-colors ${activeTab === 'sheet'
-              ? isLight ? 'bg-white text-sky-600 shadow-sm font-semibold' : 'bg-sky-500 text-white'
-              : isLight ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50' : 'text-slate-400 hover:text-white hover:bg-slate-700'
-              }`}
-          >
-            <List size={16} />
-            <span className="text-sm font-medium">Call Sheet</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('fzdnd')}
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-colors ${activeTab === 'fzdnd'
-              ? isLight ? 'bg-white text-sky-600 shadow-sm font-semibold' : 'bg-sky-500 text-white'
-              : isLight ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50' : 'text-slate-400 hover:text-white hover:bg-slate-700'
-              }`}
-          >
-            <Map size={16} />
-            <span className="text-sm font-medium">FZDnD</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('matrix')}
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-colors ${activeTab === 'matrix'
-              ? isLight ? 'bg-white text-sky-600 shadow-sm font-semibold' : 'bg-sky-500 text-white'
-              : isLight ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50' : 'text-slate-400 hover:text-white hover:bg-slate-700'
-              }`}
-          >
-            <Grid size={16} />
-            <span className="text-sm font-medium">Matrix</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('byPlayType')}
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-colors ${activeTab === 'byPlayType'
-              ? isLight ? 'bg-white text-sky-600 shadow-sm font-semibold' : 'bg-sky-500 text-white'
-              : isLight ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50' : 'text-slate-400 hover:text-white hover:bg-slate-700'
-              }`}
-          >
-            <Package size={16} />
-            <span className="text-sm font-medium">By Play Type</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('byPlayer')}
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-colors ${activeTab === 'byPlayer'
-              ? 'bg-sky-500 text-white'
-              : 'text-slate-400 hover:text-white hover:bg-slate-700'
-              }`}
-          >
-            <Users size={16} />
-            <span className="text-sm font-medium">By Player</span>
-          </button>
-        </div>
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-hidden bg-slate-950">
-        {activeTab === 'sheet' && (
-          <SheetView
+        <SheetView
             layouts={gamePlanLayouts}
             gamePlan={gamePlan}
             plays={playsArray}
@@ -1422,74 +1244,6 @@ export default function GamePlan() {
             onMatrixBoxAdd={handleMatrixBoxAdd}
             onMatrixBoxRemove={handleMatrixBoxRemove}
           />
-        )}
-
-        {activeTab === 'fzdnd' && (
-          <FZDnDView
-            layouts={gamePlanLayouts}
-            gamePlan={gamePlan}
-            plays={playsArray}
-            currentWeek={currentWeek}
-            teamLogo={teamLogo}
-            isLocked={isLocked}
-            collapsedRows={collapsedFZDnDRows}
-            onToggleRow={toggleFZDnDRow}
-            onDrop={handleFZDnDDrop}
-            onRemove={handleRemoveFromFZDnD}
-            onUpdateZoneNote={updateZoneNote}
-            onUpdateCustomZone={updateCustomZone}
-            onUpdateCustomColumns={updateCustomColumns}
-            onAddPlayToSet={handleAddPlayToSet}
-            getPlayDisplayName={getPlayDisplayName}
-          />
-        )}
-
-        {activeTab === 'matrix' && (
-          <MatrixView
-            layouts={gamePlanLayouts}
-            gamePlan={gamePlan}
-            plays={playsArray}
-            isLocked={isLocked}
-            collapsedGroups={collapsedGroups}
-            collapsedHashColumns={collapsedHashColumns}
-            collapsedRows={collapsedRows}
-            editingFormationId={editingFormationId}
-            onToggleGroup={toggleGroup}
-            onToggleHashColumn={toggleHashColumn}
-            onToggleRow={toggleRow}
-            onEditFormation={setEditingFormationId}
-            onUpdateFormationName={handleUpdateFormationName}
-            onAddPlayToSet={handleAddPlayToSet}
-            onRemovePlayFromSet={handleRemovePlayFromSet}
-            getPlayDisplayName={getPlayDisplayName}
-          />
-        )}
-
-        {activeTab === 'byPlayType' && (
-          <InstallView
-            currentWeek={currentWeek}
-            plays={playsArray}
-            gamePlan={gamePlan}
-            setupConfig={setupConfig}
-            isLocked={isLocked}
-            onUpdateGamePlan={handleUpdateGamePlan}
-            getPlayDisplayName={getPlayDisplayName}
-          />
-        )}
-
-        {activeTab === 'byPlayer' && (
-          <PlayerView
-            currentWeek={currentWeek}
-            plays={playsArray}
-            gamePlan={gamePlan}
-            roster={roster}
-            depthCharts={depthCharts}
-            setupConfig={setupConfig}
-            isLocked={isLocked}
-            onUpdateGamePlan={handleUpdateGamePlan}
-            getPlayDisplayName={getPlayDisplayName}
-          />
-        )}
       </div>
 
       {/* Box Editor Modal */}

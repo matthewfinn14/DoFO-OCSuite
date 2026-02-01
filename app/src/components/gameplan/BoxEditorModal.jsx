@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { X, Search, Trash2, GripVertical, ChevronUp, ChevronDown, ArrowRight, Plus, CheckSquare } from 'lucide-react';
+import { X, Search, Trash2, GripVertical, ChevronUp, ChevronDown, ArrowRight, Plus } from 'lucide-react';
 import { usePlayBank } from '../../context/PlayBankContext';
 import { getPlayCall } from '../../utils/playDisplay';
 
@@ -26,7 +26,7 @@ export default function BoxEditorModal({
   onMatrixCellAdd,
   onMatrixCellRemove
 }) {
-  const { startBatchSelect } = usePlayBank();
+  const { quickAddRequest } = usePlayBank();
   const [localBox, setLocalBox] = useState({ ...box });
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('editor'); // 'settings', 'editor'
@@ -34,7 +34,6 @@ export default function BoxEditorModal({
   const [dragOverQuickListIdx, setDragOverQuickListIdx] = useState(null);
 
   // Quick Add Request Handling
-  const { quickAddRequest } = usePlayBank();
   const lastProcessedQuickAddRef = useRef(0);
 
   useEffect(() => {
@@ -45,86 +44,6 @@ export default function BoxEditorModal({
       onAddPlayToQuickList(box.setId, quickAddRequest.playId);
     }
   }, [quickAddRequest, onAddPlayToQuickList, box.setId]);
-
-  // Handle batch add from Play Bank to QuickList
-  const handleBatchAddToQuickList = useCallback(() => {
-    startBatchSelect((playIds) => {
-      // Add all selected plays to the Quick List
-      playIds.forEach(playId => {
-        onAddPlayToQuickList(box.setId, playId);
-      });
-    }, `Add to Quick List (${box.header || 'Box'})`);
-  }, [startBatchSelect, onAddPlayToQuickList, box.setId, box.header]);
-
-  // Handle batch add to Grid
-  const handleBatchAddToGrid = useCallback(() => {
-    startBatchSelect((playIds) => {
-      setLocalBox(prev => {
-        const next = { ...prev };
-        const cols = next.gridColumns || 4;
-        const rows = next.gridRows || 5;
-        const totalSlots = cols * rows;
-
-        const currentAssigned = [...(next.assignedPlayIds || [])];
-        while (currentAssigned.length < totalSlots) {
-          currentAssigned.push(null);
-        }
-
-        let playIdx = 0;
-        for (let i = 0; i < totalSlots && playIdx < playIds.length; i++) {
-          if (!currentAssigned[i] || currentAssigned[i] === 'GAP') {
-            currentAssigned[i] = playIds[playIdx];
-            // Also assign via parent prop to persist immediately? No, saving happens on Save button usually?
-            // Wait, this modal usually saves on close or changes propagate differently?
-            // The prop onAssignPlayToCell is used for individual assignment.
-            // But here we are updating localBox.
-            // We should probably trigger assignment props to ensure persistence outside the modal too
-            // OR relying on `onSave` to save `localBox`.
-            // Let's rely on localBox and ensure handleSave sends it up.
-            playIdx++;
-          }
-        }
-        next.assignedPlayIds = currentAssigned;
-        return next;
-      });
-
-      // Also add to quicklist - REMOVED to prevent duplication
-      // playIds.forEach(playId => onAddPlayToQuickList(box.setId, playId));
-
-    }, `Add to Grid (${box.header || 'Box'})`);
-  }, [startBatchSelect, box.header, box.setId, onAddPlayToQuickList]);
-
-  // Handle batch add to Script
-  const handleBatchAddToScript = useCallback(() => {
-    startBatchSelect((playIds) => {
-      setLocalBox(prev => {
-        const next = { ...prev };
-        const rows = [...(next.rows || [])];
-        const scriptColumns = next.scriptColumns || 2;
-
-        let playIdx = 0;
-        for (let r = 0; r < rows.length && playIdx < playIds.length; r++) {
-          if (!rows[r]) rows[r] = { label: r + 1, content: null, contentRight: null };
-
-          if (!rows[r].content) {
-            rows[r] = { ...rows[r], content: playIds[playIdx] };
-            playIdx++;
-          }
-
-          if (playIdx < playIds.length && scriptColumns === 2 && !rows[r].contentRight) {
-            rows[r] = { ...rows[r], contentRight: playIds[playIdx] };
-            playIdx++;
-          }
-        }
-        next.rows = rows;
-        return next;
-      });
-
-      // Also add to quicklist - REMOVED to prevent duplication
-      // playIds.forEach(playId => onAddPlayToQuickList(box.setId, playId));
-
-    }, `Add to Script (${box.header || 'Box'})`);
-  }, [startBatchSelect, box.header, box.setId, onAddPlayToQuickList]);
 
   // Get Quick List plays (assignedPlayIds)
   const quickListPlays = useMemo(() => {
@@ -469,61 +388,6 @@ export default function BoxEditorModal({
           )}
         </div>
 
-        {/* Batch Add Buttons */}
-        {!isLocked && (
-          <div style={{ padding: '8px 12px', borderBottom: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {/* Add to Grid/Script Button */}
-            <button
-              onClick={box.type === 'script' ? handleBatchAddToScript : handleBatchAddToGrid}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                padding: '8px 12px',
-                background: '#eff6ff',
-                border: '1px solid #bfdbfe',
-                borderRadius: '6px',
-                color: '#2563eb',
-                fontWeight: '600',
-                fontSize: '0.8rem',
-                cursor: 'pointer'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.background = '#dbeafe'}
-              onMouseLeave={(e) => e.currentTarget.style.background = '#eff6ff'}
-            >
-              <CheckSquare size={14} />
-              {box.type === 'script' ? 'Batch Add to Script' : 'Batch Add to Grid'}
-            </button>
-
-            {/* Add to Quick List Only Button */}
-            <button
-              onClick={handleBatchAddToQuickList}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                padding: '6px 12px',
-                background: 'transparent',
-                border: '1px dashed #cbd5e1',
-                borderRadius: '6px',
-                color: '#64748b',
-                fontWeight: '500',
-                fontSize: '0.75rem',
-                cursor: 'pointer'
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#94a3b8'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
-            >
-              <Plus size={12} />
-              Add Selection to Quick List Only
-            </button>
-          </div>
-        )}
-
         {/* Quick List Header */}
         <div style={{
           padding: '10px 12px',
@@ -564,7 +428,7 @@ export default function BoxEditorModal({
               Search and add plays to your Quick List, then assign them to slots.
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               {quickListPlays.map((play, idx) => {
                 const isDragging = draggedQuickListIdx === idx;
                 const isDragOver = dragOverQuickListIdx === idx;
@@ -580,24 +444,24 @@ export default function BoxEditorModal({
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px',
-                      padding: '8px',
+                      gap: '6px',
+                      padding: '4px 6px',
                       background: isDragOver ? '#dbeafe' : (isDragging ? '#f1f5f9' : 'white'),
                       border: isDragOver ? '2px dashed #3b82f6' : '1px solid #e2e8f0',
-                      borderRadius: '6px',
+                      borderRadius: '4px',
                       opacity: isDragging ? 0.5 : 1,
                       cursor: isLocked ? 'default' : 'grab'
                     }}
                   >
                     {!isLocked && (
-                      <GripVertical size={14} className="text-slate-400 flex-shrink-0" />
+                      <GripVertical size={12} className="text-slate-400 flex-shrink-0" />
                     )}
 
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{
                         fontWeight: '500',
                         color: '#1e293b',
-                        fontSize: '0.85rem',
+                        fontSize: '0.8rem',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis'
@@ -607,12 +471,12 @@ export default function BoxEditorModal({
                     </div>
 
                     {!isLocked && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'row', gap: '0px' }}>
                         <button
                           onClick={() => handleMoveQuickListPlay(play.id, 'up')}
                           disabled={idx === 0}
                           style={{
-                            padding: '2px',
+                            padding: '1px',
                             background: 'none',
                             border: 'none',
                             cursor: idx === 0 ? 'not-allowed' : 'pointer',
@@ -626,7 +490,7 @@ export default function BoxEditorModal({
                           onClick={() => handleMoveQuickListPlay(play.id, 'down')}
                           disabled={idx === quickListPlays.length - 1}
                           style={{
-                            padding: '2px',
+                            padding: '1px',
                             background: 'none',
                             border: 'none',
                             cursor: idx === quickListPlays.length - 1 ? 'not-allowed' : 'pointer',
@@ -1187,13 +1051,19 @@ export default function BoxEditorModal({
     if (columnSource === 'custom' && localBox.customColumns?.length > 0) {
       columns = localBox.customColumns;
     } else if (columnSource === 'playPurpose') {
-      columns = (setupConfig?.playPurposes || [])
+      const allPurposes = (setupConfig?.playPurposes || [])
         .sort((a, b) => (a.order || 0) - (b.order || 0))
-        .map(p => ({ id: p.id, name: p.name }));
+        .map(p => ({ id: p.id, name: p.name, color: p.color }));
+      // Filter by selected if specified
+      const selectedIds = localBox.selectedPurposes;
+      columns = selectedIds ? allPurposes.filter(p => selectedIds.includes(p.id)) : allPurposes;
     } else {
       // Default to downDistance
-      columns = [...(setupConfig?.downDistanceCategories || [])]
+      const allDD = [...(setupConfig?.downDistanceCategories || [])]
         .sort((a, b) => (a.order || 0) - (b.order || 0));
+      // Filter by selected if specified
+      const selectedIds = localBox.selectedDownDistance;
+      columns = selectedIds ? allDD.filter(d => selectedIds.includes(d.id)) : allDD;
     }
 
     const rowCount = localBox.rowCount || 5;
@@ -2284,21 +2154,44 @@ export default function BoxEditorModal({
               ) : localBox.columnSource === 'playPurpose' ? (
                 <div>
                   <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '8px' }}>
-                    Using {(setupConfig?.playPurposes || []).length} play purposes from Setup
+                    Click to toggle columns ({(localBox.selectedPurposes || (setupConfig?.playPurposes || []).map(p => p.id)).length} selected)
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                    {(setupConfig?.playPurposes || []).map(purpose => (
-                      <span key={purpose.id} style={{
-                        padding: '4px 8px',
-                        background: purpose.color ? `${purpose.color}20` : '#f1f5f9',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        color: purpose.color || '#475569',
-                        border: `1px solid ${purpose.color || '#e2e8f0'}`
-                      }}>
-                        {purpose.name}
-                      </span>
-                    ))}
+                    {(setupConfig?.playPurposes || [])
+                      .sort((a, b) => (a.order || 0) - (b.order || 0))
+                      .map(purpose => {
+                        const selectedPurposes = localBox.selectedPurposes || (setupConfig?.playPurposes || []).map(p => p.id);
+                        const isSelected = selectedPurposes.includes(purpose.id);
+                        return (
+                          <button
+                            key={purpose.id}
+                            onClick={() => {
+                              const current = localBox.selectedPurposes || (setupConfig?.playPurposes || []).map(p => p.id);
+                              let updated;
+                              if (isSelected) {
+                                updated = current.filter(id => id !== purpose.id);
+                                if (updated.length === 0) updated = [purpose.id]; // Keep at least one
+                              } else {
+                                updated = [...current, purpose.id];
+                              }
+                              updateField('selectedPurposes', updated);
+                            }}
+                            style={{
+                              padding: '4px 8px',
+                              background: isSelected ? (purpose.color ? `${purpose.color}30` : '#dbeafe') : '#f1f5f9',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              color: isSelected ? (purpose.color || '#3b82f6') : '#94a3b8',
+                              border: `1px solid ${isSelected ? (purpose.color || '#3b82f6') : '#e2e8f0'}`,
+                              cursor: 'pointer',
+                              opacity: isSelected ? 1 : 0.6,
+                              textDecoration: isSelected ? 'none' : 'line-through'
+                            }}
+                          >
+                            {purpose.name}
+                          </button>
+                        );
+                      })}
                     {(setupConfig?.playPurposes || []).length === 0 && (
                       <p style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic' }}>
                         No play purposes defined. Go to Setup → Define Situations to add them.
@@ -2309,22 +2202,44 @@ export default function BoxEditorModal({
               ) : (
                 <div>
                   <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '8px' }}>
-                    Using {(setupConfig?.downDistanceCategories || []).length} categories from Setup
+                    Click to toggle columns ({(localBox.selectedDownDistance || (setupConfig?.downDistanceCategories || []).map(d => d.id)).length} selected)
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                     {[...(setupConfig?.downDistanceCategories || [])]
                       .sort((a, b) => (a.order || 0) - (b.order || 0))
-                      .map(dd => (
-                        <span key={dd.id} style={{
-                          padding: '4px 8px',
-                          background: '#f1f5f9',
-                          borderRadius: '4px',
-                          fontSize: '0.75rem',
-                          color: '#475569'
-                        }}>
-                          {dd.name}
-                        </span>
-                      ))}
+                      .map(dd => {
+                        const selectedDD = localBox.selectedDownDistance || (setupConfig?.downDistanceCategories || []).map(d => d.id);
+                        const isSelected = selectedDD.includes(dd.id);
+                        return (
+                          <button
+                            key={dd.id}
+                            onClick={() => {
+                              const current = localBox.selectedDownDistance || (setupConfig?.downDistanceCategories || []).map(d => d.id);
+                              let updated;
+                              if (isSelected) {
+                                updated = current.filter(id => id !== dd.id);
+                                if (updated.length === 0) updated = [dd.id]; // Keep at least one
+                              } else {
+                                updated = [...current, dd.id];
+                              }
+                              updateField('selectedDownDistance', updated);
+                            }}
+                            style={{
+                              padding: '4px 8px',
+                              background: isSelected ? '#dbeafe' : '#f1f5f9',
+                              borderRadius: '4px',
+                              fontSize: '0.75rem',
+                              color: isSelected ? '#3b82f6' : '#94a3b8',
+                              border: `1px solid ${isSelected ? '#3b82f6' : '#e2e8f0'}`,
+                              cursor: 'pointer',
+                              opacity: isSelected ? 1 : 0.6,
+                              textDecoration: isSelected ? 'none' : 'line-through'
+                            }}
+                          >
+                            {dd.name}
+                          </button>
+                        );
+                      })}
                   </div>
                   {(setupConfig?.downDistanceCategories || []).length === 0 && (
                     <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '4px' }}>

@@ -323,11 +323,19 @@ export default function SheetView({
     if (columnSource === 'custom' && box.customColumns?.length > 0) {
       columns = box.customColumns;
     } else if (columnSource === 'playPurpose') {
-      columns = (setupConfig?.playPurposes || []).map(p => ({ id: p.id, name: p.name }));
+      const allPurposes = (setupConfig?.playPurposes || [])
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .map(p => ({ id: p.id, name: p.name, color: p.color }));
+      // Filter by selected if specified
+      const selectedIds = box.selectedPurposes;
+      columns = selectedIds ? allPurposes.filter(p => selectedIds.includes(p.id)) : allPurposes;
     } else {
       // Default to downDistance
-      columns = [...(setupConfig?.downDistanceCategories || [])]
+      const allDD = [...(setupConfig?.downDistanceCategories || [])]
         .sort((a, b) => (a.order || 0) - (b.order || 0));
+      // Filter by selected if specified
+      const selectedIds = box.selectedDownDistance;
+      columns = selectedIds ? allDD.filter(d => selectedIds.includes(d.id)) : allDD;
     }
 
     const rowCount = box.rowCount || 5;

@@ -623,12 +623,17 @@ export function SchoolProvider({ children }) {
   }, [updateSchool]);
 
   /**
-   * Update a single play
+   * Update a single play - uses functional update to avoid race conditions
    */
   const updatePlay = useCallback(async (playId, playData) => {
-    const newPlays = { ...plays, [playId]: { ...plays[playId], ...playData } };
-    await updatePlays(newPlays);
-  }, [plays, updatePlays]);
+    // Use setPlays with a callback to get the latest state
+    setPlays(currentPlays => {
+      const newPlays = { ...currentPlays, [playId]: { ...currentPlays[playId], ...playData } };
+      // Trigger the async save with the new data
+      updateSchool({ plays: newPlays }).catch(err => console.error('Error updating play:', err));
+      return newPlays;
+    });
+  }, [updateSchool]);
 
   /**
    * Add a new play
