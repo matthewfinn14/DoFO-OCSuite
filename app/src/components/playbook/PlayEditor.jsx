@@ -2049,8 +2049,9 @@ export default function PlayEditor({
           <div className="bg-slate-800 rounded-lg w-[95vw] h-[95vh] overflow-hidden">
             <PlayDiagramEditor
               mode="wiz-oline"
-              initialData={formData.wizOlineData ? { elements: formData.wizOlineData } : null}
+              initialData={formData.wizOlineData ? { elements: formData.wizOlineData } : (formData.wizOlineRef?.diagramData ? { elements: formData.wizOlineRef.diagramData } : null)}
               playName={formData.formation ? `${formData.formation} ${formData.name}` : formData.name}
+              olCallText={formData.wizOlineRef?.name || ''}
               olSchemes={olSchemes}
               onSaveToOLLibrary={({ elements: diagramElements, name, type }) => {
                 // Save to the OL library in setupConfig

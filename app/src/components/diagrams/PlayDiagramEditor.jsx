@@ -173,6 +173,7 @@ export default function PlayDiagramEditor({
   positionNames = {},
   customDefaultPositions = {}, // User's custom default positions { positionKey: { x, y } }
   playName = '', // Optional play name to display in toolbar
+  olCallText = '', // OL call text (protection/scheme name) to display next to play name
   // OL WIZ Library props
   olSchemes = { protections: [], runBlocking: [] }, // Available OL schemes from library
   onSaveToOLLibrary = null // Callback to save current diagram to OL library: ({ elements, name, type }) => void
@@ -240,6 +241,7 @@ export default function PlayDiagramEditor({
   const [showSaveAsOLModal, setShowSaveAsOLModal] = useState(false);
   const [saveAsOLName, setSaveAsOLName] = useState('');
   const [saveAsOLType, setSaveAsOLType] = useState('protection'); // 'protection' | 'runBlocking'
+  const [currentOLCall, setCurrentOLCall] = useState(olCallText); // Track current OL call (updates when loading from library)
 
   // History for undo/redo
   const [history, setHistory] = useState([elements]);
@@ -1496,6 +1498,16 @@ export default function PlayDiagramEditor({
                 </div>
               )}
 
+              {/* OL Call Text Badge - shows current protection/scheme */}
+              {isWizOline && currentOLCall && (
+                <div className="flex items-center gap-2 bg-amber-700 px-3 py-1.5 rounded-lg">
+                  <span className="text-amber-200 text-xs font-medium">OL CALL</span>
+                  <span className="text-white font-semibold text-sm">
+                    {currentOLCall}
+                  </span>
+                </div>
+              )}
+
               {/* WIZ Skill: Formation Group */}
               {isWizSkill && (
                 <div className="flex items-center gap-2">
@@ -2049,6 +2061,7 @@ export default function PlayDiagramEditor({
                           if (prot.diagramData) {
                             updateElements(prot.diagramData, true);
                           }
+                          setCurrentOLCall(prot.name);
                           setShowOLLibraryModal(false);
                         }}
                         className="p-3 bg-slate-700/50 border border-slate-600 rounded-lg hover:border-sky-500 transition-colors text-left"
@@ -2112,6 +2125,7 @@ export default function PlayDiagramEditor({
                           if (scheme.diagramData) {
                             updateElements(scheme.diagramData, true);
                           }
+                          setCurrentOLCall(scheme.name);
                           setShowOLLibraryModal(false);
                         }}
                         className="p-3 bg-slate-700/50 border border-slate-600 rounded-lg hover:border-sky-500 transition-colors text-left"
