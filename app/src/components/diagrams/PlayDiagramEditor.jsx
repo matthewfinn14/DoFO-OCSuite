@@ -219,7 +219,7 @@ export default function PlayDiagramEditor({
   const [selectedTool, setSelectedTool] = useState('select');
   const [color, setColor] = useState('#000000');
   const [lineStyle, setLineStyle] = useState('solid');
-  const [lineWidth, setLineWidth] = useState(7);
+  const [lineWidth, setLineWidth] = useState(isWizOline ? 14 : 7);
   const [endType, setEndType] = useState(isWizOline ? 't' : 'arrow'); // T-block for OL, arrow for skill
   const [selectedShape, setSelectedShape] = useState('star'); // Shape to place when using shape tool
 
@@ -1159,7 +1159,7 @@ export default function PlayDiagramEditor({
       const isInteractionTool = selectedTool === 'select' || selectedTool === 'delete';
       const pointerEvents = isInteractionTool ? 'all' : 'none';
       const shapeColor = el.color || '#000000';
-      const size = 30;
+      const size = isWizOline ? 90 : 30; // 3x bigger for WIZ OL
 
       let shapeElement = null;
 
@@ -1315,7 +1315,7 @@ export default function PlayDiagramEditor({
       const uy = dy / len;
 
       // Arrow dimensions proportional to stroke width
-      const sw = el.strokeWidth || 7;
+      const sw = el.strokeWidth || (isWizOline ? 14 : 7);
       const arrowLen = sw * 6;
       const arrowWidth = sw * 3.5;
 
@@ -1341,9 +1341,10 @@ export default function PlayDiagramEditor({
       const dx = end.x - prev.x;
       const dy = end.y - prev.y;
       const len = Math.hypot(dx, dy) || 1;
-      const sWidth = parseInt(el.strokeWidth || 2);
-      const perpX = (-dy / len) * 15;
-      const perpY = (dx / len) * 15;
+      const sWidth = parseInt(el.strokeWidth || (isWizOline ? 14 : 2));
+      const tBlockSize = isWizOline ? 23 : 15; // 50% wider for WIZ OL
+      const perpX = (-dy / len) * tBlockSize;
+      const perpY = (dx / len) * tBlockSize;
 
       tBlock = (
         <line
@@ -1360,7 +1361,7 @@ export default function PlayDiagramEditor({
     }
 
     const isSelected = selectedIds.has(el.id);
-    const strokeWidth = el.strokeWidth || 7;
+    const strokeWidth = el.strokeWidth || (isWizOline ? 14 : 7);
     const isInteractionTool = selectedTool === 'select' || selectedTool === 'delete';
 
     // Generate segments with per-segment styles
@@ -1380,7 +1381,7 @@ export default function PlayDiagramEditor({
         const dx = p2.x - p1.x;
         const dy = p2.y - p1.y;
         const len = Math.hypot(dx, dy);
-        const sw = el.strokeWidth || 7;
+        const sw = el.strokeWidth || (isWizOline ? 14 : 7);
         const arrowLen = sw * 6;
         if (len > arrowLen) {
           const shortenBy = arrowLen * 0.7; // Pull back line to meet arrow base
@@ -1473,8 +1474,8 @@ export default function PlayDiagramEditor({
       {!readOnly && (
         <div className="bg-slate-900 border-b border-slate-700">
           {/* Row 1: Play & Formation Controls */}
-          <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800">
-            {/* Left side: Play name + Formation controls */}
+          <div className="flex items-center justify-center px-3 py-2 border-b border-slate-800">
+            {/* All controls centered */}
             <div className="flex items-center gap-3">
               {/* Play Name Badge */}
               {playName && (
@@ -1609,9 +1610,9 @@ export default function PlayDiagramEditor({
                 </div>
               )}
 
-              {/* WIZ OL: Add Custom Blocker + Text Size */}
+              {/* WIZ OL: Add Custom Blocker */}
               {isWizOline && (
-                <div className="flex items-center gap-1 bg-slate-800/50 px-2 py-1 rounded-lg">
+                <div className="flex items-center gap-1">
                   <input
                     id="diagram-blocker-input"
                     type="text"
@@ -1619,36 +1620,20 @@ export default function PlayDiagramEditor({
                     onChange={(e) => setCustomLetterInput(e.target.value.toUpperCase())}
                     placeholder="?"
                     maxLength={2}
-                    className="w-7 px-1 py-1 text-center text-xs bg-slate-700 border border-slate-600 rounded text-white"
+                    className="w-7 px-1 py-1 text-center text-xs font-semibold bg-slate-800 border-2 border-black rounded text-white"
                     title="Enter blocker letter"
                   />
                   <button
                     onClick={() => { if (customLetterInput) { toggleWizNode(customLetterInput); setCustomLetterInput(''); } }}
                     disabled={!customLetterInput}
-                    className="px-2 py-1.5 text-xs bg-sky-600 text-white rounded hover:bg-sky-500 disabled:opacity-50 transition-colors"
+                    className="px-2 py-1.5 text-xs font-semibold bg-sky-600 text-white border-2 border-sky-700 rounded hover:bg-sky-500 disabled:opacity-50 transition-colors"
                     title="Add blocker"
                   >
                     Add
                   </button>
-                  <div className="flex items-center gap-0.5 ml-1">
-                    <button
-                      onClick={() => { const s = Math.max(50, wizTextSize - 10); setWizTextSize(s); if (selectedIds.size > 0) updateElements(elements.map(el => (selectedIds.has(el.id) && el.shape === 'text-only') ? { ...el, fontSize: s } : el)); }}
-                      className="px-1.5 py-1 text-xs bg-slate-700 text-slate-300 rounded hover:bg-slate-600 transition-colors"
-                      title="Decrease text size"
-                    >-</button>
-                    <span className="text-xs text-slate-400 w-7 text-center">{wizTextSize}</span>
-                    <button
-                      onClick={() => { const s = Math.min(250, wizTextSize + 10); setWizTextSize(s); if (selectedIds.size > 0) updateElements(elements.map(el => (selectedIds.has(el.id) && el.shape === 'text-only') ? { ...el, fontSize: s } : el)); }}
-                      className="px-1.5 py-1 text-xs bg-slate-700 text-slate-300 rounded hover:bg-slate-600 transition-colors"
-                      title="Increase text size"
-                    >+</button>
-                  </div>
                 </div>
               )}
-            </div>
-
-            {/* Right side: Save buttons */}
-            <div className="flex items-center gap-2">
+              {/* Save buttons */}
               <button
                 onClick={onCancel}
                 className="px-3 py-1.5 text-xs text-slate-400 hover:text-white transition-colors"
@@ -1690,8 +1675,8 @@ export default function PlayDiagramEditor({
           </div>
 
           {/* Row 2: Drawing Tools */}
-          <div className="flex items-center justify-between px-3 py-2">
-            {/* Left side: Drawing tools */}
+          <div className="flex items-center justify-center px-3 py-2">
+            {/* All tools centered */}
             <div className="flex items-center gap-4">
               {/* Select/Group/Flip Tools */}
               <div className="flex flex-col">
@@ -1870,10 +1855,6 @@ export default function PlayDiagramEditor({
                   </select>
                 </div>
               </div>
-            </div>
-
-            {/* Right side: History + Help */}
-            <div className="flex items-center gap-4">
               {/* History */}
               <div className="flex flex-col">
                 <span className="text-[10px] text-slate-500 font-medium mb-1 uppercase tracking-wide">History</span>
