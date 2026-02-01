@@ -260,6 +260,9 @@ export default function PlayDiagramEditor({
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentPath, setCurrentPath] = useState(null);
 
+  // Text box drawing state (for drag-to-create text)
+  const [textBoxDrag, setTextBoxDrag] = useState(null); // { startX, startY, endX, endY }
+
   // Drag state
   const [isDraggingElements, setIsDraggingElements] = useState(false);
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
@@ -735,22 +738,9 @@ export default function PlayDiagramEditor({
       }
     }
 
-    // Text placement (WIZ SKILL only)
+    // Text box drag start (WIZ SKILL only)
     if (selectedTool === 'text' && isWizSkill) {
-      const text = prompt('Enter text:');
-      if (!text || !text.trim()) return;
-      const newText = {
-        id: Date.now(),
-        type: 'text',
-        points: [point],
-        color: color,
-        text: text.trim(),
-        fontSize: skillTextSize
-      };
-      const newElements = [...elements, newText];
-      setElements(newElements);
-      updateHistory(newElements);
-      setSelectedTool('select');
+      setTextBoxDrag({ startX: point.x, startY: point.y, endX: point.x, endY: point.y });
     }
   };
 
@@ -811,6 +801,12 @@ export default function PlayDiagramEditor({
     // Selection box update
     if (selectionBox) {
       setSelectionBox(prev => ({ ...prev, current: point }));
+      return;
+    }
+
+    // Text box drag update
+    if (textBoxDrag) {
+      setTextBoxDrag(prev => ({ ...prev, endX: point.x, endY: point.y }));
       return;
     }
 
@@ -890,6 +886,41 @@ export default function PlayDiagramEditor({
 
       setSelectedIds(newSelected);
       setSelectionBox(null);
+      return;
+    }
+
+    // Finish text box drag
+    if (textBoxDrag) {
+      const x1 = Math.min(textBoxDrag.startX, textBoxDrag.endX);
+      const y1 = Math.min(textBoxDrag.startY, textBoxDrag.endY);
+      const x2 = Math.max(textBoxDrag.startX, textBoxDrag.endX);
+      const y2 = Math.max(textBoxDrag.startY, textBoxDrag.endY);
+      const width = x2 - x1;
+      const height = y2 - y1;
+
+      // Only create text if box is big enough (at least 20x20)
+      if (width >= 20 && height >= 20) {
+        const text = prompt('Enter text:');
+        if (text && text.trim()) {
+          const centerX = x1 + width / 2;
+          const centerY = y1 + height / 2;
+          const newText = {
+            id: Date.now(),
+            type: 'text',
+            points: [{ x: centerX, y: centerY }],
+            color: color,
+            text: text.trim(),
+            fontSize: skillTextSize,
+            boxWidth: width,
+            boxHeight: height
+          };
+          const newElements = [...elements, newText];
+          setElements(newElements);
+          updateHistory(newElements);
+        }
+      }
+      setTextBoxDrag(null);
+      setSelectedTool('select');
       return;
     }
 
@@ -2003,9 +2034,9 @@ export default function PlayDiagramEditor({
                     <button
                       onClick={() => setSelectedTool('text')}
                       className={`px-2 py-1.5 text-xs font-semibold rounded border-2 transition-colors ${selectedTool === 'text' ? 'bg-orange-500 text-white border-orange-600' : 'bg-slate-800 text-white border-slate-600 hover:bg-slate-700'}`}
-                      title="Click on canvas to place text"
+                      title="Drag on canvas to draw text box"
                     >
-                      Place
+                      Draw
                     </button>
                   </div>
                 </div>
@@ -2386,7 +2417,7 @@ export default function PlayDiagramEditor({
           : selectedTool === 'shape'
           ? 'Click to place shape • Use Color dropdown to change color'
           : selectedTool === 'text'
-          ? 'Click to place text • Use font size buttons to adjust size'
+          ? 'Drag to draw text box • Release to enter text'
           : 'Drag to move • Select + Delete to remove'}
       </div>
 
@@ -2471,6 +2502,33 @@ export default function PlayDiagramEditor({
                 strokeWidth="1"
                 strokeDasharray="4,2"
               />
+            )}
+
+            {/* Text box drag preview */}
+            {textBoxDrag && (
+              <g>
+                <rect
+                  x={Math.min(textBoxDrag.startX, textBoxDrag.endX)}
+                  y={Math.min(textBoxDrag.startY, textBoxDrag.endY)}
+                  width={Math.abs(textBoxDrag.endX - textBoxDrag.startX)}
+                  height={Math.abs(textBoxDrag.endY - textBoxDrag.startY)}
+                  fill="rgba(249, 115, 22, 0.1)"
+                  stroke="#f97316"
+                  strokeWidth="2"
+                  strokeDasharray="6,3"
+                />
+                <text
+                  x={(textBoxDrag.startX + textBoxDrag.endX) / 2}
+                  y={(textBoxDrag.startY + textBoxDrag.endY) / 2}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize="14"
+                  fill="#f97316"
+                  style={{ fontFamily: 'Arial, sans-serif', pointerEvents: 'none' }}
+                >
+                  Text Box
+                </text>
+              </g>
             )}
           </svg>
         </div>
