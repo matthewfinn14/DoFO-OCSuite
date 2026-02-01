@@ -2723,14 +2723,14 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
     setShowCreateEditor(false);
   };
 
-  // Default position colors for fallback
-  const DEFAULT_POSITION_COLORS = {
-    'C': '#64748b', 'G': '#64748b', 'T': '#64748b',
-    'LT': '#64748b', 'LG': '#64748b', 'RG': '#64748b', 'RT': '#64748b',
-    'QB': '#ef4444', 'B': '#22c55e', 'X': '#3b82f6', 'Y': '#8b5cf6',
-    'Z': '#f59e0b', 'H': '#ec4899', 'A': '#06b6d4', 'F': '#10b981',
-    'RB': '#22c55e', 'FB': '#6366f1', 'TE': '#84cc16', 'WR': '#a855f7'
+  // Use global defaults - matches the DEFAULT_POSITION_COLORS shown in Name Positions tab
+  const POSITION_COLORS_DEFAULTS = {
+    QB: '#1e3a5f', RB: '#3b82f6', FB: '#0891b2', WR: '#a855f7', TE: '#f97316',
+    LT: '#64748b', LG: '#64748b', C: '#64748b', RG: '#64748b', RT: '#64748b',
+    X: '#a855f7', Y: '#22c55e', Z: '#eab308', H: '#06b6d4', F: '#f97316',
+    A: '#f97316', B: '#3b82f6'
   };
+  const SKILL_POSITION_FALLBACK = '#3b82f6'; // Blue fallback for any position not in defaults
 
   // Get initial elements for the WIZ editor based on formation
   const getInitialElements = () => {
@@ -2742,7 +2742,7 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
         id: Date.now() + idx,
         type: 'player',
         points: [{ x: (pos.x / 100) * 950, y: (pos.y / 100) * 600 }],
-        color: pos.color || positionColors[pos.label] || DEFAULT_POSITION_COLORS[pos.label] || '#3b82f6',
+        color: pos.color || positionColors[pos.label] || POSITION_COLORS_DEFAULTS[pos.label] || SKILL_POSITION_FALLBACK,
         label: pos.label,
         shape: pos.shape || 'circle',
         variant: pos.variant || 'filled',

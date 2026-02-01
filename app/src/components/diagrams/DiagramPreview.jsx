@@ -88,13 +88,14 @@ const renderArrowHead = (points, color, strokeWidth = 7) => {
   );
 };
 
-// Default position colors (fallback)
+// Default position colors - matches the colors shown in Name Positions tab
 const DEFAULT_POSITION_COLORS = {
-  'C': '#64748b', 'G': '#64748b', 'T': '#64748b',
-  'LT': '#64748b', 'LG': '#64748b', 'RG': '#64748b', 'RT': '#64748b',
-  'QB': '#ef4444', 'B': '#22c55e', 'X': '#3b82f6', 'Y': '#8b5cf6',
-  'Z': '#f59e0b', 'H': '#ec4899', 'A': '#06b6d4', 'F': '#10b981'
+  QB: '#1e3a5f', RB: '#3b82f6', FB: '#0891b2', WR: '#a855f7', TE: '#f97316',
+  LT: '#64748b', LG: '#64748b', C: '#64748b', RG: '#64748b', RT: '#64748b',
+  X: '#a855f7', Y: '#22c55e', Z: '#eab308', H: '#06b6d4', F: '#f97316',
+  A: '#f97316', B: '#3b82f6'
 };
+const SKILL_POSITION_FALLBACK = '#3b82f6'; // Fallback for any position not in defaults
 
 export default function DiagramPreview({
   elements = [],
@@ -160,7 +161,7 @@ export default function DiagramPreview({
 
   // Helper to get effective color for a position label
   const getEffectiveColor = (label, storedColor) => {
-    return positionColors[label] || storedColor || DEFAULT_POSITION_COLORS[label] || '#3b82f6';
+    return positionColors[label] || storedColor || DEFAULT_POSITION_COLORS[label] || SKILL_POSITION_FALLBACK;
   };
 
   // Render an element for the preview

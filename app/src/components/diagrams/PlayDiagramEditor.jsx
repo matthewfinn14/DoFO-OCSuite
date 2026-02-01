@@ -69,16 +69,16 @@ const SHAPES = [
   { id: 'textbox', label: 'Text Box', icon: 'T' },
 ];
 
-// Default position colors (fallback only - user's positionColors from setup take precedence)
+// Default position colors - matches the colors shown in Name Positions tab
 const DEFAULT_POSITION_COLORS = {
-  'C': '#64748b', 'G': '#64748b', 'T': '#64748b',
-  'LT': '#64748b', 'LG': '#64748b', 'RG': '#64748b', 'RT': '#64748b',
-  'QB': '#1e3a5f', 'Q': '#1e3a5f',
-  'RB': '#3b82f6', 'FB': '#6366f1',
-  'X': '#a855f7', 'Z': '#22c55e', 'Y': '#eab308',
-  'A': '#f97316', 'B': '#3b82f6', 'F': '#f97316', 'H': '#06b6d4',
-  'TE': '#84cc16', 'WR': '#a855f7'
+  QB: '#1e3a5f', RB: '#3b82f6', FB: '#0891b2', WR: '#a855f7', TE: '#f97316',
+  LT: '#64748b', LG: '#64748b', C: '#64748b', RG: '#64748b', RT: '#64748b',
+  X: '#a855f7', Y: '#22c55e', Z: '#eab308', H: '#06b6d4', F: '#f97316',
+  A: '#f97316', B: '#3b82f6'
 };
+
+// Fallback color for any position not in defaults
+const SKILL_POSITION_FALLBACK_COLOR = '#3b82f6'; // Blue
 
 // Default WIZ OL Formation - C centered on canvas (450, 300 for 900x600 viewBox)
 const getDefaultWizOLFormation = () => {
@@ -497,7 +497,7 @@ export default function PlayDiagramEditor({
     if (!formation || !formation.positions) return;
 
     const newElements = [];
-    const getColor = (label) => positionColors[label] || DEFAULT_POSITION_COLORS[label] || '#3b82f6';
+    const getColor = (label) => positionColors[label] || DEFAULT_POSITION_COLORS[label] || SKILL_POSITION_FALLBACK_COLOR;
     const baseTime = Date.now();
 
     // Default config for positions that don't have saved shape/variant
@@ -557,7 +557,7 @@ export default function PlayDiagramEditor({
 
     setSelectedPersonnelId(groupingId);
 
-    const getColor = (label) => positionColors[label] || DEFAULT_POSITION_COLORS[label] || '#3b82f6';
+    const getColor = (label) => positionColors[label] || DEFAULT_POSITION_COLORS[label] || SKILL_POSITION_FALLBACK_COLOR;
     const baseTime = Date.now();
 
     // Keep all non-player elements (lines, routes, etc.) and OL
@@ -610,7 +610,7 @@ export default function PlayDiagramEditor({
   const addSinglePlayer = (posKey) => {
     const wizCenter = 475;
     const wizLos = 390;
-    const getColor = (label) => positionColors[label] || DEFAULT_POSITION_COLORS[label] || '#3b82f6';
+    const getColor = (label) => positionColors[label] || DEFAULT_POSITION_COLORS[label] || SKILL_POSITION_FALLBACK_COLOR;
 
     const isOL = ['C', 'LT', 'LG', 'RG', 'RT'].includes(posKey);
     // For display, use short label (G instead of LG, T instead of LT)
@@ -1152,7 +1152,7 @@ export default function PlayDiagramEditor({
       const pointerEvents = isInteractionTool ? 'all' : 'none';
 
       // Always use latest color from positionColors, falling back to stored color or defaults
-      const effectiveColor = positionColors[el.label] || el.color || DEFAULT_POSITION_COLORS[el.label] || '#3b82f6';
+      const effectiveColor = positionColors[el.label] || el.color || DEFAULT_POSITION_COLORS[el.label] || SKILL_POSITION_FALLBACK_COLOR;
 
       if (el.shape === 'text-only') {
         const tSize = el.fontSize || (isWizOline ? 170 : 50);
@@ -1758,7 +1758,7 @@ export default function PlayDiagramEditor({
                               key={pos}
                               onClick={() => addSinglePlayer(pos)}
                               className="px-3 py-1.5 text-xs rounded hover:opacity-80 text-white font-medium"
-                              style={{ backgroundColor: positionColors[pos] || DEFAULT_POSITION_COLORS[pos] || '#3b82f6' }}
+                              style={{ backgroundColor: positionColors[pos] || DEFAULT_POSITION_COLORS[pos] || SKILL_POSITION_FALLBACK_COLOR }}
                             >
                               {positionNames[pos] || pos}
                             </button>
