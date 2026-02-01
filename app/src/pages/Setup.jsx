@@ -2744,20 +2744,27 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
   const getInitialElements = () => {
     if (!editingFormation) return null;
 
+    // Debug: log positionColors to verify custom colors are available
+    console.log('DEBUG getInitialElements - positionColors:', JSON.stringify(positionColors));
+
     // If formation already has positions, load them
     if (editingFormation.positions && editingFormation.positions.length > 0) {
-      return editingFormation.positions.map((pos, idx) => ({
-        id: Date.now() + idx,
-        type: 'player',
-        points: [{ x: (pos.x / 100) * 950, y: (pos.y / 100) * 600 }],
-        // Always prioritize current positionColors over stored colors
-        color: positionColors[pos.label] || pos.color || POSITION_COLORS_DEFAULTS[pos.label] || SKILL_POSITION_FALLBACK,
-        label: pos.label,
-        shape: pos.shape || 'circle',
-        variant: pos.variant || 'filled',
-        fontSize: pos.fontSize,
-        groupId: pos.groupId
-      }));
+      return editingFormation.positions.map((pos, idx) => {
+        const resolvedColor = positionColors[pos.label] || pos.color || POSITION_COLORS_DEFAULTS[pos.label] || SKILL_POSITION_FALLBACK;
+        console.log(`DEBUG position ${pos.label}: positionColors[${pos.label}]=${positionColors[pos.label]}, stored=${pos.color}, resolved=${resolvedColor}`);
+        return {
+          id: Date.now() + idx,
+          type: 'player',
+          points: [{ x: (pos.x / 100) * 950, y: (pos.y / 100) * 600 }],
+          // Always prioritize current positionColors over stored colors
+          color: resolvedColor,
+          label: pos.label,
+          shape: pos.shape || 'circle',
+          variant: pos.variant || 'filled',
+          fontSize: pos.fontSize,
+          groupId: pos.groupId
+        };
+      });
     }
 
     // Otherwise, return null to use default formation
