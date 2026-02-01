@@ -88,6 +88,14 @@ const renderArrowHead = (points, color, strokeWidth = 7) => {
   );
 };
 
+// Default position colors (fallback)
+const DEFAULT_POSITION_COLORS = {
+  'C': '#64748b', 'G': '#64748b', 'T': '#64748b',
+  'LT': '#64748b', 'LG': '#64748b', 'RG': '#64748b', 'RT': '#64748b',
+  'QB': '#ef4444', 'B': '#22c55e', 'X': '#3b82f6', 'Y': '#8b5cf6',
+  'Z': '#f59e0b', 'H': '#ec4899', 'A': '#06b6d4', 'F': '#10b981'
+};
+
 export default function DiagramPreview({
   elements = [],
   width = 150,
@@ -95,7 +103,8 @@ export default function DiagramPreview({
   mode = 'wiz-oline',
   onClick,
   fillContainer = false, // When true, fills parent container without borders
-  showBackground = true
+  showBackground = true,
+  positionColors = {} // User's position colors from setup
 }) {
   // Generate unique ID for this preview instance
   const previewId = useMemo(() => `preview-${Math.random().toString(36).substr(2, 9)}`, []);
@@ -149,6 +158,11 @@ export default function DiagramPreview({
     );
   }
 
+  // Helper to get effective color for a position label
+  const getEffectiveColor = (label, storedColor) => {
+    return positionColors[label] || storedColor || DEFAULT_POSITION_COLORS[label] || '#3b82f6';
+  };
+
   // Render an element for the preview
   const renderElement = (el, index) => {
     if (!el || !el.points || el.points.length === 0) return null;
@@ -158,6 +172,8 @@ export default function DiagramPreview({
     try {
       if (el.type === 'player') {
         const { x, y } = el.points[0];
+        // Use positionColors lookup, falling back to stored color, then defaults
+        const effectiveColor = getEffectiveColor(el.label, el.color);
 
         if (el.shape === 'text-only') {
           const tSize = el.fontSize || (isWizSkill ? 50 : 170);
@@ -170,7 +186,7 @@ export default function DiagramPreview({
                 textAnchor="middle"
                 fontSize={tSize}
                 fontWeight="bold"
-                fill={el.color || 'black'}
+                fill={effectiveColor}
                 style={{ fontFamily: 'Arial, sans-serif' }}
               >
                 {el.label}
@@ -183,9 +199,9 @@ export default function DiagramPreview({
         const size = 42;
         const isRect = el.shape === 'square';
         const isFilled = el.variant === 'filled';
-        const fillColor = isFilled ? el.color : 'white';
-        const strokeColor = el.color || '#000';
-        const textColor = isFilled ? 'white' : el.color;
+        const fillColor = isFilled ? effectiveColor : 'white';
+        const strokeColor = effectiveColor;
+        const textColor = isFilled ? 'white' : effectiveColor;
 
         return (
           <g key={key}>

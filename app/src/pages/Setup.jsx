@@ -326,7 +326,11 @@ const TAB_HELP = {
       <div className="pt-3 space-y-3">
         <p>
           <strong className="text-white">Purpose:</strong> Configure situational categories for tagging and filtering plays—
-          field zones (Red Zone, Gold Zone), down & distance categories (3rd & Long), and special situations (2-Min Offense).
+          play purposes (Base, Convert, Shot), field zones (Red Zone, Gold Zone), down & distance categories (3rd & Long), and special situations (2-Min Offense).
+        </p>
+        <p>
+          <strong className="text-white">Play Purposes:</strong> Categorize plays by their role in your offense—
+          Base (foundational plays), Convert (situational first-down plays), Shot (explosive opportunities), and Gadget (trick plays).
         </p>
         <p>
           <strong className="text-white">Connections:</strong> These categories appear in your Playbook filters and
@@ -346,10 +350,6 @@ const TAB_HELP = {
         <p>
           <strong className="text-white">Purpose:</strong> Define the parameters used by the X&O Quality Control tool
           to analyze your install, practice scripts, practice performance, game plan, and post-game results.
-        </p>
-        <p>
-          <strong className="text-white">Play Purposes:</strong> Categorize plays by their role in your offense—
-          Base (foundational plays), Convert (situational first-down plays), Shot (explosive opportunities), and Gadget (trick plays).
         </p>
         <p>
           <strong className="text-white">Thresholds:</strong> Set what counts as an "efficient" or "explosive" play
@@ -501,7 +501,8 @@ const PHASES = [
   { id: 'OFFENSE', label: 'Offense Setup' },
   { id: 'DEFENSE', label: 'Defense Setup' },
   { id: 'SPECIAL_TEAMS', label: 'Special Teams Setup' },
-  { id: 'PRACTICE', label: 'Practice Setup' }
+  { id: 'PRACTICE', label: 'Practice Setup' },
+  { id: 'SELF_SCOUT', label: 'Self-Scout Setup' }
 ];
 
 export default function Setup() {
@@ -521,7 +522,8 @@ export default function Setup() {
     'special-teams': 'SPECIAL_TEAMS',
     'practice': 'PRACTICE',
     'program': 'PROGRAM',
-    'season': 'SEASON'
+    'season': 'SEASON',
+    'self-scout': 'SELF_SCOUT'
   };
 
   const phaseIdToSlug = {
@@ -530,7 +532,8 @@ export default function Setup() {
     'SPECIAL_TEAMS': 'special-teams',
     'PRACTICE': 'practice',
     'PROGRAM': 'program',
-    'SEASON': 'season'
+    'SEASON': 'season',
+    'SELF_SCOUT': 'self-scout'
   };
 
   // Get phase from URL or default
@@ -549,12 +552,14 @@ export default function Setup() {
   const isOffense = phase === 'OFFENSE';
   const isDefense = phase === 'DEFENSE';
   const isST = phase === 'SPECIAL_TEAMS';
+  const isSelfScout = phase === 'SELF_SCOUT';
 
   // Active tab within phase - derive from URL or default
   const getDefaultTab = (p) => {
     if (p === 'PRACTICE') return 'practice-lists';
     if (p === 'PROGRAM') return 'levels';
     if (p === 'SEASON') return 'season-phases';
+    if (p === 'SELF_SCOUT') return 'formation-families';
     return 'positions';
   };
   const [activeTab, setActiveTab] = useState(() => urlTab || getDefaultTab(phase));
@@ -627,16 +632,16 @@ export default function Setup() {
     { id: 'zone_goal', name: 'Goal Line', description: 'Opponent 3 yard line and in', startYard: 97, endYard: 100, color: '#22c55e', order: 7 }
   ];
 
-  // Default Down & Distance
+  // Default Down & Distance (with min/max yards for custom ranges)
   const DEFAULT_DOWN_DISTANCE = [
-    { id: 'dd_1st', name: '1st Down', description: 'First down', down: '1', distanceType: 'any', order: 1 },
-    { id: 'dd_2long', name: '2nd & Long', description: '2nd down, 7+ yards', down: '2', distanceType: 'long', order: 2 },
-    { id: 'dd_2med', name: '2nd & Medium', description: '2nd down, 4-6 yards', down: '2', distanceType: 'medium', order: 3 },
-    { id: 'dd_2short', name: '2nd & Short', description: '2nd down, 1-3 yards', down: '2', distanceType: 'short', order: 4 },
-    { id: 'dd_3long', name: '3rd & Long', description: '3rd down, 7+ yards', down: '3', distanceType: 'long', order: 5 },
-    { id: 'dd_3med', name: '3rd & Medium', description: '3rd down, 4-6 yards', down: '3', distanceType: 'medium', order: 6 },
-    { id: 'dd_3short', name: '3rd & Short', description: '3rd down, 1-3 yards', down: '3', distanceType: 'short', order: 7 },
-    { id: 'dd_4th', name: '4th Down', description: 'Fourth down', down: '4', distanceType: 'any', order: 8 }
+    { id: 'dd_1st', name: '1st Down', description: 'First down', down: '1', minYards: null, maxYards: null, order: 1 },
+    { id: 'dd_2long', name: '2nd & Long', description: '2nd down, 7+ yards', down: '2', minYards: 7, maxYards: null, order: 2 },
+    { id: 'dd_2med', name: '2nd & Medium', description: '2nd down, 4-6 yards', down: '2', minYards: 4, maxYards: 6, order: 3 },
+    { id: 'dd_2short', name: '2nd & Short', description: '2nd down, 1-3 yards', down: '2', minYards: 1, maxYards: 3, order: 4 },
+    { id: 'dd_3long', name: '3rd & Long', description: '3rd down, 7+ yards', down: '3', minYards: 7, maxYards: null, order: 5 },
+    { id: 'dd_3med', name: '3rd & Medium', description: '3rd down, 4-6 yards', down: '3', minYards: 4, maxYards: 6, order: 6 },
+    { id: 'dd_3short', name: '3rd & Short', description: '3rd down, 1-3 yards', down: '3', minYards: 1, maxYards: 3, order: 7 },
+    { id: 'dd_4th', name: '4th Down', description: 'Fourth down', down: '4', minYards: null, maxYards: null, order: 8 }
   ];
 
   // Default Special Situations
@@ -897,6 +902,14 @@ export default function Setup() {
     // Check if in basic mode
     const isBasicMode = (localConfig.setupMode?.[phase] || 'standard') === 'basic';
 
+    // Self-Scout Setup has its own tabs
+    if (isSelfScout) {
+      return [
+        { id: 'formation-families', label: 'Formation Families', icon: LayoutGrid },
+        { id: 'quality-control', label: 'Quality Control Definitions', icon: ClipboardCheck }
+      ];
+    }
+
     // Top persistent section
     const tabs = [
       { id: 'positions', label: 'Name Positions', icon: Users },
@@ -906,8 +919,7 @@ export default function Setup() {
         { id: 'personnel', label: 'Personnel Groupings', icon: UserCheck },
         { id: 'situations', label: 'Define Situations', icon: Target },
         { id: 'play-buckets', label: 'Define Play Buckets', icon: Tag },
-        { id: 'concept-groups', label: 'Concepts/Groups', icon: Grid },
-        { id: 'quality-control', label: 'Quality Control Definitions', icon: ClipboardCheck }
+        { id: 'concept-groups', label: 'Concepts/Groups', icon: Grid }
       );
     }
     // Hide Play Call Chain in Basic mode
@@ -932,8 +944,8 @@ export default function Setup() {
 
     // Map sourceCategory to tab config
     const categoryToTab = {
-      formations: { id: 'formations', label: 'Formations/Families', icon: LayoutGrid },
-      formationFamilies: { id: 'formations', label: 'Formations/Families', icon: LayoutGrid },
+      formations: { id: 'formations', label: 'Formations', icon: LayoutGrid },
+      formationFamilies: { id: 'formation-families', label: 'Formation Families', icon: LayoutGrid }, // Now in Self-Scout
       shiftMotions: { id: 'shifts-motions', label: 'Shifts/Motions', icon: ArrowRightLeft },
       conceptGroups: { id: 'concept-groups', label: 'Concepts/Groups', icon: Grid },
       readTypes: { id: 'read-types', label: 'Read Types', icon: Eye },
@@ -969,7 +981,7 @@ export default function Setup() {
     // Note: concept-groups is now in the top section for offense, so skip it here
     if (isOffense) {
       if (!addedTabs.has('formations')) {
-        tabs.push({ id: 'formations', label: 'Formations/Families', icon: LayoutGrid });
+        tabs.push({ id: 'formations', label: 'Formations', icon: LayoutGrid });
       }
       if (!addedTabs.has('shifts-motions')) {
         tabs.push({ id: 'shifts-motions', label: 'Shifts/Motions', icon: ArrowRightLeft });
@@ -990,9 +1002,10 @@ export default function Setup() {
       }
     }
 
-    // Bottom - Glossary (with divider) - hidden in Basic mode
+    // Bottom - Wristband Abbreviations and Glossary (with divider) - hidden in Basic mode
     if (!isBasicMode) {
       tabs.push({ divider: true });
+      tabs.push({ id: 'wristband-abbreviations', label: 'Wristband Abbreviations', icon: Watch });
       tabs.push({ id: 'glossary', label: 'Glossary', icon: BookOpen });
     }
 
@@ -1405,7 +1418,7 @@ export default function Setup() {
           )}
 
           {/* Formations Tab */}
-          {activeTab === 'formations' && !isPractice && !isProgram && (
+          {activeTab === 'formations' && !isPractice && !isProgram && !isSelfScout && (
             <FormationsTab
               phase={phase}
               formations={(localConfig.formations || []).filter(f => f.phase === phase)}
@@ -1425,6 +1438,7 @@ export default function Setup() {
               customFamilyCategories={localConfig.customFamilyCategories || []}
               onUpdateCategories={(categories) => updateLocal('customFamilyCategories', categories)}
               isLight={isLight}
+              hideFamilies={isOffense}
             />
           )}
 
@@ -1433,6 +1447,7 @@ export default function Setup() {
             <ShiftMotionsTab
               shiftMotions={localConfig.shiftMotions || []}
               onUpdate={(items) => updateLocal('shiftMotions', items)}
+              isLight={isLight}
             />
           )}
 
@@ -1475,6 +1490,7 @@ export default function Setup() {
               fieldZones={localConfig.fieldZones || []}
               downDistanceCategories={localConfig.downDistanceCategories || []}
               specialSituations={localConfig.specialSituations || []}
+              playPurposes={localConfig.playPurposes || []}
               onUpdate={updateLocal}
               isLight={isLight}
             />
@@ -1487,6 +1503,7 @@ export default function Setup() {
               buckets={getPlayBuckets()}
               allBuckets={localConfig.playBuckets || []}
               onUpdate={updateLocal}
+              isLight={isLight}
             />
           )}
 
@@ -1520,6 +1537,15 @@ export default function Setup() {
             );
           })()}
 
+          {/* Wristband Abbreviations Tab */}
+          {activeTab === 'wristband-abbreviations' && !isPractice && !isProgram && (
+            <WristbandAbbreviationsSection
+              phase={phase}
+              setupConfig={localConfig}
+              onUpdate={updateLocal}
+            />
+          )}
+
           {/* Glossary Definitions Tab */}
           {activeTab === 'glossary' && !isPractice && !isProgram && (
             <GlossaryDefinitionsTab
@@ -1540,11 +1566,22 @@ export default function Setup() {
             />
           )}
 
-          {/* Quality Control Definitions Tab */}
-          {activeTab === 'quality-control' && isOffense && (
+          {/* Quality Control Definitions Tab (Self-Scout Setup) */}
+          {activeTab === 'quality-control' && isSelfScout && (
             <QualityControlDefinitionsTab
               qualityControlDefinitions={localConfig.qualityControlDefinitions || {}}
               onUpdate={updateLocal}
+              isLight={isLight}
+            />
+          )}
+
+          {/* Formation Families Tab (Self-Scout Setup) */}
+          {activeTab === 'formation-families' && isSelfScout && (
+            <FormationFamiliesTab
+              formationFamilies={localConfig.formationFamilies || []}
+              customFamilyCategories={localConfig.customFamilyCategories || []}
+              onUpdate={(families) => updateLocal('formationFamilies', families)}
+              onUpdateCategories={(categories) => updateLocal('customFamilyCategories', categories)}
               isLight={isLight}
             />
           )}
@@ -2234,8 +2271,373 @@ function PersonnelTab({ personnelGroupings, positions, positionNames, positionCo
   );
 }
 
+// Formation Families Tab Component (for Self-Scout Setup)
+function FormationFamiliesTab({ formationFamilies = [], customFamilyCategories = [], onUpdate, onUpdateCategories, isLight = false }) {
+  // Default family categories
+  const DEFAULT_FAMILY_CATEGORIES = [
+    { id: 'distribution', name: 'WR Distribution', description: 'How receivers are split (2x2, 3x1, etc.)', isDefault: true },
+    { id: 'exchange', name: 'QB Exchange', description: 'How QB receives the snap', isDefault: true },
+    { id: 'backfield', name: 'Backfield', description: 'RB alignment', isDefault: true },
+    { id: 'te', name: 'TE Positioning', description: 'Tight End alignment', isDefault: true },
+    { id: 'grouping', name: 'WR Groupings', description: 'Receiver clusters (Trips, Bunch)', isDefault: true },
+    { id: 'strength', name: 'Strength', description: 'Formation strength call', isDefault: true },
+    { id: 'trade', name: 'Trade/Unbalanced', description: 'OL adjustments', isDefault: true },
+    { id: 'type', name: 'Formation Type', description: 'Open vs Closed formations', isDefault: true },
+    { id: 'other', name: 'Other', description: 'Miscellaneous families', isDefault: true },
+  ];
+
+  const FAMILY_CATEGORIES = [...DEFAULT_FAMILY_CATEGORIES, ...(customFamilyCategories || [])];
+
+  // State for modals
+  const [showAddFamilyModal, setShowAddFamilyModal] = useState(false);
+  const [newFamilyName, setNewFamilyName] = useState('');
+  const [newFamilyCategory, setNewFamilyCategory] = useState('other');
+  const [newFamilyColor, setNewFamilyColor] = useState('#3b82f6');
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryDescription, setNewCategoryDescription] = useState('');
+
+  // Default formation families
+  const DEFAULT_FAMILIES = [
+    { id: 'family_2x2', name: '2x2', color: '#3b82f6', category: 'distribution' },
+    { id: 'family_3x1', name: '3x1', color: '#8b5cf6', category: 'distribution' },
+    { id: 'family_2x1', name: '2x1', color: '#06b6d4', category: 'distribution' },
+    { id: 'family_3x2', name: '3x2', color: '#6366f1', category: 'distribution' },
+    { id: 'family_under', name: 'Under Center', color: '#ef4444', category: 'exchange' },
+    { id: 'family_gun', name: 'Gun', color: '#22c55e', category: 'exchange' },
+    { id: 'family_pistol', name: 'Pistol', color: '#f59e0b', category: 'exchange' },
+    { id: 'family_i', name: 'I-Form', color: '#7c3aed', category: 'backfield' },
+    { id: 'family_split', name: 'Split Backs', color: '#0891b2', category: 'backfield' },
+    { id: 'family_offset', name: 'Offset', color: '#65a30d', category: 'backfield' },
+    { id: 'family_yon', name: 'Y On', color: '#ec4899', category: 'te' },
+    { id: 'family_yoff', name: 'Y Off', color: '#14b8a6', category: 'te' },
+    { id: 'family_nub', name: 'Nub', color: '#f97316', category: 'te' },
+    { id: 'family_trips', name: 'Trips', color: '#0ea5e9', category: 'grouping' },
+    { id: 'family_twins', name: 'Twins', color: '#84cc16', category: 'grouping' },
+    { id: 'family_bunch', name: 'Bunch', color: '#f43f5e', category: 'grouping' },
+    { id: 'family_stack', name: 'Stack', color: '#7c3aed', category: 'grouping' },
+    { id: 'family_empty', name: 'Empty', color: '#64748b', category: 'grouping' },
+    { id: 'family_strong', name: 'Strong', color: '#059669', category: 'strength' },
+    { id: 'family_weak', name: 'Weak', color: '#dc2626', category: 'strength' },
+    { id: 'family_balanced', name: 'Balanced', color: '#6b7280', category: 'strength' },
+    { id: 'family_trade', name: 'Trade', color: '#b45309', category: 'trade' },
+    { id: 'family_open', name: 'Open', color: '#0d9488', category: 'type' },
+    { id: 'family_closed', name: 'Closed', color: '#78350f', category: 'type' },
+  ];
+
+  const loadDefaultFamilies = () => {
+    if (formationFamilies.length > 0 && !confirm('This will add default families to your existing list. Continue?')) return;
+    const existingNames = formationFamilies.map(f => f.name.toLowerCase());
+    const newFamilies = DEFAULT_FAMILIES.filter(f => !existingNames.includes(f.name.toLowerCase()));
+    onUpdate([...formationFamilies, ...newFamilies]);
+  };
+
+  const familiesByCategory = useMemo(() => {
+    const grouped = {};
+    FAMILY_CATEGORIES.forEach(cat => {
+      grouped[cat.id] = formationFamilies.filter(f => (f.category || 'other') === cat.id);
+    });
+    return grouped;
+  }, [formationFamilies, FAMILY_CATEGORIES]);
+
+  const addFamily = () => {
+    if (!newFamilyName.trim()) return;
+    const newFamily = {
+      id: `family_${Date.now()}`,
+      name: newFamilyName.trim(),
+      color: newFamilyColor,
+      category: newFamilyCategory
+    };
+    onUpdate([...formationFamilies, newFamily]);
+    setShowAddFamilyModal(false);
+    setNewFamilyName('');
+    setNewFamilyCategory('other');
+    setNewFamilyColor('#3b82f6');
+  };
+
+  const deleteFamily = (id) => {
+    if (!confirm('Delete this family?')) return;
+    onUpdate(formationFamilies.filter(f => f.id !== id));
+  };
+
+  const updateFamily = (id, updates) => {
+    onUpdate(formationFamilies.map(f => f.id === id ? { ...f, ...updates } : f));
+  };
+
+  const addCategory = () => {
+    if (!newCategoryName.trim()) return;
+    const newCategory = {
+      id: `cat_${Date.now()}`,
+      name: newCategoryName.trim(),
+      description: newCategoryDescription.trim() || `Custom category: ${newCategoryName.trim()}`,
+      isDefault: false
+    };
+    onUpdateCategories([...(customFamilyCategories || []), newCategory]);
+    setShowAddCategoryModal(false);
+    setNewCategoryName('');
+    setNewCategoryDescription('');
+  };
+
+  const deleteCategory = (categoryId) => {
+    const category = FAMILY_CATEGORIES.find(c => c.id === categoryId);
+    if (category?.isDefault) {
+      alert('Cannot delete default categories.');
+      return;
+    }
+    if (!confirm(`Delete "${category?.name}" category? Families in this category will be moved to "Other".`)) return;
+    const updatedFamilies = formationFamilies.map(f =>
+      f.category === categoryId ? { ...f, category: 'other' } : f
+    );
+    onUpdate(updatedFamilies);
+    onUpdateCategories((customFamilyCategories || []).filter(c => c.id !== categoryId));
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className={`text-lg font-semibold ${isLight ? 'text-gray-800' : 'text-white'}`}>Formation Families</h3>
+          <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+            Group formations for self-scouting tendencies analysis
+          </p>
+        </div>
+        {formationFamilies.length === 0 && (
+          <button
+            onClick={loadDefaultFamilies}
+            className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+          >
+            Load Defaults
+          </button>
+        )}
+      </div>
+
+      <div className={`p-4 rounded-lg border ${isLight ? 'bg-white border-gray-200' : 'bg-slate-800/50 border-slate-700'}`}>
+        <p className={`text-sm mb-4 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+          Group formations by receiver distribution (2x2, 3x1), QB exchange (Gun, Under), TE alignment (Y On/Off, Nub), groupings (Trips, Bunch), strength (Right/Left/Balanced), or formation type (Open/Closed).
+        </p>
+
+        <div className="space-y-3">
+          {FAMILY_CATEGORIES.map(category => {
+            const categoryFamilies = familiesByCategory[category.id] || [];
+            if (categoryFamilies.length === 0 && formationFamilies.length > 0) return null;
+
+            return (
+              <div key={category.id} className={`p-2 rounded-lg ${isLight ? 'bg-gray-50' : 'bg-slate-700/30'}`}>
+                <div className="flex items-center justify-between mb-2 group">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-semibold uppercase tracking-wide ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                      {category.name}
+                    </span>
+                    {!category.isDefault && (
+                      <span className="text-[10px] px-1.5 py-0.5 bg-purple-500/20 text-purple-400 rounded">Custom</span>
+                    )}
+                    <span className={`text-xs ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
+                      {category.description}
+                    </span>
+                  </div>
+                  {!category.isDefault && (
+                    <button
+                      onClick={() => deleteCategory(category.id)}
+                      className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-opacity p-1"
+                      title="Delete category"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {categoryFamilies.map(family => (
+                    <div
+                      key={family.id}
+                      className="group flex items-center gap-1 px-2 py-0.5 rounded border text-sm"
+                      style={{ backgroundColor: family.color + '20', borderColor: family.color }}
+                    >
+                      <input
+                        type="color"
+                        value={family.color}
+                        onChange={(e) => updateFamily(family.id, { color: e.target.value })}
+                        className="w-3 h-3 rounded cursor-pointer border-0"
+                      />
+                      <input
+                        type="text"
+                        value={family.name}
+                        onChange={(e) => updateFamily(family.id, { name: e.target.value })}
+                        className={`bg-transparent text-xs font-medium border-none focus:outline-none w-16 ${isLight ? 'text-gray-800' : 'text-white'}`}
+                      />
+                      <select
+                        value={family.category || 'other'}
+                        onChange={(e) => updateFamily(family.id, { category: e.target.value })}
+                        className={`opacity-0 group-hover:opacity-100 w-4 h-4 text-[10px] bg-transparent border-none cursor-pointer transition-opacity ${isLight ? 'text-gray-500' : 'text-slate-400'}`}
+                      >
+                        {FAMILY_CATEGORIES.map(cat => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => deleteFamily(family.id)}
+                        className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-opacity"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                  {categoryFamilies.length === 0 && (
+                    <span className={`text-xs italic ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
+                      No {category.name.toLowerCase()} families yet
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center gap-3 mt-4">
+          <button
+            onClick={() => setShowAddFamilyModal(true)}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm ${isLight ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+          >
+            <Plus size={14} /> Add Family
+          </button>
+          <button
+            onClick={() => setShowAddCategoryModal(true)}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm ${isLight ? 'bg-purple-100 text-purple-600 hover:bg-purple-200' : 'bg-purple-900/30 text-purple-400 hover:bg-purple-900/50'}`}
+          >
+            <Plus size={14} /> Add Category
+          </button>
+          {formationFamilies.length > 0 && (
+            <button
+              onClick={loadDefaultFamilies}
+              className="text-xs text-amber-500 hover:text-amber-400 underline"
+            >
+              + Add more default families
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Add Family Modal */}
+      {showAddFamilyModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className={`rounded-lg shadow-xl w-80 ${isLight ? 'bg-white' : 'bg-slate-800'}`}>
+            <div className={`p-4 border-b ${isLight ? 'border-gray-200' : 'border-slate-700'}`}>
+              <h4 className={`font-semibold ${isLight ? 'text-gray-800' : 'text-white'}`}>Add Formation Family</h4>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className={`block text-xs font-medium mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                  Family Name
+                </label>
+                <input
+                  type="text"
+                  value={newFamilyName}
+                  onChange={(e) => setNewFamilyName(e.target.value)}
+                  placeholder="e.g., Trips, Gun, Strong..."
+                  className={`w-full px-3 py-2 rounded border text-sm ${isLight ? 'bg-white border-gray-300' : 'bg-slate-700 border-slate-600 text-white'}`}
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className={`block text-xs font-medium mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                  Category
+                </label>
+                <select
+                  value={newFamilyCategory}
+                  onChange={(e) => setNewFamilyCategory(e.target.value)}
+                  className={`w-full px-3 py-2 rounded border text-sm ${isLight ? 'bg-white border-gray-300' : 'bg-slate-700 border-slate-600 text-white'}`}
+                >
+                  {FAMILY_CATEGORIES.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={`block text-xs font-medium mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                  Color
+                </label>
+                <input
+                  type="color"
+                  value={newFamilyColor}
+                  onChange={(e) => setNewFamilyColor(e.target.value)}
+                  className="w-full h-8 rounded cursor-pointer"
+                />
+              </div>
+            </div>
+            <div className={`p-4 border-t flex justify-end gap-2 ${isLight ? 'border-gray-200' : 'border-slate-700'}`}>
+              <button
+                onClick={() => { setShowAddFamilyModal(false); setNewFamilyName(''); }}
+                className={`px-3 py-1.5 rounded text-sm ${isLight ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addFamily}
+                className="px-3 py-1.5 bg-sky-600 text-white rounded text-sm hover:bg-sky-700"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Category Modal */}
+      {showAddCategoryModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className={`rounded-lg shadow-xl w-80 ${isLight ? 'bg-white' : 'bg-slate-800'}`}>
+            <div className={`p-4 border-b ${isLight ? 'border-gray-200' : 'border-slate-700'}`}>
+              <h4 className={`font-semibold ${isLight ? 'text-gray-800' : 'text-white'}`}>Add Custom Category</h4>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className={`block text-xs font-medium mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                  Category Name
+                </label>
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="e.g., Motion Package"
+                  className={`w-full px-3 py-2 rounded border text-sm ${isLight ? 'bg-white border-gray-300' : 'bg-slate-700 border-slate-600 text-white'}`}
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className={`block text-xs font-medium mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                  Description
+                </label>
+                <input
+                  type="text"
+                  value={newCategoryDescription}
+                  onChange={(e) => setNewCategoryDescription(e.target.value)}
+                  placeholder="Optional description"
+                  className={`w-full px-3 py-2 rounded border text-sm ${isLight ? 'bg-white border-gray-300' : 'bg-slate-700 border-slate-600 text-white'}`}
+                />
+              </div>
+            </div>
+            <div className={`p-4 border-t flex justify-end gap-2 ${isLight ? 'border-gray-200' : 'border-slate-700'}`}>
+              <button
+                onClick={() => { setShowAddCategoryModal(false); setNewCategoryName(''); setNewCategoryDescription(''); }}
+                className={`px-3 py-1.5 rounded text-sm ${isLight ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addCategory}
+                className="px-3 py-1.5 bg-purple-600 text-white rounded text-sm hover:bg-purple-700"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Formations Tab Component
-function FormationsTab({ phase, formations, personnelGroupings, formationFamilies = [], onUpdate, onUpdateFamilies, positionColors = {}, positionNames = {}, hiddenPositions = [], customPositions = [], customDefaultPositions = {}, onSaveDefaultPositions, customFamilyCategories = [], onUpdateCategories, isLight = false }) {
+function FormationsTab({ phase, formations, personnelGroupings, formationFamilies = [], onUpdate, onUpdateFamilies, positionColors = {}, positionNames = {}, hiddenPositions = [], customPositions = [], customDefaultPositions = {}, onSaveDefaultPositions, customFamilyCategories = [], onUpdateCategories, isLight = false, hideFamilies = false }) {
   const [showFamiliesSection, setShowFamiliesSection] = useState(true);
   const [editingFormationId, setEditingFormationId] = useState(null);
   const [showCreateEditor, setShowCreateEditor] = useState(false); // For creating new formations from scratch
@@ -2321,6 +2723,15 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
     setShowCreateEditor(false);
   };
 
+  // Default position colors for fallback
+  const DEFAULT_POSITION_COLORS = {
+    'C': '#64748b', 'G': '#64748b', 'T': '#64748b',
+    'LT': '#64748b', 'LG': '#64748b', 'RG': '#64748b', 'RT': '#64748b',
+    'QB': '#ef4444', 'B': '#22c55e', 'X': '#3b82f6', 'Y': '#8b5cf6',
+    'Z': '#f59e0b', 'H': '#ec4899', 'A': '#06b6d4', 'F': '#10b981',
+    'RB': '#22c55e', 'FB': '#6366f1', 'TE': '#84cc16', 'WR': '#a855f7'
+  };
+
   // Get initial elements for the WIZ editor based on formation
   const getInitialElements = () => {
     if (!editingFormation) return null;
@@ -2331,7 +2742,7 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
         id: Date.now() + idx,
         type: 'player',
         points: [{ x: (pos.x / 100) * 950, y: (pos.y / 100) * 600 }],
-        color: pos.color || positionColors[pos.label] || '#64748b',
+        color: pos.color || positionColors[pos.label] || DEFAULT_POSITION_COLORS[pos.label] || '#3b82f6',
         label: pos.label,
         shape: pos.shape || 'circle',
         variant: pos.variant || 'filled',
@@ -2507,8 +2918,8 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
 
   return (
     <div className="space-y-6">
-      {/* Families Section (Offense only) */}
-      {isOffense && (
+      {/* Families Section (Offense only, unless hideFamilies is true) */}
+      {isOffense && !hideFamilies && (
         <div className={`rounded-lg border overflow-hidden ${isLight ? 'bg-white border-gray-200 shadow-sm' : 'bg-slate-800/50 border-slate-700'}`}>
           <button
             onClick={() => setShowFamiliesSection(!showFamiliesSection)}
@@ -2949,7 +3360,7 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
 }
 
 // Shifts/Motions Tab Component (Offense only)
-function ShiftMotionsTab({ shiftMotions, onUpdate }) {
+function ShiftMotionsTab({ shiftMotions, onUpdate, isLight = false }) {
   const DEFAULT_SHIFT_MOTIONS = [
     // Motions
     { id: 'sm_jet', name: 'Jet', type: 'motion', color: '#ef4444' },
@@ -3000,8 +3411,8 @@ function ShiftMotionsTab({ shiftMotions, onUpdate }) {
     <div>
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h3 className="text-lg font-semibold text-white">Shifts & Motions</h3>
-          <p className="text-slate-400 text-sm">
+          <h3 className={`text-lg font-semibold ${isLight ? 'text-gray-800' : 'text-white'}`}>Shifts & Motions</h3>
+          <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
             Define pre-snap shifts and motions that can be tagged to plays.
           </p>
         </div>
@@ -3018,10 +3429,10 @@ function ShiftMotionsTab({ shiftMotions, onUpdate }) {
       {/* Motions Section */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-semibold text-slate-300 uppercase tracking-wide">Motions</h4>
+          <h4 className={`text-sm font-semibold uppercase tracking-wide ${isLight ? 'text-gray-600' : 'text-slate-300'}`}>Motions</h4>
           <button
             onClick={() => addItem('motion')}
-            className="flex items-center gap-1 px-3 py-1.5 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 text-sm"
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm ${isLight ? 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
           >
             <Plus size={14} /> Add Motion
           </button>
@@ -3030,7 +3441,7 @@ function ShiftMotionsTab({ shiftMotions, onUpdate }) {
           {motions.map(item => (
             <div
               key={item.id}
-              className="group flex items-center gap-2 p-3 rounded-lg border bg-slate-700/50"
+              className={`group flex items-center gap-2 p-3 rounded-lg border-2 ${isLight ? 'bg-white' : 'bg-slate-700/50'}`}
               style={{ borderColor: item.color }}
             >
               <input
@@ -3047,7 +3458,7 @@ function ShiftMotionsTab({ shiftMotions, onUpdate }) {
                 value={item.name}
                 onChange={(e) => updateItem(item.id, { name: e.target.value })}
                 aria-label="Motion name"
-                className="flex-1 bg-transparent text-white font-medium border-none focus:outline-none min-w-0"
+                className={`flex-1 bg-transparent font-medium border-none focus:outline-none min-w-0 ${isLight ? 'text-gray-800' : 'text-white'}`}
               />
               <button
                 onClick={() => deleteItem(item.id)}
@@ -3059,17 +3470,17 @@ function ShiftMotionsTab({ shiftMotions, onUpdate }) {
           ))}
         </div>
         {motions.length === 0 && (
-          <p className="text-sm text-slate-500 italic py-4">No motions defined. Add motions like Jet, Orbit, Fly, Rocket.</p>
+          <p className={`text-sm italic py-4 ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>No motions defined. Add motions like Jet, Orbit, Fly, Rocket.</p>
         )}
       </div>
 
       {/* Shifts Section */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-semibold text-slate-300 uppercase tracking-wide">Shifts</h4>
+          <h4 className={`text-sm font-semibold uppercase tracking-wide ${isLight ? 'text-gray-600' : 'text-slate-300'}`}>Shifts</h4>
           <button
             onClick={() => addItem('shift')}
-            className="flex items-center gap-1 px-3 py-1.5 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 text-sm"
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm ${isLight ? 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
           >
             <Plus size={14} /> Add Shift
           </button>
@@ -3078,7 +3489,7 @@ function ShiftMotionsTab({ shiftMotions, onUpdate }) {
           {shifts.map(item => (
             <div
               key={item.id}
-              className="group flex items-center gap-2 p-3 rounded-lg border bg-slate-700/50"
+              className={`group flex items-center gap-2 p-3 rounded-lg border-2 ${isLight ? 'bg-white' : 'bg-slate-700/50'}`}
               style={{ borderColor: item.color }}
             >
               <input
@@ -3095,7 +3506,7 @@ function ShiftMotionsTab({ shiftMotions, onUpdate }) {
                 value={item.name}
                 onChange={(e) => updateItem(item.id, { name: e.target.value })}
                 aria-label="Shift name"
-                className="flex-1 bg-transparent text-white font-medium border-none focus:outline-none min-w-0"
+                className={`flex-1 bg-transparent font-medium border-none focus:outline-none min-w-0 ${isLight ? 'text-gray-800' : 'text-white'}`}
               />
               <button
                 onClick={() => deleteItem(item.id)}
@@ -3107,7 +3518,7 @@ function ShiftMotionsTab({ shiftMotions, onUpdate }) {
           ))}
         </div>
         {shifts.length === 0 && (
-          <p className="text-sm text-slate-500 italic py-4">No shifts defined. Add shifts like Trade, Shift Right, Trey.</p>
+          <p className={`text-sm italic py-4 ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>No shifts defined. Add shifts like Trade, Shift Right, Trey.</p>
         )}
       </div>
 
@@ -3127,8 +3538,6 @@ function ShiftMotionsTab({ shiftMotions, onUpdate }) {
 function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupMode, setupConfig, isLight = false }) {
   const phaseLabel = phase === 'DEFENSE' ? 'Defensive Categories' : phase === 'SPECIAL_TEAMS' ? 'Special Teams Categories' : 'Play Buckets';
   const itemLabel = phase === 'OFFENSE' ? 'Bucket' : 'Category';
-  const isBasicMode = setupMode === 'basic';
-  const isAdvanced = setupMode === 'advanced';
 
   // Default buckets for Offense
   const DEFAULT_OFFENSE_BUCKETS = [
@@ -3141,30 +3550,10 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupMode, setup
   // Initialize defaults if empty
   useEffect(() => {
     if (phase === 'OFFENSE' && buckets.length === 0) {
-      // Check if we already have them in allBuckets to avoid duplicates (though buckets.length=0 implies we don't for this phase)
       const newBuckets = [...allBuckets, ...DEFAULT_OFFENSE_BUCKETS];
       onUpdate('playBuckets', newBuckets);
     }
   }, [phase, buckets.length]);
-
-  // State for editing bucket syntax
-  const [editingSyntaxBucket, setEditingSyntaxBucket] = useState(null);
-
-  // Source categories for syntax parts
-  const SOURCE_CATEGORIES = phase === 'OFFENSE' ? [
-    { id: 'custom', label: 'Custom Term' },
-    { id: 'formations', label: 'Formation' },
-    { id: 'formationFamilies', label: 'Formation Family' },
-    { id: 'shiftMotions', label: 'Shift/Motion' },
-    { id: 'personnelGroupings', label: 'Personnel' },
-    { id: 'conceptGroups', label: 'Concept' },
-    { id: 'readTypes', label: 'Read Type' },
-    { id: 'passProtections', label: 'Pass Protection' },
-    { id: 'runBlocking', label: 'Run Scheme' },
-  ] : [
-    { id: 'custom', label: 'Custom Term' },
-    { id: 'formations', label: 'Front/Coverage' },
-  ];
 
   const addBucket = () => {
     const label = prompt(`New ${itemLabel} Label:`);
@@ -3174,12 +3563,7 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupMode, setup
       alert(`${itemLabel} ID already exists for this phase.`);
       return;
     }
-    // Default syntax: Formation + Play
-    const defaultSyntax = [
-      { id: 'formation', label: 'Formation', sourceCategory: 'formations', required: true },
-      { id: 'play', label: 'Play', sourceCategory: 'conceptGroups', required: true },
-    ];
-    onUpdate('playBuckets', [...allBuckets, { id, label, color: '#94a3b8', phase, syntax: defaultSyntax }]);
+    onUpdate('playBuckets', [...allBuckets, { id, label, color: '#94a3b8', phase }]);
   };
 
   const deleteBucket = (id) => {
@@ -3189,155 +3573,6 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupMode, setup
 
   const updateBucket = (id, updates) => {
     onUpdate('playBuckets', allBuckets.map(b => b.id === id ? { ...b, ...updates } : b));
-  };
-
-  // Syntax editing functions
-  const addSyntaxPart = (bucketId) => {
-    const bucket = buckets.find(b => b.id === bucketId);
-    const currentSyntax = bucket?.syntax || [];
-    const newPart = { id: `part-${Date.now()}`, label: 'New', sourceCategory: 'custom', required: false };
-    updateBucket(bucketId, { syntax: [...currentSyntax, newPart] });
-  };
-
-  const updateSyntaxPart = (bucketId, partIdx, updates) => {
-    const bucket = buckets.find(b => b.id === bucketId);
-    const currentSyntax = bucket?.syntax || [];
-    const newSyntax = [...currentSyntax];
-    newSyntax[partIdx] = { ...newSyntax[partIdx], ...updates };
-    updateBucket(bucketId, { syntax: newSyntax });
-  };
-
-  const deleteSyntaxPart = (bucketId, partIdx) => {
-    const bucket = buckets.find(b => b.id === bucketId);
-    const currentSyntax = bucket?.syntax || [];
-    updateBucket(bucketId, { syntax: currentSyntax.filter((_, i) => i !== partIdx) });
-  };
-
-  const moveSyntaxPart = (bucketId, partIdx, direction) => {
-    const bucket = buckets.find(b => b.id === bucketId);
-    const currentSyntax = bucket?.syntax || [];
-    const newIdx = partIdx + direction;
-    if (newIdx < 0 || newIdx >= currentSyntax.length) return;
-    const newSyntax = [...currentSyntax];
-    [newSyntax[partIdx], newSyntax[newIdx]] = [newSyntax[newIdx], newSyntax[partIdx]];
-    updateBucket(bucketId, { syntax: newSyntax });
-  };
-
-  // Get example call for a bucket
-  const getExampleCall = (bucket) => {
-    const syntax = bucket.syntax || [];
-    if (syntax.length === 0) return 'Formation + Play';
-    return syntax.map(p => p.label).join(' → ');
-  };
-
-  // Syntax editing modal
-  const SyntaxModal = () => {
-    if (!editingSyntaxBucket) return null;
-    const bucket = buckets.find(b => b.id === editingSyntaxBucket);
-    if (!bucket) return null;
-    const syntax = bucket.syntax || [];
-
-    return (
-      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-        <div className="bg-slate-800 rounded-xl w-full max-w-3xl overflow-hidden max-h-[90vh] flex flex-col">
-          <div className="flex items-center justify-between p-4 border-b border-slate-700">
-            <div>
-              <h3 className="text-lg font-semibold text-white">"{bucket.label}" Syntax</h3>
-              <p className="text-sm text-slate-400">Define the play call structure for {bucket.label} plays</p>
-            </div>
-            <button onClick={() => setEditingSyntaxBucket(null)} className="p-2 text-slate-400 hover:text-white">
-              <X size={20} />
-            </button>
-          </div>
-
-          <div className="p-4 overflow-y-auto flex-1">
-            {/* Example preview */}
-            <div className="mb-4 p-3 bg-slate-900 rounded-lg">
-              <span className="text-xs text-slate-500 uppercase">Call Structure: </span>
-              <span className="text-emerald-400 font-mono">{getExampleCall(bucket)}</span>
-            </div>
-
-            {/* Syntax parts */}
-            <div className="space-y-2">
-              {syntax.map((part, idx) => (
-                <div key={part.id} className="flex items-center gap-2 p-3 bg-slate-700/50 rounded-lg border border-slate-600">
-                  <span className="w-6 h-6 flex items-center justify-center bg-sky-600 rounded-full text-xs font-bold text-white flex-shrink-0">
-                    {idx + 1}
-                  </span>
-                  <input
-                    id={`bucket-syntax-part-label-${bucket.id}-${part.id}`}
-                    type="text"
-                    value={part.label}
-                    onChange={(e) => updateSyntaxPart(bucket.id, idx, { label: e.target.value })}
-                    placeholder="Part name"
-                    className="w-32 px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white text-sm"
-                    aria-label="Part name"
-                  />
-                  <select
-                    id={`bucket-syntax-part-source-${bucket.id}-${part.id}`}
-                    value={part.sourceCategory || 'custom'}
-                    onChange={(e) => updateSyntaxPart(bucket.id, idx, { sourceCategory: e.target.value })}
-                    className="flex-1 px-2 py-1 bg-slate-600 border border-slate-500 rounded text-white text-sm"
-                    aria-label="Source category"
-                  >
-                    {SOURCE_CATEGORIES.map(cat => (
-                      <option key={cat.id} value={cat.id}>{cat.label}</option>
-                    ))}
-                  </select>
-                  <label htmlFor={`bucket-syntax-part-required-${bucket.id}-${part.id}`} className="flex items-center gap-1 text-xs text-slate-400">
-                    <input
-                      id={`bucket-syntax-part-required-${bucket.id}-${part.id}`}
-                      type="checkbox"
-                      checked={part.required || false}
-                      onChange={(e) => updateSyntaxPart(bucket.id, idx, { required: e.target.checked })}
-                    />
-                    Req
-                  </label>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => moveSyntaxPart(bucket.id, idx, -1)}
-                      disabled={idx === 0}
-                      className="p-1 text-slate-400 hover:text-white disabled:opacity-30"
-                    >
-                      <ChevronUp size={14} />
-                    </button>
-                    <button
-                      onClick={() => moveSyntaxPart(bucket.id, idx, 1)}
-                      disabled={idx === syntax.length - 1}
-                      className="p-1 text-slate-400 hover:text-white disabled:opacity-30"
-                    >
-                      <ChevronDown size={14} />
-                    </button>
-                    <button
-                      onClick={() => deleteSyntaxPart(bucket.id, idx)}
-                      className="p-1 text-red-400 hover:text-red-300"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <button
-              onClick={() => addSyntaxPart(bucket.id)}
-              className="mt-3 flex items-center gap-2 px-3 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600"
-            >
-              <Plus size={14} /> Add Part
-            </button>
-          </div>
-
-          <div className="p-4 border-t border-slate-700">
-            <button
-              onClick={() => setEditingSyntaxBucket(null)}
-              className="w-full px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700"
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      </div>
-    );
   };
 
   return (
@@ -3352,16 +3587,10 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupMode, setup
         </button>
       </div>
 
-      {isAdvanced && phase === 'OFFENSE' && (
-        <div className={`mb-4 p-3 rounded-lg text-sm ${isLight ? 'bg-amber-50 border border-amber-200 text-amber-700' : 'bg-amber-500/10 border border-amber-500/30 text-amber-200'}`}>
-          <strong>Advanced Mode:</strong> Each bucket has its own play call syntax. Click "Edit Syntax" to customize the call structure for each type of play.
-        </div>
-      )}
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {buckets.map(bucket => (
           <div key={bucket.id} className={`rounded-lg border p-4 ${isLight ? 'bg-white border-gray-200 shadow-sm' : 'bg-slate-700/50 border-slate-600'}`}>
-            <div className="flex justify-between items-start mb-3 gap-2">
+            <div className="flex justify-between items-center gap-2">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <div className="relative flex-shrink-0">
                   <input
@@ -3392,22 +3621,6 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupMode, setup
                 <Trash2 size={16} />
               </button>
             </div>
-
-            {/* Syntax preview and edit button - Advanced mode only */}
-            {isAdvanced && phase === 'OFFENSE' && (
-              <div className={`mt-2 pt-2 border-t ${isLight ? 'border-gray-200' : 'border-slate-600'}`}>
-                <div className={`text-xs mb-1 ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Syntax:</div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className={`text-xs truncate ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>{getExampleCall(bucket)}</span>
-                  <button
-                    onClick={() => setEditingSyntaxBucket(bucket.id)}
-                    className={`text-xs px-2 py-1 rounded ${isLight ? 'bg-gray-100 text-sky-600 hover:bg-gray-200' : 'bg-slate-600 text-sky-400 hover:bg-slate-500'}`}
-                  >
-                    Edit
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         ))}
       </div>
@@ -3422,9 +3635,6 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupMode, setup
       <div className={`mt-6 p-4 rounded-lg text-sm ${isLight ? 'bg-gray-100 text-gray-600' : 'bg-slate-700/30 text-slate-400'}`}>
         <strong className={isLight ? 'text-gray-700' : ''}>Note:</strong> {phase === 'DEFENSE' ? 'These categories organize your defensive scheme (e.g. Fronts, Coverages, Blitzes).' : phase === 'SPECIAL_TEAMS' ? 'These categories organize your special teams units.' : 'These buckets define the high-level organization (e.g. Run, Pass, RPO).'}
       </div>
-
-      {/* Syntax editing modal */}
-      <SyntaxModal />
     </div>
   );
 }
@@ -3753,12 +3963,51 @@ function LookAlikeSeriesTab({ series, buckets, plays, onUpdate, isLight = false 
 }
 
 // Define Situations Tab Component
-function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituations, onUpdate, isLight = false }) {
+function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituations, playPurposes = [], onUpdate, isLight = false }) {
   const [expandedSections, setExpandedSections] = useState({
-    fieldZones: true,
+    playPurposes: true,
+    fieldZones: false,
     downDistance: false,
     special: false
   });
+
+  // Default play purposes
+  const DEFAULT_PLAY_PURPOSES = [
+    { id: 'base', name: 'Base', color: '#3b82f6' },
+    { id: 'convert', name: 'Convert', color: '#22c55e' },
+    { id: 'shot', name: 'Shot', color: '#f59e0b' },
+    { id: 'gadget', name: 'Gadget', color: '#ef4444' }
+  ];
+
+  // Play Purposes CRUD
+  const addPurpose = () => {
+    const name = prompt('Enter purpose name (e.g., "Base", "Convert"):');
+    if (!name?.trim()) return;
+    const id = name.toLowerCase().trim().replace(/\s+/g, '-');
+    const existing = playPurposes || [];
+    if (existing.some(p => p.id === id)) {
+      alert('A purpose with that name already exists');
+      return;
+    }
+    onUpdate('playPurposes', [...existing, { id, name: name.trim(), color: '#6b7280' }]);
+  };
+
+  const updatePurpose = (id, field, value) => {
+    const updated = (playPurposes || []).map(p => p.id === id ? { ...p, [field]: value } : p);
+    onUpdate('playPurposes', updated);
+  };
+
+  const deletePurpose = (id, name) => {
+    if (!confirm(`Delete purpose "${name}"?`)) return;
+    onUpdate('playPurposes', (playPurposes || []).filter(p => p.id !== id));
+  };
+
+  const loadDefaultPurposes = () => {
+    if (playPurposes.length > 0 && !confirm('This will add default purposes. Continue?')) return;
+    const existingIds = (playPurposes || []).map(p => p.id);
+    const newPurposes = DEFAULT_PLAY_PURPOSES.filter(p => !existingIds.includes(p.id));
+    onUpdate('playPurposes', [...(playPurposes || []), ...newPurposes]);
+  };
 
   const toggleSection = (section) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -3828,7 +4077,8 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
       name: name.trim(),
       description: '',
       down: '',
-      distanceType: '',
+      minYards: null,
+      maxYards: null,
       order: downDistanceCategories.length + 1
     };
     onUpdate('downDistanceCategories', [...downDistanceCategories, newCat]);
@@ -3841,6 +4091,24 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
   const deleteDownDistance = (id) => {
     if (!confirm('Delete this down & distance category?')) return;
     onUpdate('downDistanceCategories', downDistanceCategories.filter(d => d.id !== id));
+  };
+
+  const reorderDownDistance = (id, direction) => {
+    const sorted = [...downDistanceCategories].sort((a, b) => (a.order || 0) - (b.order || 0));
+    const index = sorted.findIndex(d => d.id === id);
+    if (index === -1) return;
+
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= sorted.length) return;
+
+    // Swap items
+    const temp = sorted[index];
+    sorted[index] = sorted[newIndex];
+    sorted[newIndex] = temp;
+
+    // Reassign orders
+    const reordered = sorted.map((d, i) => ({ ...d, order: i + 1 }));
+    onUpdate('downDistanceCategories', reordered);
   };
 
   // Special Situations CRUD
@@ -3888,6 +4156,78 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
         <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
           Configure field zones, down & distance categories, and special situations for tagging and filtering plays.
         </p>
+      </div>
+
+      {/* Play Purposes Section */}
+      <div className={`rounded-lg border overflow-hidden ${isLight ? 'bg-white border-gray-200 shadow-sm' : 'bg-slate-700/50 border-slate-600'}`}>
+        <button
+          onClick={() => toggleSection('playPurposes')}
+          className={`w-full flex items-center justify-between p-3 transition-colors ${isLight ? 'bg-gray-50 hover:bg-gray-100' : 'bg-slate-700/30 hover:bg-slate-700/50'}`}
+        >
+          <div className="flex items-center gap-2">
+            {expandedSections.playPurposes ? <ChevronDown size={18} className={isLight ? 'text-gray-600' : ''} /> : <ChevronUp size={18} className={`rotate-180 ${isLight ? 'text-gray-600' : ''}`} />}
+            <span className={`font-medium ${isLight ? 'text-gray-800' : 'text-white'}`}>Play Purposes</span>
+            <span className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>({playPurposes.length} purposes)</span>
+          </div>
+        </button>
+        {expandedSections.playPurposes && (
+          <div className={`p-4 border-t space-y-3 ${isLight ? 'border-gray-200' : 'border-slate-600'}`}>
+            <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+              Categorize plays by their strategic role (e.g., Base, Convert, Shot, Gadget).
+            </p>
+            {playPurposes.length === 0 && (
+              <div className={`text-center py-4 ${isLight ? 'text-gray-400' : 'text-slate-400'}`}>
+                <p className="mb-2">No purposes defined yet.</p>
+                <button
+                  onClick={loadDefaultPurposes}
+                  className="text-sky-500 hover:text-sky-400 text-sm underline"
+                >
+                  Load default purposes
+                </button>
+              </div>
+            )}
+            <div className="space-y-2">
+              {playPurposes.map(purpose => (
+                <div key={purpose.id} className={`flex items-center gap-3 p-2 rounded-lg ${isLight ? 'bg-gray-50' : 'bg-slate-800'}`}>
+                  <input
+                    type="color"
+                    value={purpose.color}
+                    onChange={(e) => updatePurpose(purpose.id, 'color', e.target.value)}
+                    className="w-6 h-6 rounded cursor-pointer border-0"
+                  />
+                  <input
+                    type="text"
+                    value={purpose.name}
+                    onChange={(e) => updatePurpose(purpose.id, 'name', e.target.value)}
+                    className={`flex-1 px-3 py-1.5 rounded font-medium ${isLight ? 'bg-white border border-gray-300 text-gray-800' : 'bg-slate-700 border border-slate-600 text-white'}`}
+                  />
+                  <button
+                    onClick={() => deletePurpose(purpose.id, purpose.name)}
+                    className="text-red-400 hover:text-red-300 p-1"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={addPurpose}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm ${isLight ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+              >
+                <Plus size={14} /> Add Purpose
+              </button>
+              {playPurposes.length > 0 && (
+                <button
+                  onClick={loadDefaultPurposes}
+                  className="text-xs text-amber-500 hover:text-amber-400 underline"
+                >
+                  + Add default purposes
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Field Zones Section */}
@@ -4021,32 +4361,46 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
                 </button>
               </div>
             )}
-            {downDistanceCategories.map(cat => (
-              <div key={cat.id} className={`flex items-center gap-3 p-3 rounded-lg border ${isLight ? 'bg-gray-50 border-gray-200' : 'bg-slate-800 border-slate-600'}`}>
+            {[...downDistanceCategories].sort((a, b) => (a.order || 0) - (b.order || 0)).map((cat, idx, arr) => (
+              <div key={cat.id} className={`flex items-center gap-2 p-3 rounded-lg border ${isLight ? 'bg-gray-50 border-gray-200' : 'bg-slate-800 border-slate-600'}`}>
+                {/* Reorder buttons */}
+                <div className="flex flex-col gap-0.5">
+                  <button
+                    onClick={() => reorderDownDistance(cat.id, 'up')}
+                    disabled={idx === 0}
+                    className={`p-1 rounded transition-colors ${idx === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-slate-600'} ${isLight ? 'text-gray-400' : 'text-slate-400'}`}
+                    title="Move up"
+                  >
+                    <ChevronUp size={14} />
+                  </button>
+                  <button
+                    onClick={() => reorderDownDistance(cat.id, 'down')}
+                    disabled={idx === arr.length - 1}
+                    className={`p-1 rounded transition-colors ${idx === arr.length - 1 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-slate-600'} ${isLight ? 'text-gray-400' : 'text-slate-400'}`}
+                    title="Move down"
+                  >
+                    <ChevronDown size={14} />
+                  </button>
+                </div>
+
+                {/* Name */}
                 <input
                   id={`down-dist-name-${cat.id}`}
                   type="text"
                   value={cat.name}
                   onChange={(e) => updateDownDistance(cat.id, { name: e.target.value })}
                   aria-label="Category name"
-                  className={`flex-1 px-3 py-1.5 rounded font-medium ${isLight ? 'bg-white border border-gray-300 text-gray-800' : 'bg-slate-700 border border-slate-600 text-white'}`}
-                  placeholder="Category name"
+                  className={`flex-1 min-w-[140px] px-3 py-1.5 rounded font-medium ${isLight ? 'bg-white border border-gray-300 text-gray-800' : 'bg-slate-700 border border-slate-600 text-white'}`}
+                  placeholder="Name"
                 />
-                <input
-                  id={`down-dist-desc-${cat.id}`}
-                  type="text"
-                  value={cat.description || ''}
-                  onChange={(e) => updateDownDistance(cat.id, { description: e.target.value })}
-                  aria-label="Category description"
-                  className={`flex-1 px-3 py-1.5 rounded text-sm ${isLight ? 'bg-white border border-gray-300 text-gray-700' : 'bg-slate-700 border border-slate-600 text-white'}`}
-                  placeholder="Description"
-                />
+
+                {/* Down selector */}
                 <select
                   id={`down-dist-down-${cat.id}`}
                   value={cat.down || ''}
                   onChange={(e) => updateDownDistance(cat.id, { down: e.target.value })}
                   aria-label="Down"
-                  className={`w-24 px-2 py-1.5 rounded text-sm ${isLight ? 'bg-white border border-gray-300 text-gray-800' : 'bg-slate-700 border border-slate-600 text-white'}`}
+                  className={`w-24 px-3 py-1.5 rounded text-sm ${isLight ? 'bg-white border border-gray-300 text-gray-800' : 'bg-slate-700 border border-slate-600 text-white'}`}
                 >
                   <option value="">Down</option>
                   <option value="1">1st</option>
@@ -4054,19 +4408,34 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
                   <option value="3">3rd</option>
                   <option value="4">4th</option>
                 </select>
-                <select
-                  id={`down-dist-distance-${cat.id}`}
-                  value={cat.distanceType || ''}
-                  onChange={(e) => updateDownDistance(cat.id, { distanceType: e.target.value })}
-                  aria-label="Distance type"
-                  className={`w-28 px-2 py-1.5 rounded text-sm ${isLight ? 'bg-white border border-gray-300 text-gray-800' : 'bg-slate-700 border border-slate-600 text-white'}`}
-                >
-                  <option value="">Distance</option>
-                  <option value="short">Short (1-3)</option>
-                  <option value="medium">Medium (4-6)</option>
-                  <option value="long">Long (7+)</option>
-                  <option value="any">Any</option>
-                </select>
+
+                {/* Yards range */}
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>Yards:</span>
+                  <input
+                    type="number"
+                    value={cat.minYards ?? ''}
+                    onChange={(e) => updateDownDistance(cat.id, { minYards: e.target.value ? parseInt(e.target.value) : null })}
+                    aria-label="Min yards"
+                    className={`w-16 px-2 py-1.5 rounded text-sm text-center ${isLight ? 'bg-white border border-gray-300 text-gray-800' : 'bg-slate-700 border border-slate-600 text-white'}`}
+                    placeholder="Min"
+                    min="1"
+                    max="99"
+                  />
+                  <span className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>–</span>
+                  <input
+                    type="number"
+                    value={cat.maxYards ?? ''}
+                    onChange={(e) => updateDownDistance(cat.id, { maxYards: e.target.value ? parseInt(e.target.value) : null })}
+                    aria-label="Max yards"
+                    className={`w-16 px-2 py-1.5 rounded text-sm text-center ${isLight ? 'bg-white border border-gray-300 text-gray-800' : 'bg-slate-700 border border-slate-600 text-white'}`}
+                    placeholder="Max"
+                    min="1"
+                    max="99"
+                  />
+                </div>
+
+                {/* Delete button */}
                 <button
                   onClick={() => deleteDownDistance(cat.id)}
                   className={`p-1.5 hover:text-red-400 ${isLight ? 'text-gray-400' : 'text-slate-400'}`}
@@ -4174,7 +4543,7 @@ function DefineSituationsTab({ fieldZones, downDistanceCategories, specialSituat
 }
 
 // Concept Groups Tab Component
-function ConceptGroupsTab({ phase, buckets, allBuckets, onUpdate }) {
+function ConceptGroupsTab({ phase, buckets, allBuckets, onUpdate, isLight = false }) {
   const phaseLabel = phase === 'DEFENSE' ? 'Defensive Concept Groups' : phase === 'SPECIAL_TEAMS' ? 'Special Teams Variations' : 'Concept Groups';
 
   const addFamily = (bucketId) => {
@@ -4206,8 +4575,8 @@ function ConceptGroupsTab({ phase, buckets, allBuckets, onUpdate }) {
   return (
     <div>
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-white">{phaseLabel}</h3>
-        <p className="text-slate-400 text-sm">
+        <h3 className={`text-lg font-semibold ${isLight ? 'text-gray-800' : 'text-white'}`}>{phaseLabel}</h3>
+        <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
           {phase === 'DEFENSE' ? 'Manage variations within each defensive category.' : phase === 'SPECIAL_TEAMS' ? 'Manage variations within each special teams unit.' : 'Manage your concept groups within each bucket.'}
         </p>
       </div>
@@ -4215,19 +4584,23 @@ function ConceptGroupsTab({ phase, buckets, allBuckets, onUpdate }) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {buckets.map(bucket => {
           const families = bucket.families || [];
+          const bucketColor = bucket.color === 'gray' ? '#94a3b8' : bucket.color;
           return (
-            <div key={bucket.id} className="bg-slate-700/50 rounded-lg border border-slate-600 p-4">
-              <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-600">
+            <div
+              key={bucket.id}
+              className={`rounded-lg border p-4 ${isLight ? 'bg-white border-gray-200 shadow-sm' : 'bg-slate-700/50 border-slate-600'}`}
+            >
+              <div className={`flex justify-between items-center mb-3 pb-2 border-b ${isLight ? 'border-gray-200' : 'border-slate-600'}`}>
                 <div className="flex items-center gap-2">
                   <div
                     className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: bucket.color === 'gray' ? '#94a3b8' : bucket.color }}
+                    style={{ backgroundColor: bucketColor }}
                   />
-                  <span className="font-semibold text-white">{bucket.label}</span>
+                  <span className={`font-semibold ${isLight ? 'text-gray-800' : 'text-white'}`}>{bucket.label}</span>
                 </div>
                 <button
                   onClick={() => addFamily(bucket.id)}
-                  className="p-1 text-slate-400 hover:text-sky-400"
+                  className={`p-1 hover:text-sky-500 ${isLight ? 'text-gray-400' : 'text-slate-400'}`}
                   title="Add Family"
                 >
                   <Plus size={16} />
@@ -4235,25 +4608,28 @@ function ConceptGroupsTab({ phase, buckets, allBuckets, onUpdate }) {
               </div>
 
               {families.length === 0 ? (
-                <div className="text-center py-4 text-sm text-slate-500 italic border border-dashed border-slate-600 rounded">
+                <div className={`text-center py-4 text-sm italic border border-dashed rounded ${isLight ? 'text-gray-400 border-gray-300' : 'text-slate-500 border-slate-600'}`}>
                   No families defined.
                 </div>
               ) : (
                 <div className="space-y-2">
                   {families.map(family => (
-                    <div key={family} className="flex justify-between items-center px-3 py-2 bg-slate-600/50 rounded border border-slate-500">
-                      <span className="text-sm font-medium text-white">{family}</span>
+                    <div
+                      key={family}
+                      className={`flex justify-between items-center px-3 py-2 rounded border ${isLight ? 'bg-sky-50 border-sky-200' : 'bg-slate-600/50 border-slate-500'}`}
+                    >
+                      <span className={`text-sm font-medium ${isLight ? 'text-gray-800' : 'text-white'}`}>{family}</span>
                       <div className="flex gap-1">
                         <button
                           onClick={() => renameFamily(bucket.id, family)}
-                          className="p-1 text-slate-400 hover:text-sky-400"
+                          className={`p-1 hover:text-sky-500 ${isLight ? 'text-gray-400' : 'text-slate-400'}`}
                           title="Rename"
                         >
                           <Edit3 size={14} />
                         </button>
                         <button
                           onClick={() => deleteFamily(bucket.id, family)}
-                          className="p-1 text-slate-400 hover:text-red-400"
+                          className={`p-1 hover:text-red-500 ${isLight ? 'text-gray-400' : 'text-slate-400'}`}
                           title="Delete"
                         >
                           <Trash2 size={14} />
@@ -4269,7 +4645,7 @@ function ConceptGroupsTab({ phase, buckets, allBuckets, onUpdate }) {
       </div>
 
       {buckets.length === 0 && (
-        <div className="text-center py-12 text-slate-400">
+        <div className={`text-center py-12 ${isLight ? 'text-gray-400' : 'text-slate-400'}`}>
           <Grid size={48} className="mx-auto mb-4 opacity-30" />
           <p>Define play buckets first to add concept groups.</p>
         </div>
@@ -4280,48 +4656,14 @@ function ConceptGroupsTab({ phase, buckets, allBuckets, onUpdate }) {
 
 // Default syntax templates for offense
 const DEFAULT_SYNTAX_TEMPLATES = {
-  pass: [
-    { id: 'shift', label: 'Shift', sourceCategory: 'shiftMotions', required: false },
-    { id: 'formation', label: 'Formation', sourceCategory: 'formations', required: true },
-    { id: 'formationTag', label: 'Tag', sourceCategory: 'custom', required: false },
-    { id: 'protection', label: 'Protection/RB', sourceCategory: 'custom', required: false },
-    { id: 'motion', label: 'Motion', sourceCategory: 'shiftMotions', required: false },
-    { id: 'concept', label: 'Concept', sourceCategory: 'conceptGroups', required: true },
-    { id: 'conceptMod', label: 'Modifier', sourceCategory: 'custom', required: false },
-    { id: 'routeCall', label: 'Route Call', sourceCategory: 'custom', required: false },
-    { id: 'navigation', label: 'Navigation', sourceCategory: 'custom', required: false },
-  ],
-  run: [
-    { id: 'formation', label: 'Formation', sourceCategory: 'formations', required: true },
-    { id: 'rbCall', label: 'RB/Direction', sourceCategory: 'custom', required: false },
-    { id: 'concept', label: 'Run Concept', sourceCategory: 'conceptGroups', required: true },
-    { id: 'rpoTag', label: 'RPO Tag', sourceCategory: 'custom', required: false },
-  ],
   quick: [
     { id: 'formation', label: 'Formation', sourceCategory: 'formations', required: true },
+    { id: 'motion', label: 'Motion', sourceCategory: 'shiftMotions', required: false },
     { id: 'play', label: 'Play', sourceCategory: 'conceptGroups', required: true },
-  ],
-  single: [
-    { id: 'play', label: 'Play/Concept', sourceCategory: 'conceptGroups', required: true },
   ],
 };
 
 // Play type template tabs configuration
-const PLAY_TYPE_TEMPLATES = {
-  OFFENSE: [
-    { id: 'quick', label: 'Quick', icon: '⚡', description: 'Simple two-part calls (Formation + Play)' },
-    { id: 'single', label: 'Single', icon: '1️⃣', description: 'One-word concept (e.g., SMASH, CHOICE)' },
-    { id: 'pass', label: 'Pass', icon: '🏈', description: 'Passing plays with routes, protection calls, and navigation' },
-    { id: 'run', label: 'Run', icon: '🏃', description: 'Running plays with RB calls and RPO tags' },
-    { id: 'custom', label: 'Custom', icon: '⚙️', description: 'Build your own syntax structure' },
-  ],
-  DEFENSE: [
-    { id: 'custom', label: 'Custom', icon: '⚙️', description: 'Build your own syntax structure' },
-  ],
-  SPECIAL_TEAMS: [
-    { id: 'custom', label: 'Custom', icon: '⚙️', description: 'Build your own syntax structure' },
-  ],
-};
 
 // Teach Play Call Modal Component - Learn from example play calls
 function TeachPlayCallModal({ isOpen, onClose, phase, currentSyntax, termLibrary, onUpdate }) {
@@ -4559,20 +4901,11 @@ function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupCo
   const isStandardMode = setupMode === 'standard';
   const isAdvancedMode = setupMode === 'advanced';
 
-  // State for selected template type
-  const [selectedTemplate, setSelectedTemplate] = useState(() => {
-    // Default to 'custom' if templates exist there, otherwise 'pass' for offense
-    const templates = syntaxTemplates?.[phase];
-    if (templates?.custom?.length > 0) return 'custom';
-    if (phase === 'OFFENSE') return 'pass';
-    return 'custom';
-  });
+  // Template is determined by setup mode: Advanced = custom, Basic/Standard = quick
+  const selectedTemplate = isAdvancedMode ? 'custom' : 'quick';
 
   // State for teach modal
   const [showTeachModal, setShowTeachModal] = useState(false);
-
-  // Get available templates for this phase
-  const availableTemplates = PLAY_TYPE_TEMPLATES[phase] || PLAY_TYPE_TEMPLATES.OFFENSE;
 
   // Get current syntax based on selected template
   // First check syntaxTemplates, fall back to legacy syntax
@@ -4641,7 +4974,7 @@ function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupCo
   // Update syntax for current template
   const updateTemplateSyntax = (newSyntax) => {
     const currentTemplates = syntaxTemplates || {
-      OFFENSE: { pass: [], run: [], quick: [], custom: [] },
+      OFFENSE: { quick: [], custom: [] },
       DEFENSE: { custom: [] },
       SPECIAL_TEAMS: { custom: [] }
     };
@@ -4807,43 +5140,11 @@ function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupCo
   // Advanced mode - show full syntax editor
   return (
     <div>
-      {/* Template Type Selector - Only show for Offense */}
-      {phase === 'OFFENSE' && availableTemplates.length > 1 && (
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold text-white mb-3">Play Type Templates</h3>
-          <p className="text-slate-400 text-sm mb-4">
-            Different play types have different syntax structures. Select a template to configure.
-          </p>
-          <div className="flex gap-3 flex-wrap">
-            {availableTemplates.map(template => (
-              <button
-                key={template.id}
-                onClick={() => setSelectedTemplate(template.id)}
-                className={`flex-1 min-w-[140px] max-w-[200px] p-4 rounded-lg border-2 transition-all text-left ${selectedTemplate === template.id
-                  ? 'border-sky-500 bg-sky-500/10'
-                  : 'border-slate-600 bg-slate-800/50 hover:border-slate-500'
-                  }`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xl">{template.icon}</span>
-                  <span className={`font-semibold ${selectedTemplate === template.id ? 'text-sky-400' : 'text-white'}`}>
-                    {template.label}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-400">{template.description}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Play Call Structure - Horizontal Layout */}
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h3 className="text-lg font-semibold text-white">
-              {selectedTemplate !== 'custom' ? `${availableTemplates.find(t => t.id === selectedTemplate)?.label} Template` : 'Play Call Structure'}
-            </h3>
+            <h3 className="text-lg font-semibold text-white">Play Call Structure</h3>
             <p className="text-slate-400 text-sm">Build your play call syntax left to right, like reading a sentence.</p>
           </div>
           <div className="flex gap-2">
@@ -5087,13 +5388,6 @@ function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupCo
           </div>
         </div>
       )}
-
-      {/* Wristband Abbreviations Section */}
-      <WristbandAbbreviationsSection
-        phase={phase}
-        setupConfig={setupConfig}
-        onUpdate={onUpdate}
-      />
 
       {/* Teach from Example Modal */}
       <TeachPlayCallModal
@@ -6630,7 +6924,37 @@ function DrillsLibraryTab({ drillsLibrary, positionGroups, playBuckets, passProt
   const currentPositionGroups = positionGroups[activePhase] || [];
 
   // Get play buckets for current phase (scheme drills)
-  const currentBuckets = (playBuckets || []).filter(b => b.phase === activePhase);
+  const currentBuckets = (playBuckets || []).filter(b => b.phase === activePhase || !b.phase);
+
+  // Extract skill position assignments from plays, grouped by bucket and position group
+  const skillAssignmentsByBucket = useMemo(() => {
+    const byBucket = {};
+    (plays || []).filter(p => (p.phase || 'OFFENSE') === activePhase).forEach(play => {
+      const bucketId = play.bucketId || play.playCategory;
+      if (!bucketId || !play.skillAssignments) return;
+      if (!byBucket[bucketId]) byBucket[bucketId] = {};
+      Object.entries(play.skillAssignments).forEach(([pos, assignment]) => {
+        if (assignment && assignment.trim()) {
+          // Map individual positions to position groups
+          const groupAbbrev = pos; // We'll show by position (QB, RB, etc.)
+          if (!byBucket[bucketId][groupAbbrev]) byBucket[bucketId][groupAbbrev] = new Set();
+          byBucket[bucketId][groupAbbrev].add(assignment.trim());
+        }
+      });
+    });
+    // Convert Sets to Arrays
+    Object.keys(byBucket).forEach(bucketId => {
+      Object.keys(byBucket[bucketId]).forEach(pos => {
+        byBucket[bucketId][pos] = Array.from(byBucket[bucketId][pos]);
+      });
+    });
+    return byBucket;
+  }, [plays, activePhase]);
+
+  // Get assignments for a position group in a bucket
+  const getAssignmentsForPositionBucket = (groupAbbrev, bucketId) => {
+    return skillAssignmentsByBucket[bucketId]?.[groupAbbrev] || [];
+  };
 
   // Toggle group expansion
   const toggleGroup = (groupId) => {
@@ -6774,6 +7098,60 @@ function DrillsLibraryTab({ drillsLibrary, positionGroups, playBuckets, passProt
     onUpdate('drillsLibrary', updated);
   };
 
+  // Add a position bucket drill (drill for a specific position group + bucket combo)
+  const addPositionBucketDrill = (groupId, bucketId, drill) => {
+    const currentDrills = drillsLibrary.positionBucketDrills?.[groupId]?.[bucketId] || [];
+    const newDrill = {
+      ...drill,
+      id: `drill_${Date.now()}`
+    };
+
+    const updated = {
+      ...drillsLibrary,
+      positionBucketDrills: {
+        ...(drillsLibrary.positionBucketDrills || {}),
+        [groupId]: {
+          ...(drillsLibrary.positionBucketDrills?.[groupId] || {}),
+          [bucketId]: [...currentDrills, newDrill]
+        }
+      }
+    };
+    onUpdate('drillsLibrary', updated);
+  };
+
+  // Update a position bucket drill
+  const updatePositionBucketDrill = (groupId, bucketId, drill) => {
+    const currentDrills = drillsLibrary.positionBucketDrills?.[groupId]?.[bucketId] || [];
+    const updated = {
+      ...drillsLibrary,
+      positionBucketDrills: {
+        ...(drillsLibrary.positionBucketDrills || {}),
+        [groupId]: {
+          ...(drillsLibrary.positionBucketDrills?.[groupId] || {}),
+          [bucketId]: currentDrills.map(d => d.id === drill.id ? drill : d)
+        }
+      }
+    };
+    onUpdate('drillsLibrary', updated);
+  };
+
+  // Delete a position bucket drill
+  const deletePositionBucketDrill = (groupId, bucketId, drillId) => {
+    if (!confirm('Delete this drill?')) return;
+    const currentDrills = drillsLibrary.positionBucketDrills?.[groupId]?.[bucketId] || [];
+    const updated = {
+      ...drillsLibrary,
+      positionBucketDrills: {
+        ...(drillsLibrary.positionBucketDrills || {}),
+        [groupId]: {
+          ...(drillsLibrary.positionBucketDrills?.[groupId] || {}),
+          [bucketId]: currentDrills.filter(d => d.id !== drillId)
+        }
+      }
+    };
+    onUpdate('drillsLibrary', updated);
+  };
+
   // Handle save from modal
   const handleSaveDrill = (drill) => {
     const { type, groupId, bucketId, originalDifficulty } = showDrillModal;
@@ -6783,6 +7161,12 @@ function DrillsLibraryTab({ drillsLibrary, positionGroups, playBuckets, passProt
         updatePositionDrill(groupId, originalDifficulty, drill);
       } else {
         addPositionDrill(groupId, drill);
+      }
+    } else if (type === 'positionBucket') {
+      if (showDrillModal.drill) {
+        updatePositionBucketDrill(groupId, bucketId, drill);
+      } else {
+        addPositionBucketDrill(groupId, bucketId, drill);
       }
     } else {
       if (showDrillModal.drill) {
@@ -6962,6 +7346,86 @@ function DrillsLibraryTab({ drillsLibrary, positionGroups, playBuckets, passProt
                           </div>
                         );
                       })}
+
+                      {/* Bucket-Specific Sections (Play Buckets) */}
+                      {currentBuckets.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-slate-600">
+                          <p className={`text-xs font-medium mb-3 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                            BY SCHEME / BUCKET
+                          </p>
+                          {currentBuckets.map(bucket => {
+                            const assignments = getAssignmentsForPositionBucket(group.abbrev, bucket.id);
+                            const bucketDrills = drillsLibrary.positionBucketDrills?.[group.id]?.[bucket.id] || [];
+                            const hasContent = assignments.length > 0 || bucketDrills.length > 0;
+
+                            return (
+                              <div key={bucket.id} className="mb-3 last:mb-0">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className="w-2 h-2 rounded-full"
+                                      style={{ backgroundColor: bucket.color || '#10b981' }}
+                                    />
+                                    <span className={`text-sm font-medium ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
+                                      {bucket.label}
+                                    </span>
+                                  </div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setShowDrillModal({ type: 'positionBucket', groupId: group.id, bucketId: bucket.id });
+                                    }}
+                                    className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                                  >
+                                    <Plus size={12} /> Add
+                                  </button>
+                                </div>
+
+                                {/* Auto-populated assignments from plays */}
+                                {assignments.length > 0 && (
+                                  <div className={`mb-2 p-2 rounded ml-4 ${isLight ? 'bg-emerald-50' : 'bg-emerald-900/20'}`}>
+                                    <span className={`text-xs font-medium block mb-1 ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
+                                      From plays:
+                                    </span>
+                                    <div className="flex flex-wrap gap-1">
+                                      {assignments.map(a => (
+                                        <span key={a} className={`px-2 py-0.5 text-xs rounded ${isLight ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-600/30 text-emerald-300'}`}>
+                                          {a}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Drills for this bucket */}
+                                {bucketDrills.length > 0 && (
+                                  <div className="space-y-1 ml-4">
+                                    {bucketDrills.map(drill => (
+                                      <DrillItem
+                                        key={drill.id}
+                                        drill={drill}
+                                        onEdit={(d) => setShowDrillModal({
+                                          type: 'positionBucket',
+                                          groupId: group.id,
+                                          bucketId: bucket.id,
+                                          drill: d
+                                        })}
+                                        onDelete={(id) => deletePositionBucketDrill(group.id, bucket.id, id)}
+                                      />
+                                    ))}
+                                  </div>
+                                )}
+
+                                {!hasContent && (
+                                  <p className={`text-xs ml-4 italic ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
+                                    No assignments yet
+                                  </p>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -10205,12 +10669,6 @@ function EventEditModal({ event, onSave, onClose }) {
 // Quality Control Definitions Tab
 function QualityControlDefinitionsTab({ qualityControlDefinitions, onUpdate, isLight = false }) {
   const defaults = {
-    playPurposes: [
-      { id: 'base', name: 'Base', color: '#3b82f6' },
-      { id: 'convert', name: 'Convert', color: '#22c55e' },
-      { id: 'shot', name: 'Shot', color: '#f59e0b' },
-      { id: 'gadget', name: 'Gadget', color: '#ef4444' }
-    ],
     efficiencyThresholds: {
       '1st': { run: 4, pass: 4, screen: 4, default: 4 },
       '2nd': { run: 50, pass: 50, screen: 50, default: 50 },
@@ -10236,37 +10694,6 @@ function QualityControlDefinitionsTab({ qualityControlDefinitions, onUpdate, isL
       ...qualityControlDefinitions,
       [key]: value
     });
-  };
-
-  // Play Purposes CRUD
-  const addPurpose = () => {
-    const name = prompt('Enter purpose name (e.g., "Base", "Convert"):');
-    if (!name?.trim()) return;
-
-    const id = name.toLowerCase().trim().replace(/\s+/g, '-');
-    const existing = config.playPurposes || [];
-    if (existing.some(p => p.id === id)) {
-      alert('A purpose with that name already exists');
-      return;
-    }
-
-    updateQCConfig('playPurposes', [
-      ...existing,
-      { id, name: name.trim(), color: '#6b7280' }
-    ]);
-  };
-
-  const updatePurpose = (id, field, value) => {
-    const updated = (config.playPurposes || []).map(p =>
-      p.id === id ? { ...p, [field]: value } : p
-    );
-    updateQCConfig('playPurposes', updated);
-  };
-
-  const deletePurpose = (id, name) => {
-    if (!confirm(`Delete purpose "${name}"?`)) return;
-    const updated = (config.playPurposes || []).filter(p => p.id !== id);
-    updateQCConfig('playPurposes', updated);
   };
 
   // Efficiency threshold update
@@ -10306,11 +10733,7 @@ function QualityControlDefinitionsTab({ qualityControlDefinitions, onUpdate, isL
         <div className="pt-3 space-y-3">
           <p>
             These settings power the <strong className={isLight ? "text-slate-900" : "text-white"}>X&O Quality Control</strong> tool in your Weekly Tools.
-            They define how plays are categorized by purpose, and what constitutes "efficient" or "explosive" performance.
-          </p>
-          <p>
-            <strong className={isLight ? "text-slate-900" : "text-white"}>Play Purposes</strong> categorize plays by their strategic role. Use these to
-            ensure your install and game plan have the right balance of foundational vs explosive plays.
+            They define what constitutes "efficient" or "explosive" performance for self-scouting purposes.
           </p>
           <p>
             <strong className={isLight ? "text-slate-900" : "text-white"}>Efficiency Thresholds</strong> define success by down. 1st down typically needs
@@ -10318,65 +10741,6 @@ function QualityControlDefinitionsTab({ qualityControlDefinitions, onUpdate, isL
           </p>
         </div>
       </HelpSection>
-
-      {/* Play Purposes Section */}
-      <div className={`rounded-lg border overflow-hidden ${isLight ? 'bg-white border-slate-200' : 'bg-slate-800 border-slate-700'}`}>
-        <div className={`flex items-center justify-between px-4 py-3 border-b ${isLight ? 'border-slate-200' : 'border-slate-700'}`}>
-          <div>
-            <h3 className={`font-medium ${isLight ? 'text-slate-900' : 'text-white'}`}>Play Purposes</h3>
-            <p className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Categorize plays by their strategic role</p>
-          </div>
-          <button
-            onClick={addPurpose}
-            className="flex items-center gap-1 px-3 py-1.5 bg-sky-600 text-white text-sm rounded hover:bg-sky-700"
-          >
-            <Plus size={16} />
-            Add Purpose
-          </button>
-        </div>
-        <div className="p-4">
-          {(config.playPurposes || []).length === 0 ? (
-            <div className="text-center py-8 text-slate-500">
-              No purposes defined. Add purposes to categorize your plays.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {(config.playPurposes || []).map(purpose => (
-                <div
-                  key={purpose.id}
-                  className={`flex items-center justify-between p-3 rounded-lg ${isLight ? 'bg-slate-100' : 'bg-slate-700/50'}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <input
-                      id={`purpose-color-${purpose.id}`}
-                      type="color"
-                      value={purpose.color}
-                      onChange={(e) => updatePurpose(purpose.id, 'color', e.target.value)}
-                      aria-label={`${purpose.name} color`}
-                      className="w-8 h-8 rounded cursor-pointer border-0"
-                    />
-                    <input
-                      id={`purpose-name-${purpose.id}`}
-                      type="text"
-                      value={purpose.name}
-                      onChange={(e) => updatePurpose(purpose.id, 'name', e.target.value)}
-                      aria-label="Purpose name"
-                      className={`px-2 py-1 border rounded text-sm w-32 ${isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-600 border-slate-500 text-white'}`}
-                    />
-                    <span className="text-xs text-slate-500">ID: {purpose.id}</span>
-                  </div>
-                  <button
-                    onClick={() => deletePurpose(purpose.id, purpose.name)}
-                    className={`p-1.5 text-red-400 hover:text-red-300 rounded ${isLight ? 'hover:bg-slate-200' : 'hover:bg-slate-600'}`}
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* Efficiency Thresholds Section */}
       <div className={`rounded-lg border overflow-hidden ${isLight ? 'bg-white border-slate-200' : 'bg-slate-800 border-slate-700'}`}>

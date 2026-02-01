@@ -281,6 +281,9 @@ export default function Playbook() {
   // Formation objects from setupConfig (for diagram editor)
   const formations = useMemo(() => setupConfig?.formations || [], [setupConfig?.formations]);
 
+  // Position colors from setupConfig (for diagram previews)
+  const positionColors = useMemo(() => setupConfig?.positionColors || {}, [setupConfig?.positionColors]);
+
   // Filter plays
   const filteredPlays = useMemo(() => {
     return phasePlays.filter(play => {
@@ -785,6 +788,7 @@ export default function Playbook() {
               onToggleSelect={togglePlaySelection}
               onEdit={() => openEditPlayEditor(play)}
               onOpenDetails={openPlayDetails}
+              positionColors={positionColors}
             />
           ))}
         </div>

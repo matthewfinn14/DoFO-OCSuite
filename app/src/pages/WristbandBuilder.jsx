@@ -1126,7 +1126,7 @@ function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, on
                   >
                     {diagramData?.length > 0 ? (
                       <div style={{ position: 'absolute', inset: 0 }}>
-                        <DiagramPreview elements={diagramData} fillContainer={true} mode={viewType === 'skill' ? 'wiz-skill' : 'wiz-oline'} />
+                        <DiagramPreview elements={diagramData} fillContainer={true} mode={viewType === 'skill' ? 'wiz-skill' : 'wiz-oline'} positionColors={positionColors} />
                       </div>
                     ) : play && !diagramData?.length ? (
                       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

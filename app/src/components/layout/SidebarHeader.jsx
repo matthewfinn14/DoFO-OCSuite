@@ -199,7 +199,7 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
         <>
           {/* Team Logo - Under DoFO logo, above school name */}
           {settings?.teamLogo && (
-            <div className="mb-1 flex justify-center">
+            <div className="mb-1">
               <img
                 src={settings.teamLogo}
                 alt="Team Logo"

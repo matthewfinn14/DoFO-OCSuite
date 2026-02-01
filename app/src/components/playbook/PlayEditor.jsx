@@ -307,27 +307,24 @@ export default function PlayEditor({
   });
 
   // Extract skill positions from the WIZ Skill diagram (non-OL players in the diagram)
+  // Uses the LABEL (what's displayed) not positionKey (the internal identifier)
   const diagramSkillPositions = useMemo(() => {
     const OL_POSITIONS = ['LT', 'LG', 'C', 'RG', 'RT', 'T', 'G'];
     const diagramData = formData.wizSkillData || [];
     const positions = new Set();
 
     diagramData.forEach(el => {
-      if (el.type === 'player' && el.positionKey) {
-        // Skip OL positions
-        if (!OL_POSITIONS.includes(el.positionKey)) {
-          positions.add(el.positionKey);
-        }
-      } else if (el.type === 'player' && el.label) {
-        // Fallback to label if no positionKey
+      // Only include player elements that aren't OL
+      if (el.type === 'player' && el.label) {
+        // Skip OL positions (by label)
         if (!OL_POSITIONS.includes(el.label)) {
           positions.add(el.label);
         }
       }
     });
 
-    // Return as array, maintaining a reasonable order
-    const orderedPositions = ['QB', 'RB', 'FB', 'WR', 'TE', 'X', 'Y', 'Z', 'H', 'F'];
+    // Return as array, maintaining a reasonable order based on common position names
+    const orderedPositions = ['QB', 'BB', 'RB', 'FB', 'WR', 'TE', 'X', 'Y', 'Z', 'H', 'F', 'A'];
     const result = orderedPositions.filter(p => positions.has(p));
     // Add any positions not in the standard order
     positions.forEach(p => {
@@ -1666,6 +1663,7 @@ export default function PlayEditor({
                         mode="wiz-skill"
                         width="100%"
                         onClick={() => setShowSkillEditor(true)}
+                        positionColors={positionColors}
                       />
                       {/* Start from Template Search - when diagram exists */}
                       {playsWithSkillDiagrams.length > 0 && (
