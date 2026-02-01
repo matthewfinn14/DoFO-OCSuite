@@ -302,7 +302,40 @@ export default function PlayEditor({
     targetProgressions: [], // Who are we targeting? Array of {position, isPrimary, order}
     // Sub-level playbook assignments
     levelPlaybooks: [],
+    // Skill position assignments (route/responsibility for each position)
+    skillAssignments: {},
   });
+
+  // Extract skill positions from the WIZ Skill diagram (non-OL players in the diagram)
+  const diagramSkillPositions = useMemo(() => {
+    const OL_POSITIONS = ['LT', 'LG', 'C', 'RG', 'RT', 'T', 'G'];
+    const diagramData = formData.wizSkillData || [];
+    const positions = new Set();
+
+    diagramData.forEach(el => {
+      if (el.type === 'player' && el.positionKey) {
+        // Skip OL positions
+        if (!OL_POSITIONS.includes(el.positionKey)) {
+          positions.add(el.positionKey);
+        }
+      } else if (el.type === 'player' && el.label) {
+        // Fallback to label if no positionKey
+        if (!OL_POSITIONS.includes(el.label)) {
+          positions.add(el.label);
+        }
+      }
+    });
+
+    // Return as array, maintaining a reasonable order
+    const orderedPositions = ['QB', 'RB', 'FB', 'WR', 'TE', 'X', 'Y', 'Z', 'H', 'F'];
+    const result = orderedPositions.filter(p => positions.has(p));
+    // Add any positions not in the standard order
+    positions.forEach(p => {
+      if (!result.includes(p)) result.push(p);
+    });
+
+    return result;
+  }, [formData.wizSkillData]);
 
   const [loading, setSaving] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
@@ -311,6 +344,7 @@ export default function PlayEditor({
     situations: false,
     gameplan: false,
     diagrams: true,
+    assignments: false,
     complementary: false,
     levels: false,
     advanced: false,
@@ -375,6 +409,8 @@ export default function PlayEditor({
         targetProgressions: play.targetProgressions || [],
         // Sub-level playbook assignments
         levelPlaybooks: play.levelPlaybooks || [],
+        // Skill position assignments
+        skillAssignments: play.skillAssignments || {},
       });
     } else {
       // Reset form for new play
@@ -527,6 +563,88 @@ export default function PlayEditor({
     setShowSeriesPrompt(false);
     setPendingSeriesPlays([]);
     setSeriesName('');
+  };
+
+  // Add new bucket from dropdown
+  const handleAddNewBucket = async () => {
+    const name = prompt('New bucket name:');
+    if (!name?.trim()) return;
+
+    const newBucket = {
+      id: `bucket-${Date.now()}`,
+      label: name.trim(),
+      phase: formData.phase || 'OFFENSE',
+      color: '#3b82f6'
+    };
+
+    const existing = setupConfig?.playBuckets || [];
+    await updateSetupConfig({ playBuckets: [...existing, newBucket] });
+
+    // Auto-select the new bucket
+    setFormData(prev => ({ ...prev, playCategory: newBucket.id, bucketId: '' }));
+  };
+
+  // Add new concept group from dropdown
+  const handleAddNewConceptGroup = async () => {
+    const currentBucketId = selectedBucketId || formData.playCategory;
+    if (!currentBucketId) {
+      alert('Please select a bucket first');
+      return;
+    }
+
+    const name = prompt('New concept group name:');
+    if (!name?.trim()) return;
+
+    const newGroup = {
+      id: `concept-${Date.now()}`,
+      label: name.trim(),
+      name: name.trim(),
+      categoryId: currentBucketId,
+      phase: formData.phase || 'OFFENSE'
+    };
+
+    const existing = setupConfig?.conceptGroups || [];
+    await updateSetupConfig({ conceptGroups: [...existing, newGroup] });
+
+    // Auto-select the new group
+    setFormData(prev => ({ ...prev, bucketId: newGroup.id }));
+  };
+
+  // Add new read type from dropdown
+  const handleAddNewReadType = async () => {
+    const name = prompt('New read type name:');
+    if (!name?.trim()) return;
+
+    const newReadType = {
+      id: `read-${Date.now()}`,
+      label: name.trim(),
+      name: name.trim()
+    };
+
+    const existing = setupConfig?.readTypes || [];
+    await updateSetupConfig({ readTypes: [...existing, newReadType] });
+
+    // Auto-select the new read type
+    setFormData(prev => ({ ...prev, readType: newReadType.id }));
+  };
+
+  // Add new look-alike series from dropdown
+  const handleAddNewSeries = async () => {
+    const name = prompt('New look-alike series name:');
+    if (!name?.trim()) return;
+
+    const newSeries = {
+      id: `series-${Date.now()}`,
+      name: name.trim(),
+      description: '',
+      playIds: []
+    };
+
+    const existing = setupConfig?.lookAlikeSeries || [];
+    await updateSetupConfig({ lookAlikeSeries: [...existing, newSeries] });
+
+    // Auto-select the new series
+    setFormData(prev => ({ ...prev, seriesId: newSeries.id }));
   };
 
   const toggleSection = (section) => {
@@ -723,54 +841,10 @@ export default function PlayEditor({
                 </div>
               )}
 
-              {/* ADVANCED MODE: Bucket Selector + Full Call + Breakdown */}
+              {/* ADVANCED MODE: Full Call first, then Bucket/Concept, then Breakdown */}
               {isAdvancedMode && (
                 <>
-                  {/* Bucket & Concept Group Selectors */}
-                  {phase === 'OFFENSE' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="play-editor-bucket-advanced" className="block text-sm font-medium text-slate-400 mb-2">
-                          Play Bucket <span className="text-slate-500">(determines syntax)</span>
-                        </label>
-                        <select
-                          id="play-editor-bucket-advanced"
-                          value={selectedBucketId}
-                          onChange={e => {
-                            setSelectedBucketId(e.target.value);
-                            setFormData(prev => ({ ...prev, playCategory: e.target.value, bucketId: '' }));
-                          }}
-                          className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white"
-                        >
-                          <option value="">Select Bucket...</option>
-                          {playBuckets.filter(b => (b.phase || 'OFFENSE') === formData.phase).map(bucket => (
-                            <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label htmlFor="play-editor-concept-group-advanced" className="block text-sm font-medium text-slate-400 mb-2">
-                          Concept Group
-                        </label>
-                        <select
-                          id="play-editor-concept-group-advanced"
-                          value={formData.bucketId || ''}
-                          onChange={e => setFormData(prev => ({ ...prev, bucketId: e.target.value }))}
-                          className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white"
-                          disabled={!selectedBucketId}
-                        >
-                          <option value="">{selectedBucketId ? 'Select Group...' : 'Select bucket first'}</option>
-                          {conceptGroups
-                            .filter(cg => cg.categoryId === selectedBucketId)
-                            .map(group => (
-                              <option key={group.id} value={group.id}>{group.label}</option>
-                            ))}
-                        </select>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Full Play Call */}
+                  {/* Full Play Call - at the top */}
                   <div>
                     <label htmlFor="play-editor-formation-advanced" className="block text-sm font-medium text-slate-400 mb-1">
                       Full Play Call *
@@ -784,6 +858,7 @@ export default function PlayEditor({
                         list="formations-list"
                         placeholder="Formation"
                         className="w-1/3 px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500 text-lg font-medium"
+                        autoFocus
                       />
                       <input
                         id="play-editor-name-advanced"
@@ -813,6 +888,62 @@ export default function PlayEditor({
                       </span>
                     </div>
                   </div>
+
+                  {/* Bucket & Concept Group Selectors - below Full Play Call */}
+                  {phase === 'OFFENSE' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="play-editor-bucket-advanced" className="block text-sm font-medium text-slate-400 mb-2">
+                          Play Bucket <span className="text-slate-500">(determines syntax)</span>
+                        </label>
+                        <select
+                          id="play-editor-bucket-advanced"
+                          value={selectedBucketId}
+                          onChange={e => {
+                            if (e.target.value === '__add_new__') {
+                              handleAddNewBucket();
+                            } else {
+                              setSelectedBucketId(e.target.value);
+                              setFormData(prev => ({ ...prev, playCategory: e.target.value, bucketId: '' }));
+                            }
+                          }}
+                          className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white"
+                        >
+                          <option value="">Select Bucket...</option>
+                          {playBuckets.filter(b => (b.phase || 'OFFENSE') === formData.phase).map(bucket => (
+                            <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
+                          ))}
+                          <option value="__add_new__" className="text-sky-400">+ Add New Bucket...</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label htmlFor="play-editor-concept-group-advanced" className="block text-sm font-medium text-slate-400 mb-2">
+                          Concept Group
+                        </label>
+                        <select
+                          id="play-editor-concept-group-advanced"
+                          value={formData.bucketId || ''}
+                          onChange={e => {
+                            if (e.target.value === '__add_new__') {
+                              handleAddNewConceptGroup();
+                            } else {
+                              setFormData(prev => ({ ...prev, bucketId: e.target.value }));
+                            }
+                          }}
+                          className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white"
+                          disabled={!selectedBucketId}
+                        >
+                          <option value="">{selectedBucketId ? 'Select Group...' : 'Select bucket first'}</option>
+                          {conceptGroups
+                            .filter(cg => cg.categoryId === selectedBucketId)
+                            .map(group => (
+                              <option key={group.id} value={group.id}>{group.label}</option>
+                            ))}
+                          {selectedBucketId && <option value="__add_new__" className="text-sky-400">+ Add New Concept Group...</option>}
+                        </select>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
 
@@ -1002,13 +1133,20 @@ export default function PlayEditor({
                       <select
                         id="play-editor-bucket"
                         value={formData.playCategory}
-                        onChange={e => setFormData(prev => ({ ...prev, playCategory: e.target.value, bucketId: '' }))}
+                        onChange={e => {
+                          if (e.target.value === '__add_new__') {
+                            handleAddNewBucket();
+                          } else {
+                            setFormData(prev => ({ ...prev, playCategory: e.target.value, bucketId: '' }));
+                          }
+                        }}
                         className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
                       >
                         <option value="">Select Bucket</option>
                         {playBuckets.filter(b => (b.phase || 'OFFENSE') === formData.phase).map(bucket => (
                           <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
                         ))}
+                        <option value="__add_new__" className="text-sky-400">+ Add New Bucket...</option>
                       </select>
                     </div>
 
@@ -1020,13 +1158,20 @@ export default function PlayEditor({
                       <select
                         id="play-editor-concept-group"
                         value={formData.bucketId}
-                        onChange={e => setFormData(prev => ({ ...prev, bucketId: e.target.value }))}
+                        onChange={e => {
+                          if (e.target.value === '__add_new__') {
+                            handleAddNewConceptGroup();
+                          } else {
+                            setFormData(prev => ({ ...prev, bucketId: e.target.value }));
+                          }
+                        }}
                         className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
                       >
                         <option value="">Select Group</option>
                         {filteredBuckets.map(bucket => (
                           <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
                         ))}
+                        <option value="__add_new__" className="text-sky-400">+ Add New Concept Group...</option>
                       </select>
                     </div>
                   </div>
@@ -1046,13 +1191,20 @@ export default function PlayEditor({
                       <select
                         id="play-editor-read-type"
                         value={formData.readType || ''}
-                        onChange={e => setFormData(prev => ({ ...prev, readType: e.target.value }))}
+                        onChange={e => {
+                          if (e.target.value === '__add_new__') {
+                            handleAddNewReadType();
+                          } else {
+                            setFormData(prev => ({ ...prev, readType: e.target.value }));
+                          }
+                        }}
                         className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
                       >
                         <option value="">No Read</option>
                         {(setupConfig?.readTypes || []).map(rt => (
                           <option key={rt.id} value={rt.id}>{rt.label || rt.name}</option>
                         ))}
+                        <option value="__add_new__" className="text-sky-400">+ Add New Read Type...</option>
                       </select>
                     </div>
 
@@ -1065,13 +1217,20 @@ export default function PlayEditor({
                       <select
                         id="play-editor-series"
                         value={formData.seriesId || ''}
-                        onChange={e => setFormData(prev => ({ ...prev, seriesId: e.target.value }))}
+                        onChange={e => {
+                          if (e.target.value === '__add_new__') {
+                            handleAddNewSeries();
+                          } else {
+                            setFormData(prev => ({ ...prev, seriesId: e.target.value }));
+                          }
+                        }}
                         className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
                       >
                         <option value="">None</option>
                         {(setupConfig?.lookAlikeSeries || []).map(series => (
                           <option key={series.id} value={series.id}>{series.name}</option>
                         ))}
+                        <option value="__add_new__" className="text-sky-400">+ Add New Series...</option>
                       </select>
                     </div>
                   </div>
@@ -1846,6 +2005,56 @@ export default function PlayEditor({
                   )}
                 </div>
               </div>
+            </Section>
+          )}
+
+          {/* Skill Position Assignments Section - Only for Offense */}
+          {phase === 'OFFENSE' && (
+            <Section
+              title={
+                <span className="flex items-center gap-2">
+                  <ClipboardList size={16} className="text-sky-400" />
+                  Skill Position Assignments
+                  {Object.values(formData.skillAssignments || {}).filter(v => v).length > 0 && (
+                    <span className="px-1.5 py-0.5 bg-sky-500/20 text-sky-400 text-xs rounded">
+                      {Object.values(formData.skillAssignments || {}).filter(v => v).length}
+                    </span>
+                  )}
+                </span>
+              }
+              isOpen={expandedSections.assignments}
+              onToggle={() => toggleSection('assignments')}
+              isLight={isLight}
+            >
+              <p className="text-xs text-slate-500 mb-4">
+                Define route/responsibility for each skill position. These auto-populate to Skills & Drills.
+              </p>
+              {diagramSkillPositions.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                  {diagramSkillPositions.map(pos => (
+                    <div key={pos}>
+                      <label className="text-xs text-slate-400 font-medium block mb-1">{pos}</label>
+                      <input
+                        type="text"
+                        value={formData.skillAssignments?.[pos] || ''}
+                        onChange={e => setFormData(prev => ({
+                          ...prev,
+                          skillAssignments: {
+                            ...(prev.skillAssignments || {}),
+                            [pos]: e.target.value
+                          }
+                        }))}
+                        placeholder="Route/Assignment"
+                        className="w-full px-2 py-1.5 bg-slate-700 border border-slate-600 rounded text-white text-sm placeholder-slate-500 focus:border-sky-500 focus:outline-none"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 italic">
+                  Add a WIZ Skill diagram to define position assignments
+                </p>
+              )}
             </Section>
           )}
 

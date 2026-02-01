@@ -1580,6 +1580,9 @@ export default function Setup() {
               drillsLibrary={localConfig.drillsLibrary || { positionDrills: {}, schemeDrills: {} }}
               positionGroups={localConfig.positionGroups || {}}
               playBuckets={localConfig.playBuckets || []}
+              passProtections={localConfig.passProtections || []}
+              runBlocking={localConfig.runBlocking || []}
+              plays={playsArray || []}
               onUpdate={updateLocal}
               isLight={isLight}
             />
@@ -5926,7 +5929,7 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
       id: Date.now().toString(),
       name: name.toUpperCase(),
       type: 'zone',
-      callText: '',
+      assignments: { LT: '', LG: '', C: '', RG: '', RT: '' },
       notes: '',
       diagramData: null
     };
@@ -6108,91 +6111,84 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {runBlocking.map((scheme, idx) => (
-            <div key={scheme.id} className="bg-slate-700/50 rounded-lg border border-slate-600 p-4">
-              <div className="flex justify-between items-center mb-3">
-                <input
-                  id={`run-scheme-name-${scheme.id}`}
-                  type="text"
-                  value={scheme.name}
-                  onChange={(e) => updateRunScheme(idx, { name: e.target.value.toUpperCase() })}
-                  className="font-bold text-lg bg-transparent border-none text-white w-24"
-                  aria-label="Scheme name"
-                />
-                <button onClick={() => deleteRunScheme(scheme.id)} className="text-red-400 hover:text-red-300">
-                  <Trash2 size={14} />
-                </button>
+            <div key={scheme.id} className="rounded-lg border border-slate-600 p-3 flex gap-3">
+              {/* Left side: Diagram */}
+              <div
+                onClick={() => setEditingDiagram({ type: 'scheme', index: idx })}
+                className="flex-shrink-0 w-40 h-28 rounded border border-slate-600 cursor-pointer hover:border-emerald-500 transition-colors overflow-hidden"
+              >
+                {scheme.diagramData && scheme.diagramData.length > 0 ? (
+                  <DiagramPreview
+                    elements={scheme.diagramData}
+                    width={160}
+                    height={112}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-slate-800 text-slate-500">
+                    <Image size={24} />
+                  </div>
+                )}
               </div>
 
-              <div className="mb-3">
-                <label htmlFor={`run-scheme-type-${scheme.id}`} className="text-xs text-slate-400 block mb-1">Scheme Type</label>
-                <select
-                  id={`run-scheme-type-${scheme.id}`}
-                  value={scheme.type}
-                  onChange={(e) => updateRunScheme(idx, { type: e.target.value })}
-                  className="w-full px-2 py-1.5 bg-slate-600 border border-slate-500 rounded text-white text-sm"
-                >
-                  <option value="zone">Zone</option>
-                  <option value="gap">Gap / Man</option>
-                  <option value="power">Power</option>
-                  <option value="counter">Counter</option>
-                  <option value="trap">Trap</option>
-                  <option value="iso">Iso</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
+              {/* Right side: Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      id={`run-scheme-name-${scheme.id}`}
+                      type="text"
+                      value={scheme.name}
+                      onChange={(e) => updateRunScheme(idx, { name: e.target.value.toUpperCase() })}
+                      className="font-bold text-lg bg-transparent border-none text-white w-24"
+                      aria-label="Scheme name"
+                    />
+                    <select
+                      id={`run-scheme-type-${scheme.id}`}
+                      value={scheme.type}
+                      onChange={(e) => updateRunScheme(idx, { type: e.target.value })}
+                      className="px-2 py-0.5 bg-transparent border border-slate-600 rounded text-slate-300 text-xs focus:border-emerald-500 focus:outline-none"
+                    >
+                      <option value="zone">Zone</option>
+                      <option value="gap">Gap</option>
+                      <option value="power">Power</option>
+                      <option value="counter">Counter</option>
+                      <option value="trap">Trap</option>
+                      <option value="iso">Iso</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <button onClick={() => deleteRunScheme(scheme.id)} className="text-red-400 hover:text-red-300">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
 
-              <div className="mb-2">
-                <label htmlFor={`run-scheme-call-text-${scheme.id}`} className="text-xs text-slate-400 block mb-1">Call Text</label>
-                <input
-                  id={`run-scheme-call-text-${scheme.id}`}
-                  type="text"
-                  value={scheme.callText || ''}
-                  onChange={(e) => updateRunScheme(idx, { callText: e.target.value })}
-                  placeholder="e.g., Inside Zone Right"
-                  className="w-full px-2 py-1.5 bg-slate-600 border border-slate-500 rounded text-white text-sm"
-                />
-              </div>
+                {/* Position Assignments */}
+                <div className="grid grid-cols-5 gap-1 mb-2">
+                  {['LT', 'LG', 'C', 'RG', 'RT'].map((pos) => (
+                    <div key={pos} className="text-center">
+                      <span className="text-[10px] text-slate-500 font-medium block">{pos}</span>
+                      <input
+                        type="text"
+                        value={scheme.assignments?.[pos] || ''}
+                        onChange={(e) => updateRunScheme(idx, {
+                          assignments: { ...(scheme.assignments || {}), [pos]: e.target.value }
+                        })}
+                        placeholder="—"
+                        className="w-full px-1 py-1 bg-transparent border border-slate-600 rounded text-white text-xs text-center focus:border-emerald-500 focus:outline-none"
+                      />
+                    </div>
+                  ))}
+                </div>
 
-              <div className="mb-3">
-                <label htmlFor={`run-scheme-notes-${scheme.id}`} className="text-xs text-slate-400 block mb-1">Notes</label>
+                {/* Notes */}
                 <textarea
                   id={`run-scheme-notes-${scheme.id}`}
                   value={scheme.notes || ''}
                   onChange={(e) => updateRunScheme(idx, { notes: e.target.value })}
-                  placeholder="Optional notes..."
+                  placeholder="Notes..."
                   rows={2}
-                  className="w-full px-2 py-1.5 bg-slate-600 border border-slate-500 rounded text-white text-sm resize-none"
+                  className="w-full px-2 py-1 bg-transparent border border-slate-600 rounded text-white text-xs resize-none focus:border-emerald-500 focus:outline-none"
                 />
-              </div>
-
-              {/* Diagram Section */}
-              <div className="pt-3 border-t border-slate-600">
-                <span className="text-xs text-slate-400 block mb-2">Blocking Diagram</span>
-                <div className="flex items-center gap-3">
-                  {scheme.diagramData && scheme.diagramData.length > 0 ? (
-                    <DiagramPreview
-                      elements={scheme.diagramData}
-                      width={120}
-                      height={80}
-                      onClick={() => setEditingDiagram({ type: 'scheme', index: idx })}
-                    />
-                  ) : (
-                    <button
-                      onClick={() => setEditingDiagram({ type: 'scheme', index: idx })}
-                      className="flex items-center gap-2 px-3 py-2 bg-slate-600 text-slate-300 rounded hover:bg-slate-500 text-sm"
-                    >
-                      <Image size={14} /> Add Diagram
-                    </button>
-                  )}
-                  {scheme.diagramData && scheme.diagramData.length > 0 && (
-                    <button
-                      onClick={() => setEditingDiagram({ type: 'scheme', index: idx })}
-                      className="text-xs text-sky-400 hover:text-sky-300"
-                    >
-                      Edit
-                    </button>
-                  )}
-                </div>
               </div>
             </div>
           ))}
@@ -6224,6 +6220,385 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
   );
 }
 
+// This component was removed - functionality moved to IndividualPositionSkills in DrillsLibraryTab
+
+function _OLineSkillsTabRemoved({ olineSkills, passProtections, runBlocking, playBuckets, onUpdate }) {
+  const [expandedPositions, setExpandedPositions] = useState({});
+  const [expandedSections, setExpandedSections] = useState({});
+  const [showDrillModal, setShowDrillModal] = useState(null);
+
+  // Extract unique techniques from OL WIZ assignments
+  const getUniqueAssignments = () => {
+    const passAssignments = new Set();
+    const runAssignments = new Map(); // bucket -> assignments
+
+    // Get pass protection assignments
+    (passProtections || []).forEach(prot => {
+      if (prot.assignments) {
+        Object.values(prot.assignments).forEach(val => {
+          if (val && val.trim()) passAssignments.add(val.trim());
+        });
+      }
+    });
+
+    // Get run blocking assignments by scheme type/bucket
+    (runBlocking || []).forEach(scheme => {
+      if (scheme.assignments) {
+        const bucketKey = scheme.type || 'general';
+        if (!runAssignments.has(bucketKey)) {
+          runAssignments.set(bucketKey, new Set());
+        }
+        Object.values(scheme.assignments).forEach(val => {
+          if (val && val.trim()) runAssignments.get(bucketKey).add(val.trim());
+        });
+      }
+    });
+
+    return { passAssignments: Array.from(passAssignments), runAssignments };
+  };
+
+  const { passAssignments, runAssignments } = getUniqueAssignments();
+
+  // Toggle position expansion
+  const togglePosition = (pos) => {
+    setExpandedPositions(prev => ({ ...prev, [pos]: !prev[pos] }));
+  };
+
+  // Toggle section expansion within a position
+  const toggleSection = (pos, section) => {
+    const key = `${pos}-${section}`;
+    setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  // Get drills for a position/section/level
+  const getDrills = (pos, section, level = null) => {
+    if (level) {
+      return olineSkills?.[pos]?.general?.[level] || [];
+    }
+    return olineSkills?.[pos]?.[section] || [];
+  };
+
+  // Add a drill
+  const addDrill = (pos, section, drill) => {
+    const currentDrills = section === 'general'
+      ? (olineSkills?.[pos]?.general?.[drill.level] || [])
+      : (olineSkills?.[pos]?.[section] || []);
+
+    const newDrill = { ...drill, id: `drill_${Date.now()}` };
+
+    let updated;
+    if (section === 'general') {
+      updated = {
+        ...olineSkills,
+        [pos]: {
+          ...(olineSkills?.[pos] || {}),
+          general: {
+            ...(olineSkills?.[pos]?.general || {}),
+            [drill.level]: [...currentDrills, newDrill]
+          }
+        }
+      };
+    } else {
+      updated = {
+        ...olineSkills,
+        [pos]: {
+          ...(olineSkills?.[pos] || {}),
+          [section]: [...currentDrills, newDrill]
+        }
+      };
+    }
+    onUpdate('olineSkills', updated);
+    setShowDrillModal(null);
+  };
+
+  // Delete a drill
+  const deleteDrill = (pos, section, level, drillId) => {
+    if (!confirm('Delete this drill?')) return;
+
+    let updated;
+    if (level) {
+      const currentDrills = olineSkills?.[pos]?.general?.[level] || [];
+      updated = {
+        ...olineSkills,
+        [pos]: {
+          ...(olineSkills?.[pos] || {}),
+          general: {
+            ...(olineSkills?.[pos]?.general || {}),
+            [level]: currentDrills.filter(d => d.id !== drillId)
+          }
+        }
+      };
+    } else {
+      const currentDrills = olineSkills?.[pos]?.[section] || [];
+      updated = {
+        ...olineSkills,
+        [pos]: {
+          ...(olineSkills?.[pos] || {}),
+          [section]: currentDrills.filter(d => d.id !== drillId)
+        }
+      };
+    }
+    onUpdate('olineSkills', updated);
+  };
+
+  // Render drill item
+  const DrillItem = ({ drill, pos, section, level }) => (
+    <div className="flex items-center justify-between py-2 px-3 bg-slate-700/50 rounded mb-1 group">
+      <div className="flex-1">
+        <span className="text-white text-sm font-medium">{drill.name}</span>
+        {drill.description && (
+          <p className="text-slate-400 text-xs mt-0.5">{drill.description}</p>
+        )}
+      </div>
+      <button
+        onClick={() => deleteDrill(pos, section, level, drill.id)}
+        className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 p-1"
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-white">O-LINE Skills & Drills</h3>
+        <p className="text-sm text-slate-400">
+          Skills organized by position. Techniques auto-populate from your OL WIZ Library assignments.
+        </p>
+      </div>
+
+      {/* Auto-populated Techniques Summary */}
+      {(passAssignments.length > 0 || runAssignments.size > 0) && (
+        <div className="mb-6 p-3 bg-slate-800/50 rounded-lg border border-slate-700">
+          <span className="text-xs text-slate-400 font-medium block mb-2">
+            Auto-detected Techniques from OL WIZ:
+          </span>
+          <div className="flex flex-wrap gap-1">
+            {passAssignments.map(a => (
+              <span key={`pass-${a}`} className="px-2 py-0.5 bg-sky-600/30 text-sky-300 text-xs rounded">
+                {a}
+              </span>
+            ))}
+            {Array.from(runAssignments.entries()).flatMap(([bucket, assignments]) =>
+              Array.from(assignments).map(a => (
+                <span key={`run-${bucket}-${a}`} className="px-2 py-0.5 bg-emerald-600/30 text-emerald-300 text-xs rounded">
+                  {a}
+                </span>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Position Cards */}
+      <div className="space-y-3">
+        {OL_POSITIONS.map(pos => (
+          <div key={pos} className="border border-slate-700 rounded-lg overflow-hidden">
+            {/* Position Header */}
+            <button
+              onClick={() => togglePosition(pos)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-slate-800 hover:bg-slate-700 transition-colors"
+            >
+              <span className="font-bold text-white text-lg">{pos}</span>
+              <ChevronDown
+                size={20}
+                className={`text-slate-400 transition-transform ${expandedPositions[pos] ? 'rotate-180' : ''}`}
+              />
+            </button>
+
+            {/* Position Content */}
+            {expandedPositions[pos] && (
+              <div className="p-3 space-y-2">
+                {/* General Skills Section */}
+                <div className="border border-slate-600 rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => toggleSection(pos, 'general')}
+                    className="w-full flex items-center justify-between px-3 py-2 bg-slate-700/50 hover:bg-slate-700 transition-colors"
+                  >
+                    <span className="font-medium text-white text-sm">General Skills</span>
+                    <ChevronDown
+                      size={16}
+                      className={`text-slate-400 transition-transform ${expandedSections[`${pos}-general`] ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+
+                  {expandedSections[`${pos}-general`] && (
+                    <div className="p-3 space-y-3">
+                      {SKILL_LEVELS.map(level => (
+                        <div key={level.id}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className={`px-2 py-0.5 ${level.color} text-white text-xs font-medium rounded`}>
+                              {level.label}
+                            </span>
+                            <button
+                              onClick={() => setShowDrillModal({ pos, section: 'general', level: level.id })}
+                              className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1"
+                            >
+                              <Plus size={12} /> Add
+                            </button>
+                          </div>
+                          {getDrills(pos, 'general', level.id).map(drill => (
+                            <DrillItem key={drill.id} drill={drill} pos={pos} section="general" level={level.id} />
+                          ))}
+                          {getDrills(pos, 'general', level.id).length === 0 && (
+                            <p className="text-slate-500 text-xs italic">No drills added</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Pass Protection Section */}
+                <div className="border border-slate-600 rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => toggleSection(pos, 'pass')}
+                    className="w-full flex items-center justify-between px-3 py-2 bg-sky-900/30 hover:bg-sky-900/50 transition-colors"
+                  >
+                    <span className="font-medium text-sky-300 text-sm">Pass Protection</span>
+                    <div className="flex items-center gap-2">
+                      {getDrills(pos, 'pass').length > 0 && (
+                        <span className="text-xs text-slate-400">{getDrills(pos, 'pass').length} drills</span>
+                      )}
+                      <ChevronDown
+                        size={16}
+                        className={`text-slate-400 transition-transform ${expandedSections[`${pos}-pass`] ? 'rotate-180' : ''}`}
+                      />
+                    </div>
+                  </button>
+
+                  {expandedSections[`${pos}-pass`] && (
+                    <div className="p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex flex-wrap gap-1">
+                          {passAssignments.length > 0 ? (
+                            passAssignments.map(t => (
+                              <span key={t} className="px-2 py-0.5 bg-sky-600/20 text-sky-300 text-xs rounded">{t}</span>
+                            ))
+                          ) : (
+                            <span className="text-slate-500 text-xs italic">No techniques defined in OL WIZ</span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => setShowDrillModal({ pos, section: 'pass', sectionLabel: 'Pass Protection' })}
+                          className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1"
+                        >
+                          <Plus size={12} /> Add Drill
+                        </button>
+                      </div>
+                      {getDrills(pos, 'pass').map(drill => (
+                        <DrillItem key={drill.id} drill={drill} pos={pos} section="pass" />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Scheme/Bucket Sections - each bucket gets its own collapsible */}
+                {playBuckets.map(bucket => (
+                  <div key={bucket.id} className="border border-slate-600 rounded-lg overflow-hidden">
+                    <button
+                      onClick={() => toggleSection(pos, `bucket-${bucket.id}`)}
+                      className="w-full flex items-center justify-between px-3 py-2 bg-emerald-900/30 hover:bg-emerald-900/50 transition-colors"
+                    >
+                      <span className="font-medium text-emerald-300 text-sm">{bucket.label}</span>
+                      <div className="flex items-center gap-2">
+                        {getDrills(pos, `bucket-${bucket.id}`).length > 0 && (
+                          <span className="text-xs text-slate-400">{getDrills(pos, `bucket-${bucket.id}`).length} drills</span>
+                        )}
+                        <ChevronDown
+                          size={16}
+                          className={`text-slate-400 transition-transform ${expandedSections[`${pos}-bucket-${bucket.id}`] ? 'rotate-180' : ''}`}
+                        />
+                      </div>
+                    </button>
+
+                    {expandedSections[`${pos}-bucket-${bucket.id}`] && (
+                      <div className="p-3">
+                        <div className="flex items-center justify-end mb-2">
+                          <button
+                            onClick={() => setShowDrillModal({ pos, section: `bucket-${bucket.id}`, sectionLabel: bucket.label })}
+                            className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                          >
+                            <Plus size={12} /> Add Drill
+                          </button>
+                        </div>
+                        {getDrills(pos, `bucket-${bucket.id}`).map(drill => (
+                          <DrillItem key={drill.id} drill={drill} pos={pos} section={`bucket-${bucket.id}`} />
+                        ))}
+                        {getDrills(pos, `bucket-${bucket.id}`).length === 0 && (
+                          <p className="text-slate-500 text-xs italic">No drills added</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Add Drill Modal */}
+      {showDrillModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-800 rounded-lg p-4 w-full max-w-md">
+            <h3 className="text-lg font-semibold text-white mb-4">
+              Add Drill - {showDrillModal.pos} {showDrillModal.sectionLabel || showDrillModal.level || ''}
+            </h3>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                addDrill(showDrillModal.pos, showDrillModal.section, {
+                  name: formData.get('name'),
+                  description: formData.get('description'),
+                  level: showDrillModal.level
+                });
+              }}
+            >
+              <div className="mb-3">
+                <label className="text-xs text-slate-400 block mb-1">Drill Name</label>
+                <input
+                  name="name"
+                  type="text"
+                  required
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white"
+                  placeholder="e.g., Kick-Slide Drill"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="text-xs text-slate-400 block mb-1">Description (optional)</label>
+                <textarea
+                  name="description"
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white resize-none"
+                  rows={2}
+                  placeholder="Brief description..."
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowDrillModal(null)}
+                  className="px-4 py-2 text-slate-400 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-sky-600 text-white rounded hover:bg-sky-500"
+                >
+                  Add Drill
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Equipment presets for drills
 const EQUIPMENT_PRESETS = [
   'cones', 'bags', 'sled', 'tackling dummy', 'agility ladder',
@@ -6245,7 +6620,7 @@ const DRILL_PHASES = [
 ];
 
 // Skills & Drills Library Tab Component
-function DrillsLibraryTab({ drillsLibrary, positionGroups, playBuckets, onUpdate, isLight = false }) {
+function DrillsLibraryTab({ drillsLibrary, positionGroups, playBuckets, passProtections, runBlocking, plays, onUpdate, isLight = false }) {
   const [activePhase, setActivePhase] = useState('OFFENSE');
   const [expandedGroups, setExpandedGroups] = useState({});
   const [expandedBuckets, setExpandedBuckets] = useState({});
@@ -6681,6 +7056,28 @@ function DrillsLibraryTab({ drillsLibrary, positionGroups, playBuckets, onUpdate
         )}
       </div>
 
+      {/* Team/Group Drills Section - for Offense only */}
+      {activePhase === 'OFFENSE' && (
+        <TeamGroupDrills
+          drillsLibrary={drillsLibrary}
+          onUpdate={onUpdate}
+          isLight={isLight}
+        />
+      )}
+
+      {/* Individual Position Skills Section - for Offense only */}
+      {activePhase === 'OFFENSE' && (
+        <IndividualPositionSkills
+          drillsLibrary={drillsLibrary}
+          playBuckets={(playBuckets || []).filter(b => b.phase === 'OFFENSE' || !b.phase)}
+          passProtections={passProtections}
+          runBlocking={runBlocking}
+          plays={(plays || []).filter(p => (p.phase || 'OFFENSE') === 'OFFENSE')}
+          onUpdate={onUpdate}
+          isLight={isLight}
+        />
+      )}
+
       {/* Add/Edit Drill Modal */}
       {showDrillModal && (
         <DrillModal
@@ -6996,6 +7393,686 @@ function DrillModal({ isOpen, type, drill, positionGroups, isLight, onSave, onCl
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+// Team/Group Drills Component - for drills involving multiple positions
+const TEAM_DRILL_CATEGORIES = [
+  { id: 'mesh', label: 'Mesh / Timing', description: 'QB-RB exchange timing, mesh points', icon: '🤝' },
+  { id: 'motion', label: 'Motion Drills', description: 'Shift and motion execution with timing', icon: '↔️' },
+  { id: 'route-combos', label: 'Route Combinations', description: 'QB + receivers working route concepts', icon: '📡' },
+  { id: 'protection-routes', label: 'Protection + Routes', description: 'OL protection with skill routes', icon: '🛡️' },
+  { id: 'reads', label: 'Read Progressions', description: 'QB reads with full route tree', icon: '👁️' },
+  { id: 'rpo', label: 'RPO Execution', description: 'Run-pass option reads and execution', icon: '⚡' },
+  { id: 'screens', label: 'Screen Game', description: 'Screen setups with blocking and timing', icon: '🎯' },
+  { id: 'red-zone', label: 'Red Zone', description: 'Compressed field team concepts', icon: '🔴' }
+];
+
+function TeamGroupDrills({ drillsLibrary, onUpdate, isLight }) {
+  const [expandedCategories, setExpandedCategories] = useState({});
+  const [showDrillModal, setShowDrillModal] = useState(null);
+
+  const toggleCategory = (catId) => {
+    setExpandedCategories(prev => ({ ...prev, [catId]: !prev[catId] }));
+  };
+
+  // Get drills for a category
+  const getDrills = (categoryId) => {
+    return drillsLibrary?.teamGroupDrills?.[categoryId] || [];
+  };
+
+  // Add a drill
+  const addDrill = (categoryId, drill) => {
+    const currentDrills = drillsLibrary?.teamGroupDrills?.[categoryId] || [];
+    const newDrill = { ...drill, id: `drill_${Date.now()}` };
+
+    const updated = {
+      ...drillsLibrary,
+      teamGroupDrills: {
+        ...(drillsLibrary?.teamGroupDrills || {}),
+        [categoryId]: [...currentDrills, newDrill]
+      }
+    };
+    onUpdate('drillsLibrary', updated);
+    setShowDrillModal(null);
+  };
+
+  // Delete a drill
+  const deleteDrill = (categoryId, drillId) => {
+    if (!confirm('Delete this drill?')) return;
+    const currentDrills = drillsLibrary?.teamGroupDrills?.[categoryId] || [];
+
+    const updated = {
+      ...drillsLibrary,
+      teamGroupDrills: {
+        ...(drillsLibrary?.teamGroupDrills || {}),
+        [categoryId]: currentDrills.filter(d => d.id !== drillId)
+      }
+    };
+    onUpdate('drillsLibrary', updated);
+  };
+
+  // Drill item component
+  const DrillItem = ({ drill, categoryId }) => (
+    <div className={`flex items-center justify-between py-2 px-3 rounded mb-1 group ${isLight ? 'bg-gray-50' : 'bg-slate-700/50'}`}>
+      <div className="flex-1">
+        <div className="flex items-center gap-2">
+          <span className={`text-sm font-medium ${isLight ? 'text-gray-900' : 'text-white'}`}>{drill.name}</span>
+          {drill.positions?.length > 0 && (
+            <span className={`text-xs px-1.5 py-0.5 rounded ${isLight ? 'bg-sky-100 text-sky-700' : 'bg-sky-900/50 text-sky-300'}`}>
+              {drill.positions.join(', ')}
+            </span>
+          )}
+        </div>
+        {drill.description && (
+          <p className={`text-xs mt-0.5 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>{drill.description}</p>
+        )}
+      </div>
+      <button
+        onClick={() => deleteDrill(categoryId, drill.id)}
+        className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 p-1"
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
+
+  return (
+    <div className={`mt-8 p-4 rounded-lg border ${isLight ? 'bg-white border-gray-200' : 'bg-slate-800/50 border-slate-700'}`}>
+      <div className="mb-4">
+        <h4 className={`text-base font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+          Team / Group Drills
+        </h4>
+        <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+          Drills involving multiple positions working together - meshes, motions, route combos, reads
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        {TEAM_DRILL_CATEGORIES.map(cat => {
+          const drills = getDrills(cat.id);
+          const isExpanded = expandedCategories[cat.id];
+
+          return (
+            <div key={cat.id} className={`rounded-lg border overflow-hidden ${isLight ? 'border-gray-200' : 'border-slate-600'}`}>
+              <button
+                onClick={() => toggleCategory(cat.id)}
+                className={`w-full flex items-center justify-between px-4 py-3 ${isLight ? 'bg-gray-50 hover:bg-gray-100' : 'bg-slate-700/50 hover:bg-slate-700'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">{cat.icon}</span>
+                  <div className="text-left">
+                    <span className={`font-medium ${isLight ? 'text-gray-900' : 'text-white'}`}>{cat.label}</span>
+                    <span className={`text-xs ml-2 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                      ({drills.length} drill{drills.length !== 1 ? 's' : ''})
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowDrillModal({ categoryId: cat.id, categoryLabel: cat.label });
+                    }}
+                    className="flex items-center gap-1 px-2 py-1 bg-sky-600 text-white text-xs rounded hover:bg-sky-700"
+                  >
+                    <Plus size={12} /> Add
+                  </button>
+                  <ChevronDown
+                    size={18}
+                    className={`transition-transform ${isExpanded ? 'rotate-180' : ''} ${isLight ? 'text-gray-500' : 'text-slate-400'}`}
+                  />
+                </div>
+              </button>
+
+              {isExpanded && (
+                <div className={`p-3 ${isLight ? 'bg-white' : 'bg-slate-800/30'}`}>
+                  <p className={`text-xs mb-3 ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>{cat.description}</p>
+                  {drills.length > 0 ? (
+                    drills.map(drill => (
+                      <DrillItem key={drill.id} drill={drill} categoryId={cat.id} />
+                    ))
+                  ) : (
+                    <p className={`text-sm italic ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
+                      No drills added yet
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Add Drill Modal */}
+      {showDrillModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className={`rounded-lg p-4 w-full max-w-md ${isLight ? 'bg-white' : 'bg-slate-800'}`}>
+            <h3 className={`text-lg font-semibold mb-4 ${isLight ? 'text-gray-900' : 'text-white'}`}>
+              Add Team Drill - {showDrillModal.categoryLabel}
+            </h3>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const positionsStr = formData.get('positions');
+                addDrill(showDrillModal.categoryId, {
+                  name: formData.get('name'),
+                  description: formData.get('description'),
+                  positions: positionsStr ? positionsStr.split(',').map(p => p.trim()).filter(Boolean) : []
+                });
+              }}
+            >
+              <div className="mb-3">
+                <label className={`text-xs block mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Drill Name</label>
+                <input
+                  name="name"
+                  type="text"
+                  required
+                  className={`w-full px-3 py-2 rounded border ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
+                  placeholder="e.g., Mesh Point Drill"
+                />
+              </div>
+              <div className="mb-3">
+                <label className={`text-xs block mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Positions Involved</label>
+                <input
+                  name="positions"
+                  type="text"
+                  className={`w-full px-3 py-2 rounded border ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
+                  placeholder="e.g., QB, RB, WR (comma separated)"
+                />
+              </div>
+              <div className="mb-4">
+                <label className={`text-xs block mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Description</label>
+                <textarea
+                  name="description"
+                  className={`w-full px-3 py-2 rounded border resize-none ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
+                  rows={2}
+                  placeholder="Brief description..."
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowDrillModal(null)}
+                  className={`px-4 py-2 ${isLight ? 'text-gray-600 hover:text-gray-900' : 'text-slate-400 hover:text-white'}`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-sky-600 text-white rounded hover:bg-sky-500"
+                >
+                  Add Drill
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Individual Position Skills Component (for OL and Skill positions)
+const INDIVIDUAL_OL_POSITIONS = ['LT', 'LG', 'C', 'RG', 'RT'];
+const INDIVIDUAL_SKILL_POSITIONS = ['QB', 'RB', 'FB', 'WR', 'TE', 'X', 'Y', 'Z', 'H', 'F'];
+const POSITION_SKILL_LEVELS = [
+  { id: 'basic', label: 'Basic', color: 'bg-emerald-500' },
+  { id: 'intermediate', label: 'Intermediate', color: 'bg-amber-500' },
+  { id: 'advanced', label: 'Advanced', color: 'bg-red-500' }
+];
+
+function IndividualPositionSkills({ drillsLibrary, playBuckets, passProtections, runBlocking, plays, onUpdate, isLight }) {
+  const [expandedPositions, setExpandedPositions] = useState({});
+  const [expandedSections, setExpandedSections] = useState({});
+  const [showDrillModal, setShowDrillModal] = useState(null);
+  const [activeTab, setActiveTab] = useState('oline'); // 'oline' or 'skill'
+
+  // Extract unique techniques from OL WIZ Pass Protections
+  const passAssignments = useMemo(() => {
+    const assignments = new Set();
+    (passProtections || []).forEach(prot => {
+      if (prot.assignments) {
+        Object.values(prot.assignments).forEach(val => {
+          if (val && val.trim()) assignments.add(val.trim());
+        });
+      }
+    });
+    return Array.from(assignments);
+  }, [passProtections]);
+
+  // Extract unique OL assignments from Run Blocking schemes by type
+  const runAssignmentsByType = useMemo(() => {
+    const byType = {};
+    (runBlocking || []).forEach(scheme => {
+      const type = scheme.type || 'other';
+      if (!byType[type]) byType[type] = { all: new Set(), byPosition: {} };
+      if (scheme.assignments) {
+        Object.entries(scheme.assignments).forEach(([pos, val]) => {
+          if (val && val.trim()) {
+            byType[type].all.add(val.trim());
+            if (!byType[type].byPosition[pos]) byType[type].byPosition[pos] = new Set();
+            byType[type].byPosition[pos].add(val.trim());
+          }
+        });
+      }
+    });
+    return byType;
+  }, [runBlocking]);
+
+  // Extract skill position assignments from plays, grouped by bucket
+  const skillAssignmentsByBucket = useMemo(() => {
+    const byBucket = {};
+    (plays || []).forEach(play => {
+      const bucketId = play.bucketId || play.playCategory;
+      if (!bucketId || !play.skillAssignments) return;
+      if (!byBucket[bucketId]) byBucket[bucketId] = {};
+      Object.entries(play.skillAssignments).forEach(([pos, assignment]) => {
+        if (assignment && assignment.trim()) {
+          if (!byBucket[bucketId][pos]) byBucket[bucketId][pos] = new Set();
+          byBucket[bucketId][pos].add(assignment.trim());
+        }
+      });
+    });
+    // Convert Sets to Arrays
+    Object.keys(byBucket).forEach(bucketId => {
+      Object.keys(byBucket[bucketId]).forEach(pos => {
+        byBucket[bucketId][pos] = Array.from(byBucket[bucketId][pos]);
+      });
+    });
+    return byBucket;
+  }, [plays]);
+
+  // Get assignments for a position in a bucket
+  const getAssignmentsForBucket = (pos, bucketId) => {
+    // For skill positions, use skillAssignmentsByBucket
+    if (INDIVIDUAL_SKILL_POSITIONS.includes(pos)) {
+      return skillAssignmentsByBucket[bucketId]?.[pos] || [];
+    }
+    // For OL positions, match bucket to run blocking type if possible
+    const bucket = playBuckets.find(b => b.id === bucketId);
+    if (bucket) {
+      const label = (bucket.label || '').toLowerCase();
+      // Try to match bucket label to run blocking types
+      const typeMap = {
+        'zone': 'zone', 'inside zone': 'zone', 'outside zone': 'zone',
+        'gap': 'gap', 'power': 'power', 'counter': 'counter',
+        'trap': 'trap', 'iso': 'iso'
+      };
+      for (const [key, type] of Object.entries(typeMap)) {
+        if (label.includes(key)) {
+          return Array.from(runAssignmentsByType[type]?.byPosition?.[pos] || []);
+        }
+      }
+    }
+    return [];
+  };
+
+  const positions = activeTab === 'oline' ? INDIVIDUAL_OL_POSITIONS : INDIVIDUAL_SKILL_POSITIONS;
+
+  const togglePosition = (pos) => {
+    setExpandedPositions(prev => ({ ...prev, [pos]: !prev[pos] }));
+  };
+
+  const toggleSection = (pos, section) => {
+    const key = `${pos}-${section}`;
+    setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  // Get drills for a position/section/level
+  const getDrills = (pos, section, level = null) => {
+    const posKey = `individual-${pos}`;
+    if (level) {
+      return drillsLibrary?.individualPositionDrills?.[posKey]?.general?.[level] || [];
+    }
+    return drillsLibrary?.individualPositionDrills?.[posKey]?.[section] || [];
+  };
+
+  // Add a drill
+  const addDrill = (pos, section, drill) => {
+    const posKey = `individual-${pos}`;
+    const currentDrills = section === 'general'
+      ? (drillsLibrary?.individualPositionDrills?.[posKey]?.general?.[drill.level] || [])
+      : (drillsLibrary?.individualPositionDrills?.[posKey]?.[section] || []);
+
+    const newDrill = { ...drill, id: `drill_${Date.now()}` };
+
+    let posData;
+    if (section === 'general') {
+      posData = {
+        ...(drillsLibrary?.individualPositionDrills?.[posKey] || {}),
+        general: {
+          ...(drillsLibrary?.individualPositionDrills?.[posKey]?.general || {}),
+          [drill.level]: [...currentDrills, newDrill]
+        }
+      };
+    } else {
+      posData = {
+        ...(drillsLibrary?.individualPositionDrills?.[posKey] || {}),
+        [section]: [...currentDrills, newDrill]
+      };
+    }
+
+    const updated = {
+      ...drillsLibrary,
+      individualPositionDrills: {
+        ...(drillsLibrary?.individualPositionDrills || {}),
+        [posKey]: posData
+      }
+    };
+    onUpdate('drillsLibrary', updated);
+    setShowDrillModal(null);
+  };
+
+  // Delete a drill
+  const deleteDrill = (pos, section, level, drillId) => {
+    if (!confirm('Delete this drill?')) return;
+    const posKey = `individual-${pos}`;
+
+    let posData;
+    if (level) {
+      const currentDrills = drillsLibrary?.individualPositionDrills?.[posKey]?.general?.[level] || [];
+      posData = {
+        ...(drillsLibrary?.individualPositionDrills?.[posKey] || {}),
+        general: {
+          ...(drillsLibrary?.individualPositionDrills?.[posKey]?.general || {}),
+          [level]: currentDrills.filter(d => d.id !== drillId)
+        }
+      };
+    } else {
+      const currentDrills = drillsLibrary?.individualPositionDrills?.[posKey]?.[section] || [];
+      posData = {
+        ...(drillsLibrary?.individualPositionDrills?.[posKey] || {}),
+        [section]: currentDrills.filter(d => d.id !== drillId)
+      };
+    }
+
+    const updated = {
+      ...drillsLibrary,
+      individualPositionDrills: {
+        ...(drillsLibrary?.individualPositionDrills || {}),
+        [posKey]: posData
+      }
+    };
+    onUpdate('drillsLibrary', updated);
+  };
+
+  // Drill item component
+  const DrillItem = ({ drill, pos, section, level }) => (
+    <div className={`flex items-center justify-between py-2 px-3 rounded mb-1 group ${isLight ? 'bg-gray-50' : 'bg-slate-700/50'}`}>
+      <div className="flex-1">
+        <span className={`text-sm font-medium ${isLight ? 'text-gray-900' : 'text-white'}`}>{drill.name}</span>
+        {drill.description && (
+          <p className={`text-xs mt-0.5 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>{drill.description}</p>
+        )}
+      </div>
+      <button
+        onClick={() => deleteDrill(pos, section, level, drill.id)}
+        className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 p-1"
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
+
+  return (
+    <div className={`mt-8 p-4 rounded-lg border ${isLight ? 'bg-white border-gray-200' : 'bg-slate-800/50 border-slate-700'}`}>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h4 className={`text-base font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+            Individual Position Skills
+          </h4>
+          <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+            Drills organized by position with general skills and scheme-specific drills
+          </p>
+        </div>
+        <div className="flex gap-1 bg-slate-700/50 p-1 rounded-lg">
+          <button
+            onClick={() => setActiveTab('oline')}
+            className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
+              activeTab === 'oline'
+                ? 'bg-sky-600 text-white'
+                : isLight ? 'text-gray-600 hover:bg-gray-100' : 'text-slate-300 hover:bg-slate-600'
+            }`}
+          >
+            O-Line
+          </button>
+          <button
+            onClick={() => setActiveTab('skill')}
+            className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
+              activeTab === 'skill'
+                ? 'bg-sky-600 text-white'
+                : isLight ? 'text-gray-600 hover:bg-gray-100' : 'text-slate-300 hover:bg-slate-600'
+            }`}
+          >
+            Skill Positions
+          </button>
+        </div>
+      </div>
+
+      {/* Auto-detected techniques for OL */}
+      {activeTab === 'oline' && passAssignments.length > 0 && (
+        <div className={`mb-4 p-3 rounded-lg ${isLight ? 'bg-sky-50 border border-sky-200' : 'bg-sky-900/20 border border-sky-800'}`}>
+          <span className={`text-xs font-medium block mb-2 ${isLight ? 'text-sky-700' : 'text-sky-300'}`}>
+            Auto-detected from OL WIZ:
+          </span>
+          <div className="flex flex-wrap gap-1">
+            {passAssignments.map(a => (
+              <span key={a} className={`px-2 py-0.5 text-xs rounded ${isLight ? 'bg-sky-100 text-sky-700' : 'bg-sky-600/30 text-sky-300'}`}>
+                {a}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Position Cards */}
+      <div className="space-y-2">
+        {positions.map(pos => (
+          <div key={pos} className={`rounded-lg border overflow-hidden ${isLight ? 'border-gray-200' : 'border-slate-600'}`}>
+            {/* Position Header */}
+            <button
+              onClick={() => togglePosition(pos)}
+              className={`w-full flex items-center justify-between px-4 py-3 ${isLight ? 'bg-gray-50 hover:bg-gray-100' : 'bg-slate-700/50 hover:bg-slate-700'}`}
+            >
+              <span className={`font-bold text-lg ${isLight ? 'text-gray-900' : 'text-white'}`}>{pos}</span>
+              <ChevronDown
+                size={20}
+                className={`transition-transform ${expandedPositions[pos] ? 'rotate-180' : ''} ${isLight ? 'text-gray-500' : 'text-slate-400'}`}
+              />
+            </button>
+
+            {/* Position Content */}
+            {expandedPositions[pos] && (
+              <div className={`p-3 space-y-2 ${isLight ? 'bg-white' : 'bg-slate-800/30'}`}>
+                {/* General Skills Section */}
+                <div className={`rounded-lg border overflow-hidden ${isLight ? 'border-gray-200' : 'border-slate-600'}`}>
+                  <button
+                    onClick={() => toggleSection(pos, 'general')}
+                    className={`w-full flex items-center justify-between px-3 py-2 ${isLight ? 'bg-gray-50 hover:bg-gray-100' : 'bg-slate-700/50 hover:bg-slate-700'}`}
+                  >
+                    <span className={`font-medium text-sm ${isLight ? 'text-gray-900' : 'text-white'}`}>General Skills</span>
+                    <ChevronDown
+                      size={16}
+                      className={`transition-transform ${expandedSections[`${pos}-general`] ? 'rotate-180' : ''} ${isLight ? 'text-gray-500' : 'text-slate-400'}`}
+                    />
+                  </button>
+
+                  {expandedSections[`${pos}-general`] && (
+                    <div className="p-3 space-y-3">
+                      {POSITION_SKILL_LEVELS.map(level => (
+                        <div key={level.id}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className={`px-2 py-0.5 ${level.color} text-white text-xs font-medium rounded`}>
+                              {level.label}
+                            </span>
+                            <button
+                              onClick={() => setShowDrillModal({ pos, section: 'general', level: level.id })}
+                              className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1"
+                            >
+                              <Plus size={12} /> Add
+                            </button>
+                          </div>
+                          {getDrills(pos, 'general', level.id).map(drill => (
+                            <DrillItem key={drill.id} drill={drill} pos={pos} section="general" level={level.id} />
+                          ))}
+                          {getDrills(pos, 'general', level.id).length === 0 && (
+                            <p className={`text-xs italic ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>No drills</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Pass Protection Section (OL only) */}
+                {activeTab === 'oline' && (
+                  <div className={`rounded-lg border overflow-hidden ${isLight ? 'border-sky-200' : 'border-slate-600'}`}>
+                    <button
+                      onClick={() => toggleSection(pos, 'pass')}
+                      className={`w-full flex items-center justify-between px-3 py-2 ${isLight ? 'bg-sky-50 hover:bg-sky-100' : 'bg-sky-900/30 hover:bg-sky-900/50'}`}
+                    >
+                      <span className={`font-medium text-sm ${isLight ? 'text-sky-700' : 'text-sky-300'}`}>Pass Protection</span>
+                      <ChevronDown
+                        size={16}
+                        className={`transition-transform ${expandedSections[`${pos}-pass`] ? 'rotate-180' : ''} ${isLight ? 'text-gray-500' : 'text-slate-400'}`}
+                      />
+                    </button>
+
+                    {expandedSections[`${pos}-pass`] && (
+                      <div className="p-3">
+                        <div className="flex items-center justify-end mb-2">
+                          <button
+                            onClick={() => setShowDrillModal({ pos, section: 'pass', sectionLabel: 'Pass Protection' })}
+                            className="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1"
+                          >
+                            <Plus size={12} /> Add Drill
+                          </button>
+                        </div>
+                        {getDrills(pos, 'pass').map(drill => (
+                          <DrillItem key={drill.id} drill={drill} pos={pos} section="pass" />
+                        ))}
+                        {getDrills(pos, 'pass').length === 0 && (
+                          <p className={`text-xs italic ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>No drills</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Bucket/Scheme Sections */}
+                {playBuckets.map(bucket => (
+                  <div key={bucket.id} className={`rounded-lg border overflow-hidden ${isLight ? 'border-emerald-200' : 'border-slate-600'}`}>
+                    <button
+                      onClick={() => toggleSection(pos, `bucket-${bucket.id}`)}
+                      className={`w-full flex items-center justify-between px-3 py-2 ${isLight ? 'bg-emerald-50 hover:bg-emerald-100' : 'bg-emerald-900/30 hover:bg-emerald-900/50'}`}
+                    >
+                      <span className={`font-medium text-sm ${isLight ? 'text-emerald-700' : 'text-emerald-300'}`}>{bucket.label}</span>
+                      <ChevronDown
+                        size={16}
+                        className={`transition-transform ${expandedSections[`${pos}-bucket-${bucket.id}`] ? 'rotate-180' : ''} ${isLight ? 'text-gray-500' : 'text-slate-400'}`}
+                      />
+                    </button>
+
+                    {expandedSections[`${pos}-bucket-${bucket.id}`] && (
+                      <div className="p-3">
+                        {/* Auto-detected assignments from plays */}
+                        {getAssignmentsForBucket(pos, bucket.id).length > 0 && (
+                          <div className={`mb-3 p-2 rounded ${isLight ? 'bg-emerald-50' : 'bg-emerald-900/20'}`}>
+                            <span className={`text-xs font-medium block mb-1 ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
+                              Assignments from plays:
+                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              {getAssignmentsForBucket(pos, bucket.id).map(a => (
+                                <span key={a} className={`px-2 py-0.5 text-xs rounded ${isLight ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-600/30 text-emerald-300'}`}>
+                                  {a}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-end mb-2">
+                          <button
+                            onClick={() => setShowDrillModal({ pos, section: `bucket-${bucket.id}`, sectionLabel: bucket.label })}
+                            className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+                          >
+                            <Plus size={12} /> Add Drill
+                          </button>
+                        </div>
+                        {getDrills(pos, `bucket-${bucket.id}`).map(drill => (
+                          <DrillItem key={drill.id} drill={drill} pos={pos} section={`bucket-${bucket.id}`} />
+                        ))}
+                        {getDrills(pos, `bucket-${bucket.id}`).length === 0 && getAssignmentsForBucket(pos, bucket.id).length === 0 && (
+                          <p className={`text-xs italic ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>No assignments or drills yet</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Add Drill Modal */}
+      {showDrillModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className={`rounded-lg p-4 w-full max-w-md ${isLight ? 'bg-white' : 'bg-slate-800'}`}>
+            <h3 className={`text-lg font-semibold mb-4 ${isLight ? 'text-gray-900' : 'text-white'}`}>
+              Add Drill - {showDrillModal.pos} {showDrillModal.sectionLabel || showDrillModal.level || ''}
+            </h3>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                addDrill(showDrillModal.pos, showDrillModal.section, {
+                  name: formData.get('name'),
+                  description: formData.get('description'),
+                  level: showDrillModal.level
+                });
+              }}
+            >
+              <div className="mb-3">
+                <label className={`text-xs block mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Drill Name</label>
+                <input
+                  name="name"
+                  type="text"
+                  required
+                  className={`w-full px-3 py-2 rounded border ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
+                  placeholder="e.g., Kick-Slide Drill"
+                />
+              </div>
+              <div className="mb-4">
+                <label className={`text-xs block mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Description (optional)</label>
+                <textarea
+                  name="description"
+                  className={`w-full px-3 py-2 rounded border resize-none ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
+                  rows={2}
+                  placeholder="Brief description..."
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowDrillModal(null)}
+                  className={`px-4 py-2 ${isLight ? 'text-gray-600 hover:text-gray-900' : 'text-slate-400 hover:text-white'}`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-sky-600 text-white rounded hover:bg-sky-500"
+                >
+                  Add Drill
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
