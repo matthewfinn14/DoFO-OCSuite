@@ -19,3 +19,10 @@ node_modules/
 scripts/serviceAccountKey.json
 *.json.key
 serviceAccountKey*.json
+
+# Google Cloud SDK
+google-cloud-sdk/
+*.tar.gz
+
+# CORS config
+cors.json
