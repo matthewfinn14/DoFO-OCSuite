@@ -1631,30 +1631,6 @@ export default function PlayDiagramEditor({
                 </div>
               )}
 
-              {/* WIZ OL: Add Custom Blocker */}
-              {isWizOline && (
-                <div className="flex items-center gap-1">
-                  <input
-                    id="diagram-blocker-input"
-                    type="text"
-                    value={customLetterInput}
-                    onChange={(e) => setCustomLetterInput(e.target.value.toUpperCase())}
-                    placeholder="?"
-                    maxLength={2}
-                    className="w-7 px-1 py-1 text-center text-xs font-semibold bg-slate-800 border-2 border-black rounded text-white"
-                    title="Enter blocker letter"
-                  />
-                  <button
-                    onClick={() => { if (customLetterInput) { toggleWizNode(customLetterInput); setCustomLetterInput(''); } }}
-                    disabled={!customLetterInput}
-                    className="px-2 py-1.5 text-xs font-semibold bg-sky-600 text-white border-2 border-sky-700 rounded hover:bg-sky-500 disabled:opacity-50 transition-colors"
-                    title="Add blocker"
-                  >
-                    Add
-                  </button>
-                </div>
-              )}
-
               {/* WIZ OL: Load from Library */}
               {isWizOline && (olSchemes.protections.length > 0 || olSchemes.runBlocking.length > 0) && (
                 <button
@@ -1721,6 +1697,33 @@ export default function PlayDiagramEditor({
           <div className="flex items-center justify-center px-3 py-2">
             {/* All tools centered */}
             <div className="flex items-center gap-4">
+              {/* WIZ OL: Add a Letter */}
+              {isWizOline && (
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-500 font-medium mb-1 uppercase tracking-wide">Add a Letter</span>
+                  <div className="flex items-center gap-1">
+                    <input
+                      id="diagram-blocker-input"
+                      type="text"
+                      value={customLetterInput}
+                      onChange={(e) => setCustomLetterInput(e.target.value.toUpperCase())}
+                      placeholder="A"
+                      maxLength={2}
+                      className="w-8 px-1 py-1.5 text-center text-xs font-semibold bg-slate-800 border-2 border-black rounded text-white"
+                      title="Enter letter to add"
+                    />
+                    <button
+                      onClick={() => { if (customLetterInput) { toggleWizNode(customLetterInput); setCustomLetterInput(''); } }}
+                      disabled={!customLetterInput}
+                      className="px-2 py-1.5 text-xs font-semibold bg-sky-600 text-white border-2 border-sky-700 rounded hover:bg-sky-500 disabled:opacity-50 transition-colors"
+                      title="Add letter to canvas"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Select/Group/Flip Tools */}
               <div className="flex flex-col">
                 <span className="text-[10px] text-slate-500 font-medium mb-1 uppercase tracking-wide">Select</span>
