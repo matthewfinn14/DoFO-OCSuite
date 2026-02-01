@@ -726,6 +726,10 @@ export default function PlayDiagramEditor({
         setElements(newElements);
         updateHistory(newElements);
       }
+      // In WIZ SKILL mode, switch back to select tool after placing a shape
+      if (isWizSkill) {
+        setSelectedTool('select');
+      }
     }
   };
 
