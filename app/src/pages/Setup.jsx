@@ -2754,23 +2754,13 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
   };
   const SKILL_POSITION_FALLBACK = '#3b82f6'; // Blue fallback for any position not in defaults
 
-  // Helper: Get color for a position label, handling renamed positions
-  // Looks up by label first, then by position key if label is a renamed display name
+  // Helper: Get color for a position label
+  // Colors are stored by display name (e.g., 'B' not 'RB')
   const getPositionColor = (label) => {
-    // Direct lookup by label
-    if (positionColors[label]) {
-      return positionColors[label];
-    }
-
-    // Reverse lookup: find the position key where positionNames[key] === label
-    // This handles cases where user renamed RB to "B" - the color is stored under 'RB'
-    const posKey = Object.keys(positionNames).find(key => positionNames[key] === label);
-    if (posKey && positionColors[posKey]) {
-      return positionColors[posKey];
-    }
-
-    // Fall back to defaults
-    return POSITION_COLORS_DEFAULTS[label] || POSITION_COLORS_DEFAULTS[posKey] || SKILL_POSITION_FALLBACK;
+    const color = positionColors[label] || POSITION_COLORS_DEFAULTS[label] || SKILL_POSITION_FALLBACK;
+    console.log(`FormationsTab getPositionColor(${label}): positionColors[${label}]=${positionColors[label]}, resolved=${color}`);
+    console.log('FormationsTab positionColors:', JSON.stringify(positionColors));
+    return color;
   };
 
   // Get initial elements for the WIZ editor based on formation

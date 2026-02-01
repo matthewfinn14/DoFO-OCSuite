@@ -190,22 +190,12 @@ export default function PlayDiagramEditor({
   // Get available skill positions (non-OL positions)
   const OL_POSITIONS = ['LT', 'LG', 'C', 'RG', 'RT'];
 
-  // Helper: Get color for a position label, handling renamed positions
-  // Example: if user renamed RB to "B", color is stored under 'RB' but label shows 'B'
+  // Helper: Get color for a position label
+  // Colors are stored by display name (e.g., 'B' not 'RB')
   const getPositionColor = (label) => {
-    // Direct lookup by label
-    if (positionColors[label]) {
-      return positionColors[label];
-    }
-
-    // Reverse lookup: find position key where positionNames[key] === label
-    const posKey = Object.keys(positionNames).find(key => positionNames[key] === label);
-    if (posKey && positionColors[posKey]) {
-      return positionColors[posKey];
-    }
-
-    // Fall back to defaults
-    return DEFAULT_POSITION_COLORS[label] || DEFAULT_POSITION_COLORS[posKey] || SKILL_POSITION_FALLBACK_COLOR;
+    const color = positionColors[label] || DEFAULT_POSITION_COLORS[label] || SKILL_POSITION_FALLBACK_COLOR;
+    console.log(`PlayDiagramEditor getPositionColor(${label}): positionColors[${label}]=${positionColors[label]}, resolved=${color}`);
+    return color;
   };
 
   // Use offensePositions if provided (from setup config), otherwise fall back to positionNames keys or defaults
