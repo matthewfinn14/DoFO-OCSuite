@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { MousePointer, Minus, Trash, RotateCcw, RotateCw, Save, X, RefreshCw, Users, Plus, Group, Ungroup, HelpCircle } from 'lucide-react';
+import { MousePointer, Minus, Trash, RotateCcw, RotateCw, Save, X, RefreshCw, Users, Plus, Group, Ungroup, HelpCircle, Library, Download } from 'lucide-react';
 
 // Zigzag path generator
 const getZigZagPath = (points) => {
@@ -172,7 +172,10 @@ export default function PlayDiagramEditor({
   positionColors = {},
   positionNames = {},
   customDefaultPositions = {}, // User's custom default positions { positionKey: { x, y } }
-  playName = '' // Optional play name to display in toolbar
+  playName = '', // Optional play name to display in toolbar
+  // OL WIZ Library props
+  olSchemes = { protections: [], runBlocking: [] }, // Available OL schemes from library
+  onSaveToOLLibrary = null // Callback to save current diagram to OL library: ({ elements, name, type }) => void
 }) {
   const isWizSkill = mode === 'wiz-skill';
   const isWizOline = mode === 'wiz-oline';
@@ -231,6 +234,12 @@ export default function PlayDiagramEditor({
   const [selectedFormationId, setSelectedFormationId] = useState('');
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [showHelpLegend, setShowHelpLegend] = useState(false);
+
+  // OL Library modal state
+  const [showOLLibraryModal, setShowOLLibraryModal] = useState(false);
+  const [showSaveAsOLModal, setShowSaveAsOLModal] = useState(false);
+  const [saveAsOLName, setSaveAsOLName] = useState('');
+  const [saveAsOLType, setSaveAsOLType] = useState('protection'); // 'protection' | 'runBlocking'
 
   // History for undo/redo
   const [history, setHistory] = useState([elements]);
@@ -1633,6 +1642,28 @@ export default function PlayDiagramEditor({
                   </button>
                 </div>
               )}
+
+              {/* WIZ OL: Load from Library */}
+              {isWizOline && (olSchemes.protections.length > 0 || olSchemes.runBlocking.length > 0) && (
+                <button
+                  onClick={() => setShowOLLibraryModal(true)}
+                  className="px-3 py-1.5 text-xs font-semibold bg-indigo-600 text-white border-2 border-indigo-700 rounded hover:bg-indigo-500 flex items-center gap-1 transition-colors"
+                  title="Load OL scheme from library"
+                >
+                  <Download size={14} /> Load OL
+                </button>
+              )}
+
+              {/* WIZ OL: Save to Library */}
+              {isWizOline && onSaveToOLLibrary && (
+                <button
+                  onClick={() => setShowSaveAsOLModal(true)}
+                  className="px-3 py-1.5 text-xs font-semibold bg-purple-600 text-white border-2 border-purple-700 rounded hover:bg-purple-500 flex items-center gap-1 transition-colors"
+                  title="Save as new OL scheme in library"
+                >
+                  <Library size={14} /> Save As OL
+                </button>
+              )}
               {/* Save buttons */}
               <button
                 onClick={onCancel}
@@ -1985,6 +2016,236 @@ export default function PlayDiagramEditor({
                   <div><kbd className="bg-slate-100 border border-slate-300 px-1.5 py-0.5 rounded text-xs font-mono">Delete</kbd> Remove selected</div>
                   <div><kbd className="bg-slate-100 border border-slate-300 px-1.5 py-0.5 rounded text-xs font-mono">Escape</kbd> Cancel / Deselect</div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* OL Library Load Modal */}
+      {showOLLibraryModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowOLLibraryModal(false)}>
+          <div className="bg-slate-800 rounded-xl max-w-3xl w-full mx-4 max-h-[80vh] overflow-hidden shadow-2xl border border-slate-600" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <h3 className="text-lg font-semibold text-white">Load from OL Library</h3>
+              <button onClick={() => setShowOLLibraryModal(false)} className="text-slate-400 hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-4 overflow-y-auto max-h-[60vh]">
+              {/* Pass Protections */}
+              {olSchemes.protections.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">
+                    Pass Protections
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {olSchemes.protections.map(prot => (
+                      <button
+                        key={prot.id}
+                        onClick={() => {
+                          // Load the diagram from library
+                          if (prot.diagramData) {
+                            updateElements(prot.diagramData, true);
+                          }
+                          setShowOLLibraryModal(false);
+                        }}
+                        className="p-3 bg-slate-700/50 border border-slate-600 rounded-lg hover:border-sky-500 transition-colors text-left"
+                      >
+                        <p className="font-medium text-white mb-2 text-sm">{prot.name}</p>
+                        <div className="w-full aspect-[1.5/1] bg-slate-900 rounded overflow-hidden">
+                          <svg viewBox="0 0 950 600" className="w-full h-full">
+                            <rect width="950" height="600" fill="#e5e7eb" />
+                            {(prot.diagramData || []).map((el, idx) => {
+                              if (el.type === 'player' && el.shape === 'text-only') {
+                                return (
+                                  <text
+                                    key={idx}
+                                    x={el.points?.[0]?.x || 0}
+                                    y={el.points?.[0]?.y || 0}
+                                    fontSize={el.fontSize || 50}
+                                    fill={el.color || '#000'}
+                                    textAnchor="middle"
+                                    dominantBaseline="central"
+                                    fontWeight="bold"
+                                  >
+                                    {el.label}
+                                  </text>
+                                );
+                              }
+                              if (el.type === 'polyline' && el.points?.length >= 2) {
+                                const d = el.points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x},${p.y}`).join(' ');
+                                return (
+                                  <path
+                                    key={idx}
+                                    d={d}
+                                    stroke={el.color || '#000'}
+                                    strokeWidth={el.strokeWidth || 7}
+                                    fill="none"
+                                    strokeDasharray={el.lineStyle === 'dashed' ? '10,5' : undefined}
+                                  />
+                                );
+                              }
+                              return null;
+                            })}
+                          </svg>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Run Blocking */}
+              {olSchemes.runBlocking.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">
+                    Run Blocking Schemes
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {olSchemes.runBlocking.map(scheme => (
+                      <button
+                        key={scheme.id}
+                        onClick={() => {
+                          // Load the diagram from library
+                          if (scheme.diagramData) {
+                            updateElements(scheme.diagramData, true);
+                          }
+                          setShowOLLibraryModal(false);
+                        }}
+                        className="p-3 bg-slate-700/50 border border-slate-600 rounded-lg hover:border-sky-500 transition-colors text-left"
+                      >
+                        <p className="font-medium text-white mb-2 text-sm">{scheme.name}</p>
+                        <div className="w-full aspect-[1.5/1] bg-slate-900 rounded overflow-hidden">
+                          <svg viewBox="0 0 950 600" className="w-full h-full">
+                            <rect width="950" height="600" fill="#e5e7eb" />
+                            {(scheme.diagramData || []).map((el, idx) => {
+                              if (el.type === 'player' && el.shape === 'text-only') {
+                                return (
+                                  <text
+                                    key={idx}
+                                    x={el.points?.[0]?.x || 0}
+                                    y={el.points?.[0]?.y || 0}
+                                    fontSize={el.fontSize || 50}
+                                    fill={el.color || '#000'}
+                                    textAnchor="middle"
+                                    dominantBaseline="central"
+                                    fontWeight="bold"
+                                  >
+                                    {el.label}
+                                  </text>
+                                );
+                              }
+                              if (el.type === 'polyline' && el.points?.length >= 2) {
+                                const d = el.points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x},${p.y}`).join(' ');
+                                return (
+                                  <path
+                                    key={idx}
+                                    d={d}
+                                    stroke={el.color || '#000'}
+                                    strokeWidth={el.strokeWidth || 7}
+                                    fill="none"
+                                    strokeDasharray={el.lineStyle === 'dashed' ? '10,5' : undefined}
+                                  />
+                                );
+                              }
+                              return null;
+                            })}
+                          </svg>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {olSchemes.protections.length === 0 && olSchemes.runBlocking.length === 0 && (
+                <div className="text-center py-12 text-slate-400">
+                  <Library size={48} className="mx-auto mb-4 opacity-30" />
+                  <p>No OL schemes with diagrams in your library yet.</p>
+                  <p className="text-sm mt-2">Add diagrams in System Setup → OL WIZ Library</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Save As OL Modal */}
+      {showSaveAsOLModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={() => setShowSaveAsOLModal(false)}>
+          <div className="bg-slate-800 rounded-xl max-w-md w-full mx-4 shadow-2xl border border-slate-600" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-slate-700">
+              <h3 className="text-lg font-semibold text-white">Save to OL Library</h3>
+              <button onClick={() => setShowSaveAsOLModal(false)} className="text-slate-400 hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Scheme Name</label>
+                <input
+                  type="text"
+                  value={saveAsOLName}
+                  onChange={(e) => setSaveAsOLName(e.target.value.toUpperCase())}
+                  placeholder="e.g., BROWN, ZONE"
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1">Type</label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSaveAsOLType('protection')}
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      saveAsOLType === 'protection'
+                        ? 'bg-sky-600 text-white'
+                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    }`}
+                  >
+                    Pass Protection
+                  </button>
+                  <button
+                    onClick={() => setSaveAsOLType('runBlocking')}
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      saveAsOLType === 'runBlocking'
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    }`}
+                  >
+                    Run Blocking
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => setShowSaveAsOLModal(false)}
+                  className="flex-1 px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (saveAsOLName.trim() && onSaveToOLLibrary) {
+                      onSaveToOLLibrary({
+                        elements,
+                        name: saveAsOLName.trim(),
+                        type: saveAsOLType
+                      });
+                      setShowSaveAsOLModal(false);
+                      setSaveAsOLName('');
+                    }
+                  }}
+                  disabled={!saveAsOLName.trim()}
+                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                >
+                  Save to Library
+                </button>
               </div>
             </div>
           </div>

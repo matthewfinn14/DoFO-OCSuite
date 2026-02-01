@@ -2051,6 +2051,32 @@ export default function PlayEditor({
               mode="wiz-oline"
               initialData={formData.wizOlineData ? { elements: formData.wizOlineData } : null}
               playName={formData.formation ? `${formData.formation} ${formData.name}` : formData.name}
+              olSchemes={olSchemes}
+              onSaveToOLLibrary={({ elements: diagramElements, name, type }) => {
+                // Save to the OL library in setupConfig
+                if (type === 'protection') {
+                  const newProt = {
+                    id: Date.now().toString(),
+                    name: name,
+                    slideDirection: 'right',
+                    manSide: 'left',
+                    callText: '',
+                    notes: '',
+                    diagramData: diagramElements
+                  };
+                  updateSetupConfig('passProtections', [...(setupConfig?.passProtections || []), newProt]);
+                } else {
+                  const newScheme = {
+                    id: Date.now().toString(),
+                    name: name,
+                    type: 'zone',
+                    callText: '',
+                    notes: '',
+                    diagramData: diagramElements
+                  };
+                  updateSetupConfig('runBlocking', [...(setupConfig?.runBlocking || []), newScheme]);
+                }
+              }}
               onSave={(data) => {
                 setFormData(prev => ({ ...prev, wizOlineData: data.elements, wizOlineRef: null }));
                 setShowOLEditor(false);
