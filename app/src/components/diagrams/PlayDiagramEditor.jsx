@@ -231,6 +231,9 @@ export default function PlayDiagramEditor({
   const [wizTextSize, setWizTextSize] = useState(isWizOline ? 170 : 24);
   const [customLetterInput, setCustomLetterInput] = useState('');
 
+  // Text tool state for WIZ SKILL
+  const [skillTextSize, setSkillTextSize] = useState(24);
+
   // Formation selector state for wiz-skill
   const [selectedFormationId, setSelectedFormationId] = useState('');
   const [showAddPlayer, setShowAddPlayer] = useState(false);
@@ -730,6 +733,24 @@ export default function PlayDiagramEditor({
       if (isWizSkill) {
         setSelectedTool('select');
       }
+    }
+
+    // Text placement (WIZ SKILL only)
+    if (selectedTool === 'text' && isWizSkill) {
+      const text = prompt('Enter text:');
+      if (!text || !text.trim()) return;
+      const newText = {
+        id: Date.now(),
+        type: 'text',
+        points: [point],
+        color: color,
+        text: text.trim(),
+        fontSize: skillTextSize
+      };
+      const newElements = [...elements, newText];
+      setElements(newElements);
+      updateHistory(newElements);
+      setSelectedTool('select');
     }
   };
 
@@ -1309,6 +1330,54 @@ export default function PlayDiagramEditor({
             <circle cx={x} cy={y} r={size + 5} fill="none" stroke="#2563eb" strokeWidth="2" strokeDasharray="4,2" />
           )}
           {shapeElement}
+        </g>
+      );
+    }
+
+    // Text element rendering (WIZ SKILL Add Text feature)
+    if (el.type === 'text') {
+      const { x, y } = el.points[0];
+      const isSelected = selectedIds.has(el.id);
+      const isInteractionTool = selectedTool === 'select' || selectedTool === 'delete';
+      const pointerEvents = isInteractionTool ? 'all' : 'none';
+      const textColor = el.color || '#000000';
+      const fontSize = el.fontSize || 24;
+
+      return (
+        <g
+          key={el.id}
+          onMouseDown={(e) => !isPreview && handleElementMouseDown(e, el.id)}
+          onClick={(e) => { e.stopPropagation(); !isPreview && handleClickElement(el.id); }}
+          style={{
+            cursor: selectedTool === 'delete' ? 'pointer' : (isPreview ? 'default' : 'move'),
+            opacity: isPreview ? 0.8 : 1,
+            pointerEvents
+          }}
+        >
+          {isSelected && !isPreview && (
+            <rect
+              x={x - 50}
+              y={y - fontSize / 2 - 5}
+              width={100}
+              height={fontSize + 10}
+              fill="none"
+              stroke="#2563eb"
+              strokeWidth="2"
+              strokeDasharray="4,2"
+            />
+          )}
+          <text
+            x={x}
+            y={y}
+            dy="0.35em"
+            textAnchor="middle"
+            fontSize={fontSize}
+            fontWeight="bold"
+            fill={textColor}
+            style={{ fontFamily: 'Arial, sans-serif', pointerEvents: 'none', userSelect: 'none' }}
+          >
+            {el.text}
+          </text>
         </g>
       );
     }
@@ -1910,6 +1979,38 @@ export default function PlayDiagramEditor({
                   </select>
                 </div>
               </div>
+
+              {/* Add Text (WIZ SKILL only) */}
+              {isWizSkill && (
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-500 font-medium mb-1 uppercase tracking-wide">Add Text</span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setSkillTextSize(Math.max(12, skillTextSize - 4))}
+                      className="px-1.5 py-1.5 text-xs font-bold bg-slate-800 text-white border-2 border-black rounded hover:bg-slate-700 transition-colors"
+                      title="Decrease text size"
+                    >
+                      −
+                    </button>
+                    <span className="text-xs text-slate-300 w-6 text-center font-medium">{skillTextSize}</span>
+                    <button
+                      onClick={() => setSkillTextSize(Math.min(72, skillTextSize + 4))}
+                      className="px-1.5 py-1.5 text-xs font-bold bg-slate-800 text-white border-2 border-black rounded hover:bg-slate-700 transition-colors"
+                      title="Increase text size"
+                    >
+                      +
+                    </button>
+                    <button
+                      onClick={() => setSelectedTool('text')}
+                      className={`px-2 py-1.5 text-xs font-semibold rounded border-2 transition-colors ${selectedTool === 'text' ? 'bg-orange-500 text-white border-orange-600' : 'bg-slate-800 text-white border-slate-600 hover:bg-slate-700'}`}
+                      title="Click on canvas to place text"
+                    >
+                      Place
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* History */}
               <div className="flex flex-col">
                 <span className="text-[10px] text-slate-500 font-medium mb-1 uppercase tracking-wide">History</span>
@@ -2284,6 +2385,8 @@ export default function PlayDiagramEditor({
           ? 'Click to start • Click to add corners • Double-click to finish'
           : selectedTool === 'shape'
           ? 'Click to place shape • Use Color dropdown to change color'
+          : selectedTool === 'text'
+          ? 'Click to place text • Use font size buttons to adjust size'
           : 'Drag to move • Select + Delete to remove'}
       </div>
 
@@ -2318,7 +2421,7 @@ export default function PlayDiagramEditor({
             onDoubleClick={handleDoubleClick}
             onMouseLeave={handleMouseUp}
             style={{
-              cursor: selectedTool === 'delete' ? 'not-allowed' : ((selectedTool === 'line' || selectedTool === 'shape') ? 'crosshair' : 'default'),
+              cursor: selectedTool === 'delete' ? 'not-allowed' : ((selectedTool === 'line' || selectedTool === 'shape' || selectedTool === 'text') ? 'crosshair' : 'default'),
               aspectRatio: isWizSkill ? '950 / 600' : undefined
             }}
           >
