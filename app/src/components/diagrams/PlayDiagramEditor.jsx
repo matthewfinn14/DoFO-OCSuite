@@ -543,7 +543,7 @@ export default function PlayDiagramEditor({
         id: baseTime + idx,
         type: 'player',
         points: [{ x, y }],
-        color: getPositionColor(pos.label),
+        color: getPositionColor(positionNames[pos.label] || pos.label),
         label: positionNames[pos.label] || pos.label,
         shape: pos.shape || defaultConfig.shape || 'circle',
         variant: pos.variant || defaultConfig.variant || 'filled',

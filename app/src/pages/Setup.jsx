@@ -2770,13 +2770,15 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
     // If formation already has positions, load them
     if (editingFormation.positions && editingFormation.positions.length > 0) {
       return editingFormation.positions.map((pos, idx) => {
-        const resolvedColor = getPositionColor(pos.label);
+        // Convert stored label to current display name (e.g., 'RB' -> 'B' if renamed)
+        const currentDisplayName = positionNames[pos.label] || pos.label;
+        const resolvedColor = getPositionColor(currentDisplayName);
         return {
           id: Date.now() + idx,
           type: 'player',
           points: [{ x: (pos.x / 100) * 950, y: (pos.y / 100) * 600 }],
           color: resolvedColor,
-          label: pos.label,
+          label: currentDisplayName, // Use current display name, not stored label
           shape: pos.shape || 'circle',
           variant: pos.variant || 'filled',
           fontSize: pos.fontSize,
