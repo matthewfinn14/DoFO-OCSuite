@@ -1664,6 +1664,7 @@ export default function PlayEditor({
                         width="100%"
                         onClick={() => setShowSkillEditor(true)}
                         positionColors={positionColors}
+                        positionNames={positionNames}
                       />
                       {/* Start from Template Search - when diagram exists */}
                       {playsWithSkillDiagrams.length > 0 && (
@@ -1835,6 +1836,8 @@ export default function PlayEditor({
                               elements={formData.wizOlineRef.diagramData}
                               mode="wiz-oline"
                               width="100%"
+                              positionColors={positionColors}
+                              positionNames={positionNames}
                             />
                           )}
                         </div>
@@ -1844,6 +1847,8 @@ export default function PlayEditor({
                           mode="wiz-oline"
                           width="100%"
                           onClick={() => setShowOLEditor(true)}
+                          positionColors={positionColors}
+                          positionNames={positionNames}
                         />
                       )}
                       {/* Search for Pre-existing OL Scheme - when diagram exists */}
@@ -2592,6 +2597,8 @@ export default function PlayEditor({
                           elements={prot.diagramData}
                           width={150}
                           height={100}
+                          positionColors={positionColors}
+                          positionNames={positionNames}
                         />
                       </button>
                     ))}
@@ -2624,6 +2631,8 @@ export default function PlayEditor({
                           elements={scheme.diagramData}
                           width={150}
                           height={100}
+                          positionColors={positionColors}
+                          positionNames={positionNames}
                         />
                       </button>
                     ))}

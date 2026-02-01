@@ -805,6 +805,8 @@ export default function WristbandBuilder() {
                           elements={prot.diagramData}
                           width={150}
                           height={100}
+                          positionColors={positionColors}
+                          positionNames={positionNames}
                         />
                       </button>
                     ))}
@@ -830,6 +832,8 @@ export default function WristbandBuilder() {
                           elements={scheme.diagramData}
                           width={150}
                           height={100}
+                          positionColors={positionColors}
+                          positionNames={positionNames}
                         />
                       </button>
                     ))}
@@ -1126,7 +1130,7 @@ function WizGrid({ slots, title, viewType, getPlayForSlot, onAssign, onClear, on
                   >
                     {diagramData?.length > 0 ? (
                       <div style={{ position: 'absolute', inset: 0 }}>
-                        <DiagramPreview elements={diagramData} fillContainer={true} mode={viewType === 'skill' ? 'wiz-skill' : 'wiz-oline'} positionColors={positionColors} />
+                        <DiagramPreview elements={diagramData} fillContainer={true} mode={viewType === 'skill' ? 'wiz-skill' : 'wiz-oline'} positionColors={positionColors} positionNames={positionNames} />
                       </div>
                     ) : play && !diagramData?.length ? (
                       <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

@@ -441,23 +441,23 @@ const TAB_HELP = {
 };
 
 // Default positions by phase
+// OFFENSE has 11 CORE positions that cannot be deleted (only renamed/recolored)
+// Users can ADD additional positions for personnel variations
 const DEFAULT_POSITIONS = {
   OFFENSE: [
-    { key: 'QB', default: 'QB', description: 'Quarterback' },
-    { key: 'RB', default: 'RB', description: 'Running Back' },
-    { key: 'FB', default: 'FB', description: 'Fullback' },
-    { key: 'WR', default: 'WR', description: 'Wide Receiver' },
-    { key: 'TE', default: 'TE', description: 'Tight End' },
-    { key: 'LT', default: 'LT', description: 'Left Tackle' },
-    { key: 'LG', default: 'LG', description: 'Left Guard' },
-    { key: 'C', default: 'C', description: 'Center' },
-    { key: 'RG', default: 'RG', description: 'Right Guard' },
-    { key: 'RT', default: 'RT', description: 'Right Tackle' },
-    { key: 'X', default: 'X', description: 'Split End' },
-    { key: 'Y', default: 'Y', description: 'Slot Receiver' },
-    { key: 'Z', default: 'Z', description: 'Flanker' },
-    { key: 'H', default: 'H', description: 'H-Back' },
-    { key: 'F', default: 'F', description: 'F-Back' }
+    // 5 OL - always linemen, can be renamed but type stays "line"
+    { key: 'LT', default: 'LT', description: 'Left Tackle', isCore: true, fixedType: 'line' },
+    { key: 'LG', default: 'LG', description: 'Left Guard', isCore: true, fixedType: 'line' },
+    { key: 'C', default: 'C', description: 'Center', isCore: true, fixedType: 'line' },
+    { key: 'RG', default: 'RG', description: 'Right Guard', isCore: true, fixedType: 'line' },
+    { key: 'RT', default: 'RT', description: 'Right Tackle', isCore: true, fixedType: 'line' },
+    // 6 Skill - can be renamed, type can be changed
+    { key: 'QB', default: 'QB', description: 'Quarterback', isCore: true },
+    { key: 'RB', default: 'RB', description: 'Running Back', isCore: true },
+    { key: 'X', default: 'X', description: 'Split End', isCore: true },
+    { key: 'Y', default: 'Y', description: 'Slot / TE', isCore: true },
+    { key: 'Z', default: 'Z', description: 'Flanker', isCore: true },
+    { key: 'H', default: 'H', description: 'H-Back / Wing', isCore: true }
   ],
   DEFENSE: [
     { key: 'DE', default: 'DE', description: 'Defensive End' },
@@ -870,12 +870,12 @@ export default function Setup() {
   };
 
   // Get positions for current phase
+  // Core positions are always shown, custom positions can be added/deleted
   const getPositions = () => {
     const defaults = DEFAULT_POSITIONS[phase] || [];
     const custom = localConfig.customPositions?.[phase] || [];
-    const hidden = localConfig.hiddenPositions?.[phase] || [];
     return [
-      ...defaults.filter(p => !hidden.includes(p.key)),
+      ...defaults,
       ...custom.map(p => ({ ...p, isCustom: true }))
     ];
   };
@@ -1716,19 +1716,26 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
     onUpdate('customPositions', { ...customPositions, [phase]: current.filter(p => p.key !== key) });
   };
 
-  const hidePosition = (key) => {
-    const current = hiddenPositions[phase] || [];
-    if (current.includes(key)) return;
-    onUpdate('hiddenPositions', { ...hiddenPositions, [phase]: [...current, key] });
-  };
-
-  const restorePosition = (key) => {
-    const current = hiddenPositions[phase] || [];
-    onUpdate('hiddenPositions', { ...hiddenPositions, [phase]: current.filter(h => h !== key) });
-  };
-
   const updatePositionName = (key, value) => {
-    onUpdate('positionNames', { ...positionNames, [key]: value.toUpperCase().slice(0, 3) });
+    const newDisplayName = value.toUpperCase().slice(0, 3);
+    const oldDisplayName = positionNames[key] || key;
+
+    // Update the name mapping
+    onUpdate('positionNames', { ...positionNames, [key]: newDisplayName });
+
+    // Migrate color from old display name to new display name
+    // Check for color stored under old display name OR under the key
+    const existingColor = positionColors[oldDisplayName] || positionColors[key];
+    if (existingColor && newDisplayName !== oldDisplayName) {
+      const updatedColors = { ...positionColors };
+      // Remove color from old display name (if stored there)
+      if (positionColors[oldDisplayName] && oldDisplayName !== key) {
+        delete updatedColors[oldDisplayName];
+      }
+      // Store under new display name
+      updatedColors[newDisplayName] = existingColor;
+      onUpdate('positionColors', updatedColors);
+    }
   };
 
   const updatePositionColor = (key, value) => {
@@ -1750,14 +1757,11 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
     return positionTypes?.[key] || DEFAULT_POSITION_TYPES[key] || 'skill';
   };
 
-  const hiddenList = hiddenPositions[phase] || [];
-  const hiddenDefaults = (DEFAULT_POSITIONS[phase] || []).filter(p => hiddenList.includes(p.key));
-
   return (
     <div>
       <h3 className={`text-lg font-semibold mb-4 ${isLight ? 'text-gray-900' : 'text-white'}`}>Position Names</h3>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
         {positions.map(pos => (
           <div key={pos.key} className={`p-4 rounded-lg border relative overflow-hidden group ${isLight
             ? 'bg-white border-gray-200 shadow-sm'
@@ -1768,13 +1772,16 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
                 <span className={`text-xs font-bold ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
                   {positionNames[pos.key] || pos.default}
                 </span>
-                <button
-                  onClick={() => pos.isCustom ? removePosition(pos.key) : hidePosition(pos.key)}
-                  className="p-0.5 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity"
-                  title={pos.isCustom ? "Delete Position" : "Hide Position"}
-                >
-                  <X size={12} />
-                </button>
+                {/* Only custom positions can be deleted - core 11 positions cannot */}
+                {pos.isCustom && (
+                  <button
+                    onClick={() => removePosition(pos.key)}
+                    className="p-0.5 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Delete Position"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
               </div>
               <input
                 id={`position-desc-${pos.key}`}
@@ -1825,15 +1832,20 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
               );
             })()}
 
-            {/* Position Type Selector - Only show for Offense */}
+            {/* Position Type Selector - Only show for Offense, disabled for fixed OL positions */}
             {phase === 'OFFENSE' && (
               <div className="mt-2">
                 <select
                   id={`position-type-${pos.key}`}
-                  value={getPositionType(pos.key)}
-                  onChange={(e) => updatePositionType(pos.key, e.target.value)}
+                  value={pos.fixedType || getPositionType(pos.key)}
+                  onChange={(e) => !pos.fixedType && updatePositionType(pos.key, e.target.value)}
+                  disabled={!!pos.fixedType}
                   aria-label={`${pos.default} position type`}
-                  className="w-full px-2 py-1 text-xs bg-slate-800 border border-slate-600 rounded text-slate-300"
+                  className={`w-full px-2 py-1 text-xs border border-slate-600 rounded ${
+                    pos.fixedType
+                      ? 'bg-slate-900 text-slate-500 cursor-not-allowed'
+                      : 'bg-slate-800 text-slate-300'
+                  }`}
                 >
                   <option value="skill">Ball Carrier / Skill</option>
                   <option value="line">Lineman</option>
@@ -1853,26 +1865,6 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
         </button>
       </div>
 
-      {/* Hidden Positions */}
-      {hiddenDefaults.length > 0 && (
-        <div className="mt-6 p-4 border border-dashed border-slate-600 rounded-lg opacity-80">
-          <h4 className="text-sm font-semibold text-slate-400 mb-3">Hidden Default Positions</h4>
-          <div className="flex flex-wrap gap-2">
-            {hiddenDefaults.map(pos => (
-              <div key={pos.key} className="flex items-center gap-2 px-3 py-2 bg-slate-700/50 rounded-lg text-sm">
-                <span className="text-white">{pos.default}</span>
-                <span className="text-slate-500">({pos.description})</span>
-                <button
-                  onClick={() => restorePosition(pos.key)}
-                  className="text-sky-400 hover:text-sky-300 font-medium"
-                >
-                  Restore
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -2665,12 +2657,12 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
   const [showCreateEditor, setShowCreateEditor] = useState(false); // For creating new formations from scratch
   const isOffense = phase === 'OFFENSE';
 
-  // Compute available offense positions (same logic as SchoolContext)
+  // Compute available offense positions
+  // Core 6 skill positions + any custom positions added for personnel variations
   const offensePositions = (() => {
-    const defaults = ['QB', 'RB', 'FB', 'WR', 'TE', 'X', 'Y', 'Z', 'H', 'F', 'A', 'B'];
-    const visible = defaults.filter(p => !hiddenPositions.includes(p));
+    const coreSkill = ['QB', 'RB', 'X', 'Y', 'Z', 'H'];
     const customKeys = customPositions.map(p => p.key).filter(Boolean);
-    return [...visible, ...customKeys];
+    return [...coreSkill, ...customKeys];
   })();
 
   // Get the formation being edited
@@ -2710,6 +2702,7 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
       const point = el.points[0];
       const pos = {
         label: el.label,
+        positionKey: el.positionKey || el.label, // Store the internal key for reliable lookups
         x: Math.round((point.x / 950) * 100 * 10) / 10, // Convert to percentage
         y: Math.round((point.y / 600) * 100 * 10) / 10,
         shape: el.shape || 'circle',
@@ -2754,10 +2747,27 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
   };
   const SKILL_POSITION_FALLBACK = '#3b82f6'; // Blue fallback for any position not in defaults
 
-  // Helper: Get color for a position label
-  // Colors are stored by display name (e.g., 'B' not 'RB')
+  // Helper: Get color for a position label (which may be a display name OR a key)
+  // Colors are stored by display name (e.g., 'BZ' not 'RB')
+  // Need to reverse-lookup to find original key for default color fallback
   const getPositionColor = (label) => {
-    return positionColors[label] || POSITION_COLORS_DEFAULTS[label] || SKILL_POSITION_FALLBACK;
+    // 1. Direct lookup by label (works if label is stored display name)
+    if (positionColors[label]) return positionColors[label];
+
+    // 2. Reverse lookup: find the KEY that maps to this display name
+    const key = Object.keys(positionNames).find(k => positionNames[k] === label);
+
+    // 3. Check if color is stored under the original key
+    if (key && positionColors[key]) return positionColors[key];
+
+    // 4. Check defaults using the original key (if found) or the label itself
+    const keyForDefault = key || label;
+    if (POSITION_COLORS_DEFAULTS[keyForDefault]) return POSITION_COLORS_DEFAULTS[keyForDefault];
+
+    // 5. Also check defaults with label directly (for backward compat)
+    if (POSITION_COLORS_DEFAULTS[label]) return POSITION_COLORS_DEFAULTS[label];
+
+    return SKILL_POSITION_FALLBACK;
   };
 
   // Get initial elements for the WIZ editor based on formation
@@ -2768,20 +2778,37 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
     if (editingFormation.positions && editingFormation.positions.length > 0) {
       const wizCenter = 475; // Center of 950px viewBox
       return editingFormation.positions.map((pos, idx) => {
-        // Convert stored label to current display name (e.g., 'RB' -> 'B' if renamed)
-        const currentDisplayName = positionNames[pos.label] || pos.label;
-        const resolvedColor = getPositionColor(currentDisplayName);
+        // Determine position KEY from stored data
+        // Priority: pos.positionKey (if stored) > pos.label lookup > reverse lookup
+        let posKey = pos.positionKey || pos.label;
+
+        // If positionKey wasn't stored, try to find it from label
+        if (!pos.positionKey) {
+          // Check if pos.label is a known KEY (exists in positionNames as a key)
+          if (positionNames[pos.label]) {
+            posKey = pos.label;
+          } else {
+            // Reverse lookup: find the KEY that maps to this display name
+            const foundKey = Object.keys(positionNames).find(k => positionNames[k] === pos.label);
+            if (foundKey) {
+              posKey = foundKey;
+            }
+          }
+        }
 
         // Convert percentage to pixel for position calculation
         const xPixel = (pos.x / 100) * 950;
 
         // Determine positionKey for OL (G->LG/RG, T->LT/RT based on x position)
-        let positionKey = pos.label;
-        if (pos.label === 'G') {
-          positionKey = xPixel < wizCenter ? 'LG' : 'RG';
-        } else if (pos.label === 'T') {
-          positionKey = xPixel < wizCenter ? 'LT' : 'RT';
+        if (pos.label === 'G' || posKey === 'G') {
+          posKey = xPixel < wizCenter ? 'LG' : 'RG';
+        } else if (pos.label === 'T' || posKey === 'T') {
+          posKey = xPixel < wizCenter ? 'LT' : 'RT';
         }
+
+        // Get current display name from positionNames using the determined key
+        const currentDisplayName = positionNames[posKey] || pos.label;
+        const resolvedColor = getPositionColor(currentDisplayName);
 
         return {
           id: Date.now() + idx,
@@ -2793,7 +2820,7 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
           variant: pos.variant || 'filled',
           fontSize: pos.fontSize,
           groupId: pos.groupId,
-          positionKey: positionKey // For OL snap positioning
+          positionKey: posKey // For OL snap positioning and reliable lookups
         };
       });
     }

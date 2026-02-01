@@ -94,8 +94,9 @@ const getDefaultWizOLFormation = () => {
   ];
 };
 
-// Default skill positions for 11 personnel (no personnel grouping selected)
-const DEFAULT_SKILL_POSITIONS = ['QB', 'RB', 'X', 'Z', 'Y', 'A'];
+// Default skill positions for base 11 personnel (no personnel grouping selected)
+// Matches the 6 core skill positions: QB, RB, X, Y, Z, H
+const DEFAULT_SKILL_POSITIONS = ['QB', 'RB', 'X', 'Y', 'Z', 'H'];
 
 // Default position placements on the canvas (wiz-card viewBox 950x600 - 1.58:1 ratio)
 // LOS is around y=390, backfield around y=450-520
@@ -116,7 +117,12 @@ const SKILL_POSITION_PLACEMENTS = {
 
 // Generate WIZ Skill Formation based on personnel grouping
 const getWizSkillFormation = (positionColors = {}, positionNames = {}, skillPositions = DEFAULT_SKILL_POSITIONS) => {
-  const getColor = (pos, fallback) => positionColors[pos] || DEFAULT_POSITION_COLORS[pos] || fallback;
+  // Get color for a position, handling renamed positions
+  // Colors are stored by display name, so need to convert key → display name first
+  const getColor = (pos, fallback) => {
+    const displayName = positionNames[pos] || pos;
+    return positionColors[displayName] || positionColors[pos] || DEFAULT_POSITION_COLORS[pos] || fallback;
+  };
 
   const wizCenter = 475; // 950/2 for wiz-card viewBox
   const wizLos = 390;    // LOS position (900x600 canvas)
@@ -191,10 +197,27 @@ export default function PlayDiagramEditor({
   // Get available skill positions (non-OL positions)
   const OL_POSITIONS = ['LT', 'LG', 'C', 'RG', 'RT'];
 
-  // Helper: Get color for a position label
-  // Colors are stored by display name (e.g., 'B' not 'RB')
+  // Helper: Get color for a position label (which may be a display name OR a key)
+  // Colors are stored by display name (e.g., 'BZ' not 'RB')
+  // Need to reverse-lookup to find original key for default color fallback
   const getPositionColor = (label) => {
-    return positionColors[label] || DEFAULT_POSITION_COLORS[label] || SKILL_POSITION_FALLBACK_COLOR;
+    // 1. Direct lookup by label (works if label is stored display name)
+    if (positionColors[label]) return positionColors[label];
+
+    // 2. Reverse lookup: find the KEY that maps to this display name
+    const key = Object.keys(positionNames).find(k => positionNames[k] === label);
+
+    // 3. Check if color is stored under the original key
+    if (key && positionColors[key]) return positionColors[key];
+
+    // 4. Check defaults using the original key (if found) or the label itself
+    const keyForDefault = key || label;
+    if (DEFAULT_POSITION_COLORS[keyForDefault]) return DEFAULT_POSITION_COLORS[keyForDefault];
+
+    // 5. Also check defaults with label directly (for backward compat)
+    if (DEFAULT_POSITION_COLORS[label]) return DEFAULT_POSITION_COLORS[label];
+
+    return SKILL_POSITION_FALLBACK_COLOR;
   };
 
   // Use offensePositions if provided (from setup config), otherwise fall back to positionNames keys or defaults
@@ -214,7 +237,53 @@ export default function PlayDiagramEditor({
   // Initialize with data or default formation
   const [elements, setElements] = useState(() => {
     if (initialData && initialData.elements && initialData.elements.length > 0) {
-      return initialData.elements;
+      // Convert stored labels to current display names and update colors
+      // This ensures renamed positions show their new names and colors
+      return initialData.elements.map(el => {
+        if (el.type !== 'player') return el;
+
+        // Find the current display name and position key for this element
+        // The stored label might be: a KEY (like 'X'), or a display name (like 'XZ')
+        let displayName = el.label;
+        let posKey = el.positionKey || el.label;
+
+        // Case 1: If the label is a key in positionNames, convert to display name
+        if (positionNames[el.label]) {
+          displayName = positionNames[el.label];
+          posKey = el.label;
+        }
+        // Case 2: If positionKey is set and has a display name
+        else if (el.positionKey && positionNames[el.positionKey]) {
+          displayName = positionNames[el.positionKey];
+          posKey = el.positionKey;
+        }
+        // Case 3: Reverse lookup - label might be a display name, find its key
+        else {
+          const foundKey = Object.keys(positionNames).find(k => positionNames[k] === el.label);
+          if (foundKey) {
+            posKey = foundKey;
+            displayName = positionNames[foundKey]; // Should be same as el.label
+          }
+        }
+
+        // Get the correct color for this position
+        // Check positionColors by display name first, then by key, then defaults
+        let color = el.color;
+        if (positionColors[displayName]) {
+          color = positionColors[displayName];
+        } else if (positionColors[posKey]) {
+          color = positionColors[posKey];
+        } else if (DEFAULT_POSITION_COLORS[posKey]) {
+          color = DEFAULT_POSITION_COLORS[posKey];
+        }
+
+        return {
+          ...el,
+          label: displayName,
+          color: color,
+          positionKey: posKey
+        };
+      });
     }
     if (isWizSkill) {
       // Use base personnel positions if available, otherwise fall back to defaults
@@ -465,6 +534,7 @@ export default function PlayDiagramEditor({
       const point = el.points[0];
       const pos = {
         label: el.label,
+        positionKey: el.positionKey || el.label, // Store the internal key for reliable lookups
         x: Math.round((point.x / 950) * 100 * 10) / 10, // Round to 1 decimal
         y: Math.round((point.y / 600) * 100 * 10) / 10,
         shape: el.shape || 'circle',
@@ -527,28 +597,49 @@ export default function PlayDiagramEditor({
       const x = (pos.x / 100) * 950;
       const y = (pos.y / 100) * 600;
 
-      const defaultConfig = positionConfig[pos.label] || { shape: 'circle', variant: 'filled' };
-      const isOL = ['C', 'G', 'T', 'LT', 'LG', 'RG', 'RT'].includes(pos.label);
+      // Determine position KEY from stored data
+      // Priority: pos.positionKey (if stored) > pos.label lookup > reverse lookup
+      let posKey = pos.positionKey || pos.label;
+
+      // If positionKey wasn't stored, try to find it from label
+      if (!pos.positionKey) {
+        // Check if pos.label is a known KEY (exists in positionNames as a key)
+        if (positionNames[pos.label]) {
+          posKey = pos.label;
+        } else {
+          // Reverse lookup: find the KEY that maps to this display name
+          const foundKey = Object.keys(positionNames).find(k => positionNames[k] === pos.label);
+          if (foundKey) {
+            posKey = foundKey;
+          }
+          // If not found, pos.label might be an OL label like 'G' or 'T', or a new position
+        }
+      }
+
+      const defaultConfig = positionConfig[pos.label] || positionConfig[posKey] || { shape: 'circle', variant: 'filled' };
+      const isOL = ['C', 'G', 'T', 'LT', 'LG', 'RG', 'RT'].includes(pos.label) || ['C', 'G', 'T', 'LT', 'LG', 'RG', 'RT'].includes(posKey);
 
       // Determine positionKey for OL (needed for Set Default to save uniquely)
-      let positionKey = pos.label;
-      if (pos.label === 'G') {
-        positionKey = x < wizCenter ? 'LG' : 'RG';
-      } else if (pos.label === 'T') {
-        positionKey = x < wizCenter ? 'LT' : 'RT';
+      if (pos.label === 'G' || posKey === 'G') {
+        posKey = x < wizCenter ? 'LG' : 'RG';
+      } else if (pos.label === 'T' || posKey === 'T') {
+        posKey = x < wizCenter ? 'LT' : 'RT';
       }
+
+      // Get the current display name from positionNames using the determined key
+      const displayName = positionNames[posKey] || pos.label;
 
       newElements.push({
         id: baseTime + idx,
         type: 'player',
         points: [{ x, y }],
-        color: getPositionColor(positionNames[pos.label] || pos.label),
-        label: positionNames[pos.label] || pos.label,
+        color: getPositionColor(displayName),
+        label: displayName,
         shape: pos.shape || defaultConfig.shape || 'circle',
         variant: pos.variant || defaultConfig.variant || 'filled',
         fontSize: pos.fontSize || defaultConfig.fontSize,
         groupId: isOL && olGroupId ? olGroupId : pos.groupId,
-        positionKey: isOL ? positionKey : pos.label // Unique key for OL
+        positionKey: posKey
       });
     });
 
@@ -578,12 +669,13 @@ export default function PlayDiagramEditor({
 
     skillPositions.forEach((pos, idx) => {
       const placement = SKILL_POSITION_PLACEMENTS[pos] || { x: 377, y: 360 };
+      const displayName = positionNames[pos] || pos;
       newSkillPlayers.push({
         id: baseTime + 100 + idx,
         type: 'player',
         points: [{ x: placement.x, y: placement.y }],
-        color: getPositionColor(pos),
-        label: positionNames[pos] || pos,
+        color: getPositionColor(displayName),
+        label: displayName,
         shape: 'circle',
         variant: 'filled',
         positionKey: pos
@@ -1761,7 +1853,7 @@ export default function PlayDiagramEditor({
                               key={pos}
                               onClick={() => addSinglePlayer(pos)}
                               className="px-3 py-1.5 text-xs rounded hover:opacity-80 text-white font-medium"
-                              style={{ backgroundColor: getPositionColor(pos) }}
+                              style={{ backgroundColor: getPositionColor(positionNames[pos] || pos) }}
                             >
                               {positionNames[pos] || pos}
                             </button>

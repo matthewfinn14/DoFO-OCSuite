@@ -160,21 +160,52 @@ export default function DiagramPreview({
     );
   }
 
+  // Helper to get effective label, converting from key to display name if renamed
+  const getEffectiveLabel = (label, positionKey) => {
+    // Priority 1: If positionKey is set and has a display name, use that (most reliable)
+    if (positionKey && positionNames[positionKey]) {
+      return positionNames[positionKey];
+    }
+    // Priority 2: If label is a key that has been renamed, use the display name
+    if (positionNames[label]) {
+      return positionNames[label];
+    }
+    // Otherwise return the original label (might be current display name or unmapped position)
+    return label;
+  };
+
   // Helper to get effective color for a position label, handling renamed positions
   const getEffectiveColor = (label, storedColor) => {
-    // Direct lookup by label
+    // 1. Direct lookup by label (display name)
     if (positionColors[label]) {
       return positionColors[label];
     }
 
-    // Reverse lookup: find position key where positionNames[key] === label
+    // 2. Reverse lookup: find position key where positionNames[key] === label
     const posKey = Object.keys(positionNames).find(key => positionNames[key] === label);
+
+    // 3. Check positionColors by original key
     if (posKey && positionColors[posKey]) {
       return positionColors[posKey];
     }
 
-    // Fall back to stored color or defaults
-    return storedColor || DEFAULT_POSITION_COLORS[label] || DEFAULT_POSITION_COLORS[posKey] || SKILL_POSITION_FALLBACK;
+    // 4. Check defaults using the original key (preferred) or label
+    const keyForDefault = posKey || label;
+    if (DEFAULT_POSITION_COLORS[keyForDefault]) {
+      return DEFAULT_POSITION_COLORS[keyForDefault];
+    }
+
+    // 5. Also check defaults with label directly
+    if (DEFAULT_POSITION_COLORS[label]) {
+      return DEFAULT_POSITION_COLORS[label];
+    }
+
+    // 6. Fall back to stored color (might be stale but better than nothing)
+    if (storedColor) {
+      return storedColor;
+    }
+
+    return SKILL_POSITION_FALLBACK;
   };
 
   // Render an element for the preview
@@ -186,8 +217,10 @@ export default function DiagramPreview({
     try {
       if (el.type === 'player') {
         const { x, y } = el.points[0];
+        // Get the current display name for this position (handles renamed positions)
+        const displayLabel = getEffectiveLabel(el.label, el.positionKey);
         // Use positionColors lookup, falling back to stored color, then defaults
-        const effectiveColor = getEffectiveColor(el.label, el.color);
+        const effectiveColor = getEffectiveColor(displayLabel, el.color);
 
         if (el.shape === 'text-only') {
           const tSize = el.fontSize || (isWizSkill ? 50 : 170);
@@ -203,7 +236,7 @@ export default function DiagramPreview({
                 fill={effectiveColor}
                 style={{ fontFamily: 'Arial, sans-serif' }}
               >
-                {el.label}
+                {displayLabel}
               </text>
             </g>
           );
@@ -234,7 +267,7 @@ export default function DiagramPreview({
               fill={textColor}
               style={{ fontFamily: 'Arial, sans-serif' }}
             >
-              {el.label}
+              {displayLabel}
             </text>
           </g>
         );
