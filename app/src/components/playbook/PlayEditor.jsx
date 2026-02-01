@@ -228,6 +228,44 @@ export default function PlayEditor({
   const [showOLEditor, setShowOLEditor] = useState(false);
   const [showOLLibrary, setShowOLLibrary] = useState(false);
 
+  // Template search state for WIZ SKILL
+  const [skillTemplateSearch, setSkillTemplateSearch] = useState('');
+  const [showSkillTemplateDropdown, setShowSkillTemplateDropdown] = useState(false);
+
+  // OL Library search state
+  const [olLibrarySearch, setOlLibrarySearch] = useState('');
+  const [showOLLibraryDropdown, setShowOLLibraryDropdown] = useState(false);
+
+  // Get plays with wizSkillData for template selection
+  const playsWithSkillDiagrams = useMemo(() => {
+    return availablePlays.filter(p => p.wizSkillData?.length > 0 && p.id !== play?.id);
+  }, [availablePlays, play?.id]);
+
+  // Filter skill templates based on search
+  const filteredSkillTemplates = useMemo(() => {
+    if (!skillTemplateSearch) return playsWithSkillDiagrams.slice(0, 10);
+    const search = skillTemplateSearch.toLowerCase();
+    return playsWithSkillDiagrams.filter(p =>
+      p.name?.toLowerCase().includes(search) ||
+      p.formation?.toLowerCase().includes(search)
+    ).slice(0, 10);
+  }, [playsWithSkillDiagrams, skillTemplateSearch]);
+
+  // Combine OL schemes for search
+  const allOLSchemes = useMemo(() => {
+    return [
+      ...olSchemes.protections.map(p => ({ ...p, schemeType: 'protection' })),
+      ...olSchemes.runBlocking.map(r => ({ ...r, schemeType: 'runBlocking' }))
+    ];
+  }, [olSchemes]);
+
+  // Filter OL schemes based on search
+  const filteredOLSchemes = useMemo(() => {
+    if (!olLibrarySearch) return allOLSchemes.slice(0, 10);
+    const search = olLibrarySearch.toLowerCase();
+    return allOLSchemes.filter(s => s.name?.toLowerCase().includes(search)).slice(0, 10);
+  }, [allOLSchemes, olLibrarySearch]);
+
   // Drag and drop state for play call builder
   const [draggedWord, setDraggedWord] = useState(null);
 
@@ -1490,6 +1528,45 @@ export default function PlayEditor({
                     </div>
                   ) : (
                     <div className="space-y-2 flex-1 flex flex-col">
+                      {/* Start from Template Search */}
+                      {playsWithSkillDiagrams.length > 0 && (
+                        <div className="relative">
+                          <label className="block text-xs text-slate-500 mb-1">Start from Template</label>
+                          <input
+                            type="text"
+                            placeholder="Search existing plays..."
+                            value={skillTemplateSearch}
+                            onChange={(e) => {
+                              setSkillTemplateSearch(e.target.value);
+                              setShowSkillTemplateDropdown(true);
+                            }}
+                            onFocus={() => setShowSkillTemplateDropdown(true)}
+                            className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                          />
+                          {showSkillTemplateDropdown && filteredSkillTemplates.length > 0 && (
+                            <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+                              {filteredSkillTemplates.map(p => (
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setFormData(prev => ({ ...prev, wizSkillData: [...p.wizSkillData] }));
+                                    setSkillTemplateSearch('');
+                                    setShowSkillTemplateDropdown(false);
+                                  }}
+                                  className="w-full px-3 py-2 text-left text-sm text-white hover:bg-slate-700 flex items-center justify-between"
+                                >
+                                  <span>{p.formation ? `${p.formation} ` : ''}{p.name}</span>
+                                  <span className="text-xs text-slate-500">Use as template</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {showSkillTemplateDropdown && (
+                            <div className="fixed inset-0 z-40" onClick={() => setShowSkillTemplateDropdown(false)} />
+                          )}
+                        </div>
+                      )}
                       <button
                         type="button"
                         onClick={() => setShowSkillEditor(true)}
@@ -1593,6 +1670,59 @@ export default function PlayEditor({
                     </div>
                   ) : (
                     <div className="space-y-2 flex-1 flex flex-col">
+                      {/* Search for Pre-existing OL Scheme */}
+                      {allOLSchemes.length > 0 && (
+                        <div className="relative">
+                          <label className="block text-xs text-slate-500 mb-1">Search for Pre-existing</label>
+                          <input
+                            type="text"
+                            placeholder="Search OL library..."
+                            value={olLibrarySearch}
+                            onChange={(e) => {
+                              setOlLibrarySearch(e.target.value);
+                              setShowOLLibraryDropdown(true);
+                            }}
+                            onFocus={() => setShowOLLibraryDropdown(true)}
+                            className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-500 focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                          />
+                          {showOLLibraryDropdown && filteredOLSchemes.length > 0 && (
+                            <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+                              {filteredOLSchemes.map(scheme => (
+                                <button
+                                  key={scheme.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      wizOlineRef: {
+                                        id: scheme.id,
+                                        name: scheme.name,
+                                        type: scheme.schemeType,
+                                        diagramData: scheme.diagramData
+                                      },
+                                      wizOlineData: null
+                                    }));
+                                    setOlLibrarySearch('');
+                                    setShowOLLibraryDropdown(false);
+                                  }}
+                                  className="w-full px-3 py-2 text-left text-sm text-white hover:bg-slate-700 flex items-center justify-between"
+                                >
+                                  <span className="flex items-center gap-2">
+                                    <Library size={12} className="text-amber-400" />
+                                    {scheme.name}
+                                  </span>
+                                  <span className="text-xs text-slate-500">
+                                    {scheme.schemeType === 'protection' ? 'Protection' : 'Run'}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {showOLLibraryDropdown && (
+                            <div className="fixed inset-0 z-40" onClick={() => setShowOLLibraryDropdown(false)} />
+                          )}
+                        </div>
+                      )}
                       <button
                         type="button"
                         onClick={() => setShowOLEditor(true)}
@@ -1621,16 +1751,6 @@ export default function PlayEditor({
                           className="hidden"
                         />
                       </label>
-                      {(olSchemes.protections.length > 0 || olSchemes.runBlocking.length > 0) && (
-                        <button
-                          type="button"
-                          onClick={() => setShowOLLibrary(true)}
-                          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs text-amber-400 hover:text-amber-300 transition-colors"
-                        >
-                          <Library size={12} />
-                          or select from WIZ Library
-                        </button>
-                      )}
                     </div>
                   )}
                 </div>
