@@ -1508,6 +1508,45 @@ export default function PlayEditor({
                         width="100%"
                         onClick={() => setShowSkillEditor(true)}
                       />
+                      {/* Start from Template Search - when diagram exists */}
+                      {playsWithSkillDiagrams.length > 0 && (
+                        <div className="relative">
+                          <label className="block text-xs text-slate-500 mb-1">Start from Template</label>
+                          <input
+                            type="text"
+                            placeholder="Search existing plays..."
+                            value={skillTemplateSearch}
+                            onChange={(e) => {
+                              setSkillTemplateSearch(e.target.value);
+                              setShowSkillTemplateDropdown(true);
+                            }}
+                            onFocus={() => setShowSkillTemplateDropdown(true)}
+                            className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                          />
+                          {showSkillTemplateDropdown && filteredSkillTemplates.length > 0 && (
+                            <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+                              {filteredSkillTemplates.map(p => (
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setFormData(prev => ({ ...prev, wizSkillData: [...p.wizSkillData] }));
+                                    setSkillTemplateSearch('');
+                                    setShowSkillTemplateDropdown(false);
+                                  }}
+                                  className="w-full px-3 py-2 text-left text-sm text-white hover:bg-slate-700 flex items-center justify-between"
+                                >
+                                  <span>{p.formation ? `${p.formation} ` : ''}{p.name}</span>
+                                  <span className="text-xs text-slate-500">Use as template</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {showSkillTemplateDropdown && (
+                            <div className="fixed inset-0 z-40" onClick={() => setShowSkillTemplateDropdown(false)} />
+                          )}
+                        </div>
+                      )}
                       <div className="flex gap-2">
                         <button
                           type="button"
@@ -1649,6 +1688,59 @@ export default function PlayEditor({
                           height={133}
                           onClick={() => setShowOLEditor(true)}
                         />
+                      )}
+                      {/* Search for Pre-existing OL Scheme - when diagram exists */}
+                      {allOLSchemes.length > 0 && (
+                        <div className="relative">
+                          <label className="block text-xs text-slate-500 mb-1">Search for Pre-existing</label>
+                          <input
+                            type="text"
+                            placeholder="Search OL library..."
+                            value={olLibrarySearch}
+                            onChange={(e) => {
+                              setOlLibrarySearch(e.target.value);
+                              setShowOLLibraryDropdown(true);
+                            }}
+                            onFocus={() => setShowOLLibraryDropdown(true)}
+                            className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-500 focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                          />
+                          {showOLLibraryDropdown && filteredOLSchemes.length > 0 && (
+                            <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+                              {filteredOLSchemes.map(scheme => (
+                                <button
+                                  key={scheme.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      wizOlineRef: {
+                                        id: scheme.id,
+                                        name: scheme.name,
+                                        type: scheme.schemeType,
+                                        diagramData: scheme.diagramData
+                                      },
+                                      wizOlineData: null
+                                    }));
+                                    setOlLibrarySearch('');
+                                    setShowOLLibraryDropdown(false);
+                                  }}
+                                  className="w-full px-3 py-2 text-left text-sm text-white hover:bg-slate-700 flex items-center justify-between"
+                                >
+                                  <span className="flex items-center gap-2">
+                                    <Library size={12} className="text-amber-400" />
+                                    {scheme.name}
+                                  </span>
+                                  <span className="text-xs text-slate-500">
+                                    {scheme.schemeType === 'protection' ? 'Protection' : 'Run'}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {showOLLibraryDropdown && (
+                            <div className="fixed inset-0 z-40" onClick={() => setShowOLLibraryDropdown(false)} />
+                          )}
+                        </div>
                       )}
                       <div className="flex gap-2">
                         <button
