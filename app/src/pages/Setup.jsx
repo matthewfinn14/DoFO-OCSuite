@@ -1732,7 +1732,10 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
   };
 
   const updatePositionColor = (key, value) => {
-    onUpdate('positionColors', { ...positionColors, [key]: value });
+    // Store color under the DISPLAY NAME, not the internal key
+    // This way when diagram shows "B", it looks up positionColors['B']
+    const displayName = positionNames[key] || key;
+    onUpdate('positionColors', { ...positionColors, [displayName]: value });
   };
 
   const updatePositionDesc = (key, value) => {
@@ -1785,35 +1788,42 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
               />
             </div>
 
-            <div className="flex gap-2 items-stretch">
-              <div className="relative flex-shrink-0">
-                <input
-                  id={`position-color-${pos.key}`}
-                  type="color"
-                  value={positionColors[pos.key] || DEFAULT_POSITION_COLORS[pos.key] || '#64748b'}
-                  onChange={(e) => updatePositionColor(pos.key, e.target.value)}
-                  aria-label={`${pos.default} color`}
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                />
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center border-2 border-white/20"
-                  style={{ backgroundColor: positionColors[pos.key] || DEFAULT_POSITION_COLORS[pos.key] || '#64748b' }}
-                >
-                  <Edit3 size={14} className="text-white/70" />
+            {/* Color picker and name input - use display name for color lookup */}
+            {(() => {
+              const displayName = positionNames[pos.key] || pos.default;
+              const colorValue = positionColors[displayName] || positionColors[pos.key] || DEFAULT_POSITION_COLORS[pos.key] || '#64748b';
+              return (
+                <div className="flex gap-2 items-stretch">
+                  <div className="relative flex-shrink-0">
+                    <input
+                      id={`position-color-${pos.key}`}
+                      type="color"
+                      value={colorValue}
+                      onChange={(e) => updatePositionColor(pos.key, e.target.value)}
+                      aria-label={`${displayName} color`}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center border-2 border-white/20"
+                      style={{ backgroundColor: colorValue }}
+                    >
+                      <Edit3 size={14} className="text-white/70" />
+                    </div>
+                  </div>
+                  <input
+                    id={`position-name-${pos.key}`}
+                    type="text"
+                    value={positionNames[pos.key] ?? pos.default}
+                    onChange={(e) => updatePositionName(pos.key, e.target.value)}
+                    placeholder={pos.default}
+                    maxLength={3}
+                    aria-label={`${pos.default} abbreviation`}
+                    className="flex-1 min-w-0 px-2 py-2 text-center font-bold text-white rounded-lg border border-slate-600"
+                    style={{ backgroundColor: colorValue }}
+                  />
                 </div>
-              </div>
-              <input
-                id={`position-name-${pos.key}`}
-                type="text"
-                value={positionNames[pos.key] ?? pos.default}
-                onChange={(e) => updatePositionName(pos.key, e.target.value)}
-                placeholder={pos.default}
-                maxLength={3}
-                aria-label={`${pos.default} abbreviation`}
-                className="flex-1 min-w-0 px-2 py-2 text-center font-bold text-white rounded-lg border border-slate-600"
-                style={{ backgroundColor: positionColors[pos.key] || DEFAULT_POSITION_COLORS[pos.key] || '#64748b' }}
-              />
-            </div>
+              );
+            })()}
 
             {/* Position Type Selector - Only show for Offense */}
             {phase === 'OFFENSE' && (
@@ -2113,7 +2123,11 @@ function PersonnelTab({ personnelGroupings, positions, positionNames, positionCo
     .filter(p => !oLinePositions.includes(p.key))
     .map(p => p.key);
 
-  const getPosColor = (pos) => positionColors[pos] || DEFAULT_POSITION_COLORS[pos] || '#64748b';
+  // Get color by looking up display name first, then key
+  const getPosColor = (pos) => {
+    const displayName = positionNames[pos] || pos;
+    return positionColors[displayName] || positionColors[pos] || DEFAULT_POSITION_COLORS[pos] || '#64748b';
+  };
 
   const addGrouping = () => {
     const newId = `pers_${Date.now()}`;
