@@ -2757,10 +2757,7 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
   // Helper: Get color for a position label
   // Colors are stored by display name (e.g., 'B' not 'RB')
   const getPositionColor = (label) => {
-    const color = positionColors[label] || POSITION_COLORS_DEFAULTS[label] || SKILL_POSITION_FALLBACK;
-    console.log(`FormationsTab getPositionColor(${label}): positionColors[${label}]=${positionColors[label]}, resolved=${color}`);
-    console.log('FormationsTab positionColors:', JSON.stringify(positionColors));
-    return color;
+    return positionColors[label] || POSITION_COLORS_DEFAULTS[label] || SKILL_POSITION_FALLBACK;
   };
 
   // Get initial elements for the WIZ editor based on formation
@@ -2769,20 +2766,34 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
 
     // If formation already has positions, load them
     if (editingFormation.positions && editingFormation.positions.length > 0) {
+      const wizCenter = 475; // Center of 950px viewBox
       return editingFormation.positions.map((pos, idx) => {
         // Convert stored label to current display name (e.g., 'RB' -> 'B' if renamed)
         const currentDisplayName = positionNames[pos.label] || pos.label;
         const resolvedColor = getPositionColor(currentDisplayName);
+
+        // Convert percentage to pixel for position calculation
+        const xPixel = (pos.x / 100) * 950;
+
+        // Determine positionKey for OL (G->LG/RG, T->LT/RT based on x position)
+        let positionKey = pos.label;
+        if (pos.label === 'G') {
+          positionKey = xPixel < wizCenter ? 'LG' : 'RG';
+        } else if (pos.label === 'T') {
+          positionKey = xPixel < wizCenter ? 'LT' : 'RT';
+        }
+
         return {
           id: Date.now() + idx,
           type: 'player',
-          points: [{ x: (pos.x / 100) * 950, y: (pos.y / 100) * 600 }],
+          points: [{ x: xPixel, y: (pos.y / 100) * 600 }],
           color: resolvedColor,
           label: currentDisplayName, // Use current display name, not stored label
           shape: pos.shape || 'circle',
           variant: pos.variant || 'filled',
           fontSize: pos.fontSize,
-          groupId: pos.groupId
+          groupId: pos.groupId,
+          positionKey: positionKey // For OL snap positioning
         };
       });
     }

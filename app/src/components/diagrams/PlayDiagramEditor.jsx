@@ -193,9 +193,7 @@ export default function PlayDiagramEditor({
   // Helper: Get color for a position label
   // Colors are stored by display name (e.g., 'B' not 'RB')
   const getPositionColor = (label) => {
-    const color = positionColors[label] || DEFAULT_POSITION_COLORS[label] || SKILL_POSITION_FALLBACK_COLOR;
-    console.log(`PlayDiagramEditor getPositionColor(${label}): positionColors[${label}]=${positionColors[label]}, resolved=${color}`);
-    return color;
+    return positionColors[label] || DEFAULT_POSITION_COLORS[label] || SKILL_POSITION_FALLBACK_COLOR;
   };
 
   // Use offensePositions if provided (from setup config), otherwise fall back to positionNames keys or defaults
