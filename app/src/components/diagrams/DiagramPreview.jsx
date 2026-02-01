@@ -105,7 +105,8 @@ export default function DiagramPreview({
   onClick,
   fillContainer = false, // When true, fills parent container without borders
   showBackground = true,
-  positionColors = {} // User's position colors from setup
+  positionColors = {}, // User's position colors from setup
+  positionNames = {} // User's position names from setup (for reverse lookup of renamed positions)
 }) {
   // Generate unique ID for this preview instance
   const previewId = useMemo(() => `preview-${Math.random().toString(36).substr(2, 9)}`, []);
@@ -159,9 +160,21 @@ export default function DiagramPreview({
     );
   }
 
-  // Helper to get effective color for a position label
+  // Helper to get effective color for a position label, handling renamed positions
   const getEffectiveColor = (label, storedColor) => {
-    return positionColors[label] || storedColor || DEFAULT_POSITION_COLORS[label] || SKILL_POSITION_FALLBACK;
+    // Direct lookup by label
+    if (positionColors[label]) {
+      return positionColors[label];
+    }
+
+    // Reverse lookup: find position key where positionNames[key] === label
+    const posKey = Object.keys(positionNames).find(key => positionNames[key] === label);
+    if (posKey && positionColors[posKey]) {
+      return positionColors[posKey];
+    }
+
+    // Fall back to stored color or defaults
+    return storedColor || DEFAULT_POSITION_COLORS[label] || DEFAULT_POSITION_COLORS[posKey] || SKILL_POSITION_FALLBACK;
   };
 
   // Render an element for the preview

@@ -190,6 +190,24 @@ export default function PlayDiagramEditor({
   // Get available skill positions (non-OL positions)
   const OL_POSITIONS = ['LT', 'LG', 'C', 'RG', 'RT'];
 
+  // Helper: Get color for a position label, handling renamed positions
+  // Example: if user renamed RB to "B", color is stored under 'RB' but label shows 'B'
+  const getPositionColor = (label) => {
+    // Direct lookup by label
+    if (positionColors[label]) {
+      return positionColors[label];
+    }
+
+    // Reverse lookup: find position key where positionNames[key] === label
+    const posKey = Object.keys(positionNames).find(key => positionNames[key] === label);
+    if (posKey && positionColors[posKey]) {
+      return positionColors[posKey];
+    }
+
+    // Fall back to defaults
+    return DEFAULT_POSITION_COLORS[label] || DEFAULT_POSITION_COLORS[posKey] || SKILL_POSITION_FALLBACK_COLOR;
+  };
+
   // Use offensePositions if provided (from setup config), otherwise fall back to positionNames keys or defaults
   const availableSkillPositions = offensePositions.length > 0
     ? offensePositions.filter(p => !OL_POSITIONS.includes(p))
@@ -497,7 +515,6 @@ export default function PlayDiagramEditor({
     if (!formation || !formation.positions) return;
 
     const newElements = [];
-    const getColor = (label) => positionColors[label] || DEFAULT_POSITION_COLORS[label] || SKILL_POSITION_FALLBACK_COLOR;
     const baseTime = Date.now();
 
     // Default config for positions that don't have saved shape/variant
@@ -536,7 +553,7 @@ export default function PlayDiagramEditor({
         id: baseTime + idx,
         type: 'player',
         points: [{ x, y }],
-        color: getColor(pos.label),
+        color: getPositionColor(pos.label),
         label: positionNames[pos.label] || pos.label,
         shape: pos.shape || defaultConfig.shape || 'circle',
         variant: pos.variant || defaultConfig.variant || 'filled',
@@ -557,7 +574,6 @@ export default function PlayDiagramEditor({
 
     setSelectedPersonnelId(groupingId);
 
-    const getColor = (label) => positionColors[label] || DEFAULT_POSITION_COLORS[label] || SKILL_POSITION_FALLBACK_COLOR;
     const baseTime = Date.now();
 
     // Keep all non-player elements (lines, routes, etc.) and OL
@@ -577,7 +593,7 @@ export default function PlayDiagramEditor({
         id: baseTime + 100 + idx,
         type: 'player',
         points: [{ x: placement.x, y: placement.y }],
-        color: getColor(pos),
+        color: getPositionColor(pos),
         label: positionNames[pos] || pos,
         shape: 'circle',
         variant: 'filled',
@@ -610,7 +626,6 @@ export default function PlayDiagramEditor({
   const addSinglePlayer = (posKey) => {
     const wizCenter = 475;
     const wizLos = 390;
-    const getColor = (label) => positionColors[label] || DEFAULT_POSITION_COLORS[label] || SKILL_POSITION_FALLBACK_COLOR;
 
     const isOL = ['C', 'LT', 'LG', 'RG', 'RT'].includes(posKey);
     // For display, use short label (G instead of LG, T instead of LT)
@@ -619,7 +634,7 @@ export default function PlayDiagramEditor({
       id: Date.now(),
       type: 'player',
       points: [{ x: wizCenter, y: wizLos + (isOL ? 0 : 60) }],
-      color: getColor(posKey),
+      color: getPositionColor(posKey),
       label: positionNames[posKey] || displayLabel,
       shape: isOL ? 'text-only' : 'circle',
       variant: 'filled',
@@ -1098,7 +1113,7 @@ export default function PlayDiagramEditor({
           id: Date.now(),
           type: 'player',
           points: [newPoint],
-          color: isWizSkill ? (positionColors[label] || '#3b82f6') : '#000000',
+          color: isWizSkill ? getPositionColor(label) : '#000000',
           label: label,
           shape: isWizOline ? 'text-only' : 'circle',
           variant: 'filled',
@@ -1151,8 +1166,8 @@ export default function PlayDiagramEditor({
       const isInteractionTool = selectedTool === 'select' || selectedTool === 'delete';
       const pointerEvents = isInteractionTool ? 'all' : 'none';
 
-      // Always use latest color from positionColors, falling back to stored color or defaults
-      const effectiveColor = positionColors[el.label] || el.color || DEFAULT_POSITION_COLORS[el.label] || SKILL_POSITION_FALLBACK_COLOR;
+      // Always use latest color from positionColors, handling renamed positions
+      const effectiveColor = getPositionColor(el.label) || el.color;
 
       if (el.shape === 'text-only') {
         const tSize = el.fontSize || (isWizOline ? 170 : 50);
@@ -1758,7 +1773,7 @@ export default function PlayDiagramEditor({
                               key={pos}
                               onClick={() => addSinglePlayer(pos)}
                               className="px-3 py-1.5 text-xs rounded hover:opacity-80 text-white font-medium"
-                              style={{ backgroundColor: positionColors[pos] || DEFAULT_POSITION_COLORS[pos] || SKILL_POSITION_FALLBACK_COLOR }}
+                              style={{ backgroundColor: getPositionColor(pos) }}
                             >
                               {positionNames[pos] || pos}
                             </button>

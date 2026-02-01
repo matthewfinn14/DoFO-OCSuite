@@ -2740,23 +2740,37 @@ function FormationsTab({ phase, formations, personnelGroupings, formationFamilie
   };
   const SKILL_POSITION_FALLBACK = '#3b82f6'; // Blue fallback for any position not in defaults
 
+  // Helper: Get color for a position label, handling renamed positions
+  // Looks up by label first, then by position key if label is a renamed display name
+  const getPositionColor = (label) => {
+    // Direct lookup by label
+    if (positionColors[label]) {
+      return positionColors[label];
+    }
+
+    // Reverse lookup: find the position key where positionNames[key] === label
+    // This handles cases where user renamed RB to "B" - the color is stored under 'RB'
+    const posKey = Object.keys(positionNames).find(key => positionNames[key] === label);
+    if (posKey && positionColors[posKey]) {
+      return positionColors[posKey];
+    }
+
+    // Fall back to defaults
+    return POSITION_COLORS_DEFAULTS[label] || POSITION_COLORS_DEFAULTS[posKey] || SKILL_POSITION_FALLBACK;
+  };
+
   // Get initial elements for the WIZ editor based on formation
   const getInitialElements = () => {
     if (!editingFormation) return null;
 
-    // Debug: log positionColors to verify custom colors are available
-    console.log('DEBUG getInitialElements - positionColors:', JSON.stringify(positionColors));
-
     // If formation already has positions, load them
     if (editingFormation.positions && editingFormation.positions.length > 0) {
       return editingFormation.positions.map((pos, idx) => {
-        const resolvedColor = positionColors[pos.label] || pos.color || POSITION_COLORS_DEFAULTS[pos.label] || SKILL_POSITION_FALLBACK;
-        console.log(`DEBUG position ${pos.label}: positionColors[${pos.label}]=${positionColors[pos.label]}, stored=${pos.color}, resolved=${resolvedColor}`);
+        const resolvedColor = getPositionColor(pos.label);
         return {
           id: Date.now() + idx,
           type: 'player',
           points: [{ x: (pos.x / 100) * 950, y: (pos.y / 100) * 600 }],
-          // Always prioritize current positionColors over stored colors
           color: resolvedColor,
           label: pos.label,
           shape: pos.shape || 'circle',

@@ -11,7 +11,8 @@ export default function PlayCard({
   onEdit,
   onQuickEdit,
   onOpenDetails,
-  positionColors = {}
+  positionColors = {},
+  positionNames = {}
 }) {
   const handleClick = (e) => {
     if (onQuickEdit) {
@@ -154,7 +155,7 @@ export default function PlayCard({
         ) : (
           <div className={`aspect-[950/600] flex items-center justify-center ${elements ? (diagramMode === 'wiz-skill' ? 'bg-slate-900' : 'bg-white') : 'bg-slate-800'}`}>
             {elements ? (
-              <DiagramPreview elements={elements} mode={diagramMode} width="100%" positionColors={positionColors} />
+              <DiagramPreview elements={elements} mode={diagramMode} width="100%" positionColors={positionColors} positionNames={positionNames} />
             ) : (
               <div className="text-slate-600 text-center">
                 <span className="text-3xl">📷</span>
