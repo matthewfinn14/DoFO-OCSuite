@@ -1276,10 +1276,10 @@ export default function PlayDiagramEditor({
         // Horizontal left arrow - hollow, longer, thicker
         const arrowLen = size * 3;
         const arrowHead = size * 0.8;
-        const strokeW = 5;
+        const strokeW = 20;
         shapeElement = (
           <g>
-            <line x1={x + arrowLen/2} y1={y} x2={x - arrowLen/2 + arrowHead} y2={y} stroke={shapeColor} strokeWidth="10" />
+            <line x1={x + arrowLen/2} y1={y} x2={x - arrowLen/2 + arrowHead} y2={y} stroke={shapeColor} strokeWidth={strokeW} strokeLinecap="round" />
             <polygon
               points={`${x - arrowLen/2},${y} ${x - arrowLen/2 + arrowHead},${y - arrowHead/2} ${x - arrowLen/2 + arrowHead},${y + arrowHead/2}`}
               fill="none"
@@ -1293,10 +1293,10 @@ export default function PlayDiagramEditor({
         // Horizontal right arrow - hollow, longer, thicker
         const arrowLen = size * 3;
         const arrowHead = size * 0.8;
-        const strokeW = 5;
+        const strokeW = 20;
         shapeElement = (
           <g>
-            <line x1={x - arrowLen/2} y1={y} x2={x + arrowLen/2 - arrowHead} y2={y} stroke={shapeColor} strokeWidth="10" />
+            <line x1={x - arrowLen/2} y1={y} x2={x + arrowLen/2 - arrowHead} y2={y} stroke={shapeColor} strokeWidth={strokeW} strokeLinecap="round" />
             <polygon
               points={`${x + arrowLen/2},${y} ${x + arrowLen/2 - arrowHead},${y - arrowHead/2} ${x + arrowLen/2 - arrowHead},${y + arrowHead/2}`}
               fill="none"
@@ -1527,6 +1527,8 @@ export default function PlayDiagramEditor({
           strokeWidth={segStrokeWidth}
           fill="none"
           strokeDasharray={segStyle === 'dashed' ? '10,5' : 'none'}
+          strokeLinejoin="round"
+          strokeLinecap="round"
           filter={segFilter}
           style={{ cursor: isInteractionTool ? 'pointer' : 'default', pointerEvents: isInteractionTool ? 'all' : 'none' }}
           onClick={(e) => {
@@ -2268,6 +2270,8 @@ export default function PlayDiagramEditor({
                                     strokeWidth={el.strokeWidth || 7}
                                     fill="none"
                                     strokeDasharray={el.lineStyle === 'dashed' ? '10,5' : undefined}
+                                    strokeLinejoin="round"
+                                    strokeLinecap="round"
                                   />
                                 );
                               }
@@ -2332,6 +2336,8 @@ export default function PlayDiagramEditor({
                                     strokeWidth={el.strokeWidth || 7}
                                     fill="none"
                                     strokeDasharray={el.lineStyle === 'dashed' ? '10,5' : undefined}
+                                    strokeLinejoin="round"
+                                    strokeLinecap="round"
                                   />
                                 );
                               }
