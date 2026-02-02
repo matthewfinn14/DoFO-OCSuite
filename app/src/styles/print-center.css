@@ -1192,10 +1192,18 @@
   font-weight: 400;
 }
 
-/* Script Grid - equal width columns for readability */
+/* Script Grid - narrow columns for 2-char fields, flexible for content */
 .pp2-script-grid {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  grid-template-columns:
+    12px    /* # */
+    12px    /* Hash */
+    12px    /* Dn */
+    12px    /* Dist */
+    50px    /* Situation */
+    minmax(100px, 1fr)    /* Play Call */
+    35px    /* Defense */
+    minmax(80px, 1fr);    /* Notes */
   font-size: 6pt;
 }
 
