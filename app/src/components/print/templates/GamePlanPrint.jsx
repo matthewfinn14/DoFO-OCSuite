@@ -135,6 +135,7 @@ export default function GamePlanPrint({
 }
 
 // Sheet View - Grid-based call sheet
+// For 4-page booklet: odd pages show left 4 cols, even pages show right 4 cols
 function SheetView({ gamePlan, playMap, sections, pageIndex = 0, totalPages = 1 }) {
   const sheetData = gamePlan.sheet || gamePlan.sections || [];
 
@@ -147,28 +148,61 @@ function SheetView({ gamePlan, playMap, sections, pageIndex = 0, totalPages = 1 
     return <div className="text-gray-500 text-center py-8">No call sheet data available</div>;
   }
 
-  // Split sections across pages
-  const sectionsPerPage = Math.ceil(filteredSections.length / totalPages);
-  const startIdx = pageIndex * sectionsPerPage;
-  const endIdx = Math.min(startIdx + sectionsPerPage, filteredSections.length);
-  const pageSections = filteredSections.slice(startIdx, endIdx);
+  // For 4-page booklet format:
+  // - Pages 0,1 form first spread (0=left 4 cols, 1=right 4 cols)
+  // - Pages 2,3 form second spread (2=left 4 cols, 3=right 4 cols)
+  const is4PageBooklet = totalPages === 4;
+  const isLeftPage = is4PageBooklet && (pageIndex % 2 === 0);
+  const isRightPage = is4PageBooklet && (pageIndex % 2 === 1);
+
+  // For 4-page: pages 0-1 show first half of sections, pages 2-3 show second half
+  // For 2-page: page 0 shows first half, page 1 shows second half
+  let pageSections = filteredSections;
+  if (totalPages === 4) {
+    const halfSections = Math.ceil(filteredSections.length / 2);
+    const spreadIndex = Math.floor(pageIndex / 2); // 0 for pages 0-1, 1 for pages 2-3
+    const startIdx = spreadIndex * halfSections;
+    const endIdx = Math.min(startIdx + halfSections, filteredSections.length);
+    pageSections = filteredSections.slice(startIdx, endIdx);
+  } else if (totalPages === 2) {
+    const halfSections = Math.ceil(filteredSections.length / 2);
+    const startIdx = pageIndex * halfSections;
+    const endIdx = Math.min(startIdx + halfSections, filteredSections.length);
+    pageSections = filteredSections.slice(startIdx, endIdx);
+  }
 
   if (pageSections.length === 0) {
     return <div className="text-gray-400 text-center py-4 text-sm">Page {pageIndex + 1} - No additional sections</div>;
   }
 
+  // Grid columns: 4 for booklet half-pages, 8 for full pages
+  const gridCols = is4PageBooklet ? 4 : 8;
+
   return (
     <div className="space-y-3">
-      {pageSections.map((section, sectionIdx) => (
+      {pageSections.map((section, sectionIdx) => {
+        // For 4-page booklet, filter boxes to show only left or right half
+        let sectionBoxes = section.boxes || section.plays || [];
+        if (is4PageBooklet && sectionBoxes.length > 0) {
+          // Split boxes: left page gets first 4 column-spans, right page gets rest
+          // This is simplified - assumes boxes have colSpan that adds up
+          const halfPoint = Math.ceil(sectionBoxes.length / 2);
+          sectionBoxes = isLeftPage
+            ? sectionBoxes.slice(0, halfPoint)
+            : sectionBoxes.slice(halfPoint);
+        }
+
+        return (
         <div key={sectionIdx} className="call-sheet-section border border-gray-300 rounded overflow-hidden">
           {/* Section Header */}
           <div className="section-header bg-gray-100 px-3 py-2 font-bold uppercase text-sm border-b">
             {section.name || section.title || `Section ${sectionIdx + 1}`}
+            {is4PageBooklet && <span className="text-gray-500 font-normal ml-2">({isLeftPage ? 'L' : 'R'})</span>}
           </div>
 
           {/* Section Content - Grid of boxes */}
-          <div className="grid grid-cols-8 gap-0">
-            {(section.boxes || section.plays || []).map((box, boxIdx) => (
+          <div className={`grid gap-0`} style={{ gridTemplateColumns: `repeat(${gridCols}, 1fr)` }}>
+            {sectionBoxes.map((box, boxIdx) => (
               <div
                 key={boxIdx}
                 className="sheet-box border-r border-b border-gray-200 last:border-r-0 min-h-[80px]"
@@ -210,7 +244,8 @@ function SheetView({ gamePlan, playMap, sections, pageIndex = 0, totalPages = 1 
             ))}
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
