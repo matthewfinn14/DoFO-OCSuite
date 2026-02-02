@@ -112,7 +112,6 @@ const SKILL_POSITION_PLACEMENTS = {
   'F': { x: 590, y: 375 },      // F-back (right of QB)
   'B': { x: 350, y: 390 },      // Extra back
   'TE': { x: 630, y: 296 },     // Tight end (on LOS)
-  'WR': { x: 80, y: 290 },      // Wide receiver (default to X spot)
 };
 
 // Generate WIZ Skill Formation based on personnel grouping
@@ -706,7 +705,7 @@ export default function PlayDiagramEditor({
   // Add single player to diagram (for wiz-skill mode)
   const addSinglePlayer = (posKey) => {
     const wizCenter = 475;
-    const wizLos = 390;
+    const wizLos = 290;
 
     const isOL = ['C', 'LT', 'LG', 'RG', 'RT'].includes(posKey);
     // Use user's abbreviation from positionNames, falling back to position key
