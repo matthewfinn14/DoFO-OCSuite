@@ -5938,7 +5938,7 @@ function WristbandAbbreviationsSection({ phase, setupConfig, onUpdate, plays }) 
           <div className="text-left">
             <h3 className="font-semibold text-white">Parse & Abbreviate</h3>
             <p className="text-xs text-slate-400">
-              Define shortened versions of terms for wristband space constraints
+              Parse play calls into categorized terms for self-scout and tendency analysis. Abbreviate terms to fit plays into fixed-width windows like wristbands.
             </p>
           </div>
         </div>
