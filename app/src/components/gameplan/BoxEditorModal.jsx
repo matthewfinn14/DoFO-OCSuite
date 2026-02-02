@@ -32,6 +32,7 @@ export default function BoxEditorModal({
   const [activeTab, setActiveTab] = useState('editor'); // 'settings', 'editor'
   const [draggedQuickListIdx, setDraggedQuickListIdx] = useState(null);
   const [dragOverQuickListIdx, setDragOverQuickListIdx] = useState(null);
+  const [showRightHash, setShowRightHash] = useState(false); // R columns collapsed by default
 
   // Quick Add Request Handling
   const lastProcessedQuickAddRef = useRef(0);
@@ -1271,8 +1272,14 @@ export default function BoxEditorModal({
       { id: 'CU', label: 'CONVERT', cols: ['CU_L', 'CU_R'] }
     ];
 
-    // Flatten all columns
-    const allCols = hashGroups.flatMap(g => g.cols);
+    // Filter columns based on showRightHash toggle - only show L columns when collapsed
+    const filteredHashGroups = hashGroups.map(g => ({
+      ...g,
+      cols: showRightHash ? g.cols : g.cols.filter(c => c.endsWith('_L'))
+    }));
+
+    // Flatten all columns (filtered)
+    const allCols = filteredHashGroups.flatMap(g => g.cols);
 
     // Get plays for a cell (multiple plays allowed)
     const getPlaysForCell = (playTypeId, colId) => {
@@ -1283,16 +1290,34 @@ export default function BoxEditorModal({
 
     return (
       <div style={{ padding: '12px', overflowY: 'auto', height: '100%' }}>
-        {/* Formation Header */}
+        {/* Formation Header with R Hash Toggle */}
         <div style={{
           padding: '8px 12px',
           background: localBox.color || '#3b82f6',
           color: 'white',
           fontWeight: 'bold',
           borderRadius: '6px 6px 0 0',
-          marginBottom: '0'
+          marginBottom: '0',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
         }}>
-          {localBox.formationLabel || localBox.header} Matrix
+          <span>{localBox.formationLabel || localBox.header} Matrix</span>
+          <button
+            onClick={() => setShowRightHash(!showRightHash)}
+            style={{
+              padding: '4px 8px',
+              fontSize: '0.7rem',
+              background: showRightHash ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.15)',
+              border: '1px solid rgba(255,255,255,0.4)',
+              borderRadius: '4px',
+              color: 'white',
+              cursor: 'pointer',
+              fontWeight: '500'
+            }}
+          >
+            {showRightHash ? 'Hide R Hash' : 'Show R Hash'}
+          </button>
         </div>
 
         {/* Matrix Grid */}
@@ -1317,7 +1342,7 @@ export default function BoxEditorModal({
             }}>
               TYPE
             </div>
-            {hashGroups.map((group, gIdx) => (
+            {filteredHashGroups.map((group, gIdx) => (
               group.cols.map((colId, cIdx) => (
                 <div key={colId} style={{
                   padding: '4px',
@@ -1328,7 +1353,7 @@ export default function BoxEditorModal({
                   background: cIdx === 0 && gIdx > 0 ? '#475569' : '#334155',
                   borderLeft: cIdx === 0 && gIdx > 0 ? '2px solid #1e293b' : '1px solid #475569'
                 }}>
-                  {cIdx === 0 ? group.label : ''} {colId.endsWith('_L') ? 'L' : 'R'}
+                  {group.label} {colId.endsWith('_L') ? 'L' : 'R'}
                 </div>
               ))
             ))}
@@ -1357,8 +1382,8 @@ export default function BoxEditorModal({
               </div>
               {allCols.map((colId, colIdx) => {
                 const cellPlays = getPlaysForCell(pt.id, colId);
-                const groupIdx = hashGroups.findIndex(g => g.cols.includes(colId));
-                const isFirstInGroup = hashGroups[groupIdx]?.cols[0] === colId;
+                const groupIdx = filteredHashGroups.findIndex(g => g.cols.includes(colId));
+                const isFirstInGroup = filteredHashGroups[groupIdx]?.cols[0] === colId;
 
                 return (
                   <div
@@ -1563,25 +1588,119 @@ export default function BoxEditorModal({
                 }}
               />
             </div>
-            <div>
-              <label htmlFor="box-editor-header-color" style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '4px' }}>
-                Header Color
+          </div>
+
+          {/* Color Settings - Organized Section */}
+          <div style={{ marginTop: '16px', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            <h4 style={{ margin: '0 0 12px 0', fontSize: '0.85rem', color: '#334155', fontWeight: '600' }}>Color Settings</h4>
+
+            {/* Header Colors */}
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '6px' }}>
+                Header
               </label>
-              <input
-                id="box-editor-header-color"
-                type="color"
-                value={localBox.color || '#3b82f6'}
-                onChange={(e) => updateField('color', e.target.value)}
-                disabled={isLocked}
-                style={{
-                  width: '100%',
-                  height: '38px',
-                  padding: '4px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '6px',
-                  cursor: isLocked ? 'not-allowed' : 'pointer'
-                }}
-              />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <div>
+                  <label htmlFor="box-editor-header-color" style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'block', marginBottom: '2px' }}>
+                    Background
+                  </label>
+                  <input
+                    id="box-editor-header-color"
+                    type="color"
+                    value={localBox.color || '#3b82f6'}
+                    onChange={(e) => updateField('color', e.target.value)}
+                    disabled={isLocked}
+                    style={{ width: '100%', height: '28px', padding: '2px', border: '1px solid #e2e8f0', borderRadius: '4px', cursor: isLocked ? 'not-allowed' : 'pointer' }}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="box-editor-header-text-color" style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'block', marginBottom: '2px' }}>
+                    Text
+                  </label>
+                  <input
+                    id="box-editor-header-text-color"
+                    type="color"
+                    value={localBox.headerTextColor || '#ffffff'}
+                    onChange={(e) => updateField('headerTextColor', e.target.value)}
+                    disabled={isLocked}
+                    style={{ width: '100%', height: '28px', padding: '2px', border: '1px solid #e2e8f0', borderRadius: '4px', cursor: isLocked ? 'not-allowed' : 'pointer' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Row Colors */}
+            <div>
+              <label style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '6px' }}>
+                Alternating Rows
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                <div>
+                  <label htmlFor="box-editor-wristband-preset" style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'block', marginBottom: '2px' }}>
+                    Preset
+                  </label>
+                  <select
+                    id="box-editor-wristband-preset"
+                    value=""
+                    onChange={(e) => {
+                      const presets = {
+                        'white-gray': { rowColor1: '#ffffff', rowColor2: '#f1f5f9' },
+                        'yellow-white': { rowColor1: '#fef9c3', rowColor2: '#ffffff' },
+                        'blue-white': { rowColor1: '#dbeafe', rowColor2: '#ffffff' },
+                        'green-white': { rowColor1: '#dcfce7', rowColor2: '#ffffff' },
+                        'pink-white': { rowColor1: '#fce7f3', rowColor2: '#ffffff' },
+                        'orange-white': { rowColor1: '#ffedd5', rowColor2: '#ffffff' },
+                        'purple-white': { rowColor1: '#f3e8ff', rowColor2: '#ffffff' },
+                        'red-white': { rowColor1: '#fee2e2', rowColor2: '#ffffff' },
+                        'cyan-white': { rowColor1: '#cffafe', rowColor2: '#ffffff' },
+                        'lime-white': { rowColor1: '#ecfccb', rowColor2: '#ffffff' },
+                      };
+                      const preset = presets[e.target.value];
+                      if (preset) {
+                        setLocalBox(prev => ({ ...prev, ...preset }));
+                      }
+                    }}
+                    disabled={isLocked}
+                    style={{ width: '100%', height: '28px', padding: '2px 6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '0.7rem', backgroundColor: '#fff', cursor: isLocked ? 'not-allowed' : 'pointer' }}
+                  >
+                    <option value="">Preset...</option>
+                    <option value="white-gray">White/Gray</option>
+                    <option value="yellow-white">Yellow</option>
+                    <option value="blue-white">Blue</option>
+                    <option value="green-white">Green</option>
+                    <option value="pink-white">Pink</option>
+                    <option value="orange-white">Orange</option>
+                    <option value="purple-white">Purple</option>
+                    <option value="red-white">Red</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="box-editor-row-color-1" style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'block', marginBottom: '2px' }}>
+                    Odd Rows
+                  </label>
+                  <input
+                    id="box-editor-row-color-1"
+                    type="color"
+                    value={localBox.rowColor1 || '#ffffff'}
+                    onChange={(e) => updateField('rowColor1', e.target.value)}
+                    disabled={isLocked}
+                    style={{ width: '100%', height: '28px', padding: '2px', border: '1px solid #e2e8f0', borderRadius: '4px', cursor: isLocked ? 'not-allowed' : 'pointer' }}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="box-editor-row-color-2" style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'block', marginBottom: '2px' }}>
+                    Even Rows
+                  </label>
+                  <input
+                    id="box-editor-row-color-2"
+                    type="color"
+                    value={localBox.rowColor2 || '#f8fafc'}
+                    onChange={(e) => updateField('rowColor2', e.target.value)}
+                    disabled={isLocked}
+                    style={{ width: '100%', height: '28px', padding: '2px', border: '1px solid #e2e8f0', borderRadius: '4px', cursor: isLocked ? 'not-allowed' : 'pointer' }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -2436,6 +2555,150 @@ export default function BoxEditorModal({
                 </button>
               )}
             </div>
+
+            {/* First Column Settings */}
+            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: '0.85rem', color: '#334155' }}>First Column Settings</h4>
+
+              {/* Row Labels - matching color settings layout */}
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '500', display: 'block', marginBottom: '6px' }}>
+                  Row Labels
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px' }}>
+                  <div>
+                    <label htmlFor="box-editor-first-col-width" style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'block', marginBottom: '2px' }}>
+                      Width (px)
+                    </label>
+                    <input
+                      id="box-editor-first-col-width"
+                      type="number"
+                      min="40"
+                      max="200"
+                      value={localBox.firstColWidth || 60}
+                      onChange={(e) => updateField('firstColWidth', parseInt(e.target.value) || 60)}
+                      disabled={isLocked}
+                      style={{ width: '100%', height: '28px', padding: '2px 6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '0.8rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="box-editor-first-col-bg" style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'block', marginBottom: '2px' }}>
+                      Background
+                    </label>
+                    <input
+                      id="box-editor-first-col-bg"
+                      type="color"
+                      value={localBox.firstColBg || '#dbeafe'}
+                      onChange={(e) => updateField('firstColBg', e.target.value)}
+                      disabled={isLocked}
+                      style={{ width: '100%', height: '28px', padding: '2px', border: '1px solid #e2e8f0', borderRadius: '4px', cursor: isLocked ? 'not-allowed' : 'pointer' }}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="box-editor-first-col-text" style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'block', marginBottom: '2px' }}>
+                      Text
+                    </label>
+                    <input
+                      id="box-editor-first-col-text"
+                      type="color"
+                      value={localBox.firstColTextColor || '#1e40af'}
+                      onChange={(e) => updateField('firstColTextColor', e.target.value)}
+                      disabled={isLocked}
+                      style={{ width: '100%', height: '28px', padding: '2px', border: '1px solid #e2e8f0', borderRadius: '4px', cursor: isLocked ? 'not-allowed' : 'pointer' }}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="box-editor-first-col-font" style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'block', marginBottom: '2px' }}>
+                      Font Size
+                    </label>
+                    <select
+                      id="box-editor-first-col-font"
+                      value={localBox.firstColFontSize || '0.5rem'}
+                      onChange={(e) => updateField('firstColFontSize', e.target.value)}
+                      disabled={isLocked}
+                      style={{ width: '100%', height: '28px', padding: '2px 4px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '0.7rem', cursor: isLocked ? 'not-allowed' : 'pointer' }}
+                    >
+                      <option value="0.4rem">XS</option>
+                      <option value="0.5rem">S</option>
+                      <option value="0.6rem">M</option>
+                      <option value="0.7rem">L</option>
+                      <option value="0.8rem">XL</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Template Actions */}
+              <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+                <button
+                  onClick={() => {
+                    // Save current first column settings as template default
+                    // Use fallback values to avoid undefined (Firestore rejects undefined)
+                    const template = {
+                      firstColWidth: localBox.firstColWidth || 60,
+                      firstColBg: localBox.firstColBg || '#dbeafe',
+                      firstColTextColor: localBox.firstColTextColor || '#1e40af',
+                      firstColFontSize: localBox.firstColFontSize || '0.5rem',
+                      // Also save play types and hash groups as part of template
+                      playTypes: localBox.playTypes || [],
+                      hashGroups: localBox.hashGroups || [],
+                      rowColor1: localBox.rowColor1 || '#ffffff',
+                      rowColor2: localBox.rowColor2 || '#f8fafc'
+                    };
+                    // Store in gamePlan via onSave with special flag
+                    onSave({ ...localBox, _saveAsMatrixTemplate: template });
+                  }}
+                  disabled={isLocked}
+                  style={{
+                    padding: '6px 12px',
+                    background: '#10b981',
+                    border: 'none',
+                    borderRadius: '4px',
+                    color: 'white',
+                    cursor: isLocked ? 'not-allowed' : 'pointer',
+                    fontSize: '0.75rem',
+                    fontWeight: '500'
+                  }}
+                >
+                  Save as Default Template
+                </button>
+                <button
+                  onClick={() => {
+                    // Apply template defaults from gamePlan
+                    const template = gamePlan?.matrixTemplate || {};
+                    setLocalBox(prev => ({
+                      ...prev,
+                      firstColWidth: template.firstColWidth || 60,
+                      firstColBg: template.firstColBg || '#dbeafe',
+                      firstColTextColor: template.firstColTextColor || '#1e40af',
+                      firstColFontSize: template.firstColFontSize || '0.5rem',
+                      playTypes: template.playTypes || prev.playTypes,
+                      hashGroups: template.hashGroups || prev.hashGroups,
+                      rowColor1: template.rowColor1 || prev.rowColor1,
+                      rowColor2: template.rowColor2 || prev.rowColor2
+                    }));
+                  }}
+                  disabled={isLocked || !gamePlan?.matrixTemplate}
+                  style={{
+                    padding: '6px 12px',
+                    background: gamePlan?.matrixTemplate ? '#eff6ff' : '#f1f5f9',
+                    border: '1px solid #bfdbfe',
+                    borderRadius: '4px',
+                    color: gamePlan?.matrixTemplate ? '#2563eb' : '#94a3b8',
+                    cursor: (isLocked || !gamePlan?.matrixTemplate) ? 'not-allowed' : 'pointer',
+                    fontSize: '0.75rem',
+                    fontWeight: '500'
+                  }}
+                >
+                  Reset to Default
+                </button>
+              </div>
+              {!gamePlan?.matrixTemplate && (
+                <p style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '6px', marginBottom: 0 }}>
+                  No template saved yet. Configure settings and click "Save as Default Template" to use these settings for new matrix boxes.
+                </p>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -2448,10 +2711,10 @@ export default function BoxEditorModal({
         className="box-editor-modal"
         onClick={e => e.stopPropagation()}
         style={{
-          width: '1200px',
-          maxWidth: '95vw',
-          height: '700px',
-          maxHeight: '90vh',
+          width: '100%',
+          maxWidth: 'calc(100vw - 520px)',
+          height: '750px',
+          maxHeight: '92vh',
           display: 'flex',
           flexDirection: 'column'
         }}

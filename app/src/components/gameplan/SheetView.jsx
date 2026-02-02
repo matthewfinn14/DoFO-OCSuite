@@ -41,6 +41,9 @@ export default function SheetView({
   const weekTitle = currentWeek?.name || `Week ${currentWeek?.weekNumber || ''}`;
   const opponentTitle = currentWeek?.opponent ? `vs. ${currentWeek.opponent}` : '';
 
+  // Track which cell is being hovered during drag (for visual feedback)
+  const [dragOverCell, setDragOverCell] = useState(null);
+
   // Render grid box content
   const renderGridBox = (box, isPrintMode = false) => {
     const cols = box.gridColumns || 4;
@@ -127,6 +130,9 @@ export default function SheetView({
           const isEmpty = isGridRowEmpty(rowSlots);
           if (isEmpty && isPrintMode) return null;
 
+          // Alternating row colors (customizable wristband style)
+          const rowBg = rIdx % 2 === 0 ? (box.rowColor1 || '#ffffff') : (box.rowColor2 || '#f8fafc');
+
           return (
             <div key={rIdx} style={{ display: 'contents' }}>
               <div style={{
@@ -139,7 +145,9 @@ export default function SheetView({
                 alignItems: 'center',
                 justifyContent: 'flex-end',
                 minWidth: '15px',
-                borderBottom: '1px dotted #f1f5f9'
+                minHeight: '18px',
+                borderBottom: '1px dotted #e2e8f0',
+                background: rowBg
               }}>
                 {(box.gridRowLabels && box.gridRowLabels[rIdx]) || (rIdx + 1)}
               </div>
@@ -149,7 +157,7 @@ export default function SheetView({
                   <div key={cIdx} style={{
                     fontSize: '0.6rem',
                     overflow: 'hidden',
-                    background: play?.priority ? '#fef08a' : (slot.type === 'GAP' ? 'transparent' : '#f8fafc'),
+                    background: play?.priority ? '#fef08a' : rowBg,
                     padding: '2px',
                     minHeight: '18px',
                     color: '#334155',
@@ -194,42 +202,79 @@ export default function SheetView({
     // Single column layout
     if (scriptColumns === 1) {
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'min-content 1fr',
+          gap: '0',
+          width: '100%'
+        }}>
+          {/* Header Row */}
+          <div style={{
+            padding: '2px',
+            fontSize: '0.55rem',
+            fontWeight: 'bold',
+            color: '#94a3b8',
+            textAlign: 'center',
+            alignSelf: 'end'
+          }}>
+            #
+          </div>
+          <div style={{
+            padding: '2px',
+            fontSize: '0.55rem',
+            fontWeight: 'bold',
+            color: '#64748b',
+            textAlign: 'center',
+            background: '#f1f5f9',
+            borderBottom: '1px solid #cbd5e1'
+          }}>
+            PLAY
+          </div>
+
+          {/* Data Rows */}
           {rowsToRender.map((row, rIdx) => {
             const play = plays.find(p => p.id === row.content);
+            // Alternating row colors (customizable wristband style)
+            const rowBg = rIdx % 2 === 0 ? (box.rowColor1 || '#ffffff') : (box.rowColor2 || '#f8fafc');
 
             return (
-              <div key={rIdx} style={{
-                display: 'flex',
-                gap: '4px',
-                alignItems: 'baseline',
-                lineHeight: '1.2',
-                borderBottom: '1px dotted #f1f5f9',
-                background: play?.priority ? '#fef08a' : 'transparent',
-                flexWrap: 'wrap'
-              }}>
-                <span style={{
-                  color: '#64748b',
-                  width: '16px',
+              <div key={rIdx} style={{ display: 'contents' }}>
+                <div style={{
+                  padding: '2px',
+                  fontSize: '0.6rem',
+                  color: '#94a3b8',
                   textAlign: 'right',
-                  flexShrink: 0,
                   fontWeight: 'bold',
-                  fontSize: '0.7rem'
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  minWidth: '15px',
+                  minHeight: '18px',
+                  borderBottom: '1px dotted #e2e8f0',
+                  background: rowBg
                 }}>
                   {row.label || rIdx + 1}
-                </span>
-                {play ? (
-                  <span style={{
-                    fontWeight: '600',
-                    color: '#1e293b',
-                    fontSize: '0.65rem',
-                    wordBreak: 'break-word'
-                  }}>
-                    {getPlayDisplayName(play)}
-                  </span>
-                ) : (
-                  <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>
-                )}
+                </div>
+                <div style={{
+                  fontSize: '0.6rem',
+                  overflow: 'hidden',
+                  background: play?.priority ? '#fef08a' : rowBg,
+                  padding: '2px',
+                  minHeight: '18px',
+                  color: '#334155',
+                  display: 'flex',
+                  alignItems: 'center',
+                  borderBottom: '1px dotted #e2e8f0',
+                  wordBreak: 'break-word'
+                }}>
+                  {play ? (
+                    <span style={{ display: 'inline', lineHeight: '1.2', fontWeight: '500' }}>
+                      {getPlayDisplayName(play)}
+                    </span>
+                  ) : (
+                    <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -241,73 +286,113 @@ export default function SheetView({
     return (
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-        columnGap: '0',
-        rowGap: '0'
+        gridTemplateColumns: 'min-content 1fr 1fr',
+        gap: '0',
+        width: '100%'
       }}>
+        {/* Header Row */}
+        <div style={{
+          padding: '2px',
+          fontSize: '0.55rem',
+          fontWeight: 'bold',
+          color: '#94a3b8',
+          textAlign: 'center',
+          alignSelf: 'end'
+        }}>
+          #
+        </div>
+        <div style={{
+          padding: '2px',
+          fontSize: '0.55rem',
+          fontWeight: 'bold',
+          color: '#64748b',
+          textAlign: 'center',
+          background: '#f1f5f9',
+          borderRight: '1px solid #cbd5e1',
+          borderBottom: '1px solid #cbd5e1'
+        }}>
+          LEFT HASH
+        </div>
+        <div style={{
+          padding: '2px',
+          fontSize: '0.55rem',
+          fontWeight: 'bold',
+          color: '#64748b',
+          textAlign: 'center',
+          background: '#f1f5f9',
+          borderBottom: '1px solid #cbd5e1'
+        }}>
+          RIGHT HASH
+        </div>
+
+        {/* Data Rows */}
         {rowsToRender.map((row, rIdx) => {
           const playLeft = plays.find(p => p.id === row.content);
           const playRight = plays.find(p => p.id === row.contentRight);
+          // Alternating row colors (customizable wristband style)
+          const rowBg = rIdx % 2 === 0 ? (box.rowColor1 || '#ffffff') : (box.rowColor2 || '#f8fafc');
 
-          return [
-            <div key={`${rIdx}-L`} style={{
-              display: 'flex',
-              gap: '4px',
-              alignItems: 'baseline',
-              lineHeight: '1.2',
-              borderBottom: '1px dotted #f1f5f9',
-              borderRight: '1px solid #e2e8f0',
-              paddingRight: '4px',
-              background: playLeft?.priority ? '#fef08a' : 'transparent',
-              flexWrap: 'wrap'
-            }}>
-              <span style={{
-                color: '#64748b',
-                width: '16px',
+          return (
+            <div key={rIdx} style={{ display: 'contents' }}>
+              <div style={{
+                padding: '2px',
+                fontSize: '0.6rem',
+                color: '#94a3b8',
                 textAlign: 'right',
-                flexShrink: 0,
                 fontWeight: 'bold',
-                fontSize: '0.7rem'
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                minWidth: '15px',
+                minHeight: '18px',
+                borderBottom: '1px dotted #e2e8f0',
+                background: rowBg
               }}>
                 {row.label || rIdx + 1}
-              </span>
-              {playLeft ? (
-                <span style={{
-                  fontWeight: '600',
-                  color: '#1e293b',
-                  fontSize: '0.65rem',
-                  wordBreak: 'break-word'
-                }}>
-                  {getPlayDisplayName(playLeft)}
-                </span>
-              ) : (
-                <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>
-              )}
-            </div>,
-            <div key={`${rIdx}-R`} style={{
-              display: 'flex',
-              gap: '4px',
-              alignItems: 'baseline',
-              lineHeight: '1.2',
-              borderBottom: '1px dotted #f1f5f9',
-              paddingLeft: '4px',
-              background: playRight?.priority ? '#fef08a' : 'transparent',
-              flexWrap: 'wrap'
-            }}>
-              {playRight ? (
-                <span style={{
-                  fontWeight: '600',
-                  color: '#1e293b',
-                  fontSize: '0.65rem',
-                  wordBreak: 'break-word'
-                }}>
-                  {getPlayDisplayName(playRight)}
-                </span>
-              ) : (
-                <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>+</span>
-              )}
+              </div>
+              <div style={{
+                fontSize: '0.6rem',
+                overflow: 'hidden',
+                background: playLeft?.priority ? '#fef08a' : rowBg,
+                padding: '2px',
+                minHeight: '18px',
+                color: '#334155',
+                display: 'flex',
+                alignItems: 'center',
+                borderRight: '1px solid #e2e8f0',
+                borderBottom: '1px dotted #e2e8f0',
+                wordBreak: 'break-word'
+              }}>
+                {playLeft ? (
+                  <span style={{ display: 'inline', lineHeight: '1.2', fontWeight: '500' }}>
+                    {getPlayDisplayName(playLeft)}
+                  </span>
+                ) : (
+                  <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>
+                )}
+              </div>
+              <div style={{
+                fontSize: '0.6rem',
+                overflow: 'hidden',
+                background: playRight?.priority ? '#fef08a' : rowBg,
+                padding: '2px',
+                minHeight: '18px',
+                color: '#334155',
+                display: 'flex',
+                alignItems: 'center',
+                borderBottom: '1px dotted #e2e8f0',
+                wordBreak: 'break-word'
+              }}>
+                {playRight ? (
+                  <span style={{ display: 'inline', lineHeight: '1.2', fontWeight: '500' }}>
+                    {getPlayDisplayName(playRight)}
+                  </span>
+                ) : (
+                  <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>
+                )}
+              </div>
             </div>
-          ];
+          );
         })}
       </div>
     );
@@ -436,7 +521,9 @@ export default function SheetView({
                       style={{
                         fontSize: '0.6rem',
                         overflow: 'hidden',
-                        background: play?.priority ? '#fef08a' : (rowIdx % 2 === 1 ? '#f8fafc' : 'transparent'),
+                        background: dragOverCell?.boxId === box.setId && dragOverCell?.cellId === `${rowIdx}_${col.id}`
+                          ? '#dbeafe'
+                          : (play?.priority ? '#fef08a' : (rowIdx % 2 === 1 ? '#f8fafc' : 'transparent')),
                         padding: '2px',
                         minHeight: '18px',
                         color: '#334155',
@@ -445,11 +532,16 @@ export default function SheetView({
                         flexWrap: 'wrap',
                         borderRight: colIdx < cols - 1 ? '1px solid #e2e8f0' : 'none',
                         borderBottom: '1px dotted #e2e8f0',
-                        wordBreak: 'break-word'
+                        border: dragOverCell?.boxId === box.setId && dragOverCell?.cellId === `${rowIdx}_${col.id}`
+                          ? '2px dashed #3b82f6'
+                          : undefined,
+                        wordBreak: 'break-word',
+                        transition: 'background 0.1s, border 0.1s'
                       }}
                       onDrop={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
+                        setDragOverCell(null);
                         if (onFZDnDBoxDrop) {
                           const playData = e.dataTransfer.getData('application/react-dnd');
                           if (playData) {
@@ -465,6 +557,15 @@ export default function SheetView({
                         }
                       }}
                       onDragOver={(e) => e.preventDefault()}
+                      onDragEnter={(e) => {
+                        e.preventDefault();
+                        setDragOverCell({ boxId: box.setId, cellId: `${rowIdx}_${col.id}` });
+                      }}
+                      onDragLeave={(e) => {
+                        if (!e.currentTarget.contains(e.relatedTarget)) {
+                          setDragOverCell(null);
+                        }
+                      }}
                       title={play ? getPlayCall(play) : ''}
                     >
                       {play ? (
@@ -523,81 +624,84 @@ export default function SheetView({
       return null;
     }
 
+    // Get formation name from header (strip "Matrix" if present)
+    const formationName = (box.header || '').replace(/\s*matrix\s*/i, '').trim() || 'TYPE';
+
+    // Header uses box.color (same as other box types) - defaults to blue
+    const headerBg = box.color || '#3b82f6';
+    // Text color - white by default for colored backgrounds, or custom
+    const headerTextColor = box.headerTextColor || '#ffffff';
+
+    // Create short labels for each column (e.g., "BASE L HASH", "BASE R HASH", etc.)
+    const getShortLabel = (group, colId) => {
+      const hashSide = colId.endsWith('_L') ? 'L' : 'R';
+      // Shorten group labels
+      const shortGroup = group.label
+        .replace('BASE/INITIAL', 'BASE')
+        .replace('BASE W/ DRESSING', 'DRESS')
+        .replace('CONVERT', 'CONV')
+        .replace('EXPLOSIVE', 'EXPL');
+      return `${shortGroup} ${hashSide} HASH`;
+    };
+
+    // First column settings (configurable per-box or from template)
+    const firstColWidth = box.firstColWidth || 60;
+    const firstColBg = box.firstColBg || '#dbeafe';
+    const firstColTextColor = box.firstColTextColor || '#1e40af';
+    const firstColFontSize = box.firstColFontSize || '0.5rem';
+
     return (
       <div className="matrix-box-container" style={{ fontSize: '0.6rem' }}>
-        {/* Header Section */}
-        <div style={{ display: 'flex' }}>
-          {/* Formation/Title column - spans both header rows */}
+        {/* Single Header Row - uses box.color like other box headers */}
+        <div className="box-header" style={{ display: 'flex', borderBottom: '1px solid rgba(0,0,0,0.2)' }}>
+          {/* Corner cell with formation name */}
           <div style={{
-            width: '70px',
+            width: `${firstColWidth}px`,
             flexShrink: 0,
+            padding: '2px 4px',
+            fontSize: firstColFontSize,
+            fontWeight: 'bold',
+            textAlign: 'center',
+            background: headerBg,
+            color: headerTextColor,
             display: 'flex',
-            flexDirection: 'column'
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '18px'
           }}>
-            <div style={{
-              flex: 1,
-              padding: '2px 4px',
-              fontSize: '0.5rem',
-              fontWeight: 'bold',
-              textAlign: 'center',
-              background: box.color || '#334155',
-              color: 'white',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              lineHeight: '1.1'
-            }}>
-              {box.header || 'MATRIX'}
-            </div>
+            {formationName}
           </div>
 
-          {/* Hash group columns */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            {/* Row 1: Group Names */}
-            <div style={{ display: 'flex' }}>
-              {hashGroups.map((group, gIdx) => (
-                <div key={group.id} style={{
-                  flex: group.cols.length,
-                  padding: '2px',
-                  fontSize: '0.45rem',
-                  fontWeight: 'bold',
-                  color: 'white',
-                  textAlign: 'center',
-                  background: '#475569',
-                  borderLeft: gIdx > 0 ? '2px solid #1e293b' : 'none',
-                  borderBottom: '1px solid #64748b'
-                }}>
-                  {group.label}
-                </div>
-              ))}
-            </div>
-
-            {/* Row 2: L/R indicators */}
-            <div style={{ display: 'flex' }}>
-              {hashGroups.map((group, gIdx) => (
-                group.cols.map((colId, cIdx) => (
-                  <div key={colId} style={{
-                    flex: 1,
-                    padding: '2px',
-                    fontSize: '0.4rem',
-                    fontWeight: 'bold',
-                    color: 'white',
-                    textAlign: 'center',
-                    background: '#64748b',
-                    borderLeft: cIdx === 0 && gIdx > 0 ? '2px solid #1e293b' : (cIdx > 0 ? '1px solid #475569' : 'none')
-                  }}>
-                    {colId.endsWith('_L') ? 'L HASH' : 'R HASH'}
-                  </div>
-                ))
-              ))}
-            </div>
-          </div>
+          {/* Column headers - single row with combined labels */}
+          {hashGroups.map((group, gIdx) => (
+            group.cols.map((colId, cIdx) => (
+              <div key={colId} style={{
+                flex: 1,
+                padding: '2px',
+                fontSize: '0.45rem',
+                fontWeight: 'bold',
+                color: headerTextColor,
+                textAlign: 'center',
+                background: headerBg,
+                borderLeft: cIdx === 0 && gIdx > 0 ? '2px solid rgba(0,0,0,0.2)' : '1px solid rgba(255,255,255,0.3)',
+                minHeight: '18px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                {getShortLabel(group, colId)}
+              </div>
+            ))
+          ))}
         </div>
 
         {/* Play Type Rows */}
         {playTypes.map((pt, ptIdx) => {
           const rowHasPlays = allCols.some(col => getPlaysForCell(pt.id, col).length > 0);
           if (isPrintMode && !rowHasPlays) return null;
+
+          // Alternating row colors (customizable wristband style)
+          const rowBg = ptIdx % 2 === 0 ? (box.rowColor1 || '#ffffff') : (box.rowColor2 || '#f8fafc');
 
           return (
             <div key={pt.id} style={{
@@ -606,15 +710,16 @@ export default function SheetView({
             }}>
               {/* Play Type Label */}
               <div style={{
-                width: '60px',
+                width: `${firstColWidth}px`,
                 flexShrink: 0,
                 padding: '2px 4px',
-                fontSize: '0.5rem',
+                fontSize: firstColFontSize,
                 fontWeight: 'bold',
-                color: '#1e40af',
-                background: '#dbeafe',
+                color: firstColTextColor,
+                background: firstColBg,
                 display: 'flex',
-                alignItems: 'center'
+                alignItems: 'center',
+                minHeight: '18px'
               }}>
                 {pt.label}
               </div>
@@ -633,15 +738,22 @@ export default function SheetView({
                       flex: 1,
                       padding: '2px',
                       minHeight: '22px',
-                      background: ptIdx % 2 === 1 ? '#f8fafc' : 'white',
+                      background: dragOverCell?.boxId === box.setId && dragOverCell?.cellId === `${pt.id}_${colId}`
+                        ? '#dbeafe'
+                        : rowBg,
                       borderLeft: isFirstInGroup && groupIdx > 0 ? '2px solid #cbd5e1' : '1px solid #e2e8f0',
+                      border: dragOverCell?.boxId === box.setId && dragOverCell?.cellId === `${pt.id}_${colId}`
+                        ? '2px dashed #3b82f6'
+                        : undefined,
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '1px'
+                      gap: '1px',
+                      transition: 'background 0.1s, border 0.1s'
                     }}
                     onDrop={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
+                      setDragOverCell(null);
                       if (onMatrixBoxAdd) {
                         const playData = e.dataTransfer.getData('application/react-dnd');
                         if (playData) {
@@ -657,6 +769,16 @@ export default function SheetView({
                       }
                     }}
                     onDragOver={(e) => e.preventDefault()}
+                    onDragEnter={(e) => {
+                      e.preventDefault();
+                      setDragOverCell({ boxId: box.setId, cellId: `${pt.id}_${colId}` });
+                    }}
+                    onDragLeave={(e) => {
+                      // Only clear if we're actually leaving this cell (not entering a child)
+                      if (!e.currentTarget.contains(e.relatedTarget)) {
+                        setDragOverCell(null);
+                      }
+                    }}
                   >
                     {cellPlays.map((p, i) => (
                       <div key={i} style={{
@@ -779,7 +901,7 @@ export default function SheetView({
       alignItems: 'center',
       gap: '8px',
       padding: '0',
-      margin: '0 0 4px 0'
+      margin: '0'
     }}>
       {teamLogo && (teamLogo.startsWith('http') || teamLogo.startsWith('data:')) ? (
         <img src={teamLogo} alt="Logo" style={{ height: '24px', width: 'auto' }} />
@@ -1291,19 +1413,21 @@ export default function SheetView({
                         )}
                       </div>
 
-                      {/* Section Content - True 2D Grid */}
+                      {/* Section Content - Grid with fixed row count */}
                       <div style={{
                         display: 'grid',
                         gridTemplateColumns: `repeat(${sectionCols}, 1fr)`,
-                        gridTemplateRows: `repeat(${sectionRows}, minmax(40px, auto))`,
+                        gridTemplateRows: `repeat(${sectionRows}, 1fr)`,
                         gridAutoFlow: 'dense',
                         gap: isEditing ? '4px' : '1px',
                         padding: isEditing ? '4px' : '0',
-                        flex: 1
+                        flex: 1,
+                        alignItems: 'stretch'
                       }}>
                         {visibleBoxes.map((box, bIdx) => {
                           const colSpan = Math.min(Number(box.colSpan) || 2, sectionCols);
-                          const rowSpan = Number(box.rowSpan) || 1;
+                          // Default to spanning all rows so boxes fill section height
+                          const rowSpan = Number(box.rowSpan) || sectionRows;
                           return (
                             <div
                               key={bIdx}
@@ -1335,69 +1459,75 @@ export default function SheetView({
                                 if (!isEditing) onBoxClick(box, sIdx, bIdx);
                               }}
                             >
-                              {/* Box Header */}
-                              <div style={{
-                                padding: '4px 8px',
-                                background: box.color || '#3b82f6',
-                                color: 'white',
-                                fontSize: '0.75rem',
-                                fontWeight: 'bold',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center'
-                              }}>
-                                <span style={{
-                                  whiteSpace: 'nowrap',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis'
-                                }}>
-                                  {box.header}
-                                </span>
-                                {isEditing ? (
-                                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
-                                    {/* ColSpan × RowSpan controls */}
-                                    <input
-                                      type="number"
-                                      min="1"
-                                      max={sectionCols}
-                                      value={box.colSpan || 2}
-                                      onChange={(e) => onUpdateBox(sIdx, bIdx, { ...box, colSpan: parseInt(e.target.value) || 2 })}
-                                      style={{ width: '28px', padding: '1px 2px', fontSize: '0.6rem', borderRadius: '2px', border: 'none', textAlign: 'center' }}
-                                      title="Column span"
-                                    />
-                                    <span style={{ fontSize: '0.6rem', opacity: 0.8 }}>×</span>
-                                    <input
-                                      type="number"
-                                      min="1"
-                                      max={sectionRows}
-                                      value={box.rowSpan || 1}
-                                      onChange={(e) => onUpdateBox(sIdx, bIdx, { ...box, rowSpan: parseInt(e.target.value) || 1 })}
-                                      style={{ width: '28px', padding: '1px 2px', fontSize: '0.6rem', borderRadius: '2px', border: 'none', textAlign: 'center' }}
-                                      title="Row span"
-                                    />
-                                    <div
-                                      onClick={() => onDeleteBox(sIdx, bIdx)}
-                                      style={{ cursor: 'pointer', padding: '0 2px', marginLeft: '4px' }}
-                                    >
-                                      ×
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                              {/* Box Header - hidden for matrix boxes unless editing */}
+                              {(box.type !== 'matrix' || isEditing) && (
+                                <div
+                                  className="box-header"
+                                  style={{
+                                    padding: box.type === 'matrix' ? '2px 4px' : '4px 8px',
+                                    background: box.type === 'matrix' ? '#f1f5f9' : (box.color || '#3b82f6'),
+                                    color: box.type === 'matrix' ? '#64748b' : 'white',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 'bold',
+                                    display: box.type === 'matrix' && !isEditing ? 'none' : 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center'
+                                  }}>
+                                  {box.type !== 'matrix' && (
                                     <span style={{
-                                      fontSize: '0.7rem',
-                                      opacity: 0.9,
-                                      background: 'rgba(0,0,0,0.2)',
-                                      padding: '0 4px',
-                                      borderRadius: '4px'
+                                      whiteSpace: 'nowrap',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis'
                                     }}>
-                                      {getPlaysForSet(box.setId).length}
+                                      {box.header}
                                     </span>
-                                  </div>
-                                )}
-                              </div>
+                                  )}
+                                  {isEditing ? (
+                                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flex: box.type === 'matrix' ? 1 : 'none', justifyContent: box.type === 'matrix' ? 'flex-end' : 'flex-start' }} onClick={(e) => e.stopPropagation()}>
+                                      {/* ColSpan × RowSpan controls */}
+                                      <input
+                                        type="number"
+                                        min="1"
+                                        max={sectionCols}
+                                        value={box.colSpan || 2}
+                                        onChange={(e) => onUpdateBox(sIdx, bIdx, { ...box, colSpan: parseInt(e.target.value) || 2 })}
+                                        style={{ width: '28px', padding: '1px 2px', fontSize: '0.6rem', borderRadius: '2px', border: box.type === 'matrix' ? '1px solid #cbd5e1' : 'none', textAlign: 'center' }}
+                                        title="Column span"
+                                      />
+                                      <span style={{ fontSize: '0.6rem', opacity: 0.8 }}>×</span>
+                                      <input
+                                        type="number"
+                                        min="1"
+                                        max={sectionRows}
+                                        value={box.rowSpan || 1}
+                                        onChange={(e) => onUpdateBox(sIdx, bIdx, { ...box, rowSpan: parseInt(e.target.value) || 1 })}
+                                        style={{ width: '28px', padding: '1px 2px', fontSize: '0.6rem', borderRadius: '2px', border: box.type === 'matrix' ? '1px solid #cbd5e1' : 'none', textAlign: 'center' }}
+                                        title="Row span"
+                                      />
+                                      <div
+                                        onClick={() => onDeleteBox(sIdx, bIdx)}
+                                        style={{ cursor: 'pointer', padding: '0 2px', marginLeft: '4px', color: box.type === 'matrix' ? '#ef4444' : 'white' }}
+                                      >
+                                        ×
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                      <span style={{
+                                        fontSize: '0.7rem',
+                                        opacity: 0.9,
+                                        background: 'rgba(0,0,0,0.2)',
+                                        padding: '0 4px',
+                                        borderRadius: '4px'
+                                      }}>
+                                        {getPlaysForSet(box.setId).length}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                               {/* Box Content */}
-                              <div style={{ padding: '6px', fontSize: '0.7rem', flex: 1 }}>
+                              <div className="box-content" style={{ padding: '6px', fontSize: '0.7rem', flex: 1 }}>
                                 {renderBoxContent(box, false)}
                               </div>
                             </div>

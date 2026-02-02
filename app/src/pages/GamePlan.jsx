@@ -20,7 +20,8 @@ import {
   MapPin,
   Zap,
   ExternalLink,
-  CheckSquare
+  CheckSquare,
+  Package
 } from 'lucide-react';
 import '../styles/gameplan.css';
 
@@ -787,6 +788,8 @@ export default function GamePlan() {
         break;
 
       case 'matrix':
+        // Apply template defaults if available
+        const template = gamePlan?.matrixTemplate || {};
         newBox = {
           header: options.name ? `${options.name} Matrix` : 'New Matrix',
           setId: `matrix_${(options.name || 'box').toLowerCase().replace(/\s+/g, '_')}_${timestamp}`,
@@ -795,14 +798,21 @@ export default function GamePlan() {
           color: options.color || '#06b6d4',
           formationId: (options.name || 'formation').toLowerCase().replace(/\s+/g, '_'),
           formationLabel: options.name || 'Formation',
-          playTypes: [
+          // Apply template settings if available
+          firstColWidth: template.firstColWidth || 60,
+          firstColBg: template.firstColBg || '#dbeafe',
+          firstColTextColor: template.firstColTextColor || '#1e40af',
+          firstColFontSize: template.firstColFontSize || '0.5rem',
+          rowColor1: template.rowColor1 || '#ffffff',
+          rowColor2: template.rowColor2 || '#f8fafc',
+          playTypes: template.playTypes || [
             { id: 'strong_run', label: 'STRONG RUN' },
             { id: 'weak_run', label: 'WEAK RUN' },
             { id: 'quick_game', label: 'QUICK GAME' },
             { id: 'drop_back', label: 'DROPBACK' },
             { id: 'gadget', label: 'GADGET' }
           ],
-          hashGroups: [
+          hashGroups: template.hashGroups || [
             { id: 'FB', label: 'BASE/INITIAL', cols: ['FB_L', 'FB_R'] },
             { id: 'CB', label: 'BASE W/ DRESSING', cols: ['CB_L', 'CB_R'] },
             { id: 'CU', label: 'CONVERT', cols: ['CU_L', 'CU_R'] },
@@ -1285,7 +1295,17 @@ export default function GamePlan() {
           isLocked={isLocked}
           onClose={() => setEditingBox(null)}
           onSave={(updates) => {
-            handleUpdateSheetBox(editingBox.sectionIdx, editingBox.boxIdx, updates);
+            // Check if we're saving a matrix template
+            if (updates._saveAsMatrixTemplate) {
+              const template = updates._saveAsMatrixTemplate;
+              delete updates._saveAsMatrixTemplate;
+              handleUpdateGamePlan({ ...gamePlan, matrixTemplate: template });
+            }
+            // Filter out undefined values (Firestore rejects them)
+            const cleanUpdates = Object.fromEntries(
+              Object.entries(updates).filter(([_, v]) => v !== undefined)
+            );
+            handleUpdateSheetBox(editingBox.sectionIdx, editingBox.boxIdx, cleanUpdates);
             setEditingBox(null);
           }}
           onDelete={handleDeleteSheetBox}

@@ -810,22 +810,12 @@ export default function PlayBankSidebar({
           </div>
         )}
 
-        {/* Week Stats */}
+        {/* Week Header */}
         {currentWeek && (
-          <div className="flex flex-col items-center gap-1.5 py-2.5 px-3 bg-slate-50 border-b border-slate-200">
-            <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">
-              {currentWeek.opponent ? `vs. ${currentWeek.opponent}` : (currentWeek.name || `Week ${currentWeek.weekNumber || ''}`)}
-            </div>
-            <div className="flex items-center gap-3 bg-indigo-100 rounded-full px-3 py-1 border border-indigo-200">
-              <div className="flex items-center gap-1">
-                <span className="text-lg font-bold text-indigo-600">{weekStats.uniquePlaysCount}</span>
-                <span className="text-xs font-semibold text-indigo-500">Unique</span>
-              </div>
-              <div className="w-px h-4 bg-indigo-300" />
-              <div className="flex items-center gap-1">
-                <span className="text-lg font-bold text-emerald-600">{weekStats.newPlaysCount}</span>
-                <span className="text-xs font-semibold text-indigo-500">New</span>
-              </div>
+          <div className="flex items-center justify-center py-2.5 px-3 bg-slate-50 border-b border-slate-200">
+            <div className="text-sm font-bold text-slate-800 uppercase tracking-wide">
+              {currentWeek.name || `Week ${currentWeek.weekNumber || ''}`}
+              {currentWeek.opponent && <span className="text-slate-500 ml-2">vs. {currentWeek.opponent}</span>}
             </div>
           </div>
         )}

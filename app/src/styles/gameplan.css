@@ -620,6 +620,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  padding-left: 20px;
+  padding-right: 490px; /* Leave room for PlayBank sidebar */
   z-index: 1000;
 }
 
@@ -1081,6 +1083,119 @@
 
   .call-sheet-section {
     break-inside: avoid;
+    margin-bottom: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+  }
+
+  /* Section header - hidden in print (content only) */
+  .call-sheet-section > div:first-child:not(.box-header):not(.box-content) {
+    display: none !important;
+  }
+
+  /* Remove padding between sections and from page content */
+  .page-container > div:last-child {
+    padding: 0 !important;
+    gap: 0 !important;
+  }
+
+  /* Remove margin from print header */
+  .print-compact-header {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Remove gaps between sections */
+  .call-sheet-section + .call-sheet-section {
+    margin-top: 0 !important;
+  }
+
+  /* 2-page print header - no margin */
+  .print-only-2page {
+    margin: 0 !important;
+    margin-bottom: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Page container - no margin for print */
+  .page-container {
+    margin: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* Section content - minimal gap for boxes */
+  .call-sheet-section > div:last-child {
+    gap: 1px !important;
+    padding: 0 !important;
+  }
+
+  /* Page content area - no vertical gap between sections */
+  .page-container > div:nth-child(2) {
+    gap: 0 !important;
+    padding: 2px !important;
+  }
+
+  /* Box headers - 50% shorter for print */
+  .box-header {
+    padding: 1px 3px !important;
+    font-size: 6pt !important;
+    min-height: 0 !important;
+    line-height: 1.1 !important;
+  }
+
+  .box-header span {
+    font-size: 6pt !important;
+  }
+
+  /* Compact rows for print - target ~50 rows on landscape */
+  /* All content inside call sheet sections */
+  .call-sheet-section div {
+    font-size: 6pt !important;
+    line-height: 1.1 !important;
+  }
+
+  /* Force smaller min-height on all grid children */
+  .call-sheet-section div[style] {
+    min-height: 12px !important;
+  }
+
+  /* Matrix container */
+  .matrix-box-container,
+  .matrix-box-container div {
+    font-size: 6pt !important;
+    line-height: 1.1 !important;
+  }
+
+  /* Box content area */
+  .box-content {
+    padding: 2px !important;
+    font-size: 6pt !important;
+  }
+
+  /* All nested divs in box content - compact rows */
+  .box-content div {
+    min-height: 12px !important;
+    max-height: none !important;
+    font-size: 6pt !important;
+    padding: 1px 2px !important;
+    line-height: 1.1 !important;
+  }
+
+  /* Span elements (play names) */
+  .call-sheet-section span,
+  .box-content span {
+    font-size: 6pt !important;
+    line-height: 1.1 !important;
+  }
+
+  /* Override inline minHeight on all elements */
+  .box-content * {
+    min-height: auto !important;
+  }
+
+  /* Set consistent row height */
+  .box-content > div > div {
+    min-height: 12px !important;
   }
 
   /* Print header */
