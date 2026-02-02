@@ -91,7 +91,7 @@ export default function GamePlanPrint({
         @media print {
           @page {
             size: letter portrait;
-            margin: 0.15in;
+            margin: 0.25in;
           }
         }
         .gameplan-print {
@@ -100,18 +100,44 @@ export default function GamePlanPrint({
         }
         .gameplan-page {
           width: 8in;
-          min-height: 10.5in;
+          height: 10.5in;
           background: white;
           page-break-after: always;
           break-after: page;
           box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
         }
         .gameplan-page:last-child {
           page-break-after: auto;
           break-after: auto;
         }
         .gameplan-page-content {
+          flex: 1;
           padding: 0.15in;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+        .gameplan-page-content > div {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+        }
+        .gameplan-page-content .space-y-3 {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+        .gameplan-page-content .call-sheet-section {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+        }
+        .gameplan-page-content .call-sheet-section > div:last-child {
+          flex: 1;
         }
       `}</style>
 
