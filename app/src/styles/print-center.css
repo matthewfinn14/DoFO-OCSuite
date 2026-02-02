@@ -832,8 +832,8 @@
   background: white;
   color: black;
   font-family: system-ui, -apple-system, sans-serif;
-  font-size: 9pt;
-  padding: 0.25in;
+  font-size: 8pt;
+  padding: 0.15in;
   min-height: 100%;
 }
 
@@ -849,7 +849,7 @@
 .pp2-page {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.15rem;
   min-height: calc(10.5in - 0.5in); /* Letter height minus margins for portrait */
 }
 
@@ -862,9 +862,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.25rem 0;
-  border-bottom: 2px solid #1e293b;
-  margin-bottom: 0.25rem;
+  padding: 0.1rem 0;
+  border-bottom: 1px solid #1e293b;
+  margin-bottom: 0.1rem;
 }
 
 .pp2-header-left {
@@ -880,14 +880,14 @@
 }
 
 .pp2-logo {
-  height: 40px;
+  height: 28px;
   width: auto;
-  max-width: 80px;
+  max-width: 60px;
   object-fit: contain;
 }
 
 .pp2-logo-emoji {
-  font-size: 2rem;
+  font-size: 1.5rem;
 }
 
 .pp2-header-title-group {
@@ -896,16 +896,16 @@
 }
 
 .pp2-day-badge {
-  font-size: 14pt;
+  font-size: 11pt;
   font-weight: 700;
   text-transform: uppercase;
   color: #1e293b;
   margin: 0;
-  line-height: 1.1;
+  line-height: 1;
 }
 
 .pp2-week-info {
-  font-size: 10pt;
+  font-size: 8pt;
   color: #475569;
   font-weight: 600;
 }
@@ -915,7 +915,7 @@
 }
 
 .pp2-start-time {
-  font-size: 11pt;
+  font-size: 9pt;
   font-weight: 700;
   color: #1e293b;
 }
@@ -924,85 +924,85 @@
 .pp2-coach-info {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.5rem;
-  padding: 0.375rem;
+  gap: 0.15rem;
+  padding: 0.1rem;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 4px;
-  margin-bottom: 0.25rem;
+  border-radius: 2px;
+  margin-bottom: 0.1rem;
 }
 
 .pp2-info-box {
-  padding: 0.25rem 0.375rem;
+  padding: 0.05rem 0.15rem;
 }
 
 .pp2-info-box h4 {
-  font-size: 7pt;
+  font-size: 5pt;
   font-weight: 600;
   text-transform: uppercase;
   color: #64748b;
-  margin: 0 0 0.125rem 0;
+  margin: 0 0 0.025rem 0;
   letter-spacing: 0.025em;
 }
 
 .pp2-coach-name {
-  font-size: 9pt;
+  font-size: 7pt;
   font-weight: 600;
   color: #1e293b;
 }
 
 .pp2-position-groups {
-  font-size: 8pt;
+  font-size: 6pt;
   color: #64748b;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .pp2-big3-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .pp2-big3-item {
   display: flex;
   align-items: flex-start;
-  gap: 0.25rem;
-  font-size: 8pt;
+  gap: 0.15rem;
+  font-size: 6pt;
 }
 
 .pp2-big3-num {
-  width: 14px;
-  height: 14px;
+  width: 10px;
+  height: 10px;
   background: #0ea5e9;
   color: white;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 7pt;
+  font-size: 5pt;
   font-weight: 600;
   flex-shrink: 0;
 }
 
 .pp2-big3-text {
   color: #1e293b;
-  line-height: 1.3;
+  line-height: 1.2;
 }
 
 .pp2-goals-list {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 0px;
 }
 
 .pp2-goal-item {
-  font-size: 8pt;
+  font-size: 6pt;
   color: #1e293b;
-  line-height: 1.2;
+  line-height: 1.1;
 }
 
 .pp2-empty-text {
-  font-size: 8pt;
+  font-size: 6pt;
   color: #94a3b8;
   font-style: italic;
 }
@@ -1015,11 +1015,11 @@
 }
 
 .pp2-section-title {
-  font-size: 9pt;
+  font-size: 7pt;
   font-weight: 700;
   text-transform: uppercase;
   color: #1e293b;
-  padding: 0.25rem 0.375rem;
+  padding: 0.125rem 0.25rem;
   background: #f1f5f9;
   border: 1px solid #cbd5e1;
   border-bottom: none;
@@ -1030,15 +1030,15 @@
 .pp2-schedule {
   display: grid;
   grid-template-columns:
-    35px    /* # */
-    55px    /* Time */
-    40px    /* Duration */
-    minmax(80px, 120px)   /* Segment Type */
-    35px    /* Phase */
-    minmax(80px, 1fr)     /* Focus */
-    55px    /* Contact */
-    minmax(100px, 1fr);   /* Notes */
-  font-size: 8pt;
+    22px    /* # */
+    42px    /* Time */
+    28px    /* Duration */
+    minmax(60px, 100px)   /* Segment Type */
+    26px    /* Phase */
+    minmax(60px, 1fr)     /* Focus */
+    42px    /* Contact */
+    minmax(80px, 1fr);   /* Notes */
+  font-size: 7pt;
   border: 1px solid #cbd5e1;
 }
 
@@ -1050,9 +1050,9 @@
   background: #1e293b;
   color: white;
   font-weight: 600;
-  padding: 0.25rem 0.25rem;
+  padding: 0.1rem 0.15rem;
   border-right: 1px solid #334155;
-  font-size: 7pt;
+  font-size: 6pt;
   text-transform: uppercase;
 }
 
@@ -1065,7 +1065,7 @@
 }
 
 .pp2-schedule-row > div {
-  padding: 0.2rem 0.25rem;
+  padding: 0.1rem 0.15rem;
   border-bottom: 1px solid #e2e8f0;
   border-right: 1px solid #e2e8f0;
   display: flex;
@@ -1092,15 +1092,17 @@
 .pp2-warmup-num {
   color: #f59e0b;
   font-weight: 700;
+  font-size: 6pt;
 }
 
 .pp2-segment-type {
   font-weight: 500;
+  font-size: 6pt;
 }
 
 .pp2-notes-cell {
-  font-size: 7pt;
-  line-height: 1.2;
+  font-size: 6pt;
+  line-height: 1.1;
   color: #475569;
 }
 
@@ -1127,10 +1129,10 @@
 
 /* Scripts Container */
 .pp2-scripts-container {
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 
 /* Script Section - should not break mid-script */
@@ -1147,8 +1149,8 @@
   align-items: center;
   background: #475569;
   color: white;
-  padding: 0.25rem 0.5rem;
-  font-size: 8pt;
+  padding: 0.1rem 0.25rem;
+  font-size: 7pt;
   font-weight: 600;
 }
 
@@ -1164,15 +1166,15 @@
 .pp2-script-grid {
   display: grid;
   grid-template-columns:
-    25px    /* # */
-    35px    /* Hash */
-    30px    /* Dn */
-    40px    /* Dist */
-    70px    /* Situation */
-    minmax(100px, 1fr)     /* Play Call */
-    50px    /* Defense */
-    minmax(80px, 1fr);     /* Notes */
-  font-size: 7pt;
+    18px    /* # */
+    26px    /* Hash */
+    22px    /* Dn */
+    30px    /* Dist */
+    55px    /* Situation */
+    minmax(80px, 1fr)     /* Play Call */
+    40px    /* Defense */
+    minmax(60px, 1fr);     /* Notes */
+  font-size: 6pt;
 }
 
 .pp2-script-row {
@@ -1180,7 +1182,7 @@
 }
 
 .pp2-script-row > div {
-  padding: 0.125rem 0.25rem;
+  padding: 0.05rem 0.125rem;
   border-bottom: 1px solid #e2e8f0;
   border-right: 1px solid #e2e8f0;
   display: flex;
@@ -1194,7 +1196,7 @@
 .pp2-script-row-header > div {
   background: #f1f5f9;
   font-weight: 600;
-  font-size: 6pt;
+  font-size: 5pt;
   text-transform: uppercase;
   justify-content: center;
   border-bottom: 1px solid #94a3b8;
@@ -1215,12 +1217,13 @@
 
 .pp2-play-call {
   font-weight: 600;
+  font-size: 6pt;
   color: #1e293b;
 }
 
 .pp2-script-notes {
-  font-size: 6pt;
-  line-height: 1.2;
+  font-size: 5pt;
+  line-height: 1.1;
   color: #64748b;
 }
 
@@ -1526,7 +1529,7 @@
     width: 100% !important;
     height: auto !important;
     background: white !important;
-    padding: 0.25in !important;
+    padding: 0.15in !important;
     margin: 0 !important;
   }
 
