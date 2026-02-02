@@ -1,9 +1,12 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
+import { useAuth } from '../context/AuthContext';
 import { getWristbandDisplay } from '../utils/wristband';
 import { getAllHistoricalReps, getCurrentWeekReps } from '../utils/repTracking';
 import PlayAssignmentWizard from '../components/install/PlayAssignmentWizard';
+import PlaySuggestionWizard from '../components/install/PlaySuggestionWizard';
+import ReviewSuggestionsModal from '../components/install/ReviewSuggestionsModal';
 import {
   Layers,
   ChevronDown,
@@ -27,7 +30,9 @@ import {
   LayoutGrid,
   Settings,
   Wand2,
-  CheckCircle2
+  CheckCircle2,
+  MessageSquarePlus,
+  ClipboardCheck
 } from 'lucide-react';
 
 // Toggle Chip Component for Quick Assign panel
@@ -482,11 +487,14 @@ export default function InstallManager() {
     weeks,
     updateWeek,
     updatePlay,
+    addPlay,
     settings,
     setupConfig,
     school,
-    gamePlans
+    gamePlans,
+    staff
   } = useSchool();
+  const { user } = useAuth();
 
   // Theme detection
   const theme = settings?.theme || school?.settings?.theme || 'dark';
@@ -511,6 +519,29 @@ export default function InstallManager() {
     isOpen: false,
     currentIndex: 0,
   });
+
+  // Play suggestion state
+  const [showSuggestionWizard, setShowSuggestionWizard] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+
+  // Determine user role for suggestion permissions
+  const userStaffEntry = useMemo(() => {
+    if (!staff || !user?.email) return null;
+    return staff.find(s => s.email?.toLowerCase() === user.email.toLowerCase());
+  }, [staff, user?.email]);
+
+  const isOC = useMemo(() => {
+    if (!userStaffEntry) return false;
+    return userStaffEntry.role === 'offensive_coordinator' ||
+           userStaffEntry.role === 'head_coach' ||
+           userStaffEntry.roles?.includes('Offensive Coordinator') ||
+           userStaffEntry.roles?.includes('Head Coach') ||
+           userStaffEntry.isSchoolAdmin;
+  }, [userStaffEntry]);
+
+  const pendingSuggestions = useMemo(() => {
+    return (currentWeek?.playSuggestions || []).filter(s => s.status === 'pending');
+  }, [currentWeek?.playSuggestions]);
 
   // Current install list and new install IDs from week
   const installList = currentWeek?.installList || [];
@@ -1088,6 +1119,82 @@ export default function InstallManager() {
     return boxes;
   }, [currentWeek?.gamePlanLayouts, currentWeek?.offensiveGamePlan]);
 
+  // Play suggestion handlers
+  const handleSubmitSuggestion = useCallback((suggestionData) => {
+    const newSuggestion = {
+      id: `suggestion_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      ...suggestionData,
+      suggestedBy: {
+        id: userStaffEntry?.id,
+        name: userStaffEntry?.name || user?.displayName || 'Unknown',
+        email: user?.email
+      },
+      suggestedAt: new Date().toISOString(),
+      status: 'pending',
+      reviewedAt: null,
+      reviewedBy: null,
+      rejectionReason: null
+    };
+
+    const currentSuggestions = currentWeek?.playSuggestions || [];
+    updateWeek(weekId, {
+      playSuggestions: [...currentSuggestions, newSuggestion]
+    });
+    setShowSuggestionWizard(false);
+  }, [currentWeek, userStaffEntry, user, weekId, updateWeek]);
+
+  const handleAcceptSuggestion = useCallback(async (suggestionId) => {
+    const suggestion = currentWeek?.playSuggestions?.find(s => s.id === suggestionId);
+    if (!suggestion) return;
+
+    // 1. Add to master playbook
+    const newPlayId = await addPlay({
+      ...suggestion.playData,
+      phase: activePhase,
+      bucketId: suggestion.gamePlanTags?.bucketId,
+      conceptFamily: suggestion.gamePlanTags?.conceptFamily
+    });
+
+    // 2. Add to install list
+    const newInstallList = [...installList, newPlayId];
+    const newNewInstallIds = [...newInstallIds, newPlayId];
+
+    // 3. Update suggestion status
+    const updatedSuggestions = (currentWeek.playSuggestions || []).map(s =>
+      s.id === suggestionId
+        ? {
+            ...s,
+            status: 'accepted',
+            reviewedAt: new Date().toISOString(),
+            reviewedBy: { name: userStaffEntry?.name, email: user?.email },
+            acceptedPlayId: newPlayId
+          }
+        : s
+    );
+
+    updateWeek(weekId, {
+      playSuggestions: updatedSuggestions,
+      installList: newInstallList,
+      newInstallIds: newNewInstallIds
+    });
+  }, [currentWeek, addPlay, activePhase, installList, newInstallIds, userStaffEntry, user, weekId, updateWeek]);
+
+  const handleRejectSuggestion = useCallback((suggestionId, reason = '') => {
+    const updatedSuggestions = (currentWeek?.playSuggestions || []).map(s =>
+      s.id === suggestionId
+        ? {
+            ...s,
+            status: 'rejected',
+            reviewedAt: new Date().toISOString(),
+            reviewedBy: { name: userStaffEntry?.name, email: user?.email },
+            rejectionReason: reason
+          }
+        : s
+    );
+
+    updateWeek(weekId, { playSuggestions: updatedSuggestions });
+  }, [currentWeek, userStaffEntry, user, weekId, updateWeek]);
+
   // Get abbreviation helpers
   const getZoneAbbrev = (zoneId) => {
     const zone = (setupConfig?.fieldZones || []).find(z => z.id === zoneId);
@@ -1207,6 +1314,29 @@ export default function InstallManager() {
               <Trash2 size={14} />
               Clear All
             </button>
+            {/* Suggest Play button - for non-OC coaches */}
+            {!isOC && (
+              <button
+                onClick={() => setShowSuggestionWizard(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded bg-purple-500 text-white hover:bg-purple-600"
+              >
+                <MessageSquarePlus size={14} />
+                Suggest Play
+              </button>
+            )}
+            {/* Review Suggestions button - for OC */}
+            {isOC && pendingSuggestions.length > 0 && (
+              <button
+                onClick={() => setShowReviewModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded bg-amber-500 text-white hover:bg-amber-600"
+              >
+                <ClipboardCheck size={14} />
+                Review Suggestions
+                <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-white/20">
+                  {pendingSuggestions.length}
+                </span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -1633,6 +1763,31 @@ export default function InstallManager() {
         playRepTargets={playRepTargets}
         newInstallIds={newInstallIds}
         scriptedReps={scriptedReps}
+        isLight={isLight}
+      />
+
+      {/* Play Suggestion Wizard */}
+      <PlaySuggestionWizard
+        isOpen={showSuggestionWizard}
+        onClose={() => setShowSuggestionWizard(false)}
+        onSubmit={handleSubmitSuggestion}
+        setupConfig={setupConfig}
+        activePhase={activePhase}
+        callSheetBoxes={callSheetBoxes}
+        phaseBuckets={phaseBuckets}
+        conceptGroups={conceptGroups}
+        isLight={isLight}
+      />
+
+      {/* Review Suggestions Modal */}
+      <ReviewSuggestionsModal
+        isOpen={showReviewModal}
+        onClose={() => setShowReviewModal(false)}
+        suggestions={currentWeek?.playSuggestions || []}
+        onAccept={handleAcceptSuggestion}
+        onReject={handleRejectSuggestion}
+        setupConfig={setupConfig}
+        phaseBuckets={phaseBuckets}
         isLight={isLight}
       />
     </div>
