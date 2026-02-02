@@ -167,7 +167,7 @@ function SheetView({ gamePlan, playMap, sections, pageIndex = 0, totalPages = 1 
           </div>
 
           {/* Section Content - Grid of boxes */}
-          <div className="grid grid-cols-7 gap-0">
+          <div className="grid grid-cols-8 gap-0">
             {(section.boxes || section.plays || []).map((box, boxIdx) => (
               <div
                 key={boxIdx}

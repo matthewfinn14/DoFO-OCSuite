@@ -798,7 +798,7 @@ export default function SheetView({
       {/* Sections Grid */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(7, 1fr)',
+        gridTemplateColumns: 'repeat(8, 1fr)',
         gap: '1rem',
         alignItems: 'start'
       }}>
@@ -820,7 +820,7 @@ export default function SheetView({
               ? Number(box.colSpan)
               : (box.type === 'grid' ? 5 : 2);
 
-            if (currentSpan + span > 7 && currentRow.length > 0) {
+            if (currentSpan + span > 8 && currentRow.length > 0) {
               rows.push(currentRow);
               currentRow = [];
               currentSpan = 0;
