@@ -551,6 +551,7 @@ function FocusMultiSelect({
   selectedFocuses = [],
   onChange,
   setupConfig,
+  week,
   isLight = false,
   placeholder = "Select Focus..."
 }) {
@@ -664,8 +665,26 @@ function FocusMultiSelect({
       }
     }
 
+    // Call Sheet Boxes - pull from week's gamePlanLayouts
+    const callSheetBoxes = [];
+    const sections = week?.gamePlanLayouts?.CALL_SHEET?.sections || [];
+    sections.forEach(section => {
+      (section.boxes || []).forEach(box => {
+        if (box.header) {
+          callSheetBoxes.push({
+            id: box.setId || `box_${box.header}`,
+            name: box.header,
+            category: 'Call Sheet'
+          });
+        }
+      });
+    });
+    if (callSheetBoxes.length > 0) {
+      groups.push({ category: 'Call Sheet', items: callSheetBoxes });
+    }
+
     return groups;
-  }, [phase, segmentType, segmentTypeFocusItems, setupConfig]);
+  }, [phase, segmentType, segmentTypeFocusItems, setupConfig, week]);
 
   // Check if an item is selected
   const isSelected = (category, id) => {
@@ -2937,6 +2956,7 @@ export default function PracticePlans() {
                               selectedFocuses={seg.offenseFocuses || []}
                               onChange={(focuses) => updateSegment(seg.id, 'offenseFocuses', focuses)}
                               setupConfig={setupConfig}
+                              week={week}
                               isLight={isLight}
                               placeholder="Offense Focus..."
                             />
@@ -2948,6 +2968,7 @@ export default function PracticePlans() {
                               selectedFocuses={seg.defenseFocuses || []}
                               onChange={(focuses) => updateSegment(seg.id, 'defenseFocuses', focuses)}
                               setupConfig={setupConfig}
+                              week={week}
                               isLight={isLight}
                               placeholder="Defense Focus..."
                             />
@@ -2961,6 +2982,7 @@ export default function PracticePlans() {
                             selectedFocuses={seg.focuses || []}
                             onChange={(focuses) => updateSegment(seg.id, 'focuses', focuses)}
                             setupConfig={setupConfig}
+                            week={week}
                             isLight={isLight}
                             placeholder="Select Focus..."
                           />
@@ -3094,6 +3116,22 @@ export default function PracticePlans() {
                           <span className="text-sky-500 font-mono font-semibold">{segTime}</span>
                           <span className={`font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>{seg.type || 'NEW SEGMENT'}</span>
                           <span className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>({seg.duration || 0} min)</span>
+                          {/* Focus display */}
+                          {(seg.focuses?.length > 0 || seg.offenseFocuses?.length > 0 || seg.defenseFocuses?.length > 0) && (
+                            <span className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                              •{' '}
+                              {seg.focuses?.length > 0 && (
+                                <span className="text-amber-500">{seg.focuses.map(f => f.name).join(', ')}</span>
+                              )}
+                              {seg.offenseFocuses?.length > 0 && (
+                                <span className="text-sky-400">O: {seg.offenseFocuses.map(f => f.name).join(', ')}</span>
+                              )}
+                              {seg.offenseFocuses?.length > 0 && seg.defenseFocuses?.length > 0 && ' | '}
+                              {seg.defenseFocuses?.length > 0 && (
+                                <span className="text-orange-400">D: {seg.defenseFocuses.map(f => f.name).join(', ')}</span>
+                              )}
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <button

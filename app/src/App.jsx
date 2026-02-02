@@ -143,6 +143,7 @@ function AppRoutes() {
         {/* Legacy week routes (for backwards compatibility) */}
         <Route path="/week/:weekId/notes" element={<CoachesNotes />} />
         <Route path="/week/:weekId/practice" element={<PracticePlans />} />
+        <Route path="/week/:weekId/practice/:day" element={<PracticePlans />} />
         <Route path="/week/:weekId/install" element={<InstallManager />} />
         <Route path="/week/:weekId/depth-charts" element={<DepthCharts />} />
         <Route path="/week/:weekId/game-plan" element={<GamePlan />} />

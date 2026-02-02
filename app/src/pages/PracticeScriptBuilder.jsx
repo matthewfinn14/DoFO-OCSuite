@@ -476,6 +476,20 @@ export default function PracticeScriptBuilder() {
                     >
                       {segmentType.label}
                     </span>
+                    {/* Focus display */}
+                    {(segment.focuses?.length > 0 || segment.offenseFocuses?.length > 0 || segment.defenseFocuses?.length > 0) && (
+                      <span className="text-xs text-slate-400 ml-2">
+                        •{' '}
+                        {segment.focuses?.length > 0 && segment.focuses.map(f => f.name).join(', ')}
+                        {segment.offenseFocuses?.length > 0 && (
+                          <span className="text-sky-400">O: {segment.offenseFocuses.map(f => f.name).join(', ')}</span>
+                        )}
+                        {segment.offenseFocuses?.length > 0 && segment.defenseFocuses?.length > 0 && ' | '}
+                        {segment.defenseFocuses?.length > 0 && (
+                          <span className="text-orange-400">D: {segment.defenseFocuses.map(f => f.name).join(', ')}</span>
+                        )}
+                      </span>
+                    )}
                   </div>
                   <div className="text-sm text-slate-500 mt-0.5">
                     {startTime} • {segment.hasScript
