@@ -636,6 +636,26 @@ export function SchoolProvider({ children }) {
   }, [updateSchool]);
 
   /**
+   * Batch update multiple plays at once - more efficient for bulk operations
+   * @param {Array} updates - Array of { playId, data } objects
+   */
+  const batchUpdatePlays = useCallback(async (updates) => {
+    if (!updates || updates.length === 0) return;
+
+    setPlays(currentPlays => {
+      const newPlays = { ...currentPlays };
+      updates.forEach(({ playId, data }) => {
+        if (newPlays[playId]) {
+          newPlays[playId] = { ...newPlays[playId], ...data };
+        }
+      });
+      // Trigger the async save with all updates at once
+      updateSchool({ plays: newPlays }).catch(err => console.error('Error batch updating plays:', err));
+      return newPlays;
+    });
+  }, [updateSchool]);
+
+  /**
    * Add a new play
    */
   const addPlay = useCallback(async (playData) => {
@@ -836,6 +856,7 @@ export function SchoolProvider({ children }) {
     updateRoster,
     updatePlays,
     updatePlay,
+    batchUpdatePlays,
     addPlay,
     updateWeeks,
     updateWeek,
