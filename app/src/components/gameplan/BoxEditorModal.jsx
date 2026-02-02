@@ -2448,7 +2448,7 @@ export default function BoxEditorModal({
         className="box-editor-modal"
         onClick={e => e.stopPropagation()}
         style={{
-          width: '900px',
+          width: '1200px',
           maxWidth: '95vw',
           height: '700px',
           maxHeight: '90vh',

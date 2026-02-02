@@ -626,8 +626,8 @@
 .box-editor-modal {
   background: white;
   border-radius: 12px;
-  width: 90%;
-  max-width: 800px;
+  width: 95%;
+  max-width: 1200px;
   max-height: 90vh;
   overflow: hidden;
   display: flex;
