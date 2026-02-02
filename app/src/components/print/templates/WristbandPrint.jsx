@@ -241,10 +241,11 @@ export default function WristbandPrint({
           flex-direction: column;
         }
 
-        /* WIZ cards: same dimensions as standard */
+        /* WIZ cards: locked to 4.75" x 2.8" ratio */
         .wristband-print-player .wristband-card.layout-wiz {
-          width: ${cardWidth}in !important;
-          height: ${cardHeight}in !important;
+          width: 4.75in !important;
+          height: 2.8in !important;
+          flex: 0 0 4.75in !important;
         }
 
         .wristband-print-player.has-wiz-cards {

@@ -1614,55 +1614,68 @@ function PrintModal({ wristbandSettings, activeCardId, playsArray, slotMap, getP
           {/* Card Dimensions */}
           {printFormat === 'player' && (
             <div className="p-3 bg-slate-800 rounded-lg">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-white font-medium">Card Dimensions</span>
-                <select
-                  value=""
-                  onChange={(e) => {
-                    const preset = presets.find(p => p.label === e.target.value);
-                    if (preset) setCardDimensions({ width: preset.width, height: preset.height });
-                  }}
-                  className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-sm text-white"
-                >
-                  <option value="">Presets...</option>
-                  {presets.map(p => (
-                    <option key={p.label} value={p.label}>{p.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <label htmlFor="card-width" className="text-slate-400 text-sm">Width:</label>
-                  <input
-                    id="card-width"
-                    type="number"
-                    step="0.05"
-                    min="2"
-                    max="6"
-                    value={cardDimensions.width}
-                    onChange={(e) => setCardDimensions(d => ({ ...d, width: parseFloat(e.target.value) || 4.75 }))}
-                    className="w-20 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
-                  />
-                  <span className="text-slate-500 text-sm">in</span>
+              {card.type === 'wiz' ? (
+                /* WIZ cards are locked to fixed dimensions */
+                <div>
+                  <span className="text-white font-medium">Card Dimensions</span>
+                  <p className="text-slate-400 text-sm mt-2">
+                    WIZ cards are locked to <span className="text-white font-semibold">4.75" x 2.8"</span> for diagram consistency.
+                  </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <label htmlFor="card-height" className="text-slate-400 text-sm">Height:</label>
-                  <input
-                    id="card-height"
-                    type="number"
-                    step="0.05"
-                    min="1.5"
-                    max="5"
-                    value={cardDimensions.height}
-                    onChange={(e) => setCardDimensions(d => ({ ...d, height: parseFloat(e.target.value) || 2.8 }))}
-                    className="w-20 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
-                  />
-                  <span className="text-slate-500 text-sm">in</span>
-                </div>
-              </div>
-              <p className="text-slate-500 text-xs mt-2">
-                Adjust to fit your wristband holder. 4 cards at {cardDimensions.width}" x {cardDimensions.height}" = {(cardDimensions.width * 2).toFixed(2)}" x {(cardDimensions.height * 2).toFixed(2)}" total
-              </p>
+              ) : (
+                /* Standard/Mini-scripts cards have adjustable dimensions */
+                <>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-white font-medium">Card Dimensions</span>
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        const preset = presets.find(p => p.label === e.target.value);
+                        if (preset) setCardDimensions({ width: preset.width, height: preset.height });
+                      }}
+                      className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-sm text-white"
+                    >
+                      <option value="">Presets...</option>
+                      {presets.map(p => (
+                        <option key={p.label} value={p.label}>{p.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2">
+                      <label htmlFor="card-width" className="text-slate-400 text-sm">Width:</label>
+                      <input
+                        id="card-width"
+                        type="number"
+                        step="0.05"
+                        min="2"
+                        max="6"
+                        value={cardDimensions.width}
+                        onChange={(e) => setCardDimensions(d => ({ ...d, width: parseFloat(e.target.value) || 4.75 }))}
+                        className="w-20 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                      />
+                      <span className="text-slate-500 text-sm">in</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label htmlFor="card-height" className="text-slate-400 text-sm">Height:</label>
+                      <input
+                        id="card-height"
+                        type="number"
+                        step="0.05"
+                        min="1.5"
+                        max="5"
+                        value={cardDimensions.height}
+                        onChange={(e) => setCardDimensions(d => ({ ...d, height: parseFloat(e.target.value) || 2.8 }))}
+                        className="w-20 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                      />
+                      <span className="text-slate-500 text-sm">in</span>
+                    </div>
+                  </div>
+                  <p className="text-slate-500 text-xs mt-2">
+                    Adjust to fit your wristband holder. 4 cards at {cardDimensions.width}" x {cardDimensions.height}" = {(cardDimensions.width * 2).toFixed(2)}" x {(cardDimensions.height * 2).toFixed(2)}" total
+                  </p>
+                </>
+              )}
             </div>
           )}
 
