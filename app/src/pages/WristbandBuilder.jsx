@@ -113,8 +113,6 @@ export default function WristbandBuilder() {
 
   // State
   const [activeCardId, setActiveCardId] = useState('card100');
-  const [showPrintModal, setShowPrintModal] = useState(false);
-  const [printFormat, setPrintFormat] = useState('player'); // 'player' (4/page) or 'coach' (2/page)
   const [cardDimensions, setCardDimensions] = useState({ width: 4.75, height: 2.8 }); // inches
 
   // WIZ editing state
@@ -525,7 +523,7 @@ export default function WristbandBuilder() {
         <WristbandPrint
           weekId={currentWeek?.id}
           levelId={selectedLevel}
-          format={printFormat}
+          format="player"
           cardSelection={[activeCardId]}
           showSlotNumbers={true}
           showFormation={true}
@@ -569,7 +567,7 @@ export default function WristbandBuilder() {
               <CheckSquare size={16} /> Batch Add
             </button>
             <button
-              onClick={() => setShowPrintModal(true)}
+              onClick={() => window.print()}
               className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 text-white rounded hover:bg-slate-700 text-sm"
             >
               <Printer size={16} /> Print
@@ -755,22 +753,6 @@ export default function WristbandBuilder() {
           )}
         </div>
       </div>
-
-      {/* Print Modal */}
-      {showPrintModal && (
-        <PrintModal
-          wristbandSettings={wristbandSettings}
-          activeCardId={activeCardId}
-          playsArray={playsArray}
-          slotMap={slotMap}
-          getPlayForSlot={getPlayForSlot}
-          onClose={() => setShowPrintModal(false)}
-          printFormat={printFormat}
-          setPrintFormat={setPrintFormat}
-          cardDimensions={cardDimensions}
-          setCardDimensions={setCardDimensions}
-        />
-      )}
 
       {/* WIZ Skill Diagram Editor Modal */}
       {editingSkillPlay && (
@@ -1567,138 +1549,3 @@ function MiniScriptPreview({ rows, plays, startCoord, title, cardColor }) {
   );
 }
 
-// Print Modal
-function PrintModal({ wristbandSettings, activeCardId, playsArray, slotMap, getPlayForSlot, onClose, printFormat, setPrintFormat, cardDimensions, setCardDimensions }) {
-  const handlePrint = () => {
-    window.print();
-  };
-
-  const card = wristbandSettings[activeCardId] || getDefaultCardSettings();
-  const tab = CARD_TABS.find(t => t.id === activeCardId);
-
-  // Preset sizes for common wristband holders
-  const presets = [
-    { label: 'Standard (4.75" x 2.8")', width: 4.75, height: 2.8 },
-    { label: 'Compact (4" x 2.5")', width: 4, height: 2.5 },
-    { label: 'Wide (5" x 2.8")', width: 5, height: 2.8 },
-    { label: 'Large (5" x 3")', width: 5, height: 3 },
-  ];
-
-  return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 no-print">
-      <div className="bg-slate-900 rounded-xl w-full max-w-2xl">
-        <div className="flex items-center justify-between p-4 border-b border-slate-800">
-          <h3 className="text-lg font-semibold text-white">Print Wristbands</h3>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-white">
-            <X size={20} />
-          </button>
-        </div>
-        <div className="p-4 space-y-4">
-          {/* Format Selection */}
-          <div className="flex items-center gap-4">
-            <span className="text-slate-400">Format:</span>
-            <button
-              onClick={() => setPrintFormat('player')}
-              className={`px-4 py-2 rounded ${printFormat === 'player' ? 'bg-sky-500 text-white' : 'bg-slate-800 text-slate-400'}`}
-            >
-              Player (4 per page)
-            </button>
-            <button
-              onClick={() => setPrintFormat('coach')}
-              className={`px-4 py-2 rounded ${printFormat === 'coach' ? 'bg-sky-500 text-white' : 'bg-slate-800 text-slate-400'}`}
-            >
-              Coach (2 per page)
-            </button>
-          </div>
-
-          {/* Card Dimensions */}
-          {printFormat === 'player' && (
-            <div className="p-3 bg-slate-800 rounded-lg">
-              {card.type === 'wiz' ? (
-                /* WIZ cards are locked to fixed dimensions */
-                <div>
-                  <span className="text-white font-medium">Card Dimensions</span>
-                  <p className="text-slate-400 text-sm mt-2">
-                    WIZ cards are locked to <span className="text-white font-semibold">4.75" x 2.8"</span> for diagram consistency.
-                  </p>
-                </div>
-              ) : (
-                /* Standard/Mini-scripts cards have adjustable dimensions */
-                <>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-white font-medium">Card Dimensions</span>
-                    <select
-                      value=""
-                      onChange={(e) => {
-                        const preset = presets.find(p => p.label === e.target.value);
-                        if (preset) setCardDimensions({ width: preset.width, height: preset.height });
-                      }}
-                      className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-sm text-white"
-                    >
-                      <option value="">Presets...</option>
-                      {presets.map(p => (
-                        <option key={p.label} value={p.label}>{p.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2">
-                      <label htmlFor="card-width" className="text-slate-400 text-sm">Width:</label>
-                      <input
-                        id="card-width"
-                        type="number"
-                        step="0.05"
-                        min="2"
-                        max="6"
-                        value={cardDimensions.width}
-                        onChange={(e) => setCardDimensions(d => ({ ...d, width: parseFloat(e.target.value) || 4.75 }))}
-                        className="w-20 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
-                      />
-                      <span className="text-slate-500 text-sm">in</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <label htmlFor="card-height" className="text-slate-400 text-sm">Height:</label>
-                      <input
-                        id="card-height"
-                        type="number"
-                        step="0.05"
-                        min="1.5"
-                        max="5"
-                        value={cardDimensions.height}
-                        onChange={(e) => setCardDimensions(d => ({ ...d, height: parseFloat(e.target.value) || 2.8 }))}
-                        className="w-20 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
-                      />
-                      <span className="text-slate-500 text-sm">in</span>
-                    </div>
-                  </div>
-                  <p className="text-slate-500 text-xs mt-2">
-                    Adjust to fit your wristband holder. 4 cards at {cardDimensions.width}" x {cardDimensions.height}" = {(cardDimensions.width * 2).toFixed(2)}" x {(cardDimensions.height * 2).toFixed(2)}" total
-                  </p>
-                </>
-              )}
-            </div>
-          )}
-
-          <p className="text-slate-500 text-sm">
-            Print will include the currently selected card ({tab?.label}). Use browser print dialog for best results.
-          </p>
-          <Link
-            to={`/print?template=wristband&format=${printFormat}`}
-            className="flex items-center gap-2 text-sky-400 hover:text-sky-300 text-sm"
-          >
-            <ExternalLink size={14} />
-            Open in Print Center for more options
-          </Link>
-        </div>
-        <div className="flex justify-end gap-3 p-4 border-t border-slate-800">
-          <button onClick={onClose} className="px-4 py-2 bg-slate-800 text-white rounded hover:bg-slate-700">
-            Cancel
-          </button>
-          <button onClick={handlePrint} className="flex items-center gap-2 px-4 py-2 bg-sky-500 text-white rounded hover:bg-sky-600">
-            <Printer size={18} /> Print
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
