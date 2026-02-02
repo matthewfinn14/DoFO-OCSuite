@@ -1293,11 +1293,20 @@ export default function InstallManager() {
                         >
                           <Star size={14} className={isPriority ? 'fill-amber-400' : ''} />
                         </button>
-                        {isNew && (
-                          <span className="text-emerald-500" title="New this week">
-                            <Sparkles size={12} />
-                          </span>
-                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleNewPlay(play.id);
+                          }}
+                          className={`p-0.5 rounded transition-colors ${
+                            isNew
+                              ? 'text-emerald-400'
+                              : 'text-slate-600 hover:text-emerald-400'
+                          }`}
+                          title={isNew ? 'Remove new marker' : 'Mark as new'}
+                        >
+                          <Sparkles size={14} className={isNew ? 'fill-emerald-400' : ''} />
+                        </button>
                         <span className={isLight ? 'text-gray-900 font-medium' : 'text-white font-medium'}>
                           {play.formation ? `${play.formation} ${play.name}` : play.name}
                         </span>
@@ -1404,17 +1413,6 @@ export default function InstallManager() {
                     {/* Actions */}
                     <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleToggleNewPlay(play.id)}
-                          className={`p-1 rounded transition-colors ${
-                            isNew
-                              ? 'text-emerald-400 bg-emerald-500/20 hover:bg-emerald-500/30'
-                              : 'text-slate-500 hover:text-emerald-400 hover:bg-slate-700'
-                          }`}
-                          title={isNew ? 'Remove new marker' : 'Mark as new'}
-                        >
-                          <Sparkles size={12} />
-                        </button>
                         <button
                           onClick={() => handleRemoveFromInstall(play.id)}
                           className="p-1 rounded text-slate-500 hover:text-orange-400 hover:bg-orange-500/20 transition-colors"
