@@ -5794,10 +5794,16 @@ function WristbandAbbreviationsSection({ phase, setupConfig, onUpdate, plays }) 
 
     // Term Library custom terms
     const termLibrary = config.termLibrary?.[phase] || {};
+    const syntaxPartsMap = (config.syntax?.[phase] || []).reduce((acc, part) => {
+      acc[part.id] = part.label || part.id;
+      return acc;
+    }, {});
     Object.entries(termLibrary).forEach(([categoryId, categoryTerms]) => {
+      // Look up the category label from syntax parts, fallback to categoryId
+      const categoryLabel = syntaxPartsMap[categoryId] || categoryId;
       (categoryTerms || []).forEach(t => {
         if (t.label) {
-          terms.push({ term: t.label, category: categoryId, source: 'termLibrary' });
+          terms.push({ term: t.label, category: categoryLabel, source: 'termLibrary' });
         }
       });
     });
