@@ -665,8 +665,8 @@ export default function WristbandBuilder() {
         <div className="flex justify-center">
           {currentCard.type === 'wiz' ? (
             <div className="flex flex-col gap-4">
-              {/* SKILL Card - WIZ dimensions: 12cm x 8cm (4.7" x 3.15"), aspect ratio ~3:2 */}
-              <div style={{ width: '470px', height: '315px' }}>
+              {/* SKILL Card - WIZ dimensions: 4.75" x 2.8" */}
+              <div style={{ width: '475px', height: '280px' }}>
                 <WizGrid
                   slots={slots}
                   title={`${currentCard.opponent || 'OPPONENT'} ${currentCard.iteration || '1'}`}
@@ -681,8 +681,8 @@ export default function WristbandBuilder() {
                   positionNames={positionNames}
                 />
               </div>
-              {/* OLINE Card - WIZ dimensions: 12cm x 8cm (4.7" x 3.15"), aspect ratio ~3:2 */}
-              <div style={{ width: '470px', height: '315px' }}>
+              {/* OLINE Card - WIZ dimensions: 4.75" x 2.8" */}
+              <div style={{ width: '475px', height: '280px' }}>
                 <WizGrid
                   slots={slots}
                   title={`${currentCard.opponent || 'OPPONENT'} ${currentCard.iteration || '1'}`}
