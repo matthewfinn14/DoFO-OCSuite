@@ -32,7 +32,8 @@ import {
   Square,
   ExternalLink,
   HelpCircle,
-  Check
+  Check,
+  Star
 } from 'lucide-react';
 
 // Days of the week
@@ -686,6 +687,7 @@ function FocusMultiSelect({
 
     // Practice category - special focus options
     const practiceItems = [
+      { id: 'priority_plays', name: 'Priority Plays', category: 'Practice' },
       { id: 'needs_reps', name: 'Needs Reps (0-1)', category: 'Practice' }
     ];
     groups.push({ category: 'Practice', items: practiceItems });
@@ -1935,13 +1937,28 @@ export default function PracticePlans() {
     // Handle Practice category focuses
     const practiceFocuses = allFocuses.filter(f => f.category === 'Practice');
     if (practiceFocuses.length > 0) {
+      const installList = week?.installList || [];
+
+      // Check for "priority_plays" focus
+      const priorityPlays = practiceFocuses.some(f => f.id === 'priority_plays');
+      if (priorityPlays) {
+        // Find priority plays from install list
+        installList.forEach(playId => {
+          if (!addedIds.has(playId)) {
+            const play = plays?.[playId] || playsArray?.find(p => p.id === playId);
+            if (play?.priority) {
+              resultPlays.push({ ...play, _isPriority: true });
+              addedIds.add(playId);
+            }
+          }
+        });
+      }
+
       // Check for "needs_reps" focus
       const needsReps = practiceFocuses.some(f => f.id === 'needs_reps');
       if (needsReps) {
         // Get all reps for this week
         const weekReps = getAllRepsForWeek(week?.id, weeks);
-        // Get installed plays for this week
-        const installList = week?.installList || [];
 
         // Find plays with 0-1 reps
         installList.forEach(playId => {
@@ -3272,7 +3289,8 @@ export default function PracticePlans() {
                                   title={`Click to add: ${play.formation || ''} ${play.name || ''}`}
                                 >
                                   <div className="flex items-center justify-between gap-1">
-                                    <span className="font-medium truncate">
+                                    <span className="font-medium truncate flex items-center gap-1">
+                                      {play._isPriority && <Star size={10} className="text-amber-400 fill-amber-400 flex-shrink-0" />}
                                       {play.formation ? `${play.formation} ${play.name}` : play.name}
                                     </span>
                                     {play._currentReps !== undefined && (
