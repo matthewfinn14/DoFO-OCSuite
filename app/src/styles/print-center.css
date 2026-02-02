@@ -1147,24 +1147,40 @@
     display: table !important;
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed !important;
   }
 
   .pp2-script-row-header {
     display: table-header-group !important;
   }
 
-  .pp2-script-row-header > div {
-    display: table-cell !important;
-    vertical-align: middle;
-  }
-
-  .pp2-script-row {
-    display: table-row !important;
-  }
-
+  .pp2-script-row-header > div,
   .pp2-script-row > div {
     display: table-cell !important;
     vertical-align: middle;
+    overflow: hidden;
+  }
+
+  /* Fixed column widths for print - minimal whitespace */
+  .pp2-script-row-header > div:nth-child(1),
+  .pp2-script-row > div:nth-child(1) { width: 3%; }  /* # */
+  .pp2-script-row-header > div:nth-child(2),
+  .pp2-script-row > div:nth-child(2) { width: 4%; }  /* Hash */
+  .pp2-script-row-header > div:nth-child(3),
+  .pp2-script-row > div:nth-child(3) { width: 3%; }  /* Dn */
+  .pp2-script-row-header > div:nth-child(4),
+  .pp2-script-row > div:nth-child(4) { width: 4%; }  /* Dist */
+  .pp2-script-row-header > div:nth-child(5),
+  .pp2-script-row > div:nth-child(5) { width: 12%; } /* Situation */
+  .pp2-script-row-header > div:nth-child(6),
+  .pp2-script-row > div:nth-child(6) { width: 40%; } /* Play Call */
+  .pp2-script-row-header > div:nth-child(7),
+  .pp2-script-row > div:nth-child(7) { width: 6%; }  /* Defense */
+  .pp2-script-row-header > div:nth-child(8),
+  .pp2-script-row > div:nth-child(8) { width: 28%; } /* Notes */
+
+  .pp2-script-row {
+    display: table-row !important;
   }
 
   /* Add "(cont.)" to repeated headers */
@@ -1192,19 +1208,21 @@
   font-weight: 400;
 }
 
-/* Script Grid - narrow columns for 2-char fields, flexible for content */
+/* Script Grid - tight columns, consistent widths */
 .pp2-script-grid {
   display: grid;
   grid-template-columns:
-    12px    /* # */
-    12px    /* Hash */
-    12px    /* Dn */
-    12px    /* Dist */
-    50px    /* Situation */
-    minmax(100px, 1fr)    /* Play Call */
-    35px    /* Defense */
-    minmax(80px, 1fr);    /* Notes */
+    14px    /* # */
+    20px    /* Hash */
+    18px    /* Dn */
+    22px    /* Dist */
+    60px    /* Situation */
+    1fr     /* Play Call - takes remaining space */
+    30px    /* Defense */
+    1fr;    /* Notes - takes remaining space */
   font-size: 6pt;
+  width: 100%;
+  table-layout: fixed;
 }
 
 .pp2-script-row {
