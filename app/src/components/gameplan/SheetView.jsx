@@ -527,9 +527,9 @@ export default function SheetView({
       <div className="matrix-box-container" style={{ fontSize: '0.6rem' }}>
         {/* Header Section */}
         <div style={{ display: 'flex' }}>
-          {/* TYPE column - spans both header rows */}
+          {/* Formation/Title column - spans both header rows */}
           <div style={{
-            width: '60px',
+            width: '70px',
             flexShrink: 0,
             display: 'flex',
             flexDirection: 'column'
@@ -540,13 +540,14 @@ export default function SheetView({
               fontSize: '0.5rem',
               fontWeight: 'bold',
               textAlign: 'center',
-              background: '#334155',
+              background: box.color || '#334155',
               color: 'white',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              lineHeight: '1.1'
             }}>
-              TYPE
+              {box.header || 'MATRIX'}
             </div>
           </div>
 
@@ -822,19 +823,20 @@ export default function SheetView({
         {/* Header Section */}
         <div style={{ display: 'flex', borderBottom: '1px solid #333' }}>
           <div style={{
-            width: '50px',
+            width: '60px',
             flexShrink: 0,
             padding: '2px 4px',
-            fontSize: '6pt',
+            fontSize: '5pt',
             fontWeight: 'bold',
             textAlign: 'center',
-            background: '#334155',
+            background: box.color || '#334155',
             color: 'white',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            lineHeight: '1.1'
           }}>
-            TYPE
+            {box.header || 'MATRIX'}
           </div>
           {hashGroups.map((group, gIdx) => (
             <div key={group.id} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
