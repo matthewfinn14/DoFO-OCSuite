@@ -241,6 +241,7 @@ export default function GamePlan() {
   // View state
   const [isLocked, setIsLocked] = useState(false);
   const [isSheetEditing, setIsSheetEditing] = useState(false);
+  const [pageFormat, setPageFormat] = useState('2-page'); // '2-page' or '4-page'
   const [editingBox, setEditingBox] = useState(null);
 
   // Drag state for Sheet view
@@ -1181,8 +1182,20 @@ export default function GamePlan() {
               </button>
             )}
 
-            {/* Print Button */}
+            {/* Print Controls */}
             <div className="flex items-center gap-2">
+              <select
+                value={pageFormat}
+                onChange={(e) => setPageFormat(e.target.value)}
+                className={`px-2 py-2 text-sm rounded-lg border ${isLight
+                  ? 'bg-white text-slate-700 border-slate-200'
+                  : 'bg-slate-800 text-slate-300 border-slate-700'
+                }`}
+                title="Page format for printing"
+              >
+                <option value="2-page">2-Page (1 sheet)</option>
+                <option value="4-page">4-Page Booklet</option>
+              </select>
               <button
                 onClick={handlePrint}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${isLight
@@ -1194,7 +1207,7 @@ export default function GamePlan() {
                 <span className="text-sm">Print</span>
               </button>
               <Link
-                to="/print?template=game_plan"
+                to={`/print?template=game_plan&pageFormat=${pageFormat}`}
                 className={`p-2 rounded-lg ${isLight
                   ? 'text-slate-400 hover:text-sky-600 hover:bg-slate-100'
                   : 'text-slate-400 hover:text-sky-400 hover:bg-slate-800'
