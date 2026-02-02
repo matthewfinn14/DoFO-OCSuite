@@ -1279,14 +1279,23 @@ export default function InstallManager() {
                     {/* Play Name */}
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUpdatePlayField(play.id, 'priority', !play.priority);
+                          }}
+                          className={`p-0.5 rounded transition-colors ${
+                            isPriority
+                              ? 'text-amber-400'
+                              : 'text-slate-600 hover:text-amber-400'
+                          }`}
+                          title={isPriority ? 'Remove priority' : 'Mark as priority'}
+                        >
+                          <Star size={14} className={isPriority ? 'fill-amber-400' : ''} />
+                        </button>
                         {isNew && (
                           <span className="text-emerald-500" title="New this week">
                             <Sparkles size={12} />
-                          </span>
-                        )}
-                        {isPriority && (
-                          <span className="text-amber-500" title="Priority">
-                            <Star size={12} className="fill-amber-500" />
                           </span>
                         )}
                         <span className={isLight ? 'text-gray-900 font-medium' : 'text-white font-medium'}>
@@ -1395,17 +1404,6 @@ export default function InstallManager() {
                     {/* Actions */}
                     <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleUpdatePlayField(play.id, 'priority', !play.priority)}
-                          className={`p-1 rounded transition-colors ${
-                            isPriority
-                              ? 'text-amber-400 bg-amber-500/20 hover:bg-amber-500/30'
-                              : 'text-slate-500 hover:text-amber-400 hover:bg-slate-700'
-                          }`}
-                          title={isPriority ? 'Remove priority' : 'Mark as priority'}
-                        >
-                          <Star size={12} className={isPriority ? 'fill-amber-400' : ''} />
-                        </button>
                         <button
                           onClick={() => handleToggleNewPlay(play.id)}
                           className={`p-1 rounded transition-colors ${
