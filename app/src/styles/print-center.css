@@ -126,31 +126,25 @@
 @media print {
   .wristband-print-player {
     display: grid !important;
-    grid-template-columns: repeat(2, 4.75in) !important;
-    grid-template-rows: repeat(2, 2.8in) !important;
-    gap: 0.4in 0.3in !important;
+    grid-template-columns: repeat(2, 4.5in) !important;
+    grid-template-rows: repeat(2, 3.5in) !important;
+    gap: 0.25in !important;
     justify-content: center !important;
-    align-content: center !important;
+    align-content: start !important;
     padding: 0.25in !important;
     background: white !important;
-    width: 11in !important;
-    height: 8.5in !important;
-    max-height: 8.5in !important;
-    overflow: hidden !important;
     box-sizing: border-box !important;
   }
 
   .wristband-print-player .wristband-card {
-    width: 4.75in !important;
-    height: 2.8in !important;
-    max-height: 2.8in !important;
+    width: 4.5in !important;
+    height: 3.5in !important;
+    max-height: 3.5in !important;
     border: 2px solid black !important;
     background: white !important;
     overflow: hidden !important;
     display: flex !important;
     flex-direction: column !important;
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
     box-sizing: border-box !important;
   }
 

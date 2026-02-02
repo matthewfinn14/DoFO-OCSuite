@@ -520,7 +520,7 @@ export default function WristbandBuilder() {
   return (
     <>
       {/* Print-only content - renders the wristband cards for printing */}
-      <div className="hidden print:block">
+      <div className="hidden print:block" style={{ margin: 0, padding: 0 }}>
         <WristbandPrint
           weekId={currentWeek?.id}
           levelId={selectedLevel}

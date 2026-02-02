@@ -216,34 +216,28 @@ export default function WristbandPrint({
 
         /* Player format: 4 cards per page (2x2 grid) on LANDSCAPE paper */
         /* Landscape letter = 11" wide x 8.5" tall */
-        /* Standard cards: 4.75" x 2.8" each - optimal print width */
+        /* Cards: 4.5" x 3.5" each with 0.25" gaps = fits perfectly */
         .wristband-print-player {
           display: grid !important;
-          grid-template-columns: repeat(2, 4.75in) !important;
-          grid-template-rows: repeat(2, 2.8in) !important;
-          gap: 0.4in 0.3in !important;
+          grid-template-columns: repeat(2, 4.5in) !important;
+          grid-template-rows: repeat(2, 3.5in) !important;
+          gap: 0.25in !important;
           justify-content: center;
-          align-content: center;
+          align-content: start;
           padding: 0.25in;
           background: white;
-          width: 11in;
-          height: 8.5in;
-          max-height: 8.5in;
-          overflow: hidden;
           box-sizing: border-box;
         }
 
         .wristband-print-player .wristband-card {
-          width: 4.75in !important;
-          height: 2.8in !important;
-          max-height: 2.8in !important;
+          width: 4.5in !important;
+          height: 3.5in !important;
+          max-height: 3.5in !important;
           border: 2px solid black;
           background: white;
           overflow: hidden !important;
           display: flex;
           flex-direction: column;
-          page-break-inside: avoid;
-          break-inside: avoid;
           box-sizing: border-box;
         }
 
