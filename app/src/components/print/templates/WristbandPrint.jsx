@@ -285,13 +285,36 @@ export default function WristbandPrint({
           height: 5in;
         }
 
-        /* Page breaks */
-        .wristband-print-player .wristband-card:nth-child(4n + 1):not(:first-child) {
-          break-before: page;
+        /* Page containers for proper page breaks */
+        .wristband-page {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          align-content: flex-start;
+          gap: 0.15in;
+          width: 100%;
+          box-sizing: border-box;
+          page-break-after: always;
+          break-after: page;
         }
 
-        .wristband-print-coach .wristband-card:nth-child(2n + 1):not(:first-child) {
-          break-before: page;
+        .wristband-page:last-child {
+          page-break-after: auto;
+          break-after: auto;
+        }
+
+        .wristband-print-player .wristband-page {
+          height: 8in;
+          padding: 0.1in;
+        }
+
+        .wristband-print-coach .wristband-page {
+          flex-direction: column;
+          align-items: center;
+          justify-content: flex-start;
+          gap: 0.3in;
+          height: 10.5in;
+          padding: 0.1in;
         }
 
         /* Card header */
@@ -537,17 +560,29 @@ export default function WristbandPrint({
         }
       `}</style>
 
-      {cardsToPrint.map((card, idx) => (
-        <WristbandCard
-          key={`${card.id}-${card.wizVariant || 'std'}-${card.copyIndex}-${idx}`}
-          card={card}
-          showSlotNumbers={showSlotNumbers}
-          showFormation={showFormation}
-          getPlayForSlot={(slot) => getPlayForSlot(card.id, slot)}
-          isCoachFormat={isCoachFormat}
-          wizVariant={card.wizVariant}
-        />
-      ))}
+      {/* Group cards into pages (4 per page for player, 2 for coach) */}
+      {(() => {
+        const pages = [];
+        for (let i = 0; i < cardsToPrint.length; i += copiesPerPage) {
+          const pageCards = cardsToPrint.slice(i, i + copiesPerPage);
+          pages.push(
+            <div key={`page-${i}`} className="wristband-page">
+              {pageCards.map((card, idx) => (
+                <WristbandCard
+                  key={`${card.id}-${card.wizVariant || 'std'}-${card.copyIndex}-${i + idx}`}
+                  card={card}
+                  showSlotNumbers={showSlotNumbers}
+                  showFormation={showFormation}
+                  getPlayForSlot={(slot) => getPlayForSlot(card.id, slot)}
+                  isCoachFormat={isCoachFormat}
+                  wizVariant={card.wizVariant}
+                />
+              ))}
+            </div>
+          );
+        }
+        return pages;
+      })()}
     </div>
   );
 }

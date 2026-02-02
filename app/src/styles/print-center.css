@@ -145,14 +145,12 @@
  * Cards are 4.75" x 2.8" each - fits 4 per page in 2x2
  * Matches the inline styles in WristbandPrint.jsx */
 @media print {
-  /* Wristband containers take over the page */
+  /* Wristband containers - use static position for proper page breaks */
   .wristband-print-player,
   .wristband-print-coach {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    z-index: 99999 !important;
+    position: static !important;
     margin: 0 !important;
+    z-index: 99999 !important;
   }
 
   /* Wristband print: use flexbox to guarantee 2x2 layout */
@@ -164,9 +162,12 @@
     gap: 0.15in !important;
     padding: 0.15in !important;
     background: white !important;
-    width: 100% !important;
+    width: 11in !important;
     max-width: 11in !important;
-    min-height: 8.5in !important;
+    height: 8.5in !important;
+    box-sizing: border-box !important;
+    page-break-after: always !important;
+    break-after: page !important;
   }
 
   .wristband-print-player .wristband-card {
