@@ -880,14 +880,27 @@
     display: none !important;
   }
 
-  /* Individual print page - portrait: 8" x 10.5", landscape: 10.5" x 8" (after 0.25" margins) */
-  .print-portrait .print-page-4 {
-    width: 8in;
-    min-height: 10.5in;
-    max-height: 10.5in;
+  /*
+   * Print page dimensions based on format + orientation:
+   *
+   * 2-page portrait: 8" x 10.5" (portrait paper)
+   * 2-page landscape: 10.5" x 8" (landscape paper)
+   *
+   * 4-page portrait booklet (17" tall x 11" wide final):
+   *   - Paper is LANDSCAPE, pages stack vertically
+   *   - Each page: 10.5" wide x ~5" tall (two per sheet)
+   *
+   * 4-page landscape booklet (17" wide x 11" tall final):
+   *   - Paper is PORTRAIT, pages printed front/back
+   *   - Each page: 8" wide x 10.5" tall
+   */
+
+  /* 4-page PORTRAIT booklet = landscape paper, pages stack */
+  .print-4page.print-portrait .print-page-4 {
+    width: 10.5in;
+    min-height: 5in;
+    max-height: 5in;
     background: white;
-    page-break-after: always;
-    break-after: page;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -896,10 +909,21 @@
     margin: 0;
   }
 
-  .print-landscape .print-page-4 {
-    width: 10.5in;
-    min-height: 8in;
-    max-height: 8in;
+  /* Two pages per sheet in portrait booklet mode */
+  .print-4page.print-portrait .print-page-4:nth-child(odd) {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+  .print-4page.print-portrait .print-page-4:nth-child(even) {
+    page-break-after: always;
+    break-after: page;
+  }
+
+  /* 4-page LANDSCAPE booklet = portrait paper, full page each */
+  .print-4page.print-landscape .print-page-4 {
+    width: 8in;
+    min-height: 10.5in;
+    max-height: 10.5in;
     background: white;
     page-break-after: always;
     break-after: page;
@@ -916,13 +940,18 @@
     break-after: auto;
   }
 
-  /* Page content container - no padding needed, @page margin handles it */
+  /* Page content container */
   .print-page-content-4 {
     flex: 1;
     padding: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+  }
+
+  /* Adjust content height for portrait booklet (shorter pages) */
+  .print-4page.print-portrait .print-page-content-4 {
+    max-height: 4.5in;
   }
 
   /* Section within a print page */

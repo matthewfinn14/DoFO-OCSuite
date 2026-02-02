@@ -930,11 +930,25 @@ export default function SheetView({
 
   const isLandscape = pageOrientation === 'landscape';
 
+  // Determine actual paper orientation based on format + orientation combo
+  // 2-page: orientation matches paper
+  // 4-page portrait booklet (17" tall): paper is LANDSCAPE (pages stack vertically)
+  // 4-page landscape booklet (17" wide): paper is PORTRAIT (pages side-by-side)
+  const getPaperOrientation = () => {
+    if (!is4Page) {
+      return pageOrientation; // 2-page: use selected orientation
+    }
+    // 4-page booklet: flip the orientation
+    return pageOrientation === 'portrait' ? 'landscape' : 'portrait';
+  };
+
+  const paperOrientation = getPaperOrientation();
+
   // Dynamic print styles for orientation
   const printOrientationStyle = `
     @media print {
       @page {
-        size: letter ${pageOrientation};
+        size: letter ${paperOrientation};
         margin: 0.25in;
       }
     }
