@@ -1354,11 +1354,33 @@ export default function SheetView({
                                   {box.header}
                                 </span>
                                 {isEditing ? (
-                                  <div
-                                    onClick={(e) => { e.stopPropagation(); onDeleteBox(sIdx, bIdx); }}
-                                    style={{ cursor: 'pointer', padding: '0 4px' }}
-                                  >
-                                    x
+                                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+                                    {/* ColSpan × RowSpan controls */}
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      max={sectionCols}
+                                      value={box.colSpan || 2}
+                                      onChange={(e) => onUpdateBox(sIdx, bIdx, { ...box, colSpan: parseInt(e.target.value) || 2 })}
+                                      style={{ width: '28px', padding: '1px 2px', fontSize: '0.6rem', borderRadius: '2px', border: 'none', textAlign: 'center' }}
+                                      title="Column span"
+                                    />
+                                    <span style={{ fontSize: '0.6rem', opacity: 0.8 }}>×</span>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      max={sectionRows}
+                                      value={box.rowSpan || 1}
+                                      onChange={(e) => onUpdateBox(sIdx, bIdx, { ...box, rowSpan: parseInt(e.target.value) || 1 })}
+                                      style={{ width: '28px', padding: '1px 2px', fontSize: '0.6rem', borderRadius: '2px', border: 'none', textAlign: 'center' }}
+                                      title="Row span"
+                                    />
+                                    <div
+                                      onClick={() => onDeleteBox(sIdx, bIdx)}
+                                      style={{ cursor: 'pointer', padding: '0 2px', marginLeft: '4px' }}
+                                    >
+                                      ×
+                                    </div>
                                   </div>
                                 ) : (
                                   <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
