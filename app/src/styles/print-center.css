@@ -124,18 +124,31 @@
  * Cards are 4.75" x 2.8" each - wide format for wristband readability
  * Matches the inline styles in WristbandPrint.jsx */
 @media print {
+  /* Force hide everything except print content */
+  .print\:hidden {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Wristband print: use flexbox to guarantee 2x2 layout */
   .wristband-print-player {
-    display: grid !important;
-    grid-template-columns: 3.9in 3.9in !important;
-    grid-template-rows: 2.6in 2.6in !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    align-content: flex-start !important;
     gap: 0.15in !important;
     padding: 0.2in !important;
     background: white !important;
+    width: 8.5in !important;
+    max-width: 8.5in !important;
   }
 
   .wristband-print-player .wristband-card {
     width: 3.9in !important;
     height: 2.6in !important;
+    flex: 0 0 3.9in !important;
     border: 1px solid black !important;
     background: white !important;
     overflow: hidden !important;

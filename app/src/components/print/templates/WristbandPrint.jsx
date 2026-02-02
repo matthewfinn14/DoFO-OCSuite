@@ -214,20 +214,24 @@ export default function WristbandPrint({
           }
         }
 
-        /* Player format: 4 cards per page (2x2 grid) */
-        /* Cards: 3.9" x 2.6" - fits on ANY orientation with margins */
+        /* Player format: 4 cards per page (2x2 flex layout) */
+        /* Cards: 3.9" x 2.6" - fits on portrait 8.5" x 11" */
         .wristband-print-player {
-          display: grid;
-          grid-template-columns: 3.9in 3.9in;
-          grid-template-rows: 2.6in 2.6in;
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          align-content: flex-start;
           gap: 0.15in;
           padding: 0.2in;
           background: white;
+          width: 8.5in;
+          max-width: 8.5in;
         }
 
         .wristband-print-player .wristband-card {
           width: 3.9in;
           height: 2.6in;
+          flex: 0 0 3.9in;
           border: 1px solid black;
           background: white;
           overflow: hidden;
