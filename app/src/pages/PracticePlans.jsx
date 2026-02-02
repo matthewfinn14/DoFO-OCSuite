@@ -2502,7 +2502,7 @@ export default function PracticePlans() {
   }
 
   return (
-    <div className={`h-full flex flex-col ${isLight ? 'bg-white' : 'bg-slate-900'}`}>
+    <div className={`h-full flex flex-col print:hidden ${isLight ? 'bg-white' : 'bg-slate-900'}`}>
       {/* Header */}
       <div className={`flex-shrink-0 border-b ${isLight ? 'border-gray-200 bg-white' : 'border-slate-700 bg-slate-800'}`}>
         <div className="px-6 py-3">
