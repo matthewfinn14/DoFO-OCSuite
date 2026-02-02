@@ -4,6 +4,7 @@ import { useSchool } from '../context/SchoolContext';
 import { usePlayBank } from '../context/PlayBankContext';
 import { getWristbandDisplay } from '../utils/wristband';
 import { getPlayCall } from '../utils/playDisplay';
+import { getCurrentWeekReps, getAllRepsForWeek } from '../utils/repTracking';
 import PracticePlanCoachView from '../components/print/templates/PracticePlanCoachView';
 import '../styles/print-center.css';
 import {
@@ -682,6 +683,12 @@ function FocusMultiSelect({
     if (callSheetBoxes.length > 0) {
       groups.push({ category: 'Call Sheet', items: callSheetBoxes });
     }
+
+    // Practice category - special focus options
+    const practiceItems = [
+      { id: 'needs_reps', name: 'Needs Reps (0-1)', category: 'Practice' }
+    ];
+    groups.push({ category: 'Practice', items: practiceItems });
 
     return groups;
   }, [phase, segmentType, segmentTypeFocusItems, setupConfig, week]);
@@ -1900,26 +1907,61 @@ export default function PracticePlans() {
       ...(segment.defenseFocuses || [])
     ];
 
-    // Filter for Call Sheet category focuses
+    if (allFocuses.length === 0) return [];
+
+    const resultPlays = [];
+    const addedIds = new Set();
+
+    // Handle Call Sheet category focuses
     const callSheetFocuses = allFocuses.filter(f => f.category === 'Call Sheet');
-    if (callSheetFocuses.length === 0) return [];
+    if (callSheetFocuses.length > 0) {
+      const sets = week.offensiveGamePlan?.sets || [];
+      callSheetFocuses.forEach(focus => {
+        const matchingSet = sets.find(s => s.id === focus.id);
+        if (matchingSet?.playIds) {
+          matchingSet.playIds.forEach(id => {
+            if (!addedIds.has(id)) {
+              const play = plays?.[id] || playsArray?.find(p => p.id === id);
+              if (play) {
+                resultPlays.push(play);
+                addedIds.add(id);
+              }
+            }
+          });
+        }
+      });
+    }
 
-    // Get play IDs from the game plan sets that match these focus IDs
-    const sets = week.offensiveGamePlan?.sets || [];
-    const playIdSet = new Set();
+    // Handle Practice category focuses
+    const practiceFocuses = allFocuses.filter(f => f.category === 'Practice');
+    if (practiceFocuses.length > 0) {
+      // Check for "needs_reps" focus
+      const needsReps = practiceFocuses.some(f => f.id === 'needs_reps');
+      if (needsReps) {
+        // Get all reps for this week
+        const weekReps = getAllRepsForWeek(week?.id, weeks);
+        // Get installed plays for this week
+        const installList = week?.installList || [];
 
-    callSheetFocuses.forEach(focus => {
-      const matchingSet = sets.find(s => s.id === focus.id);
-      if (matchingSet?.playIds) {
-        matchingSet.playIds.forEach(id => playIdSet.add(id));
+        // Find plays with 0-1 reps
+        installList.forEach(playId => {
+          if (!addedIds.has(playId)) {
+            const reps = weekReps[playId] || 0;
+            if (reps <= 1) {
+              const play = plays?.[playId] || playsArray?.find(p => p.id === playId);
+              if (play) {
+                // Add rep count info to play for display
+                resultPlays.push({ ...play, _currentReps: reps });
+                addedIds.add(playId);
+              }
+            }
+          }
+        });
       }
-    });
+    }
 
-    // Convert to play objects
-    return Array.from(playIdSet)
-      .map(id => plays?.[id] || playsArray?.find(p => p.id === id))
-      .filter(Boolean);
-  }, [week, plays, playsArray]);
+    return resultPlays;
+  }, [week, weeks, plays, playsArray]);
 
   // Get position groups from setup (use abbreviations for @mentions)
   const positionGroups = useMemo(() => {
@@ -3229,8 +3271,19 @@ export default function PracticePlans() {
                                   }`}
                                   title={`Click to add: ${play.formation || ''} ${play.name || ''}`}
                                 >
-                                  <div className="font-medium truncate">
-                                    {play.formation ? `${play.formation} ${play.name}` : play.name}
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className="font-medium truncate">
+                                      {play.formation ? `${play.formation} ${play.name}` : play.name}
+                                    </span>
+                                    {play._currentReps !== undefined && (
+                                      <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                        play._currentReps === 0
+                                          ? 'bg-red-500/20 text-red-400'
+                                          : 'bg-amber-500/20 text-amber-400'
+                                      }`}>
+                                        {play._currentReps}
+                                      </span>
+                                    )}
                                   </div>
                                   {play.bucketLabel && (
                                     <div className={`text-[10px] ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
