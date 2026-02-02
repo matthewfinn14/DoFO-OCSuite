@@ -3,11 +3,14 @@ import { useSchool } from '../../../context/SchoolContext';
 
 /**
  * Game Plan print template - supports Sheet, FZDnD, and Matrix views
+ * Page formats:
+ * - 2-page: 1 sheet front/back (portrait)
+ * - 4-page: 2 sheets that create 17x11 spread when assembled (portrait booklet)
  */
 export default function GamePlanPrint({
   weekId,
   viewType = 'sheet',
-  orientation = 'landscape',
+  pageFormat = '2-page',
   includeLogo = true,
   includeOpponent = true,
   sections = null,
@@ -38,12 +41,10 @@ export default function GamePlanPrint({
 
   // Font size classes
   const fontSizeClass = {
-    small: 'text-[9pt]',
-    medium: 'text-[10pt]',
-    large: 'text-[11pt]'
-  }[fontSize] || 'text-[10pt]';
-
-  const orientationClass = orientation === 'portrait' ? 'print-page-portrait' : 'print-page-landscape';
+    small: 'text-[8pt]',
+    medium: 'text-[9pt]',
+    large: 'text-[10pt]'
+  }[fontSize] || 'text-[9pt]';
 
   // Format game date
   const gameDate = currentWeek?.gameDate
@@ -54,48 +55,87 @@ export default function GamePlanPrint({
       })
     : '';
 
-  return (
-    <div className={`gameplan-print ${orientationClass} bg-white`}>
-      {/* Compact Header - logo left, title center-ish */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        padding: '0.25in',
-        paddingBottom: '8px',
-        borderBottom: '1px solid #333'
-      }}>
-        {includeLogo && settings?.teamLogo && (
-          <img
-            src={settings.teamLogo}
-            alt="Logo"
-            style={{ height: '40px', width: 'auto' }}
-          />
-        )}
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '14pt', fontWeight: 'bold', color: '#000' }}>
-            {currentWeek?.name || 'Week'} vs. {currentWeek?.opponent || 'OPPONENT'}
-            {gameDate && <span style={{ fontWeight: 'normal', marginLeft: '12px', fontSize: '11pt' }}>{gameDate}</span>}
-          </div>
+  const is4Page = pageFormat === '4-page';
+  const totalPages = is4Page ? 4 : 2;
+
+  // Header component - compact with logo
+  const PageHeader = ({ pageNum }) => (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      padding: '0.25in',
+      paddingBottom: '4px',
+      borderBottom: '1px solid #333'
+    }}>
+      {includeLogo && settings?.teamLogo && (
+        <img
+          src={settings.teamLogo}
+          alt="Logo"
+          style={{ height: '32px', width: 'auto' }}
+        />
+      )}
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: '11pt', fontWeight: 'bold', color: '#000' }}>
+          {currentWeek?.name || 'Week'} vs. {currentWeek?.opponent || 'OPPONENT'}
+          {gameDate && <span style={{ fontWeight: 'normal', marginLeft: '8px', fontSize: '9pt' }}>{gameDate}</span>}
+          {totalPages > 1 && <span style={{ fontWeight: 'normal', marginLeft: '8px', fontSize: '8pt', color: '#666' }}>({pageNum}/{totalPages})</span>}
         </div>
       </div>
+    </div>
+  );
 
-      {/* Content based on view type */}
-      <div className={`p-4 ${fontSizeClass}`}>
-        {viewType === 'fzdnd' ? (
-          <FZDnDView gamePlan={gamePlan} playMap={playMap} sections={sections} />
-        ) : viewType === 'matrix' ? (
-          <MatrixView gamePlan={gamePlan} playMap={playMap} sections={sections} />
-        ) : (
-          <SheetView gamePlan={gamePlan} playMap={playMap} sections={sections} />
-        )}
-      </div>
+  return (
+    <div className="gameplan-print bg-white">
+      <style>{`
+        @media print {
+          @page {
+            size: letter portrait;
+            margin: 0.15in;
+          }
+        }
+        .gameplan-print {
+          background: white;
+          color: black;
+        }
+        .gameplan-page {
+          width: 8in;
+          min-height: 10.5in;
+          background: white;
+          page-break-after: always;
+          break-after: page;
+          box-sizing: border-box;
+        }
+        .gameplan-page:last-child {
+          page-break-after: auto;
+          break-after: auto;
+        }
+        .gameplan-page-content {
+          padding: 0.15in;
+        }
+      `}</style>
+
+      {/* Render pages based on format */}
+      {Array.from({ length: totalPages }, (_, pageIndex) => (
+        <div key={pageIndex} className="gameplan-page">
+          <PageHeader pageNum={pageIndex + 1} />
+          <div className={`gameplan-page-content ${fontSizeClass}`}>
+            {viewType === 'fzdnd' ? (
+              <FZDnDView gamePlan={gamePlan} playMap={playMap} sections={sections} pageIndex={pageIndex} totalPages={totalPages} />
+            ) : viewType === 'matrix' ? (
+              <MatrixView gamePlan={gamePlan} playMap={playMap} sections={sections} pageIndex={pageIndex} totalPages={totalPages} />
+            ) : (
+              <SheetView gamePlan={gamePlan} playMap={playMap} sections={sections} pageIndex={pageIndex} totalPages={totalPages} />
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
 
 // Sheet View - Grid-based call sheet
-function SheetView({ gamePlan, playMap, sections }) {
+function SheetView({ gamePlan, playMap, sections, pageIndex = 0, totalPages = 1 }) {
   const sheetData = gamePlan.sheet || gamePlan.sections || [];
 
   // Filter sections if specified
@@ -103,13 +143,23 @@ function SheetView({ gamePlan, playMap, sections }) {
     ? sheetData.filter(s => sections.includes(s.id) || sections.includes(s.name))
     : sheetData;
 
-  if (filteredSections.length === 0) {
+  if (filteredSections.length === 0 && pageIndex === 0) {
     return <div className="text-gray-500 text-center py-8">No call sheet data available</div>;
   }
 
+  // Split sections across pages
+  const sectionsPerPage = Math.ceil(filteredSections.length / totalPages);
+  const startIdx = pageIndex * sectionsPerPage;
+  const endIdx = Math.min(startIdx + sectionsPerPage, filteredSections.length);
+  const pageSections = filteredSections.slice(startIdx, endIdx);
+
+  if (pageSections.length === 0) {
+    return <div className="text-gray-400 text-center py-4 text-sm">Page {pageIndex + 1} - No additional sections</div>;
+  }
+
   return (
-    <div className="space-y-4">
-      {filteredSections.map((section, sectionIdx) => (
+    <div className="space-y-3">
+      {pageSections.map((section, sectionIdx) => (
         <div key={sectionIdx} className="call-sheet-section border border-gray-300 rounded overflow-hidden">
           {/* Section Header */}
           <div className="section-header bg-gray-100 px-3 py-2 font-bold uppercase text-sm border-b">
@@ -166,20 +216,30 @@ function SheetView({ gamePlan, playMap, sections }) {
 }
 
 // FZDnD View - Field Zone layout
-function FZDnDView({ gamePlan, playMap, sections }) {
+function FZDnDView({ gamePlan, playMap, sections, pageIndex = 0, totalPages = 1 }) {
   const zones = gamePlan.zones || gamePlan.fzdnd || [];
 
   const filteredZones = sections
     ? zones.filter(z => sections.includes(z.id) || sections.includes(z.name))
     : zones;
 
-  if (filteredZones.length === 0) {
+  if (filteredZones.length === 0 && pageIndex === 0) {
     return <div className="text-gray-500 text-center py-8">No field zone data available</div>;
   }
 
+  // Split zones across pages
+  const zonesPerPage = Math.ceil(filteredZones.length / totalPages);
+  const startIdx = pageIndex * zonesPerPage;
+  const endIdx = Math.min(startIdx + zonesPerPage, filteredZones.length);
+  const pageZones = filteredZones.slice(startIdx, endIdx);
+
+  if (pageZones.length === 0) {
+    return <div className="text-gray-400 text-center py-4 text-sm">Page {pageIndex + 1} - No additional zones</div>;
+  }
+
   return (
-    <div className="space-y-4">
-      {filteredZones.map((zone, zoneIdx) => (
+    <div className="space-y-3">
+      {pageZones.map((zone, zoneIdx) => (
         <div key={zoneIdx} className="fzdnd-zone-container border-2 border-black">
           {/* Zone Header */}
           <div className="fzdnd-zone-header grid grid-cols-2 border-b border-black">
@@ -243,13 +303,23 @@ function FZDnDView({ gamePlan, playMap, sections }) {
 }
 
 // Matrix View - Formation/Hash/Play-type matrix
-function MatrixView({ gamePlan, playMap, sections }) {
+function MatrixView({ gamePlan, playMap, sections, pageIndex = 0, totalPages = 1 }) {
   const matrix = gamePlan.matrix || {};
   const formations = matrix.formations || [];
   const playTypes = matrix.playTypes || [];
 
-  if (formations.length === 0 || playTypes.length === 0) {
+  if ((formations.length === 0 || playTypes.length === 0) && pageIndex === 0) {
     return <div className="text-gray-500 text-center py-8">No matrix data available</div>;
+  }
+
+  // For matrix, split formations across pages (columns)
+  const formationsPerPage = Math.ceil(formations.length / totalPages);
+  const startIdx = pageIndex * formationsPerPage;
+  const endIdx = Math.min(startIdx + formationsPerPage, formations.length);
+  const pageFormations = formations.slice(startIdx, endIdx);
+
+  if (pageFormations.length === 0) {
+    return <div className="text-gray-400 text-center py-4 text-sm">Page {pageIndex + 1} - No additional formations</div>;
   }
 
   return (
@@ -258,7 +328,7 @@ function MatrixView({ gamePlan, playMap, sections }) {
         <thead>
           <tr>
             <th className="matrix-corner-cell border border-gray-300 p-2 bg-white">Play Type</th>
-            {formations.map((formation, idx) => (
+            {pageFormations.map((formation, idx) => (
               <th key={idx} className="matrix-group-header border border-gray-300 p-2 bg-gray-800 text-white">
                 {formation.name || formation}
               </th>
@@ -271,7 +341,7 @@ function MatrixView({ gamePlan, playMap, sections }) {
               <td className="matrix-playtype-cell border border-gray-300 p-2 bg-blue-100 font-bold">
                 {playType.name || playType}
               </td>
-              {formations.map((formation, colIdx) => {
+              {pageFormations.map((formation, colIdx) => {
                 const formationName = formation.name || formation;
                 const playTypeName = playType.name || playType;
                 const cellPlays = matrix.data?.[formationName]?.[playTypeName] || [];

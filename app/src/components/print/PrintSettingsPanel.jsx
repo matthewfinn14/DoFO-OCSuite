@@ -511,13 +511,13 @@ function GamePlanSettings({ settings, onChange, layout }) {
         </select>
       </SettingsField>
 
-      <SettingsField label="Orientation" layout={layout} id="print-settings-game-plan-orientation">
+      <SettingsField label="Page Format" layout={layout} id="print-settings-game-plan-page-format">
         <select
-          value={settings.orientation || 'landscape'}
-          onChange={(e) => onChange('orientation', e.target.value)}
+          value={settings.pageFormat || '2-page'}
+          onChange={(e) => onChange('pageFormat', e.target.value)}
         >
-          <option value="landscape">Landscape</option>
-          <option value="portrait">Portrait</option>
+          <option value="2-page">2-Page (1 sheet front/back)</option>
+          <option value="4-page">4-Page Booklet (17x11 spread)</option>
         </select>
       </SettingsField>
 
