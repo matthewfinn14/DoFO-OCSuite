@@ -221,12 +221,15 @@ export default function WristbandPrint({
           display: grid !important;
           grid-template-columns: repeat(2, 4.5in) !important;
           grid-template-rows: repeat(2, 3.5in) !important;
+          grid-auto-rows: 3.5in !important;
           gap: 0.25in !important;
           justify-content: center;
           align-content: start;
           padding: 0.25in;
           background: white;
           box-sizing: border-box;
+          page-break-inside: avoid !important;
+          break-inside: avoid !important;
         }
 
         .wristband-print-player .wristband-card {
@@ -239,6 +242,14 @@ export default function WristbandPrint({
           display: flex;
           flex-direction: column;
           box-sizing: border-box;
+        }
+
+        /* Prevent page breaks between first 4 cards */
+        .wristband-print-player .wristband-card:nth-child(-n+4) {
+          page-break-before: avoid !important;
+          break-before: avoid !important;
+          page-break-after: avoid !important;
+          break-after: avoid !important;
         }
 
         /* WIZ cards: 12cm x 8cm (4.7" x 3.15") - fits 4 per landscape page */
