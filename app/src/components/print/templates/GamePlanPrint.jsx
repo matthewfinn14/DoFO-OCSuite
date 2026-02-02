@@ -45,34 +45,38 @@ export default function GamePlanPrint({
 
   const orientationClass = orientation === 'portrait' ? 'print-page-portrait' : 'print-page-landscape';
 
+  // Format game date
+  const gameDate = currentWeek?.gameDate
+    ? new Date(currentWeek.gameDate).toLocaleDateString('en-US', {
+        month: 'numeric',
+        day: 'numeric',
+        year: 'numeric'
+      })
+    : '';
+
   return (
     <div className={`gameplan-print ${orientationClass} bg-white`}>
-      {/* Header */}
-      <div className="print-header">
-        <div className="print-header-left">
-          {includeLogo && settings?.teamLogo && (
-            <img src={settings.teamLogo} alt="Logo" className="print-header-logo" />
-          )}
-          <div className="print-header-info">
-            <div className="print-header-title">
-              Game Plan - {currentWeek?.name || 'Call Sheet'}
-            </div>
-            {includeOpponent && currentWeek?.opponent && (
-              <div className="print-header-subtitle">vs {currentWeek.opponent}</div>
-            )}
+      {/* Compact Header - logo left, title center-ish */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        padding: '0.25in',
+        paddingBottom: '8px',
+        borderBottom: '1px solid #333'
+      }}>
+        {includeLogo && settings?.teamLogo && (
+          <img
+            src={settings.teamLogo}
+            alt="Logo"
+            style={{ height: '40px', width: 'auto' }}
+          />
+        )}
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '14pt', fontWeight: 'bold', color: '#000' }}>
+            {currentWeek?.name || 'Week'} vs. {currentWeek?.opponent || 'OPPONENT'}
+            {gameDate && <span style={{ fontWeight: 'normal', marginLeft: '12px', fontSize: '11pt' }}>{gameDate}</span>}
           </div>
-        </div>
-        <div className="print-header-right">
-          {currentWeek?.gameDate && (
-            <div className="print-header-opponent">
-              {new Date(currentWeek.gameDate).toLocaleDateString('en-US', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric'
-              })}
-            </div>
-          )}
-          <div className="print-header-date">{new Date().toLocaleDateString()}</div>
         </div>
       </div>
 
