@@ -847,6 +847,8 @@
     margin-bottom: 0 !important;
     width: 100% !important;
     height: auto !important;
+    aspect-ratio: auto !important;
+    overflow: visible !important;
   }
 
   /* Remove padding from print containers */
