@@ -231,9 +231,9 @@ export default function WristbandPrint({
         }
 
         .wristband-print-player .wristband-card {
-          width: ${cardWidth}in;
-          height: ${cardHeight}in;
-          flex: 0 0 ${cardWidth}in;
+          width: ${cardWidth}in !important;
+          height: ${cardHeight}in !important;
+          flex: 0 0 ${cardWidth}in !important;
           border: 1px solid black;
           background: white;
           overflow: hidden;
@@ -243,8 +243,8 @@ export default function WristbandPrint({
 
         /* WIZ cards: same dimensions as standard */
         .wristband-print-player .wristband-card.layout-wiz {
-          width: ${cardWidth}in;
-          height: ${cardHeight}in;
+          width: ${cardWidth}in !important;
+          height: ${cardHeight}in !important;
         }
 
         .wristband-print-player.has-wiz-cards {
