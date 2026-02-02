@@ -33,7 +33,8 @@ export default function SheetView({
   setupConfig,
   onFZDnDBoxDrop,
   onMatrixBoxAdd,
-  onMatrixBoxRemove
+  onMatrixBoxRemove,
+  pageFormat = '2-page'
 }) {
   const sections = layouts?.CALL_SHEET?.sections || [];
   const weekTitle = currentWeek?.name || `Week ${currentWeek?.weekNumber || ''}`;
@@ -764,34 +765,300 @@ export default function SheetView({
     onBoxDrop(e, sectionIdx, boxIdx);
   };
 
+  const is4Page = pageFormat === '4-page';
+  const gameDate = currentWeek?.gameDate
+    ? new Date(currentWeek.gameDate).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })
+    : '';
+
+  // Compact print header component - aligned with content below
+  const PrintHeader = ({ pageNum, totalPages }) => (
+    <div className="print-compact-header" style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      padding: '0',
+      margin: '0 0 4px 0'
+    }}>
+      {teamLogo && (teamLogo.startsWith('http') || teamLogo.startsWith('data:')) ? (
+        <img src={teamLogo} alt="Logo" style={{ height: '24px', width: 'auto' }} />
+      ) : null}
+      <div style={{ flex: 1, fontSize: '9pt', fontWeight: 'bold', color: '#000' }}>
+        {weekTitle} vs. {currentWeek?.opponent || 'OPPONENT'}
+        {gameDate && <span style={{ fontWeight: 'normal', marginLeft: '6px', fontSize: '7pt' }}>{gameDate}</span>}
+        {totalPages > 1 && <span style={{ fontWeight: 'normal', marginLeft: '6px', fontSize: '6pt', color: '#666' }}>Page {pageNum}/{totalPages}</span>}
+      </div>
+    </div>
+  );
+
+  // Render matrix box for print with only specific hash groups
+  const renderMatrixBoxForPrint = (box, hashGroupIndices) => {
+    const playTypes = box.playTypes || [
+      { id: 'strong_run', label: 'STRONG RUN' },
+      { id: 'weak_run', label: 'WEAK RUN' },
+      { id: 'quick_game', label: 'QUICK GAME' },
+      { id: 'drop_back', label: 'DROPBACK' },
+      { id: 'gadget', label: 'GADGET' }
+    ];
+    const allHashGroups = box.hashGroups || [
+      { id: 'FB', label: 'BASE/INITIAL', cols: ['FB_L', 'FB_R'] },
+      { id: 'CB', label: 'BASE W/ DRESSING', cols: ['CB_L', 'CB_R'] },
+      { id: 'CU', label: 'CONVERT', cols: ['CU_L', 'CU_R'] },
+      { id: 'SO', label: 'EXPLOSIVE', cols: ['SO_L', 'SO_R'] }
+    ];
+
+    // Filter to only the hash groups for this page
+    const hashGroups = hashGroupIndices.map(i => allHashGroups[i]).filter(Boolean);
+    const allCols = hashGroups.flatMap(g => g.cols);
+
+    const getPlaysForCell = (playTypeId, colId) => {
+      const setId = `${box.setId}_${playTypeId}_${colId}`;
+      const set = gamePlan?.sets?.find(s => s.id === setId);
+      return (set?.playIds || []).map(id => plays.find(p => p.id === id)).filter(Boolean);
+    };
+
+    return (
+      <div className="print-matrix-box" style={{ fontSize: '7pt', width: '100%' }}>
+        {/* Header Section */}
+        <div style={{ display: 'flex', borderBottom: '1px solid #333' }}>
+          <div style={{
+            width: '50px',
+            flexShrink: 0,
+            padding: '2px 4px',
+            fontSize: '6pt',
+            fontWeight: 'bold',
+            textAlign: 'center',
+            background: '#334155',
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            TYPE
+          </div>
+          {hashGroups.map((group, gIdx) => (
+            <div key={group.id} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <div style={{
+                padding: '2px',
+                fontSize: '6pt',
+                fontWeight: 'bold',
+                color: 'white',
+                textAlign: 'center',
+                background: '#475569',
+                borderLeft: gIdx > 0 ? '2px solid #1e293b' : 'none'
+              }}>
+                {group.label}
+              </div>
+              <div style={{ display: 'flex' }}>
+                {group.cols.map((colId, cIdx) => (
+                  <div key={colId} style={{
+                    flex: 1,
+                    padding: '1px',
+                    fontSize: '5pt',
+                    fontWeight: 'bold',
+                    color: 'white',
+                    textAlign: 'center',
+                    background: '#64748b',
+                    borderLeft: cIdx === 0 && gIdx > 0 ? '2px solid #1e293b' : (cIdx > 0 ? '1px solid #475569' : 'none')
+                  }}>
+                    {colId.endsWith('_L') ? 'L' : 'R'}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Play Type Rows */}
+        {playTypes.map((pt, ptIdx) => {
+          const rowHasPlays = allCols.some(col => getPlaysForCell(pt.id, col).length > 0);
+          if (!rowHasPlays) return null;
+
+          return (
+            <div key={pt.id} style={{ display: 'flex', borderBottom: '1px solid #ddd', minHeight: '16px' }}>
+              <div style={{
+                width: '50px',
+                flexShrink: 0,
+                padding: '2px 4px',
+                fontSize: '5pt',
+                fontWeight: 'bold',
+                color: '#1e40af',
+                background: '#dbeafe',
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                {pt.label}
+              </div>
+              {hashGroups.map((group, gIdx) => (
+                group.cols.map((colId, cIdx) => {
+                  const cellPlays = getPlaysForCell(pt.id, colId);
+                  return (
+                    <div key={colId} style={{
+                      flex: 1,
+                      padding: '1px 2px',
+                      background: ptIdx % 2 === 1 ? '#f8fafc' : 'white',
+                      borderLeft: cIdx === 0 && gIdx > 0 ? '2px solid #cbd5e1' : '1px solid #e2e8f0',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '1px'
+                    }}>
+                      {cellPlays.map((p, i) => (
+                        <div key={i} style={{
+                          fontSize: '6pt',
+                          fontWeight: '500',
+                          color: '#1e293b',
+                          background: p.priority ? '#fef08a' : '#f1f5f9',
+                          padding: '1px 2px',
+                          borderRadius: '1px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {getPlayDisplayName(p)}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
-    <div className="animate-fade-in" style={{ height: '100%', overflowY: 'auto', padding: '1rem' }}>
-      {/* Print Header */}
-      <div className="print-only" style={{
+    <div className={`animate-fade-in ${is4Page ? 'print-4page' : 'print-2page'}`} style={{ height: '100%', overflowY: 'auto', padding: '1rem' }}>
+      {/* Print Pages for 4-page booklet format */}
+      {is4Page && (
+        <div className="print-only-4page">
+          {/*
+            4 pages layout for 17x11 booklet:
+            - Pages 1 & 2: First spread (left and right halves of matrix - Base/Base w/ Dressing on left, Convert/Explosive on right)
+            - Pages 3 & 4: Additional sections if needed
+
+            For matrix boxes: split 4 hash groups into 2 per page
+          */}
+          {sections.map((section, sIdx) => {
+            const visibleBoxes = (section.boxes || []).filter(b => !b.hidden);
+            const matrixBoxes = visibleBoxes.filter(b => b.type === 'matrix');
+            const nonMatrixBoxes = visibleBoxes.filter(b => b.type !== 'matrix');
+
+            // For matrix boxes, we need 2 pages (left half, right half)
+            if (matrixBoxes.length > 0) {
+              return matrixBoxes.map((matrixBox, mbIdx) => (
+                <div key={`matrix-${sIdx}-${mbIdx}`}>
+                  {/* Page 1: Left side - Base & Base w/ Dressing (hash groups 0, 1) */}
+                  <div className="print-page-4">
+                    <PrintHeader pageNum={1} totalPages={4} />
+                    <div className="print-page-content-4">
+                      <div className="print-section-4">
+                        <div className="print-section-header-4">{section.title} - {matrixBox.header}</div>
+                        <div className="print-matrix-wrapper">
+                          {renderMatrixBoxForPrint(matrixBox, [0, 1])}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Page 2: Right side - Convert & Explosive (hash groups 2, 3) */}
+                  <div className="print-page-4">
+                    <PrintHeader pageNum={2} totalPages={4} />
+                    <div className="print-page-content-4">
+                      <div className="print-section-4">
+                        <div className="print-section-header-4">{section.title} - {matrixBox.header}</div>
+                        <div className="print-matrix-wrapper">
+                          {renderMatrixBoxForPrint(matrixBox, [2, 3])}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ));
+            }
+
+            // For non-matrix sections, split boxes across 2 pages
+            if (nonMatrixBoxes.length > 0) {
+              const halfIdx = Math.ceil(nonMatrixBoxes.length / 2);
+              const leftBoxes = nonMatrixBoxes.slice(0, halfIdx);
+              const rightBoxes = nonMatrixBoxes.slice(halfIdx);
+
+              return (
+                <div key={`section-${sIdx}`}>
+                  {/* Left page */}
+                  {leftBoxes.length > 0 && (
+                    <div className="print-page-4">
+                      <PrintHeader pageNum={3} totalPages={4} />
+                      <div className="print-page-content-4">
+                        <div className="print-section-4">
+                          <div className="print-section-header-4">{section.title}</div>
+                          <div className="print-boxes-grid-4">
+                            {leftBoxes.map((box, bIdx) => (
+                              <div key={bIdx} className="print-box-4" style={{
+                                gridColumn: `span ${Math.min(box.colSpan || 2, 4)}`,
+                              }}>
+                                <div className="print-box-header-4" style={{ background: box.color || '#3b82f6' }}>
+                                  {box.header}
+                                </div>
+                                <div className="print-box-content-4">
+                                  {renderBoxContent(box, true)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Right page */}
+                  {rightBoxes.length > 0 && (
+                    <div className="print-page-4">
+                      <PrintHeader pageNum={4} totalPages={4} />
+                      <div className="print-page-content-4">
+                        <div className="print-section-4">
+                          <div className="print-section-header-4">{section.title} (cont.)</div>
+                          <div className="print-boxes-grid-4">
+                            {rightBoxes.map((box, bIdx) => (
+                              <div key={bIdx} className="print-box-4" style={{
+                                gridColumn: `span ${Math.min(box.colSpan || 2, 4)}`,
+                              }}>
+                                <div className="print-box-header-4" style={{ background: box.color || '#3b82f6' }}>
+                                  {box.header}
+                                </div>
+                                <div className="print-box-content-4">
+                                  {renderBoxContent(box, true)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            return null;
+          })}
+        </div>
+      )}
+
+      {/* Standard Print Header (2-page mode) - no left padding, aligns with content */}
+      <div className="print-only-2page" style={{
         display: 'none',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: '1rem',
-        paddingBottom: '0.5rem',
-        borderBottom: '2px solid black'
+        gap: '8px',
+        padding: '0',
+        marginBottom: '8px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {teamLogo && (teamLogo.startsWith('http') || teamLogo.startsWith('data:')) ? (
-            <img src={teamLogo} alt="Logo" style={{ height: '50px', width: 'auto' }} />
-          ) : teamLogo ? (
-            <span style={{ fontSize: '2rem' }}>{teamLogo}</span>
-          ) : null}
-          <div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'black' }}>
-              {weekTitle} {opponentTitle && `- ${opponentTitle}`}
-            </div>
-            <div style={{ fontSize: '0.85rem', color: '#475569', fontWeight: '600' }}>
-              Call Sheet
-            </div>
-          </div>
-        </div>
-        <div style={{ fontSize: '0.75rem', color: '#64748b', textAlign: 'right' }}>
-          {new Date().toLocaleDateString()}
+        {teamLogo && (teamLogo.startsWith('http') || teamLogo.startsWith('data:')) ? (
+          <img src={teamLogo} alt="Logo" style={{ height: '24px', width: 'auto' }} />
+        ) : null}
+        <div style={{ flex: 1, fontSize: '9pt', fontWeight: 'bold', color: '#000' }}>
+          {weekTitle} vs. {currentWeek?.opponent || 'OPPONENT'}
+          {gameDate && <span style={{ fontWeight: 'normal', marginLeft: '6px', fontSize: '7pt' }}>{gameDate}</span>}
         </div>
       </div>
 

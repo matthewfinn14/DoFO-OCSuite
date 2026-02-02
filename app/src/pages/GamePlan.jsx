@@ -1113,8 +1113,8 @@ export default function GamePlan() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className={`p-4 border-b ${isLight ? 'bg-white border-slate-200' : 'border-slate-800 bg-slate-900/50'}`}>
+      {/* Header - hidden when printing */}
+      <div className={`p-4 border-b hide-on-print ${isLight ? 'bg-white border-slate-200' : 'border-slate-800 bg-slate-900/50'}`}>
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className={`text-2xl font-bold mb-1 ${isLight ? 'text-slate-900' : 'text-white'}`}>Game Plan</h1>
@@ -1232,6 +1232,7 @@ export default function GamePlan() {
             teamLogo={teamLogo}
             isLocked={isLocked}
             isEditing={isSheetEditing}
+            pageFormat={pageFormat}
             onToggleEditing={() => setIsSheetEditing(!isSheetEditing)}
             onUpdateLayouts={handleUpdateLayouts}
             onAddSection={() => setShowAddSectionModal(true)}
