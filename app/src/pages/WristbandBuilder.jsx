@@ -4,6 +4,7 @@ import { useSchool } from '../context/SchoolContext';
 import { usePlayBank } from '../context/PlayBankContext';
 import PlayDiagramEditor from '../components/diagrams/PlayDiagramEditor';
 import DiagramPreview from '../components/diagrams/DiagramPreview';
+import WristbandPrint from '../components/print/templates/WristbandPrint';
 import {
   Watch,
   Plus,
@@ -113,6 +114,7 @@ export default function WristbandBuilder() {
   // State
   const [activeCardId, setActiveCardId] = useState('card100');
   const [showPrintModal, setShowPrintModal] = useState(false);
+  const [printFormat, setPrintFormat] = useState('player'); // 'player' (4/page) or 'coach' (2/page)
 
   // WIZ editing state
   const [editingSkillPlay, setEditingSkillPlay] = useState(null);
@@ -516,7 +518,20 @@ export default function WristbandBuilder() {
   }
 
   return (
-    <div className="flex h-full">
+    <>
+      {/* Print-only content - renders the wristband cards for printing */}
+      <div className="hidden print:block">
+        <WristbandPrint
+          weekId={currentWeek?.id}
+          levelId={selectedLevel}
+          format={printFormat}
+          cardSelection={[activeCardId]}
+          showSlotNumbers={true}
+          showFormation={true}
+        />
+      </div>
+
+      <div className="flex h-full print:hidden">
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-4">
         {/* Header */}
@@ -747,6 +762,8 @@ export default function WristbandBuilder() {
           slotMap={slotMap}
           getPlayForSlot={getPlayForSlot}
           onClose={() => setShowPrintModal(false)}
+          printFormat={printFormat}
+          setPrintFormat={setPrintFormat}
         />
       )}
 
@@ -876,6 +893,7 @@ export default function WristbandBuilder() {
         </div>
       )}
     </div>
+    </>
   );
 }
 
@@ -1545,9 +1563,7 @@ function MiniScriptPreview({ rows, plays, startCoord, title, cardColor }) {
 }
 
 // Print Modal
-function PrintModal({ wristbandSettings, activeCardId, playsArray, slotMap, getPlayForSlot, onClose }) {
-  const [printType, setPrintType] = useState('player'); // 'player' or 'coach'
-
+function PrintModal({ wristbandSettings, activeCardId, playsArray, slotMap, getPlayForSlot, onClose, printFormat, setPrintFormat }) {
   const handlePrint = () => {
     window.print();
   };
@@ -1556,7 +1572,7 @@ function PrintModal({ wristbandSettings, activeCardId, playsArray, slotMap, getP
   const tab = CARD_TABS.find(t => t.id === activeCardId);
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 no-print">
       <div className="bg-slate-900 rounded-xl w-full max-w-2xl">
         <div className="flex items-center justify-between p-4 border-b border-slate-800">
           <h3 className="text-lg font-semibold text-white">Print Wristbands</h3>
@@ -1568,14 +1584,14 @@ function PrintModal({ wristbandSettings, activeCardId, playsArray, slotMap, getP
           <div className="flex items-center gap-4 mb-4">
             <span className="text-slate-400">Format:</span>
             <button
-              onClick={() => setPrintType('player')}
-              className={`px-4 py-2 rounded ${printType === 'player' ? 'bg-sky-500 text-white' : 'bg-slate-800 text-slate-400'}`}
+              onClick={() => setPrintFormat('player')}
+              className={`px-4 py-2 rounded ${printFormat === 'player' ? 'bg-sky-500 text-white' : 'bg-slate-800 text-slate-400'}`}
             >
               Player (4 per page)
             </button>
             <button
-              onClick={() => setPrintType('coach')}
-              className={`px-4 py-2 rounded ${printType === 'coach' ? 'bg-sky-500 text-white' : 'bg-slate-800 text-slate-400'}`}
+              onClick={() => setPrintFormat('coach')}
+              className={`px-4 py-2 rounded ${printFormat === 'coach' ? 'bg-sky-500 text-white' : 'bg-slate-800 text-slate-400'}`}
             >
               Coach (2 per page)
             </button>
@@ -1584,7 +1600,7 @@ function PrintModal({ wristbandSettings, activeCardId, playsArray, slotMap, getP
             Print will include the currently selected card ({tab?.label}). Use browser print dialog for best results.
           </p>
           <Link
-            to={`/print?template=wristband&format=${printType}`}
+            to={`/print?template=wristband&format=${printFormat}`}
             className="flex items-center gap-2 text-sky-400 hover:text-sky-300 text-sm"
           >
             <ExternalLink size={14} />
