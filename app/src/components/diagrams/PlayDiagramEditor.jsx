@@ -1100,7 +1100,7 @@ export default function PlayDiagramEditor({
   // Uses customDefaultPositions if set, otherwise falls back to SKILL_POSITION_PLACEMENTS
   const snapToDefaultPositions = () => {
     const wizCenter = 475;
-    const wizLos = 390;
+    const wizLos = 290; // LOS position for 950x450 canvas
     const olSpacing = 38;
 
     const newElements = elements.map(el => {
