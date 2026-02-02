@@ -1163,19 +1163,19 @@
 
   /* Fixed column widths for print - minimal whitespace */
   .pp2-script-row-header > div:nth-child(1),
-  .pp2-script-row > div:nth-child(1) { width: 3%; }  /* # */
+  .pp2-script-row > div:nth-child(1) { width: 3%; text-align: center; }  /* # */
   .pp2-script-row-header > div:nth-child(2),
-  .pp2-script-row > div:nth-child(2) { width: 4%; }  /* Hash */
+  .pp2-script-row > div:nth-child(2) { width: 4%; text-align: center; }  /* Hash */
   .pp2-script-row-header > div:nth-child(3),
-  .pp2-script-row > div:nth-child(3) { width: 3%; }  /* Dn */
+  .pp2-script-row > div:nth-child(3) { width: 3%; text-align: center; }  /* Dn */
   .pp2-script-row-header > div:nth-child(4),
-  .pp2-script-row > div:nth-child(4) { width: 4%; }  /* Dist */
+  .pp2-script-row > div:nth-child(4) { width: 4%; text-align: center; }  /* Dist */
   .pp2-script-row-header > div:nth-child(5),
   .pp2-script-row > div:nth-child(5) { width: 12%; } /* Situation */
   .pp2-script-row-header > div:nth-child(6),
   .pp2-script-row > div:nth-child(6) { width: 40%; } /* Play Call */
   .pp2-script-row-header > div:nth-child(7),
-  .pp2-script-row > div:nth-child(7) { width: 6%; }  /* Defense */
+  .pp2-script-row > div:nth-child(7) { width: 6%; text-align: center; }  /* Defense */
   .pp2-script-row-header > div:nth-child(8),
   .pp2-script-row > div:nth-child(8) { width: 28%; } /* Notes */
 
