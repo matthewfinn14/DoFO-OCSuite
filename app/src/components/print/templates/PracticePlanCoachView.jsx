@@ -226,18 +226,37 @@ export default function PracticePlanCoachView({
 
   // Get focus display
   const getFocusDisplay = (seg) => {
-    if (seg.offenseFocus || seg.defenseFocus) {
-      const parts = [];
-      if (seg.offenseFocus) {
-        const focus = Array.isArray(seg.offenseFocus) ? seg.offenseFocus.join(', ') : seg.offenseFocus;
-        parts.push(`O: ${focus}`);
+    const parts = [];
+
+    // Check for general focuses (array of objects with .name)
+    if (seg.focuses?.length > 0) {
+      const focusNames = seg.focuses.map(f => typeof f === 'string' ? f : f.name).filter(Boolean);
+      if (focusNames.length > 0) {
+        parts.push(focusNames.join(', '));
       }
-      if (seg.defenseFocus) {
-        const focus = Array.isArray(seg.defenseFocus) ? seg.defenseFocus.join(', ') : seg.defenseFocus;
-        parts.push(`D: ${focus}`);
+    }
+
+    // Check for offense focuses (array of objects with .name)
+    if (seg.offenseFocuses?.length > 0) {
+      const focusNames = seg.offenseFocuses.map(f => typeof f === 'string' ? f : f.name).filter(Boolean);
+      if (focusNames.length > 0) {
+        parts.push(`O: ${focusNames.join(', ')}`);
       }
+    }
+
+    // Check for defense focuses (array of objects with .name)
+    if (seg.defenseFocuses?.length > 0) {
+      const focusNames = seg.defenseFocuses.map(f => typeof f === 'string' ? f : f.name).filter(Boolean);
+      if (focusNames.length > 0) {
+        parts.push(`D: ${focusNames.join(', ')}`);
+      }
+    }
+
+    if (parts.length > 0) {
       return parts.join(' / ');
     }
+
+    // Fallback to situation
     if (seg.situation) {
       return Array.isArray(seg.situation) ? seg.situation.join(', ') : seg.situation;
     }
