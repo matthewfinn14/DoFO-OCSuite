@@ -839,6 +839,16 @@
     display: none !important;
   }
 
+  /* Page container - remove chrome for printing */
+  .page-container {
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin-bottom: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+
   /* Remove padding from print containers */
   .print-4page,
   .print-2page {

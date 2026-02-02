@@ -1131,6 +1131,9 @@ export default function SheetView({
             .map((section, idx) => ({ section, originalIdx: idx }))
             .filter(({ section }) => (section.pageNumber || 1) === pageNum);
 
+          // Skip empty pages when not editing
+          if (pageSections.length === 0 && !isEditing) continue;
+
           pageContainers.push(
             <div
               key={pageNum}
@@ -1451,18 +1454,6 @@ export default function SheetView({
                   </button>
                 )}
 
-                {/* Empty state */}
-                {pageSections.length === 0 && !isEditing && (
-                  <div style={{
-                    gridColumn: '1 / -1',
-                    textAlign: 'center',
-                    color: '#94a3b8',
-                    fontStyle: 'italic',
-                    padding: '2rem'
-                  }}>
-                    No sections on this page
-                  </div>
-                )}
               </div>
             </div>
           );
