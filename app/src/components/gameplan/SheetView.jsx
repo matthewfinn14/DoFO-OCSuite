@@ -1096,6 +1096,35 @@ export default function SheetView({
         const numPages = is4Page ? 4 : 2;
         const pageContainers = [];
 
+        // Calculate page dimensions based on format and orientation
+        // Using 96px per inch for screen display
+        const pxPerInch = 96;
+        let pageWidthIn, pageHeightIn;
+
+        if (is4Page) {
+          // 4-page booklet
+          if (isLandscape) {
+            // Landscape booklet: portrait paper, full page each
+            pageWidthIn = 8; pageHeightIn = 10.5;
+          } else {
+            // Portrait booklet: landscape paper, pages stack (half height)
+            pageWidthIn = 10.5; pageHeightIn = 5;
+          }
+        } else {
+          // 2-page mode
+          if (isLandscape) {
+            pageWidthIn = 10.5; pageHeightIn = 8;
+          } else {
+            pageWidthIn = 8; pageHeightIn = 10.5;
+          }
+        }
+
+        // Scale for screen (fit within reasonable width)
+        const maxScreenWidth = 850;
+        const scaleFactor = Math.min(1, maxScreenWidth / (pageWidthIn * pxPerInch));
+        const displayWidth = pageWidthIn * pxPerInch * scaleFactor;
+        const displayHeight = pageHeightIn * pxPerInch * scaleFactor;
+
         for (let pageNum = 1; pageNum <= numPages; pageNum++) {
           // Filter sections for this page (default to page 1 if not set)
           const pageSections = sections
@@ -1107,38 +1136,45 @@ export default function SheetView({
               key={pageNum}
               className="page-container"
               style={{
-                border: '2px solid #cbd5e1',
-                borderRadius: '8px',
+                width: `${displayWidth}px`,
+                height: `${displayHeight}px`,
+                border: '2px solid #94a3b8',
+                borderRadius: '4px',
                 marginBottom: '1.5rem',
-                background: '#fafafa',
-                overflow: 'hidden'
+                background: 'white',
+                overflow: 'hidden',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                display: 'flex',
+                flexDirection: 'column'
               }}
             >
-              {/* Page Header */}
-              <div style={{
+              {/* Page Header - editor only, not printed */}
+              <div className="hide-on-print" style={{
                 background: '#334155',
                 color: 'white',
-                padding: '8px 16px',
+                padding: '4px 12px',
                 fontWeight: 'bold',
-                fontSize: '0.9rem',
+                fontSize: '0.75rem',
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'center'
+                alignItems: 'center',
+                flexShrink: 0
               }}>
                 <span>PAGE {pageNum}</span>
-                <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>
-                  {pageSections.length} section{pageSections.length !== 1 ? 's' : ''}
+                <span style={{ fontSize: '0.65rem', opacity: 0.7 }}>
+                  {pageWidthIn}" × {pageHeightIn}" | {pageSections.length} section{pageSections.length !== 1 ? 's' : ''}
                 </span>
               </div>
 
-              {/* Page Content */}
+              {/* Page Content - fixed size, overflow hidden */}
               <div style={{
-                padding: '1rem',
-                minHeight: '200px',
-                display: 'grid',
-                gridTemplateColumns: 'repeat(8, 1fr)',
-                gap: '1rem',
-                alignItems: 'start'
+                flex: 1,
+                padding: '8px',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+                fontSize: `${0.65 * scaleFactor}rem`
               }}>
                 {pageSections.map(({ section, originalIdx: sIdx }) => {
                   // Show all boxes in edit mode
