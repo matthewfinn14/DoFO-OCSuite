@@ -1889,6 +1889,38 @@ export default function PracticePlans() {
     return segType?.focusItems || [];
   }, [getSegmentTypesForPhase]);
 
+  // Get plays for a segment's Call Sheet focuses
+  const getPlaysForSegmentFocuses = useCallback((segment) => {
+    if (!segment || !week) return [];
+
+    // Collect all focuses from the segment
+    const allFocuses = [
+      ...(segment.focuses || []),
+      ...(segment.offenseFocuses || []),
+      ...(segment.defenseFocuses || [])
+    ];
+
+    // Filter for Call Sheet category focuses
+    const callSheetFocuses = allFocuses.filter(f => f.category === 'Call Sheet');
+    if (callSheetFocuses.length === 0) return [];
+
+    // Get play IDs from the game plan sets that match these focus IDs
+    const sets = week.offensiveGamePlan?.sets || [];
+    const playIdSet = new Set();
+
+    callSheetFocuses.forEach(focus => {
+      const matchingSet = sets.find(s => s.id === focus.id);
+      if (matchingSet?.playIds) {
+        matchingSet.playIds.forEach(id => playIdSet.add(id));
+      }
+    });
+
+    // Convert to play objects
+    return Array.from(playIdSet)
+      .map(id => plays?.[id] || playsArray?.find(p => p.id === id))
+      .filter(Boolean);
+  }, [week, plays, playsArray]);
+
   // Get position groups from setup (use abbreviations for @mentions)
   const positionGroups = useMemo(() => {
     const groups = new Set();
@@ -2160,6 +2192,29 @@ export default function PracticePlans() {
     updateScriptRow(segmentId, rowId, 'playId', '');
     updateScriptRow(segmentId, rowId, 'playName', '');
   }, [updateScriptRow]);
+
+  // Add play from quick list to next empty script row
+  const addPlayToNextEmptyRow = useCallback((segmentId, play) => {
+    const segment = currentPlan.segments.find(s => s.id === segmentId);
+    if (!segment?.script || !play) return;
+
+    // Find first empty row (no playId and no playName)
+    const emptyRow = segment.script.find(row => !row.playId && !row.playName);
+    if (emptyRow) {
+      updateScriptRowFields(segmentId, emptyRow.id, {
+        playId: play.id,
+        playName: formatPlayCall(play)
+      });
+    } else {
+      // All rows filled - add a new row with the play
+      const newRow = {
+        ...createScriptRow(segment.script.length),
+        playId: play.id,
+        playName: formatPlayCall(play)
+      };
+      updateSegment(segmentId, 'script', [...segment.script, newRow]);
+    }
+  }, [currentPlan, updateScriptRowFields, updateSegment, formatPlayCall]);
 
   // Ensure segment has script rows when enabled
   const ensureScriptRows = useCallback((segmentId) => {
@@ -3108,6 +3163,9 @@ export default function PracticePlans() {
                     setTimeout(() => updateSegment(seg.id, 'script', script), 0);
                   }
 
+                  // Get plays for this segment's call sheet focuses
+                  const focusPlays = getPlaysForSegmentFocuses(seg);
+
                   return (
                     <div key={seg.id} className={`rounded-lg ${isLight ? 'bg-white border border-gray-200' : 'bg-slate-800'}`}>
                       {/* Segment Header */}
@@ -3151,9 +3209,43 @@ export default function PracticePlans() {
                         </div>
                       </div>
 
-                      {/* Script Table */}
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                      {/* Script Content - Flex container for sidebar + table */}
+                      <div className="flex">
+                        {/* Quick List Sidebar - shows plays from focused call sheet boxes */}
+                        {focusPlays.length > 0 && (
+                          <div className={`w-48 flex-shrink-0 border-r ${isLight ? 'border-gray-200 bg-gray-50' : 'border-slate-700 bg-slate-900/50'}`}>
+                            <div className={`px-3 py-2 text-xs font-semibold uppercase border-b ${isLight ? 'border-gray-200 text-gray-500' : 'border-slate-700 text-slate-400'}`}>
+                              Quick List ({focusPlays.length})
+                            </div>
+                            <div className="max-h-[400px] overflow-y-auto">
+                              {focusPlays.map(play => (
+                                <button
+                                  key={play.id}
+                                  onClick={() => addPlayToNextEmptyRow(seg.id, play)}
+                                  className={`w-full px-3 py-1.5 text-left text-xs border-b transition-colors ${
+                                    isLight
+                                      ? 'border-gray-100 hover:bg-sky-50 text-gray-700'
+                                      : 'border-slate-800 hover:bg-slate-700 text-slate-300'
+                                  }`}
+                                  title={`Click to add: ${play.formation || ''} ${play.name || ''}`}
+                                >
+                                  <div className="font-medium truncate">
+                                    {play.formation ? `${play.formation} ${play.name}` : play.name}
+                                  </div>
+                                  {play.bucketLabel && (
+                                    <div className={`text-[10px] ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
+                                      {play.bucketLabel}
+                                    </div>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Script Table */}
+                        <div className="flex-1 overflow-x-auto">
+                          <table className="w-full text-sm">
                           <thead>
                             <tr className={`border-b text-xs uppercase ${isLight ? 'border-gray-200 text-gray-500' : 'border-slate-700 text-slate-400'}`}>
                               <th className="px-2 py-2 text-center w-10">#</th>
@@ -3353,6 +3445,7 @@ export default function PracticePlans() {
                             })}
                           </tbody>
                         </table>
+                        </div>
                       </div>
                     </div>
                   );
