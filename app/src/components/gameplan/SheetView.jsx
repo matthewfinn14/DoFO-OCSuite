@@ -1185,29 +1185,9 @@ export default function SheetView({
 
                   if (!isEditing && visibleBoxes.length === 0) return null;
 
-                  // Group boxes into rows based on 8-column grid
-                  const rows = [];
-                  let currentRow = [];
-                  let currentSpan = 0;
-
-                  visibleBoxes.forEach((box, bIdx) => {
-                    const span = Number(box.colSpan) > 1
-                      ? Number(box.colSpan)
-                      : (box.type === 'grid' ? 5 : 2);
-
-                    if (currentSpan + span > 8 && currentRow.length > 0) {
-                      rows.push(currentRow);
-                      currentRow = [];
-                      currentSpan = 0;
-                    }
-
-                    currentRow.push({ box, originalIndex: bIdx, span });
-                    currentSpan += span;
-                  });
-
-                  if (currentRow.length > 0) {
-                    rows.push(currentRow);
-                  }
+                  // Section grid dimensions
+                  const sectionCols = section.gridColumns || 8;
+                  const sectionRows = section.gridRows || 6;
 
                   return (
                     <div
@@ -1269,22 +1249,30 @@ export default function SheetView({
                                 <option key={i + 1} value={i + 1}>Page {i + 1}</option>
                               ))}
                             </select>
-                            <button
-                              onClick={() => onUpdateSection(sIdx, { ...section, expandToFill: !section.expandToFill })}
-                              style={{
-                                background: section.expandToFill ? '#f59e0b' : '#e2e8f0',
-                                color: section.expandToFill ? 'white' : '#64748b',
-                                fontSize: '0.7rem',
-                                padding: '4px 8px',
-                                whiteSpace: 'nowrap',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer'
-                              }}
-                              title={section.expandToFill ? 'Return to fixed width' : 'Expand to fill'}
-                            >
-                              {section.expandToFill ? 'Fixed Width' : 'Expand'}
-                            </button>
+                            {/* Grid Columns */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.65rem' }}>
+                              <span style={{ color: '#64748b' }}>Cols:</span>
+                              <input
+                                type="number"
+                                min="1"
+                                max="12"
+                                value={section.gridColumns || 8}
+                                onChange={(e) => onUpdateSection(sIdx, { ...section, gridColumns: parseInt(e.target.value) || 8 })}
+                                style={{ width: '36px', padding: '2px 4px', fontSize: '0.65rem', borderRadius: '3px', border: '1px solid #cbd5e1' }}
+                              />
+                            </div>
+                            {/* Grid Rows */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.65rem' }}>
+                              <span style={{ color: '#64748b' }}>Rows:</span>
+                              <input
+                                type="number"
+                                min="1"
+                                max="20"
+                                value={section.gridRows || 6}
+                                onChange={(e) => onUpdateSection(sIdx, { ...section, gridRows: parseInt(e.target.value) || 6 })}
+                                style={{ width: '36px', padding: '2px 4px', fontSize: '0.65rem', borderRadius: '3px', border: '1px solid #cbd5e1' }}
+                              />
+                            </div>
                             <button
                               onClick={() => onDeleteSection(sIdx)}
                               style={{
@@ -1303,104 +1291,96 @@ export default function SheetView({
                         )}
                       </div>
 
-                      {/* Section Content */}
+                      {/* Section Content - True 2D Grid */}
                       <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        borderTop: '0',
-                        padding: isEditing ? '4px' : '0'
+                        display: 'grid',
+                        gridTemplateColumns: `repeat(${sectionCols}, 1fr)`,
+                        gridTemplateRows: `repeat(${sectionRows}, minmax(40px, auto))`,
+                        gridAutoFlow: 'dense',
+                        gap: isEditing ? '4px' : '1px',
+                        padding: isEditing ? '4px' : '0',
+                        flex: 1
                       }}>
-                        {rows.map((rowBoxes, rIdx) => (
-                          <div key={rIdx} style={{
-                            display: section.expandToFill ? 'flex' : 'grid',
-                            gridTemplateColumns: section.expandToFill ? undefined : 'repeat(7, 1fr)',
-                            width: '100%',
-                            gap: isEditing ? '4px' : '0',
-                            marginBottom: isEditing ? '4px' : '0'
-                          }}>
-                            {rowBoxes.map(({ box, originalIndex: bIdx, span }, i) => {
-                              return (
-                                <div
-                                  key={bIdx}
-                                  draggable={isEditing}
-                                  onDragStart={(e) => handleDragStart(e, sIdx, bIdx)}
-                                  onDragOver={handleDragOver}
-                                  onDragEnter={(e) => handleDragEnter(e, sIdx, bIdx)}
-                                  onDragLeave={(e) => handleDragLeave(e, sIdx, bIdx)}
-                                  onDrop={(e) => handleDrop(e, sIdx, bIdx)}
-                                  style={{
-                                    flexGrow: section.expandToFill ? span : 0,
-                                    flexBasis: section.expandToFill ? '0' : undefined,
-                                    minWidth: section.expandToFill ? '125px' : undefined,
-                                    gridColumn: section.expandToFill ? 'auto' : `span ${span}`,
-                                    border: isEditing
-                                      ? '1px solid #e2e8f0'
-                                      : (playDragOverBox?.sectionIdx === sIdx && playDragOverBox?.boxIdx === bIdx
-                                        ? '2px dashed #3b82f6'
-                                        : 'none'),
-                                    background: playDragOverBox?.sectionIdx === sIdx && playDragOverBox?.boxIdx === bIdx
-                                      ? '#eff6ff'
-                                      : 'white',
-                                    minHeight: '120px',
-                                    cursor: isEditing ? 'grab' : 'pointer',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    opacity: (draggedCell?.sectionIdx === sIdx && draggedCell?.boxIdx === bIdx) ? 0.5 : 1,
-                                    transition: 'background 0.15s, border 0.15s'
-                                  }}
-                                  onClick={() => {
-                                    if (!isEditing) onBoxClick(box, sIdx, bIdx);
-                                  }}
-                                >
-                                  {/* Box Header */}
-                                  <div style={{
-                                    padding: '4px 8px',
-                                    background: box.color || '#3b82f6',
-                                    color: 'white',
-                                    fontSize: '0.75rem',
-                                    fontWeight: 'bold',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center'
-                                  }}>
+                        {visibleBoxes.map((box, bIdx) => {
+                          const colSpan = Math.min(Number(box.colSpan) || 2, sectionCols);
+                          const rowSpan = Number(box.rowSpan) || 1;
+                          return (
+                            <div
+                              key={bIdx}
+                              draggable={isEditing}
+                              onDragStart={(e) => handleDragStart(e, sIdx, bIdx)}
+                              onDragOver={handleDragOver}
+                              onDragEnter={(e) => handleDragEnter(e, sIdx, bIdx)}
+                              onDragLeave={(e) => handleDragLeave(e, sIdx, bIdx)}
+                              onDrop={(e) => handleDrop(e, sIdx, bIdx)}
+                              style={{
+                                gridColumn: `span ${colSpan}`,
+                                gridRow: `span ${rowSpan}`,
+                                border: isEditing
+                                  ? '1px solid #e2e8f0'
+                                  : (playDragOverBox?.sectionIdx === sIdx && playDragOverBox?.boxIdx === bIdx
+                                    ? '2px dashed #3b82f6'
+                                    : '1px solid #e2e8f0'),
+                                background: playDragOverBox?.sectionIdx === sIdx && playDragOverBox?.boxIdx === bIdx
+                                  ? '#eff6ff'
+                                  : 'white',
+                                cursor: isEditing ? 'grab' : 'pointer',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                opacity: (draggedCell?.sectionIdx === sIdx && draggedCell?.boxIdx === bIdx) ? 0.5 : 1,
+                                transition: 'background 0.15s, border 0.15s',
+                                overflow: 'hidden'
+                              }}
+                              onClick={() => {
+                                if (!isEditing) onBoxClick(box, sIdx, bIdx);
+                              }}
+                            >
+                              {/* Box Header */}
+                              <div style={{
+                                padding: '4px 8px',
+                                background: box.color || '#3b82f6',
+                                color: 'white',
+                                fontSize: '0.75rem',
+                                fontWeight: 'bold',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                              }}>
+                                <span style={{
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis'
+                                }}>
+                                  {box.header}
+                                </span>
+                                {isEditing ? (
+                                  <div
+                                    onClick={(e) => { e.stopPropagation(); onDeleteBox(sIdx, bIdx); }}
+                                    style={{ cursor: 'pointer', padding: '0 4px' }}
+                                  >
+                                    x
+                                  </div>
+                                ) : (
+                                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                                     <span style={{
-                                      whiteSpace: 'nowrap',
-                                      overflow: 'hidden',
-                                      textOverflow: 'ellipsis'
+                                      fontSize: '0.7rem',
+                                      opacity: 0.9,
+                                      background: 'rgba(0,0,0,0.2)',
+                                      padding: '0 4px',
+                                      borderRadius: '4px'
                                     }}>
-                                      {box.header}
+                                      {getPlaysForSet(box.setId).length}
                                     </span>
-                                    {isEditing ? (
-                                      <div
-                                        onClick={(e) => { e.stopPropagation(); onDeleteBox(sIdx, bIdx); }}
-                                        style={{ cursor: 'pointer', padding: '0 4px' }}
-                                      >
-                                        x
-                                      </div>
-                                    ) : (
-                                      <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                                        <span style={{
-                                          fontSize: '0.7rem',
-                                          opacity: 0.9,
-                                          background: 'rgba(0,0,0,0.2)',
-                                          padding: '0 4px',
-                                          borderRadius: '4px'
-                                        }}>
-                                          {getPlaysForSet(box.setId).length}
-                                        </span>
-                                      </div>
-                                    )}
                                   </div>
-
-                                  {/* Box Content */}
-                                  <div style={{ padding: '6px', fontSize: '0.7rem', flex: 1 }}>
-                                    {renderBoxContent(box, false)}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ))}
+                                )}
+                              </div>
+                              {/* Box Content */}
+                              <div style={{ padding: '6px', fontSize: '0.7rem', flex: 1 }}>
+                                {renderBoxContent(box, false)}
+                              </div>
+                            </div>
+                          );
+                        })}
 
                         {/* Add Box Button */}
                         {isEditing && (
