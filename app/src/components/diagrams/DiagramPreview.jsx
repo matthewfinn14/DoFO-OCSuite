@@ -451,7 +451,7 @@ export default function DiagramPreview({
             stroke={color}
             strokeWidth={strokeWidth}
             fill="none"
-            strokeDasharray={segStyle === 'dashed' ? '10,5' : undefined}
+            strokeDasharray={segStyle === 'dashed' ? '20,12' : undefined}
             strokeLinecap="round"
           />
         );

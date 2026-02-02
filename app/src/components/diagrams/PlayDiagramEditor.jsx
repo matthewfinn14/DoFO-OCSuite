@@ -1652,7 +1652,7 @@ export default function PlayDiagramEditor({
           stroke={segStroke}
           strokeWidth={segStrokeWidth}
           fill="none"
-          strokeDasharray={segStyle === 'dashed' ? '10,5' : 'none'}
+          strokeDasharray={segStyle === 'dashed' ? '20,12' : 'none'}
           strokeLinejoin="round"
           strokeLinecap="round"
           filter={segFilter}
@@ -2395,7 +2395,7 @@ export default function PlayDiagramEditor({
                                     stroke={el.color || '#000'}
                                     strokeWidth={el.strokeWidth || 7}
                                     fill="none"
-                                    strokeDasharray={el.lineStyle === 'dashed' ? '10,5' : undefined}
+                                    strokeDasharray={el.lineStyle === 'dashed' ? '20,12' : undefined}
                                     strokeLinejoin="round"
                                     strokeLinecap="round"
                                   />
@@ -2461,7 +2461,7 @@ export default function PlayDiagramEditor({
                                     stroke={el.color || '#000'}
                                     strokeWidth={el.strokeWidth || 7}
                                     fill="none"
-                                    strokeDasharray={el.lineStyle === 'dashed' ? '10,5' : undefined}
+                                    strokeDasharray={el.lineStyle === 'dashed' ? '20,12' : undefined}
                                     strokeLinejoin="round"
                                     strokeLinecap="round"
                                   />
