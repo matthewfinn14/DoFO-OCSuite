@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
 import { getWristbandDisplay } from '../utils/wristband';
 import { getAllHistoricalReps, getCurrentWeekReps } from '../utils/repTracking';
+import PlayAssignmentWizard from '../components/install/PlayAssignmentWizard';
 import {
   Layers,
   ChevronDown,
@@ -24,7 +25,9 @@ import {
   Clock,
   Hash,
   LayoutGrid,
-  Settings
+  Settings,
+  Wand2,
+  CheckCircle2
 } from 'lucide-react';
 
 // Toggle Chip Component for Quick Assign panel
@@ -503,10 +506,17 @@ export default function InstallManager() {
   const [sortColumn, setSortColumn] = useState('name');
   const [sortDirection, setSortDirection] = useState('asc');
 
+  // Wizard state
+  const [wizardState, setWizardState] = useState({
+    isOpen: false,
+    currentIndex: 0,
+  });
+
   // Current install list and new install IDs from week
   const installList = currentWeek?.installList || [];
   const newInstallIds = currentWeek?.newInstallIds || [];
   const playRepTargets = currentWeek?.playRepTargets || {};
+  const processedPlayIds = currentWeek?.processedPlayIds || [];
 
   // Get game plan for current week (for call sheet boxes)
   const gamePlan = useMemo(() => {
@@ -565,10 +575,20 @@ export default function InstallManager() {
       .filter(p => p && (p.phase || 'OFFENSE') === activePhase);
   }, [installList, playsArray, activePhase]);
 
-  // Sort plays
+  // Sort plays - processed plays go to bottom
   const sortedPlays = useMemo(() => {
     const plays = [...phaseInstalledPlays];
+    const processedSet = new Set(processedPlayIds);
+
     plays.sort((a, b) => {
+      // PRIMARY: Unprocessed first
+      const aProcessed = processedSet.has(a.id);
+      const bProcessed = processedSet.has(b.id);
+      if (aProcessed !== bProcessed) {
+        return aProcessed ? 1 : -1;
+      }
+
+      // SECONDARY: Existing sort logic
       let aVal, bVal;
       switch (sortColumn) {
         case 'name':
@@ -603,7 +623,7 @@ export default function InstallManager() {
       return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
     });
     return plays;
-  }, [phaseInstalledPlays, sortColumn, sortDirection, playRepTargets, historicalReps]);
+  }, [phaseInstalledPlays, sortColumn, sortDirection, playRepTargets, historicalReps, processedPlayIds]);
 
   // Stats
   const stats = useMemo(() => {
@@ -611,8 +631,10 @@ export default function InstallManager() {
     const priorityCount = phaseInstalledPlays.filter(p => p.priority).length;
     const newCount = phaseInstalledPlays.filter(p => newInstallIds.includes(p.id)).length;
     const needsWizCount = phaseInstalledPlays.filter(p => p.needsWiz).length;
-    return { total, priority: priorityCount, new: newCount, needsWiz: needsWizCount };
-  }, [phaseInstalledPlays, newInstallIds]);
+    const processedCount = phaseInstalledPlays.filter(p => processedPlayIds.includes(p.id)).length;
+    const remainingCount = total - processedCount;
+    return { total, priority: priorityCount, new: newCount, needsWiz: needsWizCount, processed: processedCount, remaining: remainingCount };
+  }, [phaseInstalledPlays, newInstallIds, processedPlayIds]);
 
   // Handle sort
   const handleSort = (column) => {
@@ -972,6 +994,100 @@ export default function InstallManager() {
     setLastClickedIndex(null);
   }, [activePhase]);
 
+  // Wizard handlers
+  const openWizard = useCallback((startIndex = null) => {
+    // Find first unprocessed play if no index specified
+    let index = startIndex;
+    if (index === null) {
+      const firstUnprocessedIdx = sortedPlays.findIndex(p => !processedPlayIds.includes(p.id));
+      index = firstUnprocessedIdx >= 0 ? firstUnprocessedIdx : 0;
+    }
+    setWizardState({
+      isOpen: true,
+      currentIndex: index,
+    });
+  }, [sortedPlays, processedPlayIds]);
+
+  const closeWizard = useCallback(() => {
+    setWizardState(prev => ({ ...prev, isOpen: false }));
+  }, []);
+
+  const wizardNext = useCallback(() => {
+    setWizardState(prev => ({
+      ...prev,
+      currentIndex: Math.min(prev.currentIndex + 1, sortedPlays.length - 1),
+    }));
+  }, [sortedPlays.length]);
+
+  const wizardPrevious = useCallback(() => {
+    setWizardState(prev => ({
+      ...prev,
+      currentIndex: Math.max(prev.currentIndex - 1, 0),
+    }));
+  }, []);
+
+  const handleMarkProcessed = useCallback((playId) => {
+    if (!currentWeek) return;
+    let newIds;
+    if (processedPlayIds.includes(playId)) {
+      // Already processed, keep it that way (don't toggle off in wizard flow)
+      return;
+    } else {
+      newIds = [...processedPlayIds, playId];
+    }
+    updateWeek(weekId, { processedPlayIds: newIds });
+  }, [currentWeek, processedPlayIds, weekId, updateWeek]);
+
+  const handleToggleProcessed = useCallback((playId) => {
+    if (!currentWeek) return;
+    let newIds;
+    if (processedPlayIds.includes(playId)) {
+      newIds = processedPlayIds.filter(id => id !== playId);
+    } else {
+      newIds = [...processedPlayIds, playId];
+    }
+    updateWeek(weekId, { processedPlayIds: newIds });
+  }, [currentWeek, processedPlayIds, weekId, updateWeek]);
+
+  // Calculate scripted reps for each play
+  const scriptedReps = useMemo(() => {
+    const reps = {};
+    if (currentWeek?.practicePlans) {
+      Object.values(currentWeek.practicePlans).forEach(dayPlan => {
+        (dayPlan.segments || []).forEach(segment => {
+          (segment.script || []).forEach(row => {
+            if (row.playId) {
+              reps[row.playId] = (reps[row.playId] || 0) + (row.reps || 1);
+            }
+          });
+        });
+      });
+    }
+    return reps;
+  }, [currentWeek?.practicePlans]);
+
+  // Get call sheet boxes with their play assignments for wizard
+  const callSheetBoxesWithPlays = useMemo(() => {
+    const boxes = [];
+    const sections = currentWeek?.gamePlanLayouts?.CALL_SHEET?.sections || [];
+    const sets = currentWeek?.offensiveGamePlan?.sets || [];
+
+    sections.forEach(section => {
+      (section.boxes || []).forEach(box => {
+        if (box.setId && box.header) {
+          const boxSet = sets.find(s => s.id === box.setId);
+          boxes.push({
+            id: box.setId,
+            label: box.header,
+            color: box.color || '#3b82f6',
+            playIds: boxSet?.playIds || []
+          });
+        }
+      });
+    });
+    return boxes;
+  }, [currentWeek?.gamePlanLayouts, currentWeek?.offensiveGamePlan]);
+
   // Get abbreviation helpers
   const getZoneAbbrev = (zoneId) => {
     const zone = (setupConfig?.fieldZones || []).find(z => z.id === zoneId);
@@ -1034,6 +1150,24 @@ export default function InstallManager() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {/* Assignment Wizard Button */}
+            <button
+              onClick={() => openWizard()}
+              disabled={phaseInstalledPlays.length === 0}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded transition-colors ${
+                phaseInstalledPlays.length === 0
+                  ? 'opacity-50 cursor-not-allowed bg-slate-700 text-slate-500'
+                  : 'bg-violet-500 text-white hover:bg-violet-600'
+              }`}
+            >
+              <Wand2 size={14} />
+              Assignment Wizard
+              {stats.remaining > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-white/20">
+                  {stats.remaining}
+                </span>
+              )}
+            </button>
             {/* Add Play Button */}
             <button
               onClick={() => setShowSearchModal(true)}
@@ -1116,6 +1250,12 @@ export default function InstallManager() {
               <div className="flex items-center gap-1.5 text-orange-400" title="Plays needing wristband diagrams">
                 <LayoutGrid size={12} />
                 <span>{stats.needsWiz} WIZ</span>
+              </div>
+            )}
+            {stats.processed > 0 && (
+              <div className="flex items-center gap-1.5 text-emerald-500" title="Plays reviewed in wizard">
+                <CheckCircle2 size={12} />
+                <span>{stats.processed} done</span>
               </div>
             )}
           </div>
@@ -1227,6 +1367,7 @@ export default function InstallManager() {
                 const isExpanded = expandedRowIds.includes(play.id);
                 const isNew = newInstallIds.includes(play.id);
                 const isPriority = play.priority;
+                const isProcessed = processedPlayIds.includes(play.id);
                 const targetReps = playRepTargets[play.id] || 0;
                 const histReps = historicalReps[play.id] || 0;
 
@@ -1237,15 +1378,22 @@ export default function InstallManager() {
                   <tr
                     key={play.id}
                     onClick={(e) => handleToggleSelect(play.id, idx, e.shiftKey)}
+                    onDoubleClick={() => openWizard(idx)}
                     className={`border-b transition-colors cursor-pointer ${
+                      isProcessed ? 'opacity-60' : ''
+                    } ${
                       isLight
                         ? isSelected
                           ? 'bg-sky-50 border-gray-200'
+                          : isProcessed
+                          ? 'bg-emerald-50/50 border-gray-200 hover:bg-emerald-50'
                           : idx % 2 === 0
                           ? 'bg-white border-gray-200 hover:bg-gray-50'
                           : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
                         : isSelected
                         ? 'bg-sky-500/10 border-slate-700'
+                        : isProcessed
+                        ? 'bg-emerald-500/5 border-slate-800 hover:bg-emerald-500/10'
                         : idx % 2 === 0
                         ? 'bg-slate-900/50 border-slate-800 hover:bg-slate-800/50'
                         : 'bg-slate-900/30 border-slate-800 hover:bg-slate-800/30'
@@ -1279,6 +1427,21 @@ export default function InstallManager() {
                     {/* Play Name */}
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-2">
+                        {/* Processed indicator */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleProcessed(play.id);
+                          }}
+                          className={`p-0.5 rounded transition-colors ${
+                            isProcessed
+                              ? 'text-emerald-500'
+                              : 'text-slate-600 hover:text-emerald-400'
+                          }`}
+                          title={isProcessed ? 'Mark as not done' : 'Mark as done'}
+                        >
+                          <CheckCircle2 size={14} className={isProcessed ? 'fill-emerald-500/20' : ''} />
+                        </button>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1444,6 +1607,32 @@ export default function InstallManager() {
         onAddPlay={handleAddPlay}
         plays={playsArray.filter(p => (p.phase || 'OFFENSE') === activePhase)}
         installedIds={installList}
+        isLight={isLight}
+      />
+
+      {/* Assignment Wizard */}
+      <PlayAssignmentWizard
+        isOpen={wizardState.isOpen}
+        onClose={closeWizard}
+        plays={sortedPlays}
+        currentIndex={wizardState.currentIndex}
+        totalPlays={sortedPlays.length}
+        remainingCount={stats.remaining}
+        processedPlayIds={processedPlayIds}
+        onNext={wizardNext}
+        onPrevious={wizardPrevious}
+        onMarkProcessed={handleMarkProcessed}
+        onUpdatePlayField={handleUpdatePlayField}
+        onTogglePlayInBox={handleTogglePlayInBox}
+        onUpdateTargetReps={handleUpdateTargetReps}
+        onToggleNewPlay={handleToggleNewPlay}
+        phaseBuckets={phaseBuckets}
+        conceptGroups={conceptGroups}
+        callSheetBoxes={callSheetBoxesWithPlays}
+        historicalReps={historicalReps}
+        playRepTargets={playRepTargets}
+        newInstallIds={newInstallIds}
+        scriptedReps={scriptedReps}
         isLight={isLight}
       />
     </div>

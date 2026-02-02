@@ -1011,10 +1011,10 @@ export default function Setup() {
       }
     }
 
-    // Bottom - Wristband Abbreviations and Glossary (with divider) - hidden in Basic mode
+    // Bottom - Parse & Abbreviate and Glossary (with divider) - hidden in Basic mode
     if (!isBasicMode) {
       tabs.push({ divider: true });
-      tabs.push({ id: 'wristband-abbreviations', label: 'Wristband Abbreviations', icon: Watch });
+      tabs.push({ id: 'wristband-abbreviations', label: 'Parse & Abbreviate', icon: Watch });
       tabs.push({ id: 'glossary', label: 'Glossary', icon: BookOpen });
     }
 
@@ -1552,6 +1552,7 @@ export default function Setup() {
               phase={phase}
               setupConfig={localConfig}
               onUpdate={updateLocal}
+              plays={playsArray || []}
             />
           )}
 
@@ -5529,10 +5530,182 @@ function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupCo
   );
 }
 
+// Scanned Term Row - for categorizing extracted play call terms
+function ScannedTermRow({ term, count, syntaxParts, onAdd, onDismiss }) {
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [abbrev, setAbbrev] = useState('');
+
+  const handleAdd = () => {
+    if (!selectedCategory) return;
+    onAdd(term, selectedCategory, abbrev);
+    setSelectedCategory('');
+    setAbbrev('');
+  };
+
+  return (
+    <div className="flex items-center gap-2 bg-slate-800/50 rounded px-3 py-2">
+      <div className="flex-1 min-w-0">
+        <span className="text-sm text-white font-medium">{term}</span>
+        <span className="text-xs text-slate-500 ml-2">({count}x)</span>
+      </div>
+      <select
+        value={selectedCategory}
+        onChange={(e) => setSelectedCategory(e.target.value)}
+        className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white min-w-[120px]"
+      >
+        <option value="">Select part...</option>
+        {syntaxParts.map(part => (
+          <option key={part.id} value={part.id}>{part.label}</option>
+        ))}
+        <option value="Formation">Formation</option>
+        <option value="Motion">Motion</option>
+        <option value="Concept">Concept</option>
+        <option value="Personnel">Personnel</option>
+        <option value="Other">Other</option>
+      </select>
+      <input
+        type="text"
+        value={abbrev}
+        onChange={(e) => setAbbrev(e.target.value.toUpperCase())}
+        placeholder="Abbrev"
+        className="w-16 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-xs text-white placeholder-slate-500 text-center"
+      />
+      <button
+        onClick={handleAdd}
+        disabled={!selectedCategory}
+        className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+          selectedCategory
+            ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+            : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+        }`}
+        title="Add to category"
+      >
+        <Plus size={14} />
+      </button>
+      <button
+        onClick={() => onDismiss(term)}
+        className="px-2 py-1 rounded text-xs text-slate-400 hover:text-red-400 hover:bg-red-500/20 transition-colors"
+        title="Dismiss"
+      >
+        <X size={14} />
+      </button>
+    </div>
+  );
+}
+
 // Wristband Abbreviations Section Component
-function WristbandAbbreviationsSection({ phase, setupConfig, onUpdate }) {
+function WristbandAbbreviationsSection({ phase, setupConfig, onUpdate, plays }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
+  const [collapsedCategories, setCollapsedCategories] = useState({});
+  const [showScanResults, setShowScanResults] = useState(false);
+  const [scannedTerms, setScannedTerms] = useState([]);
+
+  // Toggle category collapse
+  const toggleCategory = (category) => {
+    setCollapsedCategories(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
+  };
+
+  // Expand/collapse all categories
+  const expandAllCategories = () => setCollapsedCategories({});
+  const collapseAllCategories = () => {
+    const allCollapsed = {};
+    Object.keys(termsByCategory).forEach(cat => {
+      allCollapsed[cat] = true;
+    });
+    setCollapsedCategories(allCollapsed);
+  };
+
+  // Get syntax parts for categorization
+  const syntaxParts = useMemo(() => {
+    const parts = setupConfig?.syntax?.[phase] || [];
+    return parts.filter(p => p.label); // Only parts with labels
+  }, [setupConfig?.syntax, phase]);
+
+  // Scan plays and extract unique terms
+  const scanPlays = () => {
+    const phasePlays = (plays || []).filter(p => (p.phase || 'OFFENSE') === phase);
+    const termCounts = {};
+
+    phasePlays.forEach(play => {
+      // Extract terms from various play fields
+      const fieldsToScan = [
+        play.name,
+        play.formation,
+        play.motion,
+        play.tag,
+        play.protection,
+        play.blocking,
+        play.concept,
+      ].filter(Boolean);
+
+      fieldsToScan.forEach(field => {
+        // Split by spaces and clean up
+        const tokens = field.split(/\s+/).map(t => t.trim()).filter(t => t.length > 0);
+        tokens.forEach(token => {
+          // Normalize: uppercase for counting
+          const normalized = token.toUpperCase();
+          if (!termCounts[normalized]) {
+            termCounts[normalized] = { term: token, count: 0 };
+          }
+          termCounts[normalized].count++;
+        });
+      });
+    });
+
+    // Convert to array and sort by frequency
+    const extracted = Object.values(termCounts)
+      .sort((a, b) => b.count - a.count);
+
+    setScannedTerms(extracted);
+    setShowScanResults(true);
+  };
+
+  // Check if a term is already categorized
+  const isTermCategorized = (term) => {
+    const termLower = term.toLowerCase();
+    return allTerms.some(t => t.term.toLowerCase() === termLower);
+  };
+
+  // Add a scanned term to a category (term library) with optional abbreviation
+  const addTermToCategory = (term, categoryId, abbrev) => {
+    const termLibrary = setupConfig?.termLibrary || {};
+    const phaseTerms = termLibrary[phase] || {};
+    const categoryTerms = phaseTerms[categoryId] || [];
+
+    // Check if already exists
+    if (categoryTerms.some(t => t.label?.toLowerCase() === term.toLowerCase())) {
+      return; // Already exists
+    }
+
+    const newTermLibrary = {
+      ...termLibrary,
+      [phase]: {
+        ...phaseTerms,
+        [categoryId]: [...categoryTerms, { id: `term_${Date.now()}`, label: term }]
+      }
+    };
+
+    // Also add abbreviation if provided
+    if (abbrev && abbrev.trim()) {
+      const newAbbreviations = { ...(setupConfig?.wristbandAbbreviations || {}), [term]: abbrev.trim() };
+      onUpdate('termLibrary', newTermLibrary);
+      onUpdate('wristbandAbbreviations', newAbbreviations);
+    } else {
+      onUpdate('termLibrary', newTermLibrary);
+    }
+
+    // Remove from scanned list
+    setScannedTerms(prev => prev.filter(t => t.term.toUpperCase() !== term.toUpperCase()));
+  };
+
+  // Dismiss a scanned term without adding it
+  const dismissScannedTerm = (term) => {
+    setScannedTerms(prev => prev.filter(t => t.term.toUpperCase() !== term.toUpperCase()));
+  };
 
   // Get all abbreviations
   const abbreviations = setupConfig?.wristbandAbbreviations || {};
@@ -5763,7 +5936,7 @@ function WristbandAbbreviationsSection({ phase, setupConfig, onUpdate }) {
         <div className="flex items-center gap-3">
           <Watch size={20} className="text-amber-500" />
           <div className="text-left">
-            <h3 className="font-semibold text-white">Wristband Abbreviations</h3>
+            <h3 className="font-semibold text-white">Parse & Abbreviate</h3>
             <p className="text-xs text-slate-400">
               Define shortened versions of terms for wristband space constraints
             </p>
@@ -5790,6 +5963,29 @@ function WristbandAbbreviationsSection({ phase, setupConfig, onUpdate }) {
                 className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-sm text-white placeholder-slate-400"
               />
             </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={expandAllCategories}
+                className="px-3 py-2 bg-slate-700 text-slate-300 text-xs rounded hover:bg-slate-600"
+                title="Expand all categories"
+              >
+                Expand All
+              </button>
+              <button
+                onClick={collapseAllCategories}
+                className="px-3 py-2 bg-slate-700 text-slate-300 text-xs rounded hover:bg-slate-600"
+                title="Collapse all categories"
+              >
+                Collapse All
+              </button>
+            </div>
+            <button
+              onClick={scanPlays}
+              className="px-4 py-2 bg-sky-600 text-white text-sm rounded hover:bg-sky-700"
+              title="Extract terms from play names in your playbook"
+            >
+              Scan Plays
+            </button>
             <button
               onClick={autoGenerateAbbreviations}
               className="px-4 py-2 bg-amber-600 text-white text-sm rounded hover:bg-amber-700"
@@ -5798,33 +5994,101 @@ function WristbandAbbreviationsSection({ phase, setupConfig, onUpdate }) {
             </button>
           </div>
 
+          {/* Scan Results Panel */}
+          {showScanResults && scannedTerms.length > 0 && (
+            <div className="mb-4 p-4 bg-sky-900/20 border border-sky-700/50 rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-semibold text-sky-400">
+                  Scanned Terms ({scannedTerms.filter(t => !isTermCategorized(t.term)).length} uncategorized)
+                </h4>
+                <button
+                  onClick={() => setShowScanResults(false)}
+                  className="text-slate-400 hover:text-white"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <p className="text-xs text-slate-400 mb-3">
+                Assign each term to a category and optionally add an abbreviation. Terms already in your system are hidden.
+              </p>
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {scannedTerms
+                  .filter(t => !isTermCategorized(t.term))
+                  .slice(0, 50)
+                  .map(({ term, count }) => (
+                    <ScannedTermRow
+                      key={term}
+                      term={term}
+                      count={count}
+                      syntaxParts={syntaxParts}
+                      onAdd={addTermToCategory}
+                      onDismiss={dismissScannedTerm}
+                    />
+                  ))}
+              </div>
+              {scannedTerms.filter(t => !isTermCategorized(t.term)).length > 50 && (
+                <p className="text-xs text-slate-500 mt-2">
+                  Showing first 50 terms. Categorize some to see more.
+                </p>
+              )}
+              {scannedTerms.filter(t => !isTermCategorized(t.term)).length === 0 && (
+                <p className="text-center text-slate-400 py-4">
+                  All scanned terms have been categorized!
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Terms by category */}
           {Object.keys(termsByCategory).length === 0 ? (
             <div className="text-center py-8 text-slate-400">
               <p>No terms found. Add formations, motions, concepts, etc. to see them here.</p>
             </div>
           ) : (
-            <div className="space-y-4 max-h-[400px] overflow-y-auto">
-              {Object.entries(termsByCategory).sort(([a], [b]) => a.localeCompare(b)).map(([category, terms]) => (
-                <div key={category}>
-                  <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">{category}</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                    {terms.map(({ term }) => (
-                      <div key={term} className="flex items-center gap-2 bg-slate-700/50 rounded px-3 py-1.5">
-                        <span className="flex-1 text-sm text-white truncate" title={term}>{term}</span>
-                        <span className="text-slate-500">→</span>
-                        <input
-                          type="text"
-                          value={abbreviations[term] || ''}
-                          onChange={(e) => updateAbbreviation(term, e.target.value)}
-                          placeholder="abbrev"
-                          className="w-20 px-2 py-1 bg-slate-600 border border-slate-500 rounded text-xs text-white placeholder-slate-400 text-center"
-                        />
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              {Object.entries(termsByCategory).sort(([a], [b]) => a.localeCompare(b)).map(([category, terms]) => {
+                const isCollapsed = collapsedCategories[category];
+                const abbrevInCategory = terms.filter(t => abbreviations[t.term]).length;
+                return (
+                  <div key={category} className="border border-slate-700 rounded-lg overflow-hidden">
+                    <button
+                      onClick={() => toggleCategory(category)}
+                      className="w-full flex items-center justify-between px-3 py-2 bg-slate-700/50 hover:bg-slate-700 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        {isCollapsed ? (
+                          <ChevronRight size={14} className="text-slate-400" />
+                        ) : (
+                          <ChevronDown size={14} className="text-slate-400" />
+                        )}
+                        <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wide">{category}</h4>
                       </div>
-                    ))}
+                      <span className="text-xs text-slate-500">
+                        {abbrevInCategory}/{terms.length} abbreviated
+                      </span>
+                    </button>
+                    {!isCollapsed && (
+                      <div className="p-3 bg-slate-800/30">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                          {terms.map(({ term }) => (
+                            <div key={term} className="flex items-center gap-2 bg-slate-700/50 rounded px-3 py-1.5">
+                              <span className="flex-1 text-sm text-white truncate" title={term}>{term}</span>
+                              <span className="text-slate-500">→</span>
+                              <input
+                                type="text"
+                                value={abbreviations[term] || ''}
+                                onChange={(e) => updateAbbreviation(term, e.target.value)}
+                                placeholder="abbrev"
+                                className="w-20 px-2 py-1 bg-slate-600 border border-slate-500 rounded text-xs text-white placeholder-slate-400 text-center"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
