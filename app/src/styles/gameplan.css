@@ -880,11 +880,26 @@
     display: none !important;
   }
 
-  /* Individual print page - 8.5" x 11" portrait (minus 0.25" margins = 8" x 10.5") */
-  .print-page-4 {
+  /* Individual print page - portrait: 8" x 10.5", landscape: 10.5" x 8" (after 0.25" margins) */
+  .print-portrait .print-page-4 {
     width: 8in;
     min-height: 10.5in;
     max-height: 10.5in;
+    background: white;
+    page-break-after: always;
+    break-after: page;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
+  }
+
+  .print-landscape .print-page-4 {
+    width: 10.5in;
+    min-height: 8in;
+    max-height: 8in;
     background: white;
     page-break-after: always;
     break-after: page;
@@ -1067,11 +1082,7 @@
     color-adjust: exact !important;
   }
 
-  /* Default page setup - 0.25" margins on all sides */
-  @page {
-    size: letter portrait;
-    margin: 0.25in;
-  }
+  /* Page orientation controlled dynamically via inline <style> tag in SheetView */
 
   /* Matrix print styles */
   .matrix-table {

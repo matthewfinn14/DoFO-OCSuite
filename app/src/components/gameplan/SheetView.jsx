@@ -34,7 +34,8 @@ export default function SheetView({
   onFZDnDBoxDrop,
   onMatrixBoxAdd,
   onMatrixBoxRemove,
-  pageFormat = '2-page'
+  pageFormat = '2-page',
+  pageOrientation = 'portrait'
 }) {
   const sections = layouts?.CALL_SHEET?.sections || [];
   const weekTitle = currentWeek?.name || `Week ${currentWeek?.weekNumber || ''}`;
@@ -927,8 +928,22 @@ export default function SheetView({
     );
   };
 
+  const isLandscape = pageOrientation === 'landscape';
+
+  // Dynamic print styles for orientation
+  const printOrientationStyle = `
+    @media print {
+      @page {
+        size: letter ${pageOrientation};
+        margin: 0.25in;
+      }
+    }
+  `;
+
   return (
-    <div className={`animate-fade-in ${is4Page ? 'print-4page' : 'print-2page'}`} style={{ height: '100%', overflowY: 'auto', padding: '1rem' }}>
+    <div className={`animate-fade-in ${is4Page ? 'print-4page' : 'print-2page'} ${isLandscape ? 'print-landscape' : 'print-portrait'}`} style={{ height: '100%', overflowY: 'auto', padding: '1rem' }}>
+      {/* Dynamic print orientation style */}
+      <style dangerouslySetInnerHTML={{ __html: printOrientationStyle }} />
       {/* Print Pages for 4-page booklet format */}
       {is4Page && (
         <div className="print-only-4page">
