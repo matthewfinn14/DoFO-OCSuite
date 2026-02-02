@@ -39,3 +39,52 @@ export function getPlayCallParts(play) {
 
   return { formation, name, full };
 }
+
+/**
+ * Apply abbreviations to a play call string
+ *
+ * @param {string} playCall - The full play call string
+ * @param {Object} abbreviations - Map of term -> abbreviation (e.g., { "TRIPS": "TRP", "RIGHT": "RT" })
+ * @returns {string} Abbreviated play call
+ */
+export function abbreviatePlayCall(playCall, abbreviations) {
+  if (!playCall || !abbreviations || Object.keys(abbreviations).length === 0) {
+    return playCall;
+  }
+
+  // Split into words, apply abbreviations, rejoin
+  const words = playCall.split(/\s+/);
+  const abbreviated = words.map(word => {
+    // Try exact match first (case-insensitive lookup)
+    const upper = word.toUpperCase();
+    const lower = word.toLowerCase();
+
+    // Check for exact match in various cases
+    if (abbreviations[word]) return abbreviations[word];
+    if (abbreviations[upper]) return abbreviations[upper];
+    if (abbreviations[lower]) return abbreviations[lower];
+
+    // Check for case-insensitive match
+    for (const [term, abbrev] of Object.entries(abbreviations)) {
+      if (term.toUpperCase() === upper) {
+        return abbrev;
+      }
+    }
+
+    return word;
+  });
+
+  return abbreviated.join(' ');
+}
+
+/**
+ * Get an abbreviated play display name
+ *
+ * @param {Object} play - Play object
+ * @param {Object} abbreviations - Map of term -> abbreviation
+ * @returns {string} Abbreviated play call
+ */
+export function getAbbreviatedPlayCall(play, abbreviations) {
+  const fullCall = getPlayCall(play);
+  return abbreviatePlayCall(fullCall, abbreviations);
+}

@@ -1,6 +1,86 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Trash2, Plus, GripVertical } from 'lucide-react';
-import { getPlayCall } from '../../utils/playDisplay';
+import { getPlayCall, abbreviatePlayCall } from '../../utils/playDisplay';
+
+/**
+ * FitText component - displays text that auto-shrinks to fit container
+ * Applies abbreviations first, then reduces font size if needed
+ */
+function FitText({ text, abbreviations, baseFontSize = 0.6, minFontSize = 0.35, style = {} }) {
+  const containerRef = useRef(null);
+  const textRef = useRef(null);
+  const [fontSize, setFontSize] = useState(baseFontSize);
+
+  // Apply abbreviations to text
+  const displayText = abbreviations ? abbreviatePlayCall(text, abbreviations) : text;
+
+  useEffect(() => {
+    if (!containerRef.current || !textRef.current || !displayText) {
+      setFontSize(baseFontSize);
+      return;
+    }
+
+    // Start at base font size and shrink until text fits
+    let currentSize = baseFontSize;
+
+    // Function to measure and fit
+    const fitText = () => {
+      if (!containerRef.current || !textRef.current) return;
+
+      const container = containerRef.current;
+      const textEl = textRef.current;
+
+      // Get container width
+      const containerWidth = container.clientWidth;
+      if (containerWidth <= 0) return; // Container not rendered yet
+
+      // Reset to base size for measurement
+      textEl.style.fontSize = `${baseFontSize}rem`;
+
+      // Measure text width
+      let textWidth = textEl.scrollWidth;
+
+      // Shrink font until text fits or we hit minimum
+      currentSize = baseFontSize;
+      while (textWidth > containerWidth && currentSize > minFontSize) {
+        currentSize -= 0.025;
+        textEl.style.fontSize = `${currentSize}rem`;
+        textWidth = textEl.scrollWidth;
+      }
+
+      setFontSize(currentSize);
+    };
+
+    // Run on next frame to ensure layout is complete
+    const frameId = requestAnimationFrame(fitText);
+
+    return () => cancelAnimationFrame(frameId);
+  }, [displayText, baseFontSize, minFontSize]);
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        ...style,
+        overflow: 'hidden',
+        width: '100%',
+      }}
+    >
+      <span
+        ref={textRef}
+        style={{
+          fontSize: `${fontSize}rem`,
+          fontWeight: '500',
+          lineHeight: '1.2',
+          whiteSpace: 'nowrap',
+          display: 'inline-block',
+        }}
+      >
+        {displayText}
+      </span>
+    </div>
+  );
+}
 
 export default function SheetView({
   layouts,
@@ -40,6 +120,9 @@ export default function SheetView({
   const sections = layouts?.CALL_SHEET?.sections || [];
   const weekTitle = currentWeek?.name || `Week ${currentWeek?.weekNumber || ''}`;
   const opponentTitle = currentWeek?.opponent ? `vs. ${currentWeek.opponent}` : '';
+
+  // Get wristband abbreviations for auto-shortening play names
+  const abbreviations = setupConfig?.wristbandAbbreviations || {};
 
   // Track which cell is being hovered during drag (for visual feedback)
   const [dragOverCell, setDragOverCell] = useState(null);
@@ -155,7 +238,6 @@ export default function SheetView({
                 const play = slot.type === 'PLAY' ? slot : null;
                 return (
                   <div key={cIdx} style={{
-                    fontSize: '0.6rem',
                     overflow: 'hidden',
                     background: play?.priority ? '#fef08a' : rowBg,
                     padding: '2px',
@@ -163,15 +245,16 @@ export default function SheetView({
                     color: '#334155',
                     display: 'flex',
                     alignItems: 'center',
-                    flexWrap: 'wrap',
                     borderRight: cIdx < cols - 1 ? '1px solid #e2e8f0' : 'none',
                     borderBottom: '1px dotted #e2e8f0',
-                    wordBreak: 'break-word'
                   }} title={play ? getPlayCall(play) : ''}>
                     {play ? (
-                      <span style={{ display: 'inline', lineHeight: '1.2', fontWeight: '500' }}>
-                        {getPlayDisplayName(play)}
-                      </span>
+                      <FitText
+                        text={getPlayDisplayName(play)}
+                        abbreviations={abbreviations}
+                        baseFontSize={0.6}
+                        minFontSize={0.35}
+                      />
                     ) : (slot.type === 'GAP' ? '' : '-')}
                   </div>
                 );
@@ -256,7 +339,6 @@ export default function SheetView({
                   {row.label || rIdx + 1}
                 </div>
                 <div style={{
-                  fontSize: '0.6rem',
                   overflow: 'hidden',
                   background: play?.priority ? '#fef08a' : rowBg,
                   padding: '2px',
@@ -265,14 +347,16 @@ export default function SheetView({
                   display: 'flex',
                   alignItems: 'center',
                   borderBottom: '1px dotted #e2e8f0',
-                  wordBreak: 'break-word'
                 }}>
                   {play ? (
-                    <span style={{ display: 'inline', lineHeight: '1.2', fontWeight: '500' }}>
-                      {getPlayDisplayName(play)}
-                    </span>
+                    <FitText
+                      text={getPlayDisplayName(play)}
+                      abbreviations={abbreviations}
+                      baseFontSize={0.6}
+                      minFontSize={0.35}
+                    />
                   ) : (
-                    <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>
+                    <span style={{ color: '#cbd5e1', fontStyle: 'italic', fontSize: '0.6rem' }}>-</span>
                   )}
                 </div>
               </div>
@@ -351,7 +435,6 @@ export default function SheetView({
                 {row.label || rIdx + 1}
               </div>
               <div style={{
-                fontSize: '0.6rem',
                 overflow: 'hidden',
                 background: playLeft?.priority ? '#fef08a' : rowBg,
                 padding: '2px',
@@ -361,18 +444,19 @@ export default function SheetView({
                 alignItems: 'center',
                 borderRight: '1px solid #e2e8f0',
                 borderBottom: '1px dotted #e2e8f0',
-                wordBreak: 'break-word'
               }}>
                 {playLeft ? (
-                  <span style={{ display: 'inline', lineHeight: '1.2', fontWeight: '500' }}>
-                    {getPlayDisplayName(playLeft)}
-                  </span>
+                  <FitText
+                    text={getPlayDisplayName(playLeft)}
+                    abbreviations={abbreviations}
+                    baseFontSize={0.6}
+                    minFontSize={0.35}
+                  />
                 ) : (
-                  <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>
+                  <span style={{ color: '#cbd5e1', fontStyle: 'italic', fontSize: '0.6rem' }}>-</span>
                 )}
               </div>
               <div style={{
-                fontSize: '0.6rem',
                 overflow: 'hidden',
                 background: playRight?.priority ? '#fef08a' : rowBg,
                 padding: '2px',
@@ -381,14 +465,16 @@ export default function SheetView({
                 display: 'flex',
                 alignItems: 'center',
                 borderBottom: '1px dotted #e2e8f0',
-                wordBreak: 'break-word'
               }}>
                 {playRight ? (
-                  <span style={{ display: 'inline', lineHeight: '1.2', fontWeight: '500' }}>
-                    {getPlayDisplayName(playRight)}
-                  </span>
+                  <FitText
+                    text={getPlayDisplayName(playRight)}
+                    abbreviations={abbreviations}
+                    baseFontSize={0.6}
+                    minFontSize={0.35}
+                  />
                 ) : (
-                  <span style={{ color: '#cbd5e1', fontStyle: 'italic' }}>-</span>
+                  <span style={{ color: '#cbd5e1', fontStyle: 'italic', fontSize: '0.6rem' }}>-</span>
                 )}
               </div>
             </div>
@@ -569,9 +655,12 @@ export default function SheetView({
                       title={play ? getPlayCall(play) : ''}
                     >
                       {play ? (
-                        <span style={{ display: 'inline', lineHeight: '1.2', fontWeight: '500' }}>
-                          {getPlayDisplayName(play)}
-                        </span>
+                        <FitText
+                          text={getPlayDisplayName(play)}
+                          abbreviations={abbreviations}
+                          baseFontSize={0.6}
+                          minFontSize={0.35}
+                        />
                       ) : ''}
                     </div>
                   );
@@ -782,17 +871,19 @@ export default function SheetView({
                   >
                     {cellPlays.map((p, i) => (
                       <div key={i} style={{
-                        fontSize: '0.55rem',
-                        fontWeight: '500',
                         color: '#1e293b',
                         background: p.priority ? '#fef08a' : '#f1f5f9',
                         padding: '1px 2px',
                         borderRadius: '2px',
-                        whiteSpace: 'nowrap',
                         overflow: 'hidden',
-                        textOverflow: 'ellipsis'
+                        width: '100%',
                       }} title={getPlayCall(p)}>
-                        {getPlayDisplayName(p)}
+                        <FitText
+                          text={getPlayDisplayName(p)}
+                          abbreviations={abbreviations}
+                          baseFontSize={0.55}
+                          minFontSize={0.35}
+                        />
                       </div>
                     ))}
                   </div>
@@ -835,25 +926,29 @@ export default function SheetView({
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-        {playsInBox.map((p, pIdx) => (
-          <div key={pIdx} style={{
-            display: 'flex',
-            gap: '4px',
-            alignItems: 'baseline',
-            lineHeight: '1.2',
-            background: p.priority ? '#fef08a' : 'transparent'
-          }}>
-            <span style={{
-              color: '#94a3b8',
-              width: '14px',
-              textAlign: 'right',
-              flexShrink: 0
+        {playsInBox.map((p, pIdx) => {
+          const playCall = getPlayCall(p);
+          const abbreviated = abbreviatePlayCall(playCall, abbreviations);
+          return (
+            <div key={pIdx} style={{
+              display: 'flex',
+              gap: '4px',
+              alignItems: 'baseline',
+              lineHeight: '1.2',
+              background: p.priority ? '#fef08a' : 'transparent'
             }}>
-              {pIdx + 1}.
-            </span>
-            <span style={{ fontWeight: '600', color: '#1e293b' }}>{getPlayCall(p)}</span>
-          </div>
-        ))}
+              <span style={{
+                color: '#94a3b8',
+                width: '14px',
+                textAlign: 'right',
+                flexShrink: 0
+              }}>
+                {pIdx + 1}.
+              </span>
+              <span style={{ fontWeight: '600', color: '#1e293b' }}>{abbreviated}</span>
+            </div>
+          );
+        })}
       </div>
     );
   };
@@ -1026,21 +1121,25 @@ export default function SheetView({
                       flexDirection: 'column',
                       gap: '1px'
                     }}>
-                      {cellPlays.map((p, i) => (
-                        <div key={i} style={{
-                          fontSize: '6pt',
-                          fontWeight: '500',
-                          color: '#1e293b',
-                          background: p.priority ? '#fef08a' : '#f1f5f9',
-                          padding: '1px 2px',
-                          borderRadius: '1px',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          {getPlayDisplayName(p)}
-                        </div>
-                      ))}
+                      {cellPlays.map((p, i) => {
+                        const displayName = getPlayDisplayName(p);
+                        const abbreviated = abbreviatePlayCall(displayName, abbreviations);
+                        return (
+                          <div key={i} style={{
+                            fontSize: '6pt',
+                            fontWeight: '500',
+                            color: '#1e293b',
+                            background: p.priority ? '#fef08a' : '#f1f5f9',
+                            padding: '1px 2px',
+                            borderRadius: '1px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {abbreviated}
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })
