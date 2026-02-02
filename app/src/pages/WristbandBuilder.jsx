@@ -115,6 +115,7 @@ export default function WristbandBuilder() {
   const [activeCardId, setActiveCardId] = useState('card100');
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printFormat, setPrintFormat] = useState('player'); // 'player' (4/page) or 'coach' (2/page)
+  const [cardDimensions, setCardDimensions] = useState({ width: 4.75, height: 2.8 }); // inches
 
   // WIZ editing state
   const [editingSkillPlay, setEditingSkillPlay] = useState(null);
@@ -528,6 +529,8 @@ export default function WristbandBuilder() {
           cardSelection={[activeCardId]}
           showSlotNumbers={true}
           showFormation={true}
+          cardWidth={cardDimensions.width}
+          cardHeight={cardDimensions.height}
         />
       </div>
 
@@ -764,6 +767,8 @@ export default function WristbandBuilder() {
           onClose={() => setShowPrintModal(false)}
           printFormat={printFormat}
           setPrintFormat={setPrintFormat}
+          cardDimensions={cardDimensions}
+          setCardDimensions={setCardDimensions}
         />
       )}
 
@@ -1563,13 +1568,21 @@ function MiniScriptPreview({ rows, plays, startCoord, title, cardColor }) {
 }
 
 // Print Modal
-function PrintModal({ wristbandSettings, activeCardId, playsArray, slotMap, getPlayForSlot, onClose, printFormat, setPrintFormat }) {
+function PrintModal({ wristbandSettings, activeCardId, playsArray, slotMap, getPlayForSlot, onClose, printFormat, setPrintFormat, cardDimensions, setCardDimensions }) {
   const handlePrint = () => {
     window.print();
   };
 
   const card = wristbandSettings[activeCardId] || getDefaultCardSettings();
   const tab = CARD_TABS.find(t => t.id === activeCardId);
+
+  // Preset sizes for common wristband holders
+  const presets = [
+    { label: 'Standard (4.75" x 2.8")', width: 4.75, height: 2.8 },
+    { label: 'Compact (4" x 2.5")', width: 4, height: 2.5 },
+    { label: 'Wide (5" x 2.8")', width: 5, height: 2.8 },
+    { label: 'Large (5" x 3")', width: 5, height: 3 },
+  ];
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 no-print">
@@ -1580,8 +1593,9 @@ function PrintModal({ wristbandSettings, activeCardId, playsArray, slotMap, getP
             <X size={20} />
           </button>
         </div>
-        <div className="p-4">
-          <div className="flex items-center gap-4 mb-4">
+        <div className="p-4 space-y-4">
+          {/* Format Selection */}
+          <div className="flex items-center gap-4">
             <span className="text-slate-400">Format:</span>
             <button
               onClick={() => setPrintFormat('player')}
@@ -1596,7 +1610,63 @@ function PrintModal({ wristbandSettings, activeCardId, playsArray, slotMap, getP
               Coach (2 per page)
             </button>
           </div>
-          <p className="text-slate-500 text-sm mb-4">
+
+          {/* Card Dimensions */}
+          {printFormat === 'player' && (
+            <div className="p-3 bg-slate-800 rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-white font-medium">Card Dimensions</span>
+                <select
+                  value=""
+                  onChange={(e) => {
+                    const preset = presets.find(p => p.label === e.target.value);
+                    if (preset) setCardDimensions({ width: preset.width, height: preset.height });
+                  }}
+                  className="px-2 py-1 bg-slate-700 border border-slate-600 rounded text-sm text-white"
+                >
+                  <option value="">Presets...</option>
+                  {presets.map(p => (
+                    <option key={p.label} value={p.label}>{p.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2">
+                  <label htmlFor="card-width" className="text-slate-400 text-sm">Width:</label>
+                  <input
+                    id="card-width"
+                    type="number"
+                    step="0.05"
+                    min="2"
+                    max="6"
+                    value={cardDimensions.width}
+                    onChange={(e) => setCardDimensions(d => ({ ...d, width: parseFloat(e.target.value) || 4.75 }))}
+                    className="w-20 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                  />
+                  <span className="text-slate-500 text-sm">in</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="card-height" className="text-slate-400 text-sm">Height:</label>
+                  <input
+                    id="card-height"
+                    type="number"
+                    step="0.05"
+                    min="1.5"
+                    max="5"
+                    value={cardDimensions.height}
+                    onChange={(e) => setCardDimensions(d => ({ ...d, height: parseFloat(e.target.value) || 2.8 }))}
+                    className="w-20 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
+                  />
+                  <span className="text-slate-500 text-sm">in</span>
+                </div>
+              </div>
+              <p className="text-slate-500 text-xs mt-2">
+                Adjust to fit your wristband holder. 4 cards at {cardDimensions.width}" x {cardDimensions.height}" = {(cardDimensions.width * 2).toFixed(2)}" x {(cardDimensions.height * 2).toFixed(2)}" total
+              </p>
+            </div>
+          )}
+
+          <p className="text-slate-500 text-sm">
             Print will include the currently selected card ({tab?.label}). Use browser print dialog for best results.
           </p>
           <Link

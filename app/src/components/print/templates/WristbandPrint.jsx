@@ -46,7 +46,9 @@ export default function WristbandPrint({
   cardSelection = ['card100'],
   showSlotNumbers = true,
   showFormation = true,
-  wizType = 'both' // 'skill', 'oline', or 'both'
+  wizType = 'both', // 'skill', 'oline', or 'both'
+  cardWidth = 4.75, // inches
+  cardHeight = 2.8  // inches
 }) {
   const { playsArray, weeks, programLevels, activeLevelId, settings } = useSchool();
 
@@ -215,23 +217,23 @@ export default function WristbandPrint({
         }
 
         /* Player format: 4 cards per page (2x2 flex layout) */
-        /* Cards: 3.9" x 2.6" - fits on portrait 8.5" x 11" */
+        /* Cards use dynamic dimensions from props */
         .wristband-print-player {
           display: flex;
           flex-wrap: wrap;
           justify-content: center;
           align-content: flex-start;
           gap: 0.15in;
-          padding: 0.2in;
+          padding: 0.15in;
           background: white;
-          width: 8.5in;
-          max-width: 8.5in;
+          width: 11in;
+          max-width: 11in;
         }
 
         .wristband-print-player .wristband-card {
-          width: 3.9in;
-          height: 2.6in;
-          flex: 0 0 3.9in;
+          width: ${cardWidth}in;
+          height: ${cardHeight}in;
+          flex: 0 0 ${cardWidth}in;
           border: 1px solid black;
           background: white;
           overflow: hidden;
@@ -239,16 +241,14 @@ export default function WristbandPrint({
           flex-direction: column;
         }
 
-        /* WIZ cards: 12cm x 8cm (4.7" x 3.15") - fits 4 per landscape page */
+        /* WIZ cards: same dimensions as standard */
         .wristband-print-player .wristband-card.layout-wiz {
-          width: 4.7in;
-          height: 3.15in;
+          width: ${cardWidth}in;
+          height: ${cardHeight}in;
         }
 
         .wristband-print-player.has-wiz-cards {
-          grid-template-columns: repeat(2, 4.7in);
-          grid-template-rows: repeat(2, 3.15in);
-          gap: 0.3in 0.4in;
+          gap: 0.15in;
         }
 
         /* Coach format: 2 cards per page (vertical stack) on PORTRAIT paper */
