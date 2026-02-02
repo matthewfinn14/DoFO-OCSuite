@@ -114,6 +114,7 @@ export default function WristbandBuilder() {
   // State
   const [activeCardId, setActiveCardId] = useState('card100');
   const [cardDimensions, setCardDimensions] = useState({ width: 4.75, height: 2.8 }); // inches
+  const [wizPrintVariant, setWizPrintVariant] = useState('skill'); // 'skill' or 'oline' for WIZ cards
 
   // WIZ editing state
   const [editingSkillPlay, setEditingSkillPlay] = useState(null);
@@ -527,6 +528,7 @@ export default function WristbandBuilder() {
           cardSelection={[activeCardId]}
           showSlotNumbers={true}
           showFormation={true}
+          wizType={wizPrintVariant}
           cardWidth={cardDimensions.width}
           cardHeight={cardDimensions.height}
         />
@@ -566,6 +568,17 @@ export default function WristbandBuilder() {
             >
               <CheckSquare size={16} /> Batch Add
             </button>
+            {currentCard.type === 'wiz' && (
+              <select
+                value={wizPrintVariant}
+                onChange={(e) => setWizPrintVariant(e.target.value)}
+                className="px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-white text-sm"
+                title="Select which WIZ card to print"
+              >
+                <option value="skill">SKILL</option>
+                <option value="oline">OLINE</option>
+              </select>
+            )}
             <button
               onClick={() => window.print()}
               className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 text-white rounded hover:bg-slate-700 text-sm"
