@@ -285,6 +285,14 @@ export default function PracticePlanPrint({
           border-right: 1px solid black;
         }
 
+        .pp-script-table tbody tr:nth-child(odd) {
+          background-color: #ffffff;
+        }
+
+        .pp-script-table tbody tr:nth-child(even) {
+          background-color: #f3f4f6;
+        }
+
         .pp-script-table .play-call {
           font-weight: bold;
         }
