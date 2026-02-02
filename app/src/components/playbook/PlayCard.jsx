@@ -153,7 +153,7 @@ export default function PlayCard({
             className="w-full h-32 object-cover"
           />
         ) : (
-          <div className={`aspect-[950/600] flex items-center justify-center ${elements ? (diagramMode === 'wiz-skill' ? 'bg-slate-900' : 'bg-white') : 'bg-slate-800'}`}>
+          <div className={`aspect-[950/450] flex items-center justify-center ${elements ? (diagramMode === 'wiz-skill' ? 'bg-slate-900' : 'bg-white') : 'bg-white'}`}>
             {elements ? (
               <DiagramPreview elements={elements} mode={diagramMode} width="100%" positionColors={positionColors} positionNames={positionNames} />
             ) : (

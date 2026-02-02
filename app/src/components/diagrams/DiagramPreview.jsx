@@ -142,8 +142,8 @@ export default function DiagramPreview({
   }, [elements]);
 
   // Use full canvas viewBox for consistent sizing
-  // Both wiz-skill and wiz-oline use the same canvas dimensions
-  const viewBox = '0 0 950 600';
+  // WIZ cards use 950x450 (2.1:1 ratio) to match wristband cell proportions
+  const viewBox = '0 0 950 450';
 
   if (!elements || elements.length === 0) {
     if (fillContainer) {
@@ -487,7 +487,7 @@ export default function DiagramPreview({
             x="0"
             y="0"
             width="950"
-            height="600"
+            height="450"
             preserveAspectRatio="none"
           />
         )}
@@ -499,7 +499,7 @@ export default function DiagramPreview({
 
   // Support responsive width (when width is "100%" or similar string)
   const isResponsive = typeof width === 'string' && width.includes('%');
-  const aspectRatio = '950 / 600';
+  const aspectRatio = '950 / 450';
 
   return (
     <div

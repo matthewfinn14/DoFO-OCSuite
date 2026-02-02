@@ -80,17 +80,17 @@ const DEFAULT_POSITION_COLORS = {
 // Fallback color for any position not in defaults
 const SKILL_POSITION_FALLBACK_COLOR = '#3b82f6'; // Blue
 
-// Default WIZ OL Formation - C centered on canvas (450, 300 for 900x600 viewBox)
+// Default WIZ OL Formation - C centered on canvas (475, 225 for 950x450 viewBox)
 const getDefaultWizOLFormation = () => {
-  const centerX = 450;
-  const centerY = 300;
-  const initialSize = 170;
+  const centerX = 475;
+  const centerY = 225;
+  const initialSize = 140;
   return [
     { id: Date.now() + 1, type: 'player', points: [{ x: centerX, y: centerY }], color: '#000000', label: 'C', shape: 'text-only', variant: 'filled', fontSize: initialSize },
-    { id: Date.now() + 2, type: 'player', points: [{ x: centerX - 170, y: centerY + 15 }], color: '#000000', label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize },
-    { id: Date.now() + 3, type: 'player', points: [{ x: centerX + 170, y: centerY + 15 }], color: '#000000', label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize },
-    { id: Date.now() + 4, type: 'player', points: [{ x: centerX - 340, y: centerY + 30 }], color: '#000000', label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize },
-    { id: Date.now() + 5, type: 'player', points: [{ x: centerX + 340, y: centerY + 30 }], color: '#000000', label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize },
+    { id: Date.now() + 2, type: 'player', points: [{ x: centerX - 150, y: centerY + 12 }], color: '#000000', label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize },
+    { id: Date.now() + 3, type: 'player', points: [{ x: centerX + 150, y: centerY + 12 }], color: '#000000', label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize },
+    { id: Date.now() + 4, type: 'player', points: [{ x: centerX - 300, y: centerY + 24 }], color: '#000000', label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize },
+    { id: Date.now() + 5, type: 'player', points: [{ x: centerX + 300, y: centerY + 24 }], color: '#000000', label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize },
   ];
 };
 
@@ -98,21 +98,21 @@ const getDefaultWizOLFormation = () => {
 // Matches the 6 core skill positions: QB, RB, X, Y, Z, H
 const DEFAULT_SKILL_POSITIONS = ['QB', 'RB', 'X', 'Y', 'Z', 'H'];
 
-// Default position placements on the canvas (wiz-card viewBox 950x600 - 1.58:1 ratio)
-// LOS is around y=390, backfield around y=450-520
+// Default position placements on the canvas (wiz-card viewBox 950x450 - 2.1:1 ratio)
+// LOS is around y=290, backfield around y=340-390
 const SKILL_POSITION_PLACEMENTS = {
-  'QB': { x: 510, y: 500 },     // Backfield, center
-  'RB': { x: 420, y: 520 },     // Backfield, left of QB
-  'FB': { x: 510, y: 460 },     // Behind QB (fullback)
-  'X': { x: 80, y: 390 },       // Wide left on LOS
-  'Z': { x: 710, y: 440 },      // Off ball, slot right
-  'Y': { x: 870, y: 390 },      // Wide right on LOS
-  'A': { x: 330, y: 450 },      // Off ball, slot left
-  'H': { x: 750, y: 450 },      // H-back (wing right)
-  'F': { x: 590, y: 500 },      // F-back (right of QB)
-  'B': { x: 350, y: 520 },      // Extra back
-  'TE': { x: 630, y: 395 },     // Tight end (on LOS)
-  'WR': { x: 80, y: 390 },      // Wide receiver (default to X spot)
+  'QB': { x: 510, y: 375 },     // Backfield, center
+  'RB': { x: 420, y: 390 },     // Backfield, left of QB
+  'FB': { x: 510, y: 345 },     // Behind QB (fullback)
+  'X': { x: 80, y: 290 },       // Wide left on LOS
+  'Z': { x: 710, y: 330 },      // Off ball, slot right
+  'Y': { x: 870, y: 290 },      // Wide right on LOS
+  'A': { x: 330, y: 337 },      // Off ball, slot left
+  'H': { x: 750, y: 337 },      // H-back (wing right)
+  'F': { x: 590, y: 375 },      // F-back (right of QB)
+  'B': { x: 350, y: 390 },      // Extra back
+  'TE': { x: 630, y: 296 },     // Tight end (on LOS)
+  'WR': { x: 80, y: 290 },      // Wide receiver (default to X spot)
 };
 
 // Generate WIZ Skill Formation based on personnel grouping
@@ -125,7 +125,7 @@ const getWizSkillFormation = (positionColors = {}, positionNames = {}, skillPosi
   };
 
   const wizCenter = 475; // 950/2 for wiz-card viewBox
-  const wizLos = 390;    // LOS position (900x600 canvas)
+  const wizLos = 290;    // LOS position (950x450 canvas - 2.1:1 ratio)
   const initialSize = 50; // OL text size for WIZ Skill
   const spacing = 38;    // OL spacing (tighter gaps)
   const olY = wizLos;    // OL on the LOS
@@ -191,8 +191,8 @@ export default function PlayDiagramEditor({
   const isWizOline = mode === 'wiz-oline';
 
   // ViewBox settings based on mode (wiz-skill uses wider aspect ratio to fit wristband cells)
-  const viewBox = isWizSkill ? '0 0 950 600' : '0 0 950 600';
-  const aspectRatio = '950 / 600';
+  const viewBox = isWizSkill ? '0 0 950 450' : '0 0 950 450';
+  const aspectRatio = '950 / 450';
 
   // Get available skill positions (non-OL positions)
   const OL_POSITIONS = ['LT', 'LG', 'C', 'RG', 'RT'];
@@ -593,9 +593,9 @@ export default function PlayDiagramEditor({
 
     const wizCenter = 475;
     formation.positions.forEach((pos, idx) => {
-      // Convert percentage (0-100) to pixel coordinates for wiz-card viewBox (950x600)
+      // Convert percentage (0-100) to pixel coordinates for wiz-card viewBox (950x450)
       const x = (pos.x / 100) * 950;
-      const y = (pos.y / 100) * 600;
+      const y = (pos.y / 100) * 450;
 
       // Determine position KEY from stored data
       // Priority: pos.positionKey (if stored) > pos.label lookup > reverse lookup
@@ -2366,9 +2366,9 @@ export default function PlayDiagramEditor({
                         className="p-3 bg-slate-700/50 border border-slate-600 rounded-lg hover:border-sky-500 transition-colors text-left"
                       >
                         <p className="font-medium text-white mb-2 text-sm">{prot.name}</p>
-                        <div className="w-full aspect-[1.5/1] bg-slate-900 rounded overflow-hidden">
-                          <svg viewBox="0 0 950 600" className="w-full h-full">
-                            <rect width="950" height="600" fill="#e5e7eb" />
+                        <div className="w-full aspect-[950/450] bg-slate-900 rounded overflow-hidden">
+                          <svg viewBox="0 0 950 450" className="w-full h-full">
+                            <rect width="950" height="450" fill="#e5e7eb" />
                             {(prot.diagramData || []).map((el, idx) => {
                               if (el.type === 'player' && el.shape === 'text-only') {
                                 return (
@@ -2432,9 +2432,9 @@ export default function PlayDiagramEditor({
                         className="p-3 bg-slate-700/50 border border-slate-600 rounded-lg hover:border-sky-500 transition-colors text-left"
                       >
                         <p className="font-medium text-white mb-2 text-sm">{scheme.name}</p>
-                        <div className="w-full aspect-[1.5/1] bg-slate-900 rounded overflow-hidden">
-                          <svg viewBox="0 0 950 600" className="w-full h-full">
-                            <rect width="950" height="600" fill="#e5e7eb" />
+                        <div className="w-full aspect-[950/450] bg-slate-900 rounded overflow-hidden">
+                          <svg viewBox="0 0 950 450" className="w-full h-full">
+                            <rect width="950" height="450" fill="#e5e7eb" />
                             {(scheme.diagramData || []).map((el, idx) => {
                               if (el.type === 'player' && el.shape === 'text-only') {
                                 return (
@@ -2690,7 +2690,7 @@ export default function PlayDiagramEditor({
             onMouseLeave={handleMouseUp}
             style={{
               cursor: selectedTool === 'delete' ? 'not-allowed' : ((selectedTool === 'line' || selectedTool === 'shape' || selectedTool === 'text') ? 'crosshair' : 'default'),
-              aspectRatio: isWizSkill ? '950 / 600' : undefined
+              aspectRatio: isWizSkill ? '950 / 450' : undefined
             }}
           >
             <defs>
