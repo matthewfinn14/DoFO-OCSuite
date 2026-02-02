@@ -5722,15 +5722,6 @@ function WristbandAbbreviationsSection({ phase, setupConfig, onUpdate, plays }) 
       }
     });
 
-    // Formation Families (Offense only)
-    if (phase === 'OFFENSE') {
-      (config.formationFamilies || []).forEach(f => {
-        if (f.name) {
-          terms.push({ term: f.name, category: 'Family', source: 'formationFamilies' });
-        }
-      });
-    }
-
     // Personnel Groupings
     (config.personnelGroupings || []).forEach(p => {
       const name = p.name || p.code;
