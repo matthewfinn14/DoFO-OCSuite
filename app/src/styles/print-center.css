@@ -1141,6 +1141,38 @@
   background: white;
 }
 
+/* Print: Convert script grid to table so headers repeat on page breaks */
+@media print {
+  .pp2-script-grid {
+    display: table !important;
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .pp2-script-row-header {
+    display: table-header-group !important;
+  }
+
+  .pp2-script-row-header > div {
+    display: table-cell !important;
+    vertical-align: middle;
+  }
+
+  .pp2-script-row {
+    display: table-row !important;
+  }
+
+  .pp2-script-row > div {
+    display: table-cell !important;
+    vertical-align: middle;
+  }
+
+  /* Add "(cont.)" to repeated headers */
+  .pp2-script-header {
+    break-after: avoid;
+  }
+}
+
 .pp2-script-header {
   display: flex;
   justify-content: space-between;
