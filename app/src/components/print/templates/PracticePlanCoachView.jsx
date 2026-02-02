@@ -418,11 +418,17 @@ export default function PracticePlanCoachView({
               );
               if (!hasActualContent) return null;
 
+              const segmentFocuses = getFocusDisplay(seg);
               return (
                 <div key={`script-${sIdx}`} className="pp2-script-section">
                   <div className="pp2-script-header">
                     <span className="pp2-script-title">
                       SEGMENT: {seg.name || seg.type} ({seg.phase || seg.group || 'Team'})
+                      {segmentFocuses && segmentFocuses !== '-' && (
+                        <span style={{ fontWeight: 400, marginLeft: '8px', opacity: 0.9 }}>
+                          • {segmentFocuses}
+                        </span>
+                      )}
                     </span>
                     <span className="pp2-script-duration">{seg.duration} min</span>
                   </div>
