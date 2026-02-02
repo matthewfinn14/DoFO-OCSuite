@@ -218,27 +218,33 @@ export default function WristbandPrint({
         /* Landscape letter = 11" wide x 8.5" tall */
         /* Standard cards: 4.75" x 2.8" each - optimal print width */
         .wristband-print-player {
-          display: grid;
-          grid-template-columns: repeat(2, 4.75in);
-          grid-template-rows: repeat(2, 2.8in);
-          gap: 0.4in 0.3in;
+          display: grid !important;
+          grid-template-columns: repeat(2, 4.75in) !important;
+          grid-template-rows: repeat(2, 2.8in) !important;
+          gap: 0.4in 0.3in !important;
           justify-content: center;
           align-content: center;
           padding: 0.25in;
           background: white;
-          min-height: 8.5in;
+          width: 11in;
+          height: 8.5in;
+          max-height: 8.5in;
+          overflow: hidden;
+          box-sizing: border-box;
         }
 
         .wristband-print-player .wristband-card {
-          width: 4.75in;
-          height: 2.8in;
+          width: 4.75in !important;
+          height: 2.8in !important;
+          max-height: 2.8in !important;
           border: 2px solid black;
           background: white;
-          overflow: hidden;
+          overflow: hidden !important;
           display: flex;
           flex-direction: column;
           page-break-inside: avoid;
           break-inside: avoid;
+          box-sizing: border-box;
         }
 
         /* WIZ cards: 12cm x 8cm (4.7" x 3.15") - fits 4 per landscape page */
@@ -321,6 +327,8 @@ export default function WristbandPrint({
           flex: 1;
           display: grid;
           overflow: hidden;
+          min-height: 0;
+          max-height: 100%;
         }
 
         .slot-row-pair {

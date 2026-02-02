@@ -133,12 +133,17 @@
     align-content: center !important;
     padding: 0.25in !important;
     background: white !important;
-    min-height: 8.5in !important;
+    width: 11in !important;
+    height: 8.5in !important;
+    max-height: 8.5in !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
   }
 
   .wristband-print-player .wristband-card {
     width: 4.75in !important;
     height: 2.8in !important;
+    max-height: 2.8in !important;
     border: 2px solid black !important;
     background: white !important;
     overflow: hidden !important;
@@ -146,6 +151,7 @@
     flex-direction: column !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
+    box-sizing: border-box !important;
   }
 
   /* WIZ cards: slightly different dimensions */
