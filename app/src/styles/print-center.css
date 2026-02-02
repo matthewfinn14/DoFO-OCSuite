@@ -1135,10 +1135,8 @@
   gap: 0.25rem;
 }
 
-/* Script Section - should not break mid-script */
+/* Script Section - allows breaking across pages for better fit */
 .pp2-script-section {
-  break-inside: avoid;
-  page-break-inside: avoid;
   border: 1px solid #475569;
   background: white;
 }
@@ -1537,10 +1535,7 @@
     min-height: auto;
   }
 
-  .pp2-script-section {
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
-  }
+  /* Scripts can break across pages for better 2-page fit */
 
   /* Ensure colors print */
   .pp2-phase-o,
