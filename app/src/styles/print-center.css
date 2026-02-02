@@ -126,37 +126,21 @@
 @media print {
   .wristband-print-player {
     display: grid !important;
-    grid-template-columns: repeat(2, 4.5in) !important;
-    grid-template-rows: repeat(2, 3.5in) !important;
-    grid-auto-rows: 3.5in !important;
-    gap: 0.25in !important;
-    justify-content: center !important;
-    align-content: start !important;
-    padding: 0.25in !important;
+    grid-template-columns: 3.9in 3.9in !important;
+    grid-template-rows: 2.6in 2.6in !important;
+    gap: 0.15in !important;
+    padding: 0.2in !important;
     background: white !important;
-    box-sizing: border-box !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
   }
 
   .wristband-print-player .wristband-card {
-    width: 4.5in !important;
-    height: 3.5in !important;
-    max-height: 3.5in !important;
-    border: 2px solid black !important;
+    width: 3.9in !important;
+    height: 2.6in !important;
+    border: 1px solid black !important;
     background: white !important;
     overflow: hidden !important;
     display: flex !important;
     flex-direction: column !important;
-    box-sizing: border-box !important;
-  }
-
-  /* Prevent page breaks between first 4 cards */
-  .wristband-print-player .wristband-card:nth-child(-n+4) {
-    page-break-before: avoid !important;
-    break-before: avoid !important;
-    page-break-after: avoid !important;
-    break-after: avoid !important;
   }
 
   /* WIZ cards: slightly different dimensions */

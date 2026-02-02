@@ -214,42 +214,25 @@ export default function WristbandPrint({
           }
         }
 
-        /* Player format: 4 cards per page (2x2 grid) on LANDSCAPE paper */
-        /* Landscape letter = 11" wide x 8.5" tall */
-        /* Cards: 4.5" x 3.5" each with 0.25" gaps = fits perfectly */
+        /* Player format: 4 cards per page (2x2 grid) */
+        /* Cards: 3.9" x 2.6" - fits on ANY orientation with margins */
         .wristband-print-player {
-          display: grid !important;
-          grid-template-columns: repeat(2, 4.5in) !important;
-          grid-template-rows: repeat(2, 3.5in) !important;
-          grid-auto-rows: 3.5in !important;
-          gap: 0.25in !important;
-          justify-content: center;
-          align-content: start;
-          padding: 0.25in;
+          display: grid;
+          grid-template-columns: 3.9in 3.9in;
+          grid-template-rows: 2.6in 2.6in;
+          gap: 0.15in;
+          padding: 0.2in;
           background: white;
-          box-sizing: border-box;
-          page-break-inside: avoid !important;
-          break-inside: avoid !important;
         }
 
         .wristband-print-player .wristband-card {
-          width: 4.5in !important;
-          height: 3.5in !important;
-          max-height: 3.5in !important;
-          border: 2px solid black;
+          width: 3.9in;
+          height: 2.6in;
+          border: 1px solid black;
           background: white;
-          overflow: hidden !important;
+          overflow: hidden;
           display: flex;
           flex-direction: column;
-          box-sizing: border-box;
-        }
-
-        /* Prevent page breaks between first 4 cards */
-        .wristband-print-player .wristband-card:nth-child(-n+4) {
-          page-break-before: avoid !important;
-          break-before: avoid !important;
-          page-break-after: avoid !important;
-          break-after: avoid !important;
         }
 
         /* WIZ cards: 12cm x 8cm (4.7" x 3.15") - fits 4 per landscape page */
