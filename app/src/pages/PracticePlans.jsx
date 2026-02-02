@@ -2502,7 +2502,21 @@ export default function PracticePlans() {
   }
 
   return (
-    <div className={`h-full flex flex-col print:hidden ${isLight ? 'bg-white' : 'bg-slate-900'}`}>
+    <>
+      {/* Print Modal - rendered outside print:hidden so print template shows */}
+      {showPrintModal && (
+        <PrintSettingsModal
+          staff={staff}
+          positionGroups={positionGroups}
+          practicePlans={practicePlans}
+          weekId={weekId}
+          weekName={week?.name || ''}
+          currentDay={selectedDay}
+          onClose={() => setShowPrintModal(false)}
+        />
+      )}
+
+      <div className={`h-full flex flex-col print:hidden ${isLight ? 'bg-white' : 'bg-slate-900'}`}>
       {/* Header */}
       <div className={`flex-shrink-0 border-b ${isLight ? 'border-gray-200 bg-white' : 'border-slate-700 bg-slate-800'}`}>
         <div className="px-6 py-3">
@@ -3537,19 +3551,6 @@ export default function PracticePlans() {
         />
       )}
 
-      {/* Print Modal */}
-      {showPrintModal && (
-        <PrintSettingsModal
-          staff={staff}
-          positionGroups={positionGroups}
-          practicePlans={practicePlans}
-          weekId={weekId}
-          weekName={week?.name || ''}
-          currentDay={selectedDay}
-          onClose={() => setShowPrintModal(false)}
-        />
-      )}
-
       {/* Save Template Modal */}
       {showSaveTemplateModal && (
         <SaveTemplateModal
@@ -3646,5 +3647,6 @@ export default function PracticePlans() {
         </div>
       )}
     </div>
+    </>
   );
 }
