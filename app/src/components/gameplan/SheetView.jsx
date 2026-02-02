@@ -1119,11 +1119,8 @@ export default function SheetView({
           }
         }
 
-        // Scale for screen (fit within reasonable width)
-        const maxScreenWidth = 850;
-        const scaleFactor = Math.min(1, maxScreenWidth / (pageWidthIn * pxPerInch));
-        const displayWidth = pageWidthIn * pxPerInch * scaleFactor;
-        const displayHeight = pageHeightIn * pxPerInch * scaleFactor;
+        // Use full width, maintain aspect ratio for height
+        const aspectRatio = pageHeightIn / pageWidthIn;
 
         for (let pageNum = 1; pageNum <= numPages; pageNum++) {
           // Filter sections for this page (default to page 1 if not set)
@@ -1139,8 +1136,8 @@ export default function SheetView({
               key={pageNum}
               className="page-container"
               style={{
-                width: `${displayWidth}px`,
-                height: `${displayHeight}px`,
+                width: '100%',
+                aspectRatio: `${pageWidthIn} / ${pageHeightIn}`,
                 border: '2px solid #94a3b8',
                 borderRadius: '4px',
                 marginBottom: '1.5rem',
@@ -1169,15 +1166,14 @@ export default function SheetView({
                 </span>
               </div>
 
-              {/* Page Content - fixed size, overflow hidden */}
+              {/* Page Content - overflow hidden */}
               <div style={{
                 flex: 1,
                 padding: '8px',
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '6px',
-                fontSize: `${0.65 * scaleFactor}rem`
+                gap: '6px'
               }}>
                 {pageSections.map(({ section, originalIdx: sIdx }) => {
                   // Show all boxes in edit mode
