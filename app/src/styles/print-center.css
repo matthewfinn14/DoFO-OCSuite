@@ -1030,11 +1030,11 @@
 .pp2-schedule {
   display: grid;
   grid-template-columns:
-    22px    /* # */
+    16px    /* # */
     42px    /* Time */
     28px    /* Duration */
     minmax(60px, 100px)   /* Segment Type */
-    26px    /* Phase */
+    20px    /* Phase */
     minmax(60px, 1fr)     /* Focus */
     42px    /* Contact */
     minmax(80px, 1fr);   /* Notes */
@@ -1196,14 +1196,14 @@
 .pp2-script-grid {
   display: grid;
   grid-template-columns:
-    18px    /* # */
-    26px    /* Hash */
-    22px    /* Dn */
-    30px    /* Dist */
+    16px    /* # */
+    16px    /* Hash */
+    16px    /* Dn */
+    16px    /* Dist */
     55px    /* Situation */
-    minmax(80px, 1fr)     /* Play Call */
+    minmax(90px, 1fr)     /* Play Call */
     40px    /* Defense */
-    minmax(60px, 1fr);     /* Notes */
+    minmax(70px, 1fr);     /* Notes */
   font-size: 6pt;
 }
 
