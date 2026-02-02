@@ -922,6 +922,7 @@ function FocusMultiSelect({
 function PrintSettingsModal({ staff, positionGroups, practicePlans, weekId, weekName, currentDay, onClose }) {
   const [selectedCoach, setSelectedCoach] = useState('ALL');
   const [selectedDay, setSelectedDay] = useState(currentDay || 'Monday');
+  const [printScale, setPrintScale] = useState(100);
 
   const hasPlan = practicePlans[selectedDay]?.segments?.length > 0;
 
@@ -943,6 +944,7 @@ function PrintSettingsModal({ staff, positionGroups, practicePlans, weekId, week
           coachId={coachIdForTemplate}
           orientation="portrait"
           includeScripts={true}
+          scale={printScale}
         />
       </div>
 
@@ -1019,6 +1021,30 @@ function PrintSettingsModal({ staff, positionGroups, practicePlans, weekId, week
                   );
                 })}
               </div>
+            </div>
+
+            {/* Scale Slider */}
+            <div>
+              <label htmlFor="print-scale" className="block text-sm font-medium text-slate-300 mb-2">
+                Scale: {printScale}%
+              </label>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-slate-500">70%</span>
+                <input
+                  id="print-scale"
+                  type="range"
+                  min="70"
+                  max="100"
+                  step="5"
+                  value={printScale}
+                  onChange={e => setPrintScale(parseInt(e.target.value))}
+                  className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-sky-500"
+                />
+                <span className="text-xs text-slate-500">100%</span>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                Reduce to fit more content on 2 pages
+              </p>
             </div>
 
             {/* Summary */}

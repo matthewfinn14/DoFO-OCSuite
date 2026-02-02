@@ -15,7 +15,8 @@ export default function PracticePlanCoachView({
   day = 'Monday',
   coachId,
   orientation = 'portrait',
-  includeScripts = true
+  includeScripts = true,
+  scale = 100
 }) {
   const { weeks, staff, setupConfig, settings, culture } = useSchool();
 
@@ -251,8 +252,11 @@ export default function PracticePlanCoachView({
     );
   }
 
+  // Apply scale as CSS zoom (reflows layout, won't overflow page width)
+  const containerStyle = scale !== 100 ? { zoom: `${scale}%` } : {};
+
   return (
-    <div className={`pp2-container pp2-${orientation}`}>
+    <div className={`pp2-container pp2-${orientation}`} style={containerStyle}>
       {/* Inline styles for print */}
       <style>{`
         @media print {
