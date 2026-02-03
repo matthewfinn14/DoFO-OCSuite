@@ -148,12 +148,11 @@ function WristbandSettings({ settings, onChange, weekData, layout }) {
 
       <SettingsField label="WIZ Card Type" layout={layout} id="print-settings-wristband-wiz-type">
         <select
-          value={settings.wizType || 'both'}
+          value={settings.wizType || 'skill'}
           onChange={(e) => onChange('wizType', e.target.value)}
         >
-          <option value="both">OC / Play Caller (SKILL & OLINE)</option>
-          <option value="skill">Skill Coach (SKILL only)</option>
-          <option value="oline">OL Coach (OLINE only)</option>
+          <option value="skill">SKILL</option>
+          <option value="oline">OLINE</option>
         </select>
       </SettingsField>
 

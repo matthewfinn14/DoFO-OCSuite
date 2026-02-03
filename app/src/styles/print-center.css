@@ -162,12 +162,13 @@
     gap: 0.15in !important;
     padding: 0.15in !important;
     background: white !important;
-    width: 11in !important;
-    max-width: 11in !important;
-    height: 8.5in !important;
+    width: 10.5in !important;
+    max-width: 10.5in !important;
+    height: auto !important;
+    max-height: 8in !important;
     box-sizing: border-box !important;
-    page-break-after: always !important;
-    break-after: page !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
 
   .wristband-print-player .wristband-card {

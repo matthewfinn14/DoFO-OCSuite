@@ -51,7 +51,7 @@ const PRINT_TEMPLATES = [
       cardSelection: ['card100'],
       showSlotNumbers: true,
       showFormation: true,
-      wizType: 'both'
+      wizType: 'skill'
     },
     orientation: 'landscape'
   },

@@ -46,7 +46,7 @@ export default function WristbandPrint({
   cardSelection = ['card100'],
   showSlotNumbers = true,
   showFormation = true,
-  wizType = 'both', // 'skill', 'oline', or 'both'
+  wizType = 'skill', // 'skill' or 'oline'
   cardWidth = 4.75, // inches
   cardHeight = 2.8  // inches
 }) {
@@ -210,24 +210,48 @@ export default function WristbandPrint({
             size: letter ${pageOrientation};
             margin: 0.25in;
           }
-          body {
+
+          html, body {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            height: auto !important;
+            min-height: 0 !important;
+            overflow: visible !important;
+          }
+
+          /* Ensure the print container doesn't cause extra pages */
+          .wristband-print-player,
+          .wristband-print-coach {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+          }
+
+          /* Force hide print:hidden elements and ensure they take no space */
+          .print\\:hidden {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            width: 0 !important;
+            overflow: hidden !important;
+            position: absolute !important;
+            left: -9999px !important;
           }
         }
 
         /* Player format: 4 cards per page (2x2 flex layout) */
         /* Cards use dynamic dimensions from props */
+        /* Letter landscape = 11" x 8.5" with 0.25" margins = 10.5" x 8" available */
         .wristband-print-player {
-          display: flex;
-          flex-wrap: wrap;
-          justify-content: center;
-          align-content: flex-start;
-          gap: 0.15in;
-          padding: 0.15in;
+          display: block;
           background: white;
-          width: 11in;
-          max-width: 11in;
+          width: 10.5in;
+          max-width: 10.5in;
+          max-height: 8in;
+          overflow: hidden;
+          margin: 0;
+          padding: 0;
         }
 
         .wristband-print-player .wristband-card {
@@ -294,18 +318,34 @@ export default function WristbandPrint({
           gap: 0.15in;
           width: 100%;
           box-sizing: border-box;
+        }
+
+        /* Only add page break if there are multiple pages */
+        .wristband-page:not(:last-child) {
           page-break-after: always;
           break-after: page;
         }
 
-        .wristband-page:last-child {
-          page-break-after: auto;
-          break-after: auto;
+        /* Explicitly prevent page break after last page */
+        .wristband-page:last-child,
+        .wristband-page:only-child {
+          page-break-after: avoid !important;
+          break-after: avoid !important;
+          margin-bottom: 0 !important;
+          padding-bottom: 0 !important;
         }
 
         .wristband-print-player .wristband-page {
-          height: 8in;
-          padding: 0.1in;
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          align-content: flex-start;
+          gap: 0.15in;
+          height: auto;
+          max-height: 8in;
+          padding: 0;
+          margin: 0;
+          overflow: hidden;
         }
 
         .wristband-print-coach .wristband-page {
@@ -435,27 +475,20 @@ export default function WristbandPrint({
           display: grid;
           grid-template-rows: repeat(4, 1fr);
           overflow: hidden;
+          border: 1px solid black;
+          border-top: none;
         }
 
         .wiz-row {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          border-bottom: 1px solid black;
-        }
-
-        .wiz-row:last-child {
-          border-bottom: none;
         }
 
         .wiz-cell {
-          border-right: 1px solid black;
+          outline: 1px solid black;
           display: flex;
           flex-direction: column;
           overflow: hidden;
-        }
-
-        .wiz-cell:last-child {
-          border-right: none;
         }
 
         .wiz-diagram-area {
