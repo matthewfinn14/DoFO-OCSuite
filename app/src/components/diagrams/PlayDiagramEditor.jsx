@@ -585,14 +585,14 @@ export default function PlayDiagramEditor({
     const playerElements = elements.filter(el => el.type === 'player');
 
     // Convert pixel coordinates to percentages (0-100) for portability
-    // ViewBox is 900x600 for wiz-skill
+    // ViewBox is 950x450 for wiz-skill (matches wristband cell aspect ratio 2.1:1)
     const positions = playerElements.map(el => {
       const point = el.points[0];
       const pos = {
         label: el.label,
         positionKey: el.positionKey || el.label, // Store the internal key for reliable lookups
         x: Math.round((point.x / 950) * 100 * 10) / 10, // Round to 1 decimal
-        y: Math.round((point.y / 600) * 100 * 10) / 10,
+        y: Math.round((point.y / 450) * 100 * 10) / 10, // 450 height to match viewBox
         shape: el.shape || 'circle',
         variant: el.variant || 'filled'
       };
