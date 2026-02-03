@@ -987,7 +987,6 @@ export default function Setup() {
       await updateSetupConfig(newConfig);
       initialConfigRef.current = newConfig;
       setSaveStatus('saved');
-      console.log('DEBUG: Immediate save completed for', key);
     } catch (err) {
       console.error('Error saving setup:', err);
       setSaveStatus('error');
