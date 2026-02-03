@@ -6,6 +6,27 @@ import { ensureMembership } from '../services/auth';
 
 const SchoolContext = createContext(null);
 
+/**
+ * Recursively remove undefined values from an object
+ * Firestore doesn't accept undefined values, so we need to clean them before saving
+ */
+const removeUndefinedValues = (obj) => {
+  if (obj === null || obj === undefined) return obj;
+  if (Array.isArray(obj)) {
+    return obj.map(item => removeUndefinedValues(item)).filter(item => item !== undefined);
+  }
+  if (typeof obj === 'object') {
+    const cleaned = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== undefined) {
+        cleaned[key] = removeUndefinedValues(value);
+      }
+    }
+    return cleaned;
+  }
+  return obj;
+};
+
 // Default season phases
 const DEFAULT_SEASON_PHASES = [
   { id: 'offseason', name: 'Offseason', color: 'slate', order: 0, numWeeks: 0, isOffseason: true },
@@ -596,8 +617,10 @@ export function SchoolProvider({ children }) {
     try {
       const schoolRef = doc(db, 'schools', currentSchool.id);
       console.log(`Updating school ${currentSchool.id}:`, Object.keys(updates));
+      // Clean undefined values before saving to Firestore
+      const cleanedUpdates = removeUndefinedValues(updates);
       await updateDoc(schoolRef, {
-        ...updates,
+        ...cleanedUpdates,
         updatedAt: new Date().toISOString(),
         updatedBy: user?.uid
       });
