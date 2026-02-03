@@ -19,6 +19,8 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { generateDepthChartPositions } from '../utils/depthChartPositions';
+import DepthChartPrint from '../components/print/templates/DepthChartPrint';
+import '../styles/print-center.css';
 
 // Default offense positions - same as in Setup.jsx
 const DEFAULT_OFFENSE_POSITIONS = [
@@ -1325,7 +1327,20 @@ export default function DepthCharts() {
   };
 
   return (
-    <div className="p-6">
+    <>
+      {/* Print-only content - uses DepthChartPrint template */}
+      <div className="hidden print:block">
+        <DepthChartPrint
+          weekId={currentWeekId}
+          chartTypes={[activeChart]}
+          viewMode="full"
+          depthLevels={3}
+          showBackups={true}
+        />
+      </div>
+
+      {/* Main UI - hidden when printing */}
+      <div className="p-6 print:hidden">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -1463,6 +1478,7 @@ export default function DepthCharts() {
           dynamicPositions={activeChart === 'offense' ? basePositions : null}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }

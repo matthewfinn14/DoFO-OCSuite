@@ -229,6 +229,18 @@ export default function PracticePlanPrint({
           page-break-inside: avoid;
         }
 
+        .pp-table tbody tr:nth-child(odd) td {
+          background-color: #ffffff !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+
+        .pp-table tbody tr:nth-child(even) td {
+          background-color: #e5e7eb !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+
         .warmup-period {
           color: #f59e0b;
         }
@@ -285,12 +297,16 @@ export default function PracticePlanPrint({
           border-right: 1px solid black;
         }
 
-        .pp-script-table tbody tr:nth-child(odd) {
-          background-color: #ffffff;
+        .pp-script-table tbody tr:nth-child(odd) td {
+          background-color: #ffffff !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
         }
 
-        .pp-script-table tbody tr:nth-child(even) {
-          background-color: #f3f4f6;
+        .pp-script-table tbody tr:nth-child(even) td {
+          background-color: #e5e7eb !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
         }
 
         .pp-script-table .play-call {
