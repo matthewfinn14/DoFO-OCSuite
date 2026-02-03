@@ -25,7 +25,9 @@ import {
   BarChart3,
   Target,
   TrendingUp,
-  HelpCircle
+  HelpCircle,
+  Filter,
+  MapPin
 } from 'lucide-react';
 
 // Helper Box Component for new coaches
@@ -219,22 +221,29 @@ function ColumnMappingModal({ isOpen, onClose, onSave, availableColumns, current
   const [mapping, setMapping] = useState(currentMapping || DEFAULT_COLUMN_MAPPING);
 
   const mappingFields = [
-    { key: 'playNumber', label: 'Play Number', required: false },
-    { key: 'quarter', label: 'Quarter', required: false },
-    { key: 'series', label: 'Series/Drive', required: false },
-    { key: 'odk', label: 'O/D/K', required: false },
-    { key: 'down', label: 'Down', required: false },
-    { key: 'distance', label: 'Distance', required: false },
-    { key: 'yardLine', label: 'Yard Line', required: false },
-    { key: 'hash', label: 'Hash', required: false },
-    { key: 'formation', label: 'Formation', required: false },
-    { key: 'backfield', label: 'Backfield', required: false },
-    { key: 'motion', label: 'Motion', required: false },
-    { key: 'playName', label: 'Play Name', required: true },
-    { key: 'playType', label: 'Play Type (Run/Pass)', required: false },
-    { key: 'playDir', label: 'Play Direction', required: false },
-    { key: 'result', label: 'Result', required: false },
-    { key: 'gainLoss', label: 'Gain/Loss', required: false }
+    { key: 'playNumber', label: 'Play Number', required: false, group: 'situation' },
+    { key: 'quarter', label: 'Quarter', required: false, group: 'situation' },
+    { key: 'series', label: 'Series/Drive', required: false, group: 'situation' },
+    { key: 'odk', label: 'O/D/K', required: false, group: 'situation' },
+    { key: 'down', label: 'Down', required: false, group: 'situation' },
+    { key: 'distance', label: 'Distance', required: false, group: 'situation' },
+    { key: 'yardLine', label: 'Yard Line', required: false, group: 'situation' },
+    { key: 'hash', label: 'Hash', required: false, group: 'situation' },
+    // Play call fields - these build the full play call display
+    { key: 'formation', label: 'Formation', required: false, group: 'playcall' },
+    { key: 'backfield', label: 'Backfield', required: false, group: 'playcall' },
+    { key: 'motion', label: 'Motion/Shift', required: false, group: 'playcall' },
+    { key: 'personnel', label: 'Personnel', required: false, group: 'playcall' },
+    { key: 'tag', label: 'Tag/RPO', required: false, group: 'playcall' },
+    { key: 'playName', label: 'Play Name', required: true, group: 'playcall' },
+    { key: 'playType', label: 'Play Type (Run/Pass)', required: false, group: 'result' },
+    { key: 'playDir', label: 'Play Direction', required: false, group: 'result' },
+    { key: 'result', label: 'Result', required: false, group: 'result' },
+    { key: 'gainLoss', label: 'Gain/Loss', required: false, group: 'result' },
+    // Custom fields users can map
+    { key: 'custom1', label: 'Custom Field 1', required: false, group: 'custom' },
+    { key: 'custom2', label: 'Custom Field 2', required: false, group: 'custom' },
+    { key: 'custom3', label: 'Custom Field 3', required: false, group: 'custom' }
   ];
 
   const handleSave = () => {
@@ -279,29 +288,127 @@ function ColumnMappingModal({ isOpen, onClose, onSave, availableColumns, current
               <p className="text-sm">Import an Excel file first to see available columns for mapping.</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {mappingFields.map(field => (
-                <div key={field.key} className="flex items-center gap-3">
-                  <label className={`w-28 text-sm font-medium ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
-                    {field.label}
-                    {field.required && <span className="text-red-400 ml-1">*</span>}
-                  </label>
-                  <select
-                    value={mapping[field.key] || ''}
-                    onChange={(e) => setMapping({ ...mapping, [field.key]: e.target.value })}
-                    className={`flex-1 px-3 py-2 rounded-lg text-sm ${
-                      isLight
-                        ? 'bg-gray-100 border border-gray-300 text-gray-900'
-                        : 'bg-slate-800 border border-slate-700 text-white'
-                    } focus:outline-none focus:border-amber-500`}
-                  >
-                    <option value="">-- Select Column --</option>
-                    {availableColumns.map(col => (
-                      <option key={col} value={col}>{col}</option>
-                    ))}
-                  </select>
+            <div className="space-y-4">
+              {/* Situation Fields */}
+              <div>
+                <div className={`text-xs font-semibold uppercase tracking-wider mb-2 ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
+                  Situation
                 </div>
-              ))}
+                <div className="space-y-2">
+                  {mappingFields.filter(f => f.group === 'situation').map(field => (
+                    <div key={field.key} className="flex items-center gap-3">
+                      <label className={`w-28 text-sm ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+                        {field.label}
+                      </label>
+                      <select
+                        value={mapping[field.key] || ''}
+                        onChange={(e) => setMapping({ ...mapping, [field.key]: e.target.value })}
+                        className={`flex-1 px-3 py-1.5 rounded-lg text-sm ${
+                          isLight
+                            ? 'bg-gray-100 border border-gray-300 text-gray-900'
+                            : 'bg-slate-800 border border-slate-700 text-white'
+                        } focus:outline-none focus:border-amber-500`}
+                      >
+                        <option value="">-- Select --</option>
+                        {availableColumns.map(col => (
+                          <option key={col} value={col}>{col}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Play Call Fields */}
+              <div>
+                <div className={`text-xs font-semibold uppercase tracking-wider mb-2 ${isLight ? 'text-sky-600' : 'text-sky-400'}`}>
+                  Play Call (builds the full call display)
+                </div>
+                <div className="space-y-2">
+                  {mappingFields.filter(f => f.group === 'playcall').map(field => (
+                    <div key={field.key} className="flex items-center gap-3">
+                      <label className={`w-28 text-sm font-medium ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+                        {field.label}
+                        {field.required && <span className="text-red-400 ml-1">*</span>}
+                      </label>
+                      <select
+                        value={mapping[field.key] || ''}
+                        onChange={(e) => setMapping({ ...mapping, [field.key]: e.target.value })}
+                        className={`flex-1 px-3 py-1.5 rounded-lg text-sm ${
+                          isLight
+                            ? 'bg-gray-100 border border-gray-300 text-gray-900'
+                            : 'bg-slate-800 border border-slate-700 text-white'
+                        } focus:outline-none focus:border-amber-500`}
+                      >
+                        <option value="">-- Select --</option>
+                        {availableColumns.map(col => (
+                          <option key={col} value={col}>{col}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Result Fields */}
+              <div>
+                <div className={`text-xs font-semibold uppercase tracking-wider mb-2 ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
+                  Result
+                </div>
+                <div className="space-y-2">
+                  {mappingFields.filter(f => f.group === 'result').map(field => (
+                    <div key={field.key} className="flex items-center gap-3">
+                      <label className={`w-28 text-sm ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+                        {field.label}
+                      </label>
+                      <select
+                        value={mapping[field.key] || ''}
+                        onChange={(e) => setMapping({ ...mapping, [field.key]: e.target.value })}
+                        className={`flex-1 px-3 py-1.5 rounded-lg text-sm ${
+                          isLight
+                            ? 'bg-gray-100 border border-gray-300 text-gray-900'
+                            : 'bg-slate-800 border border-slate-700 text-white'
+                        } focus:outline-none focus:border-amber-500`}
+                      >
+                        <option value="">-- Select --</option>
+                        {availableColumns.map(col => (
+                          <option key={col} value={col}>{col}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Custom Fields */}
+              <div>
+                <div className={`text-xs font-semibold uppercase tracking-wider mb-2 ${isLight ? 'text-amber-600' : 'text-amber-400'}`}>
+                  Custom Fields (optional extra columns)
+                </div>
+                <div className="space-y-2">
+                  {mappingFields.filter(f => f.group === 'custom').map(field => (
+                    <div key={field.key} className="flex items-center gap-3">
+                      <label className={`w-28 text-sm ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+                        {field.label}
+                      </label>
+                      <select
+                        value={mapping[field.key] || ''}
+                        onChange={(e) => setMapping({ ...mapping, [field.key]: e.target.value })}
+                        className={`flex-1 px-3 py-1.5 rounded-lg text-sm ${
+                          isLight
+                            ? 'bg-gray-100 border border-gray-300 text-gray-900'
+                            : 'bg-slate-800 border border-slate-700 text-white'
+                        } focus:outline-none focus:border-amber-500`}
+                      >
+                        <option value="">-- Select --</option>
+                        {availableColumns.map(col => (
+                          <option key={col} value={col}>{col}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -994,15 +1101,43 @@ function GamePlayCard({ gamePlay, matchedPlay, plays, onOpenMatch, onUpdateRevie
   // Get display values - prefer matched play data, fall back to imported data
   const formation = matchedPlay?.formation || gamePlay.formation || '';
   const backfield = gamePlay.backfield || '';
-  const playName = matchedPlay?.name || gamePlay.playName || 'Unknown';
+  const motion = gamePlay.motion || '';
+  const playName = matchedPlay?.name || gamePlay.playName || '';
 
   const review = gamePlay.review || {};
 
-  // Build tags for additional info (motion, type, direction - NOT backfield anymore)
+  // Build full play call parts (formation, backfield, motion, personnel, tag, play)
+  // Users can customize which columns appear via column mapping
+  const callParts = [];
+  if (formation) callParts.push({ text: formation, color: 'sky' });
+  if (backfield) callParts.push({ text: backfield, color: 'purple' });
+  if (motion) callParts.push({ text: motion, color: 'amber' });
+  if (gamePlay.personnel) callParts.push({ text: gamePlay.personnel, color: 'orange' });
+  if (playName) callParts.push({ text: playName, color: 'white' });
+  if (gamePlay.tag) callParts.push({ text: gamePlay.tag, color: 'teal' });
+
+  // Custom columns that users may have mapped
+  if (gamePlay.custom1) callParts.push({ text: gamePlay.custom1, color: 'rose' });
+  if (gamePlay.custom2) callParts.push({ text: gamePlay.custom2, color: 'lime' });
+  if (gamePlay.custom3) callParts.push({ text: gamePlay.custom3, color: 'cyan' });
+
+  // Build tags for additional info (type, direction)
   const tags = [];
-  if (gamePlay.motion) tags.push(gamePlay.motion);
   if (gamePlay.playType) tags.push(gamePlay.playType);
   if (gamePlay.playDir) tags.push(gamePlay.playDir);
+
+  // Color mapping for call parts
+  const colorClasses = {
+    sky: isLight ? 'text-sky-600' : 'text-sky-400',
+    purple: isLight ? 'text-purple-600' : 'text-purple-400',
+    amber: isLight ? 'text-amber-600' : 'text-amber-400',
+    teal: isLight ? 'text-teal-600' : 'text-teal-400',
+    orange: isLight ? 'text-orange-600' : 'text-orange-400',
+    rose: isLight ? 'text-rose-600' : 'text-rose-400',
+    lime: isLight ? 'text-lime-600' : 'text-lime-400',
+    cyan: isLight ? 'text-cyan-600' : 'text-cyan-400',
+    white: isLight ? 'text-gray-900' : 'text-white'
+  };
 
   return (
     <div className={`rounded-lg border p-3 ${
@@ -1027,23 +1162,29 @@ function GamePlayCard({ gamePlay, matchedPlay, plays, onOpenMatch, onUpdateRevie
           </div>
         </div>
 
-        {/* Formation | Backfield | Play - as distinct columns */}
-        <div className="flex-1 min-w-0 flex items-center gap-1">
-          {formation && (
-            <span className={`text-sm font-medium ${isLight ? 'text-sky-600' : 'text-sky-400'}`}>
-              {formation}
-            </span>
+        {/* Full Play Call - Formation | Backfield | Motion | Play */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1 flex-wrap">
+            {callParts.map((part, i) => (
+              <span key={i} className="flex items-center gap-1">
+                {i > 0 && <span className={`${isLight ? 'text-gray-300' : 'text-slate-600'}`}>|</span>}
+                <span className={`text-sm ${part.color === 'white' ? 'font-medium' : ''} ${colorClasses[part.color]}`}>
+                  {part.text}
+                </span>
+              </span>
+            ))}
+            {callParts.length === 0 && (
+              <span className={`text-sm italic ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
+                No play call data
+              </span>
+            )}
+          </div>
+          {/* OD Call if different from constructed call */}
+          {gamePlay.odCall && gamePlay.odCall !== playName && (
+            <div className={`text-xs mt-0.5 ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
+              {gamePlay.odCall}
+            </div>
           )}
-          {formation && backfield && <span className={`${isLight ? 'text-gray-300' : 'text-slate-600'}`}>|</span>}
-          {backfield && (
-            <span className={`text-sm ${isLight ? 'text-purple-600' : 'text-purple-400'}`}>
-              {backfield}
-            </span>
-          )}
-          {(formation || backfield) && <span className={`${isLight ? 'text-gray-300' : 'text-slate-600'}`}>|</span>}
-          <span className={`font-medium truncate ${isLight ? 'text-gray-900' : 'text-white'}`}>
-            {playName}
-          </span>
         </div>
 
         {/* Tags and match status */}
@@ -1111,6 +1252,7 @@ function calculateDetailedStats(plays) {
   let passYards = 0;
   let completions = 0;
   let explosives = 0;
+  let efficientPlays = 0;
 
   // Down efficiency tracking
   const downStats = {
@@ -1129,6 +1271,8 @@ function calculateDetailedStats(plays) {
     const isRun = p.playType === 'Run' || result.includes('rush') || result.includes('run');
     const isIncomplete = result.includes('inc') || result.includes('incomplete');
     const isSack = result.includes('sack');
+    const down = p.down || 1;
+    const distance = p.distance || 10;
 
     // Track all plays for "best plays"
     allPlays.push({
@@ -1151,14 +1295,28 @@ function calculateDetailedStats(plays) {
       if (yards >= 16) explosives++;
     }
 
-    // Down efficiency
-    const down = p.down;
+    // Overall Efficiency calculation:
+    // 1st down: 4+ yards or 40% of distance
+    // 2nd down: 50%+ of remaining distance
+    // 3rd/4th down: convert (get the first down)
+    const gotTD = result.includes('td') || result.includes('touchdown');
+    let isEfficient = false;
+    if (gotTD) {
+      isEfficient = true;
+    } else if (down === 1) {
+      isEfficient = yards >= Math.min(4, distance * 0.4);
+    } else if (down === 2) {
+      isEfficient = yards >= Math.ceil(distance / 2);
+    } else {
+      // 3rd or 4th down - need to convert
+      isEfficient = yards >= distance;
+    }
+    if (isEfficient) efficientPlays++;
+
+    // Down efficiency (conversions only)
     if (down >= 1 && down <= 4) {
       downStats[down].attempts++;
-      const distance = p.distance || 0;
-      // Success = got the first down or TD
       const gotFirstDown = yards >= distance;
-      const gotTD = result.includes('td') || result.includes('touchdown');
       if (gotFirstDown || gotTD) {
         downStats[down].successful++;
       }
@@ -1171,6 +1329,8 @@ function calculateDetailedStats(plays) {
     .sort((a, b) => (b.yards || 0) - (a.yards || 0))
     .slice(0, 3);
 
+  const totalPlays = rushAttempts + passAttempts;
+
   return {
     rushAttempts,
     rushYards,
@@ -1178,6 +1338,8 @@ function calculateDetailedStats(plays) {
     passYards,
     completions,
     explosives,
+    efficientPlays,
+    efficiencyPct: totalPlays > 0 ? Math.round((efficientPlays / totalPlays) * 100) : 0,
     totalYards: rushYards + passYards,
     yardsPerCarry: rushAttempts > 0 ? (rushYards / rushAttempts).toFixed(1) : '0.0',
     yardsPerAttempt: passAttempts > 0 ? (passYards / passAttempts).toFixed(1) : '0.0',
@@ -1187,8 +1349,35 @@ function calculateDetailedStats(plays) {
   };
 }
 
+// Build full play call string from play data
+function buildPlayCallString(play) {
+  const parts = [];
+  if (play.formation) parts.push(play.formation);
+  if (play.backfield) parts.push(play.backfield);
+  if (play.motion) parts.push(play.motion);
+  if (play.personnel) parts.push(play.personnel);
+  if (play.playName) parts.push(play.playName);
+  if (play.tag) parts.push(play.tag);
+  if (play.custom1) parts.push(play.custom1);
+  if (play.custom2) parts.push(play.custom2);
+  if (play.custom3) parts.push(play.custom3);
+
+  return parts.length > 0 ? parts.join(' ') : play.odCall || `Play ${play.rowNumber || '?'}`;
+}
+
 // Summary Stats Card
-function SummaryStatsCard({ summary, isLight }) {
+function SummaryStatsCard({ summary, isLight, plays }) {
+  // Generate insights with error handling
+  const insights = useMemo(() => {
+    try {
+      if (!plays || plays.length < 5) return null;
+      return generatePlayInsights(plays);
+    } catch (err) {
+      console.error('Error generating insights:', err);
+      return null;
+    }
+  }, [plays]);
+
   if (!summary) return null;
 
   const stats = summary.detailedStats;
@@ -1198,7 +1387,7 @@ function SummaryStatsCard({ summary, isLight }) {
       isLight ? 'bg-gray-50 border border-gray-200' : 'bg-slate-800/30 border border-slate-700'
     }`}>
       {/* Top row - main stats */}
-      <div className="grid grid-cols-6 gap-4 p-4 border-b border-slate-700/50">
+      <div className="grid grid-cols-7 gap-3 p-4 border-b border-slate-700/50">
         <div className="text-center">
           <div className={`text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
             {summary.offensivePlays}
@@ -1209,7 +1398,7 @@ function SummaryStatsCard({ summary, isLight }) {
           <div className={`text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
             {stats?.totalYards || 0}
           </div>
-          <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Total Yards</div>
+          <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Total Yds</div>
         </div>
         <div className="text-center">
           <div className="text-2xl font-bold text-emerald-400">
@@ -1222,6 +1411,15 @@ function SummaryStatsCard({ summary, isLight }) {
             {stats?.passYards || 0}
           </div>
           <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Pass Yds</div>
+        </div>
+        <div className="text-center">
+          <div className={`text-2xl font-bold ${
+            (stats?.efficiencyPct || 0) >= 50 ? 'text-emerald-400' :
+            (stats?.efficiencyPct || 0) >= 40 ? 'text-amber-400' : 'text-red-400'
+          }`}>
+            {stats?.efficiencyPct || 0}%
+          </div>
+          <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Efficiency</div>
         </div>
         <div className="text-center">
           <div className="text-2xl font-bold text-amber-400">
@@ -1338,21 +1536,19 @@ function SummaryStatsCard({ summary, isLight }) {
           </div>
         </div>
 
-        {/* Best Plays */}
+        {/* Best Play Calls */}
         <div className={`p-3 rounded-lg ${isLight ? 'bg-amber-50' : 'bg-amber-500/10'}`}>
           <div className={`text-sm font-medium mb-2 ${isLight ? 'text-amber-700' : 'text-amber-400'}`}>
-            Best Plays
+            Best Play Calls
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             {(stats?.bestPlays || []).length > 0 ? (
               stats.bestPlays.map((play, idx) => (
-                <div key={idx} className={`flex items-center justify-between text-xs ${
-                  isLight ? 'text-gray-600' : 'text-slate-400'
-                }`}>
-                  <span className="truncate flex-1">
-                    {play.playName || play.odCall || `Play ${play.rowNumber || idx + 1}`}
+                <div key={idx} className="flex items-center justify-between gap-2">
+                  <span className={`text-xs truncate flex-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                    {buildPlayCallString(play)}
                   </span>
-                  <span className={`font-bold ml-2 ${play.isRun ? 'text-emerald-400' : 'text-sky-400'}`}>
+                  <span className={`text-xs font-bold whitespace-nowrap ${play.isRun ? 'text-emerald-400' : 'text-sky-400'}`}>
                     +{play.yards}
                   </span>
                 </div>
@@ -1365,8 +1561,267 @@ function SummaryStatsCard({ summary, isLight }) {
           </div>
         </div>
       </div>
+
+      {/* Smart Insights */}
+      {insights && insights.length > 0 && (
+        <div className={`p-4 border-t ${isLight ? 'border-gray-200' : 'border-slate-700/50'}`}>
+          <div className="flex items-center gap-2 mb-3">
+            <Zap size={16} className="text-violet-400" />
+            <span className={`text-sm font-medium ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+              Smart Insights
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {insights.map((insight, idx) => {
+              const bgClass = insight.type === 'positive'
+                ? (isLight ? 'bg-emerald-50 border border-emerald-200' : 'bg-emerald-500/10 border border-emerald-500/30')
+                : insight.type === 'negative'
+                ? (isLight ? 'bg-red-50 border border-red-200' : 'bg-red-500/10 border border-red-500/30')
+                : (isLight ? 'bg-blue-50 border border-blue-200' : 'bg-blue-500/10 border border-blue-500/30');
+
+              const badgeClass = insight.type === 'positive'
+                ? 'bg-emerald-500/20 text-emerald-400'
+                : insight.type === 'negative'
+                ? 'bg-red-500/20 text-red-400'
+                : 'bg-blue-500/20 text-blue-400';
+
+              const textClass = insight.type === 'positive'
+                ? (isLight ? 'text-emerald-700' : 'text-emerald-300')
+                : insight.type === 'negative'
+                ? (isLight ? 'text-red-700' : 'text-red-300')
+                : (isLight ? 'text-blue-700' : 'text-blue-300');
+
+              return (
+                <div
+                  key={idx}
+                  className={`p-2.5 rounded-lg text-xs ${bgClass} ${insight.highlight ? 'ring-2 ring-violet-500/50' : ''}`}
+                >
+                  <div className="flex items-start gap-2">
+                    <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${badgeClass}`}>
+                      {insight.category}
+                    </span>
+                  </div>
+                  <div className={`mt-1.5 font-medium ${textClass}`}>
+                    {insight.text}
+                  </div>
+                  {insight.detail && (
+                    <div className={`mt-1 ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
+                      {insight.detail}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+// Generate smart insights from play data
+function generatePlayInsights(plays) {
+  if (!plays || plays.length < 5) return null; // Need enough data for insights
+
+  const insights = [];
+
+  // Helper to calculate stats for a group of plays
+  const calcGroupStats = (groupPlays) => {
+    if (groupPlays.length === 0) return null;
+    const totalYards = groupPlays.reduce((sum, p) => sum + (p.gainLoss || 0), 0);
+    const avgYards = totalYards / groupPlays.length;
+    const positiveCount = groupPlays.filter(p => (p.gainLoss || 0) > 0).length;
+    const successRate = (positiveCount / groupPlays.length) * 100;
+    const explosives = groupPlays.filter(p => {
+      const yards = p.gainLoss || 0;
+      const result = (p.result || '').toLowerCase();
+      const isRun = p.playType === 'Run' || result.includes('rush') || result.includes('run');
+      return isRun ? yards >= 12 : yards >= 16;
+    }).length;
+    return { count: groupPlays.length, totalYards, avgYards, successRate, explosives, plays: groupPlays };
+  };
+
+  // Analyze by field (formation, backfield, motion, tag, personnel)
+  const analyzeByField = (fieldName, minCount = 3) => {
+    const groups = {};
+    plays.forEach(p => {
+      const value = p[fieldName];
+      if (value && typeof value === 'string' && value.trim()) {
+        const key = value.trim().toUpperCase();
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(p);
+      }
+    });
+
+    return Object.entries(groups)
+      .filter(([_, groupPlays]) => groupPlays.length >= minCount)
+      .map(([name, groupPlays]) => {
+        const stats = calcGroupStats(groupPlays);
+        return stats ? { name, field: fieldName, ...stats } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => (b.avgYards || 0) - (a.avgYards || 0));
+  };
+
+  // Analyze by words/terms in play call
+  const analyzeByTerms = (minCount = 3) => {
+    const termGroups = {};
+    plays.forEach(p => {
+      // Get all words from play call parts
+      const fullCall = [p.formation, p.backfield, p.motion, p.personnel, p.playName, p.tag, p.custom1, p.custom2, p.custom3]
+        .filter(Boolean)
+        .join(' ');
+
+      // Split into words and normalize
+      const words = fullCall.toUpperCase().split(/[\s\-\/]+/).filter(w => w.length >= 2);
+      const uniqueWords = [...new Set(words)];
+
+      uniqueWords.forEach(word => {
+        if (!termGroups[word]) termGroups[word] = [];
+        termGroups[word].push(p);
+      });
+    });
+
+    return Object.entries(termGroups)
+      .filter(([_, groupPlays]) => groupPlays.length >= minCount)
+      .map(([term, groupPlays]) => {
+        const stats = calcGroupStats(groupPlays);
+        return stats ? { term, ...stats } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => (b.avgYards || 0) - (a.avgYards || 0));
+  };
+
+  // Get overall average for comparison
+  const overallStats = calcGroupStats(plays);
+  const overallAvg = overallStats?.avgYards || 0;
+
+  // Find best and worst formations
+  const formationStats = analyzeByField('formation', 2);
+  if (formationStats.length > 0) {
+    const best = formationStats[0];
+    if (best.avgYards > overallAvg + 1 && best.count >= 3) {
+      insights.push({
+        type: 'positive',
+        category: 'Formation',
+        text: `${best.name} formation averaged ${best.avgYards.toFixed(1)} yds/play (${best.count} plays)`,
+        detail: `${best.successRate.toFixed(0)}% success rate, ${best.explosives} explosives`
+      });
+    }
+    const worst = formationStats[formationStats.length - 1];
+    if (worst && worst.avgYards < overallAvg - 1 && worst.count >= 3 && formationStats.length > 1) {
+      insights.push({
+        type: 'negative',
+        category: 'Formation',
+        text: `${worst.name} formation averaged only ${worst.avgYards.toFixed(1)} yds/play (${worst.count} plays)`,
+        detail: `${worst.successRate.toFixed(0)}% success rate`
+      });
+    }
+  }
+
+  // Find best backfields
+  const backfieldStats = analyzeByField('backfield', 2);
+  if (backfieldStats.length > 0) {
+    const best = backfieldStats[0];
+    if (best.avgYards > overallAvg + 1 && best.count >= 3) {
+      insights.push({
+        type: 'positive',
+        category: 'Backfield',
+        text: `${best.name} backfield averaged ${best.avgYards.toFixed(1)} yds/play (${best.count} plays)`,
+        detail: `${best.successRate.toFixed(0)}% success rate`
+      });
+    }
+  }
+
+  // Find best motions
+  const motionStats = analyzeByField('motion', 2);
+  if (motionStats.length > 0) {
+    const best = motionStats[0];
+    if (best.avgYards > overallAvg + 1 && best.count >= 2) {
+      insights.push({
+        type: 'positive',
+        category: 'Motion',
+        text: `${best.name} motion averaged ${best.avgYards.toFixed(1)} yds/play (${best.count} plays)`,
+        detail: `${best.successRate.toFixed(0)}% success rate`
+      });
+    }
+  }
+
+  // Find best tags
+  const tagStats = analyzeByField('tag', 2);
+  if (tagStats.length > 0) {
+    const best = tagStats[0];
+    if (best.avgYards > overallAvg + 0.5 && best.count >= 2) {
+      insights.push({
+        type: 'positive',
+        category: 'Tag',
+        text: `${best.name} tag averaged ${best.avgYards.toFixed(1)} yds/play (${best.count} plays)`,
+        detail: `${best.successRate.toFixed(0)}% success rate`
+      });
+    }
+  }
+
+  // Find standout terms/words in play calls
+  const termStats = analyzeByTerms(3);
+  // Filter out common words and find interesting patterns
+  const commonWords = new Set(['THE', 'AND', 'OR', 'TO', 'IN', 'ON', 'AT', 'BY', 'FOR', 'OF', 'VS', 'LEFT', 'RIGHT', 'RUN', 'PASS']);
+  const interestingTerms = termStats.filter(t =>
+    !commonWords.has(t.term) &&
+    t.term.length >= 3 &&
+    (t.avgYards > overallAvg + 2 || t.avgYards < overallAvg - 2)
+  );
+
+  if (interestingTerms.length > 0) {
+    // Best performing term
+    const bestTerm = interestingTerms[0];
+    if (bestTerm.avgYards > overallAvg + 2) {
+      insights.push({
+        type: 'positive',
+        category: 'Term',
+        text: `Plays with "${bestTerm.term}" averaged ${bestTerm.avgYards.toFixed(1)} yds/play (${bestTerm.count} plays)`,
+        detail: `${bestTerm.successRate.toFixed(0)}% success rate, ${bestTerm.explosives} explosives`,
+        highlight: true
+      });
+    }
+
+    // Worst performing term
+    const worstTerms = interestingTerms.filter(t => t.avgYards < overallAvg - 2);
+    if (worstTerms.length > 0) {
+      const worstTerm = worstTerms[worstTerms.length - 1];
+      insights.push({
+        type: 'negative',
+        category: 'Term',
+        text: `Plays with "${worstTerm.term}" averaged only ${worstTerm.avgYards.toFixed(1)} yds/play (${worstTerm.count} plays)`,
+        detail: `${worstTerm.successRate.toFixed(0)}% success rate`
+      });
+    }
+  }
+
+  // Run vs Pass insights
+  const runs = plays.filter(p => p.playType === 'Run' || (p.result || '').toLowerCase().includes('rush'));
+  const passes = plays.filter(p => !runs.includes(p));
+  const runStats = calcGroupStats(runs);
+  const passStats = calcGroupStats(passes);
+
+  if (runStats && passStats && runs.length >= 5 && passes.length >= 5) {
+    if (runStats.avgYards > passStats.avgYards + 2) {
+      insights.push({
+        type: 'info',
+        category: 'Run/Pass',
+        text: `Running game outperformed passing (${runStats.avgYards.toFixed(1)} vs ${passStats.avgYards.toFixed(1)} yds/play)`,
+        detail: `Run: ${runStats.successRate.toFixed(0)}% success, Pass: ${passStats.successRate.toFixed(0)}% success`
+      });
+    } else if (passStats.avgYards > runStats.avgYards + 2) {
+      insights.push({
+        type: 'info',
+        category: 'Run/Pass',
+        text: `Passing game outperformed running (${passStats.avgYards.toFixed(1)} vs ${runStats.avgYards.toFixed(1)} yds/play)`,
+        detail: `Pass: ${passStats.successRate.toFixed(0)}% success, Run: ${runStats.successRate.toFixed(0)}% success`
+      });
+    }
+  }
+
+  return insights.slice(0, 6); // Return top 6 insights
 }
 
 // Determine series outcome from plays
@@ -1519,12 +1974,12 @@ function SeriesGroup({ seriesNum, plays, outcome, children, isLight, isExpanded,
                 </span>
               </div>
             )}
-            {/* Best play in series */}
+            {/* Best play call in series */}
             {seriesStats.bestPlays?.[0] && (
               <div className="flex items-center gap-2">
                 <span className={`font-medium ${isLight ? 'text-amber-600' : 'text-amber-400'}`}>Best:</span>
-                <span className={isLight ? 'text-gray-600' : 'text-slate-400'}>
-                  {seriesStats.bestPlays[0].playName || seriesStats.bestPlays[0].odCall || 'Play'} (+{seriesStats.bestPlays[0].yards})
+                <span className={`truncate max-w-xs ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                  {buildPlayCallString(seriesStats.bestPlays[0])} (+{seriesStats.bestPlays[0].yards})
                 </span>
               </div>
             )}
@@ -1619,6 +2074,23 @@ export default function PostgameReview() {
   const [importError, setImportError] = useState(null);
   const [expandedSeries, setExpandedSeries] = useState(new Set());
 
+  // Filter state
+  const [viewMode, setViewMode] = useState('drives'); // 'drives', 'downs', 'quarters', 'all'
+  const [filters, setFilters] = useState({
+    down: null,      // 1, 2, 3, 4, 'p10' (P&10), or null for all
+    downDistance: null, // down & distance category id or null for all
+    quarter: null,   // 1, 2, 3, 4, or null for all
+    half: null,      // 1, 2, or null for all
+    drive: null,     // series number or null for all
+    playType: null,  // 'run', 'pass', or null for all
+    result: null,    // 'positive', 'negative', 'explosive', 'firstdown', or null
+    fieldZone: null  // field zone id or null for all
+  });
+
+  // Get field zones and down/distance categories from setup config
+  const fieldZones = setupConfig?.fieldZones || [];
+  const downDistanceCategories = setupConfig?.downDistanceCategories || [];
+
   // Get game review from the week
   const gameReview = currentWeek?.gameReview || {
     plays: [],
@@ -1632,17 +2104,201 @@ export default function PostgameReview() {
   const filmReviewTags = setupConfig?.filmReviewTags || { worked: [], didntWork: [] };
 
   // Filter to only offensive plays for now
-  const offensivePlays = useMemo(() => {
+  const allOffensivePlays = useMemo(() => {
     return (gameReview.plays || []).filter(p => p.odk === 'O' || !p.odk);
   }, [gameReview.plays]);
 
-  // Group plays by series
+  // Identify first play of each drive (P&10)
+  const firstPlayOfDriveIds = useMemo(() => {
+    const ids = new Set();
+    const seenSeries = new Set();
+    allOffensivePlays.forEach(play => {
+      const series = play.series;
+      if (series && !seenSeries.has(series)) {
+        seenSeries.add(series);
+        ids.add(play.id);
+      }
+    });
+    // If no series data, fall back to first play overall or plays marked as playInSeries === 1
+    if (ids.size === 0) {
+      allOffensivePlays.forEach((play, idx) => {
+        if (play.playInSeries === 1 || idx === 0) {
+          ids.add(play.id);
+        }
+      });
+    }
+    return ids;
+  }, [allOffensivePlays]);
+
+  // Apply filters to offensive plays
+  const offensivePlays = useMemo(() => {
+    return allOffensivePlays.filter(play => {
+      const result = (play.result || '').toLowerCase();
+      const isRun = play.playType === 'Run' || result.includes('rush') || result.includes('run');
+      const yards = play.gainLoss || 0;
+
+      // Down filter (including P&10 for first play of drive)
+      if (filters.down !== null) {
+        if (filters.down === 'p10') {
+          // P&10 = first play of each drive only
+          if (!firstPlayOfDriveIds.has(play.id)) return false;
+        } else if (play.down !== filters.down) {
+          return false;
+        }
+      }
+
+      // Down & Distance category filter
+      if (filters.downDistance !== null) {
+        const ddCat = downDistanceCategories.find(d => d.id === filters.downDistance);
+        if (ddCat) {
+          const playDown = String(play.down);
+          const playDistance = play.distance || 0;
+
+          // Check down matches
+          if (ddCat.down && playDown !== ddCat.down) return false;
+
+          // Check distance range
+          if (ddCat.minYards !== null && playDistance < ddCat.minYards) return false;
+          if (ddCat.maxYards !== null && playDistance > ddCat.maxYards) return false;
+        }
+      }
+
+      // Quarter filter
+      if (filters.quarter !== null && play.quarter !== filters.quarter) return false;
+
+      // Half filter
+      if (filters.half !== null) {
+        const playHalf = (play.quarter <= 2) ? 1 : 2;
+        if (playHalf !== filters.half) return false;
+      }
+
+      // Drive filter
+      if (filters.drive !== null && play.series !== filters.drive) return false;
+
+      // Play type filter
+      if (filters.playType === 'run' && !isRun) return false;
+      if (filters.playType === 'pass' && isRun) return false;
+
+      // Result filter
+      if (filters.result === 'positive' && yards <= 0) return false;
+      if (filters.result === 'negative' && yards >= 0) return false;
+      if (filters.result === 'explosive') {
+        const isExplosive = isRun ? yards >= 12 : yards >= 16;
+        if (!isExplosive) return false;
+      }
+      if (filters.result === 'firstdown') {
+        const distance = play.distance || 0;
+        if (yards < distance) return false;
+      }
+
+      // Field zone filter (using user-defined zones from setup)
+      if (filters.fieldZone !== null) {
+        const zone = fieldZones.find(z => z.id === filters.fieldZone);
+        if (zone) {
+          // Convert play's yardLine to 1-100 scale
+          // Play yardLine: negative = own territory, positive = opponent territory
+          // Zone scale: 1-50 = own territory, 51-100 = opponent territory
+          const playYardLine = play.yardLine || 0;
+          let zoneYardLine;
+          if (playYardLine < 0) {
+            // Own territory: -25 (own 25) → zone yard 25
+            zoneYardLine = Math.abs(playYardLine);
+          } else if (playYardLine === 0) {
+            // Midfield
+            zoneYardLine = 50;
+          } else {
+            // Opponent territory: 30 (opp 30) → zone yard 70 (100 - 30)
+            zoneYardLine = 100 - playYardLine;
+          }
+
+          // Check if play is within zone's yard range
+          if (zoneYardLine < zone.startYard || zoneYardLine > zone.endYard) return false;
+        }
+      }
+
+      return true;
+    });
+  }, [allOffensivePlays, filters, firstPlayOfDriveIds, fieldZones, downDistanceCategories]);
+
+  // Get original drive outcomes (before filtering) so we always show if drive scored
+  const originalDriveOutcomes = useMemo(() => {
+    const outcomes = {};
+    const allGroups = groupPlaysBySeries(allOffensivePlays);
+    allGroups.forEach(group => {
+      outcomes[group.series] = group.outcome;
+    });
+    return outcomes;
+  }, [allOffensivePlays]);
+
+  // Group plays by series (filtered plays, but with original outcomes)
   const seriesGroups = useMemo(() => {
-    return groupPlaysBySeries(offensivePlays);
+    const groups = groupPlaysBySeries(offensivePlays);
+    // Use original outcomes so TD/FG/etc shows even when filtering
+    return groups.map(group => ({
+      ...group,
+      outcome: originalDriveOutcomes[group.series] || group.outcome
+    }));
+  }, [offensivePlays, originalDriveOutcomes]);
+
+  // Group plays by down for down view
+  const downGroups = useMemo(() => {
+    const groups = { 1: [], 2: [], 3: [], 4: [] };
+    offensivePlays.forEach(play => {
+      const down = play.down;
+      if (down >= 1 && down <= 4) {
+        groups[down].push(play);
+      }
+    });
+    return groups;
   }, [offensivePlays]);
+
+  // Group plays by quarter
+  const quarterGroups = useMemo(() => {
+    const groups = { 1: [], 2: [], 3: [], 4: [] };
+    offensivePlays.forEach(play => {
+      const quarter = play.quarter;
+      if (quarter >= 1 && quarter <= 4) {
+        groups[quarter].push(play);
+      }
+    });
+    return groups;
+  }, [offensivePlays]);
+
+  // Get unique drives for filter dropdown
+  const uniqueDrives = useMemo(() => {
+    const drives = new Set();
+    allOffensivePlays.forEach(p => {
+      if (p.series) drives.add(p.series);
+    });
+    return Array.from(drives).sort((a, b) => a - b);
+  }, [allOffensivePlays]);
 
   // Check if we have series data
   const hasSeries = seriesGroups.length > 0 && seriesGroups.some(g => g.series !== 0 && g.series !== null);
+
+  // Clear all filters
+  const clearFilters = useCallback(() => {
+    setFilters({
+      down: null,
+      downDistance: null,
+      quarter: null,
+      half: null,
+      drive: null,
+      playType: null,
+      result: null,
+      fieldZone: null
+    });
+  }, []);
+
+  // Check if any filters are active
+  const hasActiveFilters = Object.values(filters).some(v => v !== null);
+
+  // Auto-expand all drives when filters are active
+  useEffect(() => {
+    if (hasActiveFilters && seriesGroups.length > 0) {
+      setExpandedSeries(new Set(seriesGroups.map(g => g.series)));
+    }
+  }, [hasActiveFilters, seriesGroups]);
 
   // Toggle series expansion
   const toggleSeries = useCallback((seriesNum) => {
@@ -1955,14 +2611,23 @@ export default function PostgameReview() {
           distance: parseInt(getValue('distance')) || 10,
           yardLine,
           hash: getValue('hash') || '',
+          // Play call fields
           formation: getValue('formation') || '',
           backfield: getValue('backfield') || '',
           motion: getValue('motion') || '',
+          personnel: getValue('personnel') || '',
+          tag: getValue('tag') || '',
           playName: String(playName).trim(),
+          // Result fields
           playType: getValue('playType') || '',
           playDir: getValue('playDir') || '',
           result: getValue('result') || '',
           gainLoss: parseInt(getValue('gainLoss')) || 0,
+          // Custom fields
+          custom1: getValue('custom1') || '',
+          custom2: getValue('custom2') || '',
+          custom3: getValue('custom3') || '',
+          // Matching
           matchedPlayId: null,
           matchConfidence: 'unmatched',
           review: {}
@@ -2183,7 +2848,196 @@ export default function PostgameReview() {
         ) : (
           <div className="space-y-6">
             {/* Summary Stats */}
-            <SummaryStatsCard summary={summary} isLight={isLight} />
+            <SummaryStatsCard summary={summary} isLight={isLight} plays={allOffensivePlays} />
+
+            {/* View Mode & Filter Bar */}
+            <div className={`p-4 rounded-xl ${isLight ? 'bg-gray-50 border border-gray-200' : 'bg-slate-800/30 border border-slate-700'}`}>
+              {/* View Mode Tabs */}
+              <div className="flex items-center gap-2 mb-4">
+                <span className={`text-xs font-medium ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>View by:</span>
+                <div className={`flex rounded-lg p-1 ${isLight ? 'bg-gray-200' : 'bg-slate-700'}`}>
+                  {[
+                    { id: 'drives', label: 'Drives' },
+                    { id: 'downs', label: 'Downs' },
+                    { id: 'quarters', label: 'Quarters' },
+                    { id: 'all', label: 'All Plays' }
+                  ].map(mode => (
+                    <button
+                      key={mode.id}
+                      onClick={() => setViewMode(mode.id)}
+                      className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                        viewMode === mode.id
+                          ? 'bg-white text-gray-900 shadow-sm'
+                          : isLight ? 'text-gray-600 hover:text-gray-900' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Filters */}
+              <div className="flex flex-wrap items-center gap-2">
+                <Filter size={14} className={isLight ? 'text-gray-400' : 'text-slate-500'} />
+
+                {/* Down Filter */}
+                <select
+                  value={filters.down || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFilters(f => ({ ...f, down: val === 'p10' ? 'p10' : val ? parseInt(val) : null }));
+                  }}
+                  className={`px-2 py-1 text-xs rounded-lg border ${
+                    filters.down
+                      ? 'border-violet-500 bg-violet-500/10 text-violet-400'
+                      : isLight ? 'border-gray-300 bg-white text-gray-700' : 'border-slate-600 bg-slate-700 text-slate-300'
+                  }`}
+                >
+                  <option value="">All Downs</option>
+                  <option value="p10">P&10 (1st of Drive)</option>
+                  <option value="1">1st Down</option>
+                  <option value="2">2nd Down</option>
+                  <option value="3">3rd Down</option>
+                  <option value="4">4th Down</option>
+                </select>
+
+                {/* Down & Distance Category Filter */}
+                {downDistanceCategories.length > 0 && (
+                  <select
+                    value={filters.downDistance || ''}
+                    onChange={(e) => setFilters(f => ({ ...f, downDistance: e.target.value || null }))}
+                    className={`px-2 py-1 text-xs rounded-lg border ${
+                      filters.downDistance
+                        ? 'border-violet-500 bg-violet-500/10 text-violet-400'
+                        : isLight ? 'border-gray-300 bg-white text-gray-700' : 'border-slate-600 bg-slate-700 text-slate-300'
+                    }`}
+                  >
+                    <option value="">All Dn & Dist</option>
+                    {downDistanceCategories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                  </select>
+                )}
+
+                {/* Quarter Filter */}
+                <select
+                  value={filters.quarter || ''}
+                  onChange={(e) => setFilters(f => ({ ...f, quarter: e.target.value ? parseInt(e.target.value) : null }))}
+                  className={`px-2 py-1 text-xs rounded-lg border ${
+                    filters.quarter
+                      ? 'border-violet-500 bg-violet-500/10 text-violet-400'
+                      : isLight ? 'border-gray-300 bg-white text-gray-700' : 'border-slate-600 bg-slate-700 text-slate-300'
+                  }`}
+                >
+                  <option value="">All Quarters</option>
+                  <option value="1">Q1</option>
+                  <option value="2">Q2</option>
+                  <option value="3">Q3</option>
+                  <option value="4">Q4</option>
+                </select>
+
+                {/* Half Filter */}
+                <select
+                  value={filters.half || ''}
+                  onChange={(e) => setFilters(f => ({ ...f, half: e.target.value ? parseInt(e.target.value) : null }))}
+                  className={`px-2 py-1 text-xs rounded-lg border ${
+                    filters.half
+                      ? 'border-violet-500 bg-violet-500/10 text-violet-400'
+                      : isLight ? 'border-gray-300 bg-white text-gray-700' : 'border-slate-600 bg-slate-700 text-slate-300'
+                  }`}
+                >
+                  <option value="">Both Halves</option>
+                  <option value="1">1st Half</option>
+                  <option value="2">2nd Half</option>
+                </select>
+
+                {/* Drive Filter */}
+                {uniqueDrives.length > 0 && (
+                  <select
+                    value={filters.drive || ''}
+                    onChange={(e) => setFilters(f => ({ ...f, drive: e.target.value ? parseInt(e.target.value) : null }))}
+                    className={`px-2 py-1 text-xs rounded-lg border ${
+                      filters.drive
+                        ? 'border-violet-500 bg-violet-500/10 text-violet-400'
+                        : isLight ? 'border-gray-300 bg-white text-gray-700' : 'border-slate-600 bg-slate-700 text-slate-300'
+                    }`}
+                  >
+                    <option value="">All Drives</option>
+                    {uniqueDrives.map(d => (
+                      <option key={d} value={d}>Drive {d}</option>
+                    ))}
+                  </select>
+                )}
+
+                {/* Play Type Filter */}
+                <select
+                  value={filters.playType || ''}
+                  onChange={(e) => setFilters(f => ({ ...f, playType: e.target.value || null }))}
+                  className={`px-2 py-1 text-xs rounded-lg border ${
+                    filters.playType
+                      ? 'border-violet-500 bg-violet-500/10 text-violet-400'
+                      : isLight ? 'border-gray-300 bg-white text-gray-700' : 'border-slate-600 bg-slate-700 text-slate-300'
+                  }`}
+                >
+                  <option value="">Run & Pass</option>
+                  <option value="run">Runs Only</option>
+                  <option value="pass">Passes Only</option>
+                </select>
+
+                {/* Result Filter */}
+                <select
+                  value={filters.result || ''}
+                  onChange={(e) => setFilters(f => ({ ...f, result: e.target.value || null }))}
+                  className={`px-2 py-1 text-xs rounded-lg border ${
+                    filters.result
+                      ? 'border-violet-500 bg-violet-500/10 text-violet-400'
+                      : isLight ? 'border-gray-300 bg-white text-gray-700' : 'border-slate-600 bg-slate-700 text-slate-300'
+                  }`}
+                >
+                  <option value="">All Results</option>
+                  <option value="positive">Positive Plays</option>
+                  <option value="negative">Negative Plays</option>
+                  <option value="explosive">Explosive Plays</option>
+                  <option value="firstdown">First Downs</option>
+                </select>
+
+                {/* Field Zone Filter */}
+                {fieldZones.length > 0 && (
+                  <select
+                    value={filters.fieldZone || ''}
+                    onChange={(e) => setFilters(f => ({ ...f, fieldZone: e.target.value || null }))}
+                    className={`px-2 py-1 text-xs rounded-lg border ${
+                      filters.fieldZone
+                        ? 'border-violet-500 bg-violet-500/10 text-violet-400'
+                        : isLight ? 'border-gray-300 bg-white text-gray-700' : 'border-slate-600 bg-slate-700 text-slate-300'
+                    }`}
+                  >
+                    <option value="">All Field Zones</option>
+                    {fieldZones.map(zone => (
+                      <option key={zone.id} value={zone.id}>{zone.name}</option>
+                    ))}
+                  </select>
+                )}
+
+                {/* Clear Filters */}
+                {hasActiveFilters && (
+                  <button
+                    onClick={clearFilters}
+                    className="flex items-center gap-1 px-2 py-1 text-xs rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30"
+                  >
+                    <X size={12} />
+                    Clear
+                  </button>
+                )}
+
+                {/* Results count */}
+                <span className={`text-xs ml-auto ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
+                  {offensivePlays.length} plays
+                  {hasActiveFilters && ` (of ${allOffensivePlays.length})`}
+                </span>
+              </div>
+            </div>
 
             {/* Action Bar */}
             <div className="flex items-center justify-between">
@@ -2249,12 +3103,12 @@ export default function PostgameReview() {
 
             {/* Play List */}
             <div className="space-y-3">
-              {hasSeries ? (
-                /* Grouped by Series */
+              {viewMode === 'drives' && hasSeries ? (
+                /* Grouped by Series/Drives */
                 <>
                   <div className="flex items-center justify-between mb-2">
                     <div className={`text-xs font-medium ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
-                      {seriesGroups.length} series
+                      {seriesGroups.length} drives
                     </div>
                     <button
                       onClick={expandAllSeries}
@@ -2291,8 +3145,141 @@ export default function PostgameReview() {
                     </SeriesGroup>
                   ))}
                 </>
+              ) : viewMode === 'downs' ? (
+                /* Grouped by Down */
+                <>
+                  {[1, 2, 3, 4].map(down => {
+                    const downPlays = downGroups[down];
+                    if (downPlays.length === 0) return null;
+                    const downStats = calculateDetailedStats(downPlays);
+                    const downLabel = down === 1 ? '1st' : down === 2 ? '2nd' : down === 3 ? '3rd' : '4th';
+                    return (
+                      <div key={down} className={`rounded-lg border ${
+                        isLight ? 'bg-white border-gray-200' : 'bg-slate-800/30 border-slate-700'
+                      }`}>
+                        <div className={`px-4 py-3 border-b ${isLight ? 'border-gray-200 bg-gray-50' : 'border-slate-700 bg-slate-800/50'}`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={`px-3 py-1 rounded-lg text-sm font-bold ${
+                                down === 1 ? 'bg-emerald-500/20 text-emerald-400' :
+                                down === 2 ? 'bg-sky-500/20 text-sky-400' :
+                                down === 3 ? 'bg-amber-500/20 text-amber-400' :
+                                'bg-red-500/20 text-red-400'
+                              }`}>
+                                {downLabel} Down
+                              </div>
+                              <span className={`text-sm ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                                {downPlays.length} plays
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-4 text-xs">
+                              {downStats && (
+                                <>
+                                  <span className={isLight ? 'text-gray-500' : 'text-slate-500'}>
+                                    <span className="text-emerald-400 font-medium">{downStats.rushYards}</span> rush
+                                  </span>
+                                  <span className={isLight ? 'text-gray-500' : 'text-slate-500'}>
+                                    <span className="text-sky-400 font-medium">{downStats.passYards}</span> pass
+                                  </span>
+                                  <span className={isLight ? 'text-gray-500' : 'text-slate-500'}>
+                                    <span className={`font-medium ${
+                                      (downStats.downStats[down]?.successful / (downStats.downStats[down]?.attempts || 1)) >= 0.5
+                                        ? 'text-emerald-400' : 'text-amber-400'
+                                    }`}>
+                                      {downStats.downStats[down]?.successful || 0}/{downStats.downStats[down]?.attempts || 0}
+                                    </span> converted
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="p-2 space-y-2">
+                          {downPlays.map((gamePlay, idx) => (
+                            <GamePlayCard
+                              key={gamePlay.id}
+                              gamePlay={gamePlay}
+                              matchedPlay={gamePlay.matchedPlayId ? plays[gamePlay.matchedPlayId] : null}
+                              plays={plays}
+                              onOpenMatch={(gp) => {
+                                setSelectedGamePlay(gp);
+                                setShowPlayMatching(true);
+                              }}
+                              onUpdateReview={handleUpdatePlayReview}
+                              isLight={isLight}
+                              index={idx}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              ) : viewMode === 'quarters' ? (
+                /* Grouped by Quarter */
+                <>
+                  {[1, 2, 3, 4].map(quarter => {
+                    const quarterPlays = quarterGroups[quarter];
+                    if (quarterPlays.length === 0) return null;
+                    const quarterStats = calculateDetailedStats(quarterPlays);
+                    return (
+                      <div key={quarter} className={`rounded-lg border ${
+                        isLight ? 'bg-white border-gray-200' : 'bg-slate-800/30 border-slate-700'
+                      }`}>
+                        <div className={`px-4 py-3 border-b ${isLight ? 'border-gray-200 bg-gray-50' : 'border-slate-700 bg-slate-800/50'}`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={`px-3 py-1 rounded-lg text-sm font-bold ${
+                                quarter <= 2 ? 'bg-violet-500/20 text-violet-400' : 'bg-orange-500/20 text-orange-400'
+                              }`}>
+                                Q{quarter}
+                              </div>
+                              <span className={`text-sm ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                                {quarterPlays.length} plays • {quarterStats?.totalYards || 0} total yards
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-4 text-xs">
+                              {quarterStats && (
+                                <>
+                                  <span className={isLight ? 'text-gray-500' : 'text-slate-500'}>
+                                    <span className="text-emerald-400 font-medium">{quarterStats.rushAttempts}</span> runs ({quarterStats.rushYards} yds)
+                                  </span>
+                                  <span className={isLight ? 'text-gray-500' : 'text-slate-500'}>
+                                    <span className="text-sky-400 font-medium">{quarterStats.passAttempts}</span> passes ({quarterStats.passYards} yds)
+                                  </span>
+                                  {quarterStats.explosives > 0 && (
+                                    <span className="text-amber-400 font-medium">
+                                      {quarterStats.explosives} explosive
+                                    </span>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="p-2 space-y-2">
+                          {quarterPlays.map((gamePlay, idx) => (
+                            <GamePlayCard
+                              key={gamePlay.id}
+                              gamePlay={gamePlay}
+                              matchedPlay={gamePlay.matchedPlayId ? plays[gamePlay.matchedPlayId] : null}
+                              plays={plays}
+                              onOpenMatch={(gp) => {
+                                setSelectedGamePlay(gp);
+                                setShowPlayMatching(true);
+                              }}
+                              onUpdateReview={handleUpdatePlayReview}
+                              isLight={isLight}
+                              index={idx}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
               ) : (
-                /* Flat list (no series data) */
+                /* Flat list (All Plays view or no series data) */
                 offensivePlays.map((gamePlay, idx) => (
                   <GamePlayCard
                     key={gamePlay.id}
