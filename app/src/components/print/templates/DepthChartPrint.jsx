@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useSchool } from '../../../context/SchoolContext';
-import { generateDepthChartPositions } from '../../../utils/depthChartPositions';
+import { generateDepthChartPositions, CANONICAL_OFFENSE_POSITIONS } from '../../../utils/depthChartPositions';
 
 // Default position layouts for each chart type
 const POSITION_LAYOUTS = {
@@ -262,12 +262,26 @@ export default function DepthChartPrint({
 }) {
   const { roster, depthCharts, weeks, programLevels, activeLevelId, settings, setupConfig } = useSchool();
 
-  // Generate dynamic positions from personnel groupings
+  // Generate dynamic positions from personnel groupings and setup config
   const personnelGroupings = setupConfig?.personnelGroupings || [];
   const positionNames = setupConfig?.positionNames || {};
+  const customPositions = setupConfig?.customPositions?.OFFENSE || [];
+  const hiddenPositions = setupConfig?.hiddenPositions?.OFFENSE || [];
+
+  // Use canonical offense positions from the shared utility
+  // This ensures print view matches the core 11 positions from Setup.jsx
+  const DEFAULT_OFFENSE_POSITIONS = CANONICAL_OFFENSE_POSITIONS;
+
+  // Compute active positions: defaults + custom - hidden
+  const activePositions = useMemo(() => {
+    const defaults = DEFAULT_OFFENSE_POSITIONS.filter(p => !hiddenPositions.includes(p.key));
+    const custom = customPositions.map(p => ({ key: p.key || p, default: p.default || p.key || p }));
+    return [...defaults, ...custom];
+  }, [customPositions, hiddenPositions]);
+
   const { basePositions, additionalPositions, basePersonnel } = useMemo(() => {
-    return generateDepthChartPositions(levelId || activeLevelId, programLevels, personnelGroupings, positionNames);
-  }, [levelId, activeLevelId, programLevels, personnelGroupings, positionNames]);
+    return generateDepthChartPositions(levelId || activeLevelId, programLevels, personnelGroupings, positionNames, activePositions);
+  }, [levelId, activeLevelId, programLevels, personnelGroupings, positionNames, activePositions]);
 
   // Convert dynamic positions to print format for offense
   const dynamicOffenseLayout = useMemo(() => {

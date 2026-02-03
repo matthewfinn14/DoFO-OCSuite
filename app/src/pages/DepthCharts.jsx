@@ -18,28 +18,13 @@ import {
   ChevronDown,
   ExternalLink
 } from 'lucide-react';
-import { generateDepthChartPositions } from '../utils/depthChartPositions';
+import { generateDepthChartPositions, CANONICAL_OFFENSE_POSITIONS } from '../utils/depthChartPositions';
 import DepthChartPrint from '../components/print/templates/DepthChartPrint';
 import '../styles/print-center.css';
 
-// Default offense positions - same as in Setup.jsx
-const DEFAULT_OFFENSE_POSITIONS = [
-  { key: 'QB', default: 'QB' },
-  { key: 'RB', default: 'RB' },
-  { key: 'FB', default: 'FB' },
-  { key: 'WR', default: 'WR' },
-  { key: 'TE', default: 'TE' },
-  { key: 'LT', default: 'LT' },
-  { key: 'LG', default: 'LG' },
-  { key: 'C', default: 'C' },
-  { key: 'RG', default: 'RG' },
-  { key: 'RT', default: 'RT' },
-  { key: 'X', default: 'X' },
-  { key: 'Y', default: 'Y' },
-  { key: 'Z', default: 'Z' },
-  { key: 'H', default: 'H' },
-  { key: 'F', default: 'F' }
-];
+// Use canonical offense positions from the shared utility
+// This ensures depth chart positions match Setup.jsx's core 11 positions
+const DEFAULT_OFFENSE_POSITIONS = CANONICAL_OFFENSE_POSITIONS;
 
 // Depth chart types
 const DEPTH_CHART_TYPES = [
@@ -1203,7 +1188,7 @@ export default function DepthCharts() {
   const { roster, depthCharts, updateDepthCharts, weeks, currentWeekId, updateWeeks, settings, school, setupConfig, programLevels, activeLevelId } = useSchool();
 
   const [activeChart, setActiveChart] = useState('offense');
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'formation'
+  const [viewMode, setViewMode] = useState('formation'); // 'formation' or 'grid'
   const [showAdditional, setShowAdditional] = useState(false); // Toggle for additional positions
 
   // Theme support

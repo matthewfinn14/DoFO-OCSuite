@@ -1,20 +1,15 @@
 import { useState, useMemo, useCallback } from 'react';
 import { ChevronDown, ChevronRight, GripVertical, User, X, Plus, Trash2 } from 'lucide-react';
 import { getPlayCall } from '../../utils/playDisplay';
+import { CANONICAL_OFFENSE_POSITIONS } from '../../utils/depthChartPositions';
 
-// Default positions for offense (used if no setupConfig)
-const DEFAULT_OFFENSE_POSITIONS = [
-  { key: 'QB', default: 'QB', description: 'Quarterback' },
-  { key: 'RB', default: 'RB', description: 'Running Back' },
-  { key: 'FB', default: 'FB', description: 'Fullback' },
-  { key: 'WR', default: 'WR', description: 'Wide Receiver' },
-  { key: 'TE', default: 'TE', description: 'Tight End' },
-  { key: 'X', default: 'X', description: 'Split End' },
-  { key: 'Y', default: 'Y', description: 'Slot Receiver' },
-  { key: 'Z', default: 'Z', description: 'Flanker' },
-  { key: 'H', default: 'H', description: 'H-Back' },
-  { key: 'F', default: 'F', description: 'F-Back' }
-];
+// Default positions for offense - use canonical core 11 from shared utility
+// Teams can add FB, WR, TE, F etc. as custom positions in Setup > Name Positions
+const DEFAULT_OFFENSE_POSITIONS = CANONICAL_OFFENSE_POSITIONS.map(p => ({
+  key: p.key,
+  default: p.default,
+  description: p.key // Keep it simple - descriptions can be looked up elsewhere if needed
+}));
 
 // Default position colors
 const DEFAULT_POSITION_COLORS = {

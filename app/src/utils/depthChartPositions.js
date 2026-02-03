@@ -21,9 +21,27 @@ const OL_POSITIONS = [
 // OL position keys to exclude from skill positions
 const OL_POSITION_KEYS = ['LT', 'LG', 'C', 'RG', 'RT'];
 
-// Default offense positions - used when no custom positions are configured
+// Default offense positions - matches the 11 core positions in Setup.jsx
+// This is the CANONICAL list - all other files should reference this
+// OL positions (LT, LG, C, RG, RT) are handled separately via OL_POSITIONS
 const DEFAULT_OFFENSE_POSITIONS = [
-  'QB', 'RB', 'FB', 'WR', 'TE', 'X', 'Y', 'Z', 'H', 'F'
+  'QB', 'RB', 'X', 'Y', 'Z', 'H'
+];
+
+// Export the full default positions for other files to use
+// This includes both skill and OL positions as objects with key/default pairs
+export const CANONICAL_OFFENSE_POSITIONS = [
+  { key: 'QB', default: 'QB' },
+  { key: 'RB', default: 'RB' },
+  { key: 'X', default: 'X' },
+  { key: 'Y', default: 'Y' },
+  { key: 'Z', default: 'Z' },
+  { key: 'H', default: 'H' },
+  { key: 'LT', default: 'LT' },
+  { key: 'LG', default: 'LG' },
+  { key: 'C', default: 'C' },
+  { key: 'RG', default: 'RG' },
+  { key: 'RT', default: 'RT' }
 ];
 
 /**
@@ -100,10 +118,12 @@ export function mapPersonnelToPositions(personnelGrouping, positionNames = {}) {
     });
   });
 
-  // Always add OL positions - each with its own positionType for layout coords
+  // Always add OL positions - apply positionNames lookup for custom labels
   OL_POSITIONS.forEach(slot => {
     positions.push({
-      ...slot,
+      id: slot.id,
+      label: positionNames[slot.id] || slot.label,
+      depth: slot.depth,
       positionType: slot.id  // LT, LG, C, RG, RT - not 'OL'
     });
   });
@@ -184,10 +204,12 @@ export function getAllActivePositions(activePositions = [], positionNames = {}) 
     });
   });
 
-  // Always add OL positions - each with its own positionType for layout coords
+  // Always add OL positions - apply positionNames lookup for custom labels
   OL_POSITIONS.forEach(slot => {
     positions.push({
-      ...slot,
+      id: slot.id,
+      label: positionNames[slot.id] || slot.label,
+      depth: slot.depth,
       positionType: slot.id  // LT, LG, C, RG, RT - not 'OL'
     });
   });
@@ -232,10 +254,12 @@ export function getDefaultPositions(positionNames = {}) {
     positionType: key
   }));
 
-  // Add OL positions - each with its own positionType for layout coords
+  // Add OL positions - apply positionNames lookup for custom labels
   OL_POSITIONS.forEach(slot => {
     positions.push({
-      ...slot,
+      id: slot.id,
+      label: positionNames[slot.id] || slot.label,
+      depth: slot.depth,
       positionType: slot.id  // LT, LG, C, RG, RT - not 'OL'
     });
   });
