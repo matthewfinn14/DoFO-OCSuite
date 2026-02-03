@@ -1558,6 +1558,60 @@ export default function PostgameReview() {
     });
   }, [plays]);
 
+  // Detect new terms from imported plays that aren't in termLibrary
+  // NOTE: Must be defined before handleFileImport which uses it
+  const detectNewTerms = useCallback((importedPlays) => {
+    const termLibrary = setupConfig?.termLibrary?.OFFENSE || {};
+    const existingTerms = new Set();
+
+    // Collect all existing terms (uppercase for comparison)
+    Object.values(termLibrary).forEach(terms => {
+      if (Array.isArray(terms)) {
+        terms.forEach(t => existingTerms.add((t.label || t).toUpperCase()));
+      }
+    });
+
+    // Also check abbreviations as existing
+    const abbreviations = setupConfig?.wristbandAbbreviations || {};
+    Object.keys(abbreviations).forEach(term => existingTerms.add(term.toUpperCase()));
+
+    // Extract unique terms from imported plays
+    const newTerms = {
+      formation: new Set(),
+      backfield: new Set(),
+      motion: new Set(),
+      playType: new Set(),
+      playDir: new Set()
+    };
+
+    importedPlays.forEach(play => {
+      if (play.odk !== 'O') return; // Only offense for now
+
+      const checkAndAdd = (value, category) => {
+        if (!value || typeof value !== 'string') return;
+        const normalized = value.trim().toUpperCase();
+        if (normalized && !existingTerms.has(normalized)) {
+          newTerms[category].add(value.trim()); // Keep original case for display
+        }
+      };
+
+      checkAndAdd(play.formation, 'formation');
+      checkAndAdd(play.backfield, 'backfield');
+      checkAndAdd(play.motion, 'motion');
+      checkAndAdd(play.playType, 'playType');
+      checkAndAdd(play.playDir, 'playDir');
+    });
+
+    // Convert sets to arrays and filter empty categories
+    const result = {};
+    Object.entries(newTerms).forEach(([category, termSet]) => {
+      const arr = Array.from(termSet).sort();
+      if (arr.length > 0) result[category] = arr;
+    });
+
+    return Object.keys(result).length > 0 ? result : null;
+  }, [setupConfig]);
+
   // Handle file import
   const handleFileImport = useCallback(async (event) => {
     const file = event.target.files?.[0];
@@ -1701,59 +1755,6 @@ export default function PostgameReview() {
       handleFileImport({ target: { files: fileInputRef.current.files } });
     }
   }, [updateSetupConfig, handleFileImport]);
-
-  // Detect new terms from imported plays that aren't in termLibrary
-  const detectNewTerms = useCallback((importedPlays) => {
-    const termLibrary = setupConfig?.termLibrary?.OFFENSE || {};
-    const existingTerms = new Set();
-
-    // Collect all existing terms (uppercase for comparison)
-    Object.values(termLibrary).forEach(terms => {
-      if (Array.isArray(terms)) {
-        terms.forEach(t => existingTerms.add((t.label || t).toUpperCase()));
-      }
-    });
-
-    // Also check abbreviations as existing
-    const abbreviations = setupConfig?.wristbandAbbreviations || {};
-    Object.keys(abbreviations).forEach(term => existingTerms.add(term.toUpperCase()));
-
-    // Extract unique terms from imported plays
-    const newTerms = {
-      formation: new Set(),
-      backfield: new Set(),
-      motion: new Set(),
-      playType: new Set(),
-      playDir: new Set()
-    };
-
-    importedPlays.forEach(play => {
-      if (play.odk !== 'O') return; // Only offense for now
-
-      const checkAndAdd = (value, category) => {
-        if (!value || typeof value !== 'string') return;
-        const normalized = value.trim().toUpperCase();
-        if (normalized && !existingTerms.has(normalized)) {
-          newTerms[category].add(value.trim()); // Keep original case for display
-        }
-      };
-
-      checkAndAdd(play.formation, 'formation');
-      checkAndAdd(play.backfield, 'backfield');
-      checkAndAdd(play.motion, 'motion');
-      checkAndAdd(play.playType, 'playType');
-      checkAndAdd(play.playDir, 'playDir');
-    });
-
-    // Convert sets to arrays and filter empty categories
-    const result = {};
-    Object.entries(newTerms).forEach(([category, termSet]) => {
-      const arr = Array.from(termSet).sort();
-      if (arr.length > 0) result[category] = arr;
-    });
-
-    return Object.keys(result).length > 0 ? result : null;
-  }, [setupConfig]);
 
   // Handle saving new terms to glossary
   const handleSaveNewTerms = useCallback(async (termsToAdd, abbrevsToAdd) => {

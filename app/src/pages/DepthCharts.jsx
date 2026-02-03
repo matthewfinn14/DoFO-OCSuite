@@ -1203,8 +1203,13 @@ export default function DepthCharts() {
 
   // Compute active positions: defaults + custom - hidden
   const activePositions = useMemo(() => {
+    console.log('DEBUG: DEFAULT_OFFENSE_POSITIONS:', DEFAULT_OFFENSE_POSITIONS);
+    console.log('DEBUG: hiddenPositions:', hiddenPositions);
     const defaults = DEFAULT_OFFENSE_POSITIONS.filter(p => !hiddenPositions.includes(p.key));
+    console.log('DEBUG: defaults after filter:', defaults);
     const custom = customPositions.map(p => ({ key: p.key || p, default: p.default || p.key || p }));
+    console.log('DEBUG: custom:', custom);
+    console.log('DEBUG: final activePositions:', [...defaults, ...custom]);
     return [...defaults, ...custom];
   }, [customPositions, hiddenPositions]);
 

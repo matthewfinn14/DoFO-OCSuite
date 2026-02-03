@@ -1839,6 +1839,38 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
         </button>
       </div>
 
+      {/* Reset Positions Button */}
+      <div className="mt-6 pt-6 border-t border-slate-700">
+        <button
+          onClick={async () => {
+            if (!confirm('Reset all position settings to defaults? This will:\n• Show all default positions\n• Remove custom positions\n• Clear all position renames and colors\n\nThis cannot be undone.')) return;
+
+            // Clear hidden positions for this phase
+            const newHidden = { ...hiddenPositions };
+            delete newHidden[phase];
+
+            // Clear custom positions for this phase
+            const newCustom = { ...customPositions };
+            delete newCustom[phase];
+
+            // Clear position names, colors, descriptions, types
+            if (onImmediateSave) {
+              await onImmediateSave('hiddenPositions', newHidden);
+              await onImmediateSave('customPositions', newCustom);
+              await onImmediateSave('positionNames', {});
+              await onImmediateSave('positionColors', {});
+              await onImmediateSave('positionDescriptions', {});
+              await onImmediateSave('positionTypes', {});
+            }
+
+            alert('Positions reset to defaults!');
+          }}
+          className="px-4 py-2 text-sm bg-red-600/20 text-red-400 border border-red-600/30 rounded-lg hover:bg-red-600/30 transition-colors"
+        >
+          Reset Positions to Defaults
+        </button>
+      </div>
+
     </div>
   );
 }
