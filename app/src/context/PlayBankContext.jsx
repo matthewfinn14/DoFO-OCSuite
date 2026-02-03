@@ -20,6 +20,10 @@ export function PlayBankProvider({ children }) {
   // Batch Add Destination Event
   const [batchAddEvent, setBatchAddEvent] = useState(null);
 
+  // Targeting mode - allows clicking on wristband slots, practice segments, or game plan boxes
+  const [targetingMode, setTargetingMode] = useState(false);
+  const [targetingPlays, setTargetingPlays] = useState([]);
+
   // Listen for batch add events from PlayBankSidebar
   useEffect(() => {
     const handleBatchAdd = (e) => {
@@ -94,6 +98,26 @@ export function PlayBankProvider({ children }) {
     setSelectedPlayId(null);
   }, []);
 
+  // Start targeting mode with plays to add
+  const startTargetingMode = useCallback((playIds) => {
+    setTargetingPlays(playIds);
+    setTargetingMode(true);
+  }, []);
+
+  // Cancel targeting mode
+  const cancelTargetingMode = useCallback(() => {
+    setTargetingMode(false);
+    setTargetingPlays([]);
+  }, []);
+
+  // Complete targeting mode (called when destination is clicked)
+  const completeTargeting = useCallback(() => {
+    const plays = targetingPlays;
+    setTargetingMode(false);
+    setTargetingPlays([]);
+    return plays;
+  }, [targetingPlays]);
+
   return (
     <PlayBankContext.Provider
       value={{
@@ -119,7 +143,14 @@ export function PlayBankProvider({ children }) {
 
         // Batch add destination event
         batchAddEvent,
-        clearBatchAddEvent
+        clearBatchAddEvent,
+
+        // Targeting mode - click to place plays
+        targetingMode,
+        targetingPlays,
+        startTargetingMode,
+        cancelTargetingMode,
+        completeTargeting
       }}
     >
       {children}

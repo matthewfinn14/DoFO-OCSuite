@@ -108,7 +108,10 @@ export default function WristbandBuilder() {
     clearSelectedPlay,
     stopSingleSelect,
     batchAddEvent,
-    clearBatchAddEvent
+    clearBatchAddEvent,
+    targetingMode,
+    targetingPlays,
+    completeTargeting
   } = usePlayBank();
 
   // State
@@ -278,6 +281,30 @@ export default function WristbandBuilder() {
 
   // Assign play to slot
   const handleAssignSlot = (slot) => {
+    const wristbandType = currentCard.type === 'wiz' ? 'wiz' : currentCard.type === 'mini-scripts' ? 'mini' : 'standard';
+
+    // Handle targeting mode - place multiple plays starting from clicked slot
+    if (targetingMode && targetingPlays.length > 0) {
+      const playIdsToAdd = completeTargeting();
+      const currentSlots = { ...(currentCard.slots || {}) };
+
+      // Get slots starting from clicked slot that are empty
+      const availableSlots = slots.filter(s => s >= slot && !currentSlots[s]?.playId);
+
+      // Assign plays to available slots
+      playIdsToAdd.forEach((playId, idx) => {
+        if (idx < availableSlots.length) {
+          const targetSlot = availableSlots[idx];
+          currentSlots[targetSlot] = { playId };
+          updatePlay(playId, { wristbandSlot: targetSlot, wristbandType });
+        }
+      });
+
+      updateCardSettings({ slots: currentSlots });
+      return;
+    }
+
+    // Single play assignment (existing behavior)
     if (!selectedPlayId) return;
     const play = playsArray.find(p => p.id === selectedPlayId);
     if (!play) return;
@@ -287,7 +314,6 @@ export default function WristbandBuilder() {
     updateCardSettings({ slots: newSlots });
 
     // Also update the play object with wristband info
-    const wristbandType = currentCard.type === 'wiz' ? 'wiz' : currentCard.type === 'mini-scripts' ? 'mini' : 'standard';
     updatePlay(play.id, {
       wristbandSlot: slot,
       wristbandType: wristbandType

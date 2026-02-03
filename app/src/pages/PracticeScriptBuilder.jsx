@@ -20,7 +20,8 @@ import {
   Save,
   FileText,
   ListOrdered,
-  CheckSquare
+  CheckSquare,
+  MousePointer
 } from 'lucide-react';
 
 // Hash patterns for script rows (alternating L to R)
@@ -85,7 +86,7 @@ const DEFAULT_SEGMENTS = [
 export default function PracticeScriptBuilder() {
   const { plays, playsArray, weeks, currentWeekId, setCurrentWeekId, updateWeeks } = useSchool();
   const { openPlayDetails } = usePlayDetailsModal();
-  const { startBatchSelect } = usePlayBank();
+  const { startBatchSelect, targetingMode, targetingPlays, completeTargeting } = usePlayBank();
 
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [expandedSegments, setExpandedSegments] = useState({});
@@ -294,6 +295,52 @@ export default function PracticeScriptBuilder() {
     updateSegment(segmentId, { script: newScript });
   };
 
+  // Handle targeting mode - add plays from playbank targeting to segment
+  const handleTargetingClick = useCallback((segmentId) => {
+    if (!targetingMode || targetingPlays.length === 0) return;
+
+    const playIdsToAdd = completeTargeting();
+    const segment = segments.find(s => s.id === segmentId);
+    if (!segment) return;
+
+    if (segment.hasScript && segment.script) {
+      // Fill empty script rows
+      let playIndex = 0;
+      const newScript = segment.script.map(row => {
+        if ((!row.playId && !row.playName) && playIndex < playIdsToAdd.length) {
+          const play = plays[playIdsToAdd[playIndex]];
+          playIndex++;
+          return {
+            ...row,
+            playId: play?.id || playIdsToAdd[playIndex - 1],
+            playName: play?.name || ''
+          };
+        }
+        return row;
+      });
+
+      // If more plays than empty rows, add new rows
+      while (playIndex < playIdsToAdd.length) {
+        const play = plays[playIdsToAdd[playIndex]];
+        newScript.push({
+          ...createScriptRow(newScript.length),
+          playId: play?.id || playIdsToAdd[playIndex],
+          playName: play?.name || ''
+        });
+        playIndex++;
+      }
+
+      updateSegment(segmentId, { script: newScript });
+    } else {
+      // Add to simple plays array
+      const newPlays = [
+        ...(segment.plays || []),
+        ...playIdsToAdd.map(playId => ({ playId, reps: 1, notes: '' }))
+      ];
+      updateSegment(segmentId, { plays: newPlays });
+    }
+  }, [targetingMode, targetingPlays, completeTargeting, segments, plays, updateSegment]);
+
   // Batch add plays to script from Play Bank
   const handleBatchAddToScript = useCallback((segmentId) => {
     setBatchTargetSegmentId(segmentId);
@@ -440,12 +487,29 @@ export default function PracticeScriptBuilder() {
           return (
             <div
               key={segment.id}
-              className="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden"
+              className={`bg-slate-900 rounded-lg border overflow-hidden transition-all ${
+                targetingMode
+                  ? 'border-violet-500 ring-2 ring-violet-500/30'
+                  : 'border-slate-800'
+              }`}
             >
+              {/* Targeting mode indicator */}
+              {targetingMode && (
+                <div className="bg-gradient-to-r from-violet-600 to-purple-600 text-white text-xs font-medium px-3 py-1.5 flex items-center gap-2">
+                  <MousePointer size={14} className="animate-pulse" />
+                  Click to add {targetingPlays.length} plays here
+                </div>
+              )}
               {/* Segment Header */}
               <div
                 className="flex items-center gap-3 p-4 cursor-pointer hover:bg-slate-800/50"
-                onClick={() => toggleSegment(segment.id)}
+                onClick={() => {
+                  if (targetingMode) {
+                    handleTargetingClick(segment.id);
+                  } else {
+                    toggleSegment(segment.id);
+                  }
+                }}
               >
                 <div
                   className="w-1 h-12 rounded-full"

@@ -115,7 +115,9 @@ export default function SheetView({
   onMatrixBoxAdd,
   onMatrixBoxRemove,
   pageFormat = '2-page',
-  pageOrientation = 'portrait'
+  pageOrientation = 'portrait',
+  isTargetingMode = false,
+  targetingPlayCount = 0
 }) {
   const sections = layouts?.CALL_SHEET?.sections || [];
   const weekTitle = currentWeek?.name || `Week ${currentWeek?.weekNumber || ''}`;
@@ -181,22 +183,27 @@ export default function SheetView({
       }}>
         {/* Header Row */}
         <div style={{
-          padding: '2px',
+          height: '22px',
+          padding: '0 2px',
           fontSize: '0.55rem',
           fontWeight: 'bold',
           color: '#94a3b8',
-          textAlign: 'center',
-          alignSelf: 'end'
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}>
           {box.cornerLabel || '#'}
         </div>
         {headings.slice(0, cols).map((h, i) => (
           <div key={`h-${i}`} style={{
-            padding: '2px',
+            height: '22px',
+            padding: '0 2px',
             fontSize: '0.55rem',
             fontWeight: 'bold',
             color: '#64748b',
-            textAlign: 'center',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             background: '#f1f5f9',
             whiteSpace: 'nowrap',
             overflow: 'hidden',
@@ -228,7 +235,7 @@ export default function SheetView({
                 alignItems: 'center',
                 justifyContent: 'flex-end',
                 minWidth: '15px',
-                minHeight: '18px',
+                height: '22px',
                 borderBottom: '1px dotted #e2e8f0',
                 background: rowBg
               }}>
@@ -241,7 +248,7 @@ export default function SheetView({
                     overflow: 'hidden',
                     background: play?.priority ? '#fef08a' : rowBg,
                     padding: '2px',
-                    minHeight: '18px',
+                    height: '22px',
                     color: '#334155',
                     display: 'flex',
                     alignItems: 'center',
@@ -293,21 +300,26 @@ export default function SheetView({
         }}>
           {/* Header Row */}
           <div style={{
-            padding: '2px',
+            height: '22px',
+            padding: '0 2px',
             fontSize: '0.55rem',
             fontWeight: 'bold',
             color: '#94a3b8',
-            textAlign: 'center',
-            alignSelf: 'end'
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}>
             #
           </div>
           <div style={{
-            padding: '2px',
+            height: '22px',
+            padding: '0 2px',
             fontSize: '0.55rem',
             fontWeight: 'bold',
             color: '#64748b',
-            textAlign: 'center',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             background: '#f1f5f9',
             borderBottom: '1px solid #cbd5e1'
           }}>
@@ -332,7 +344,7 @@ export default function SheetView({
                   alignItems: 'center',
                   justifyContent: 'flex-end',
                   minWidth: '15px',
-                  minHeight: '18px',
+                  height: '22px',
                   borderBottom: '1px dotted #e2e8f0',
                   background: rowBg
                 }}>
@@ -342,7 +354,7 @@ export default function SheetView({
                   overflow: 'hidden',
                   background: play?.priority ? '#fef08a' : rowBg,
                   padding: '2px',
-                  minHeight: '18px',
+                  height: '22px',
                   color: '#334155',
                   display: 'flex',
                   alignItems: 'center',
@@ -376,21 +388,26 @@ export default function SheetView({
       }}>
         {/* Header Row */}
         <div style={{
-          padding: '2px',
+          height: '22px',
+          padding: '0 2px',
           fontSize: '0.55rem',
           fontWeight: 'bold',
           color: '#94a3b8',
-          textAlign: 'center',
-          alignSelf: 'end'
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}>
           #
         </div>
         <div style={{
-          padding: '2px',
+          height: '22px',
+          padding: '0 2px',
           fontSize: '0.55rem',
           fontWeight: 'bold',
           color: '#64748b',
-          textAlign: 'center',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           background: '#f1f5f9',
           borderRight: '1px solid #cbd5e1',
           borderBottom: '1px solid #cbd5e1'
@@ -398,11 +415,14 @@ export default function SheetView({
           LEFT HASH
         </div>
         <div style={{
-          padding: '2px',
+          height: '22px',
+          padding: '0 2px',
           fontSize: '0.55rem',
           fontWeight: 'bold',
           color: '#64748b',
-          textAlign: 'center',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           background: '#f1f5f9',
           borderBottom: '1px solid #cbd5e1'
         }}>
@@ -428,7 +448,7 @@ export default function SheetView({
                 alignItems: 'center',
                 justifyContent: 'flex-end',
                 minWidth: '15px',
-                minHeight: '18px',
+                height: '22px',
                 borderBottom: '1px dotted #e2e8f0',
                 background: rowBg
               }}>
@@ -438,7 +458,7 @@ export default function SheetView({
                 overflow: 'hidden',
                 background: playLeft?.priority ? '#fef08a' : rowBg,
                 padding: '2px',
-                minHeight: '18px',
+                height: '22px',
                 color: '#334155',
                 display: 'flex',
                 alignItems: 'center',
@@ -460,7 +480,7 @@ export default function SheetView({
                 overflow: 'hidden',
                 background: playRight?.priority ? '#fef08a' : rowBg,
                 padding: '2px',
-                minHeight: '18px',
+                height: '22px',
                 color: '#334155',
                 display: 'flex',
                 alignItems: 'center',
@@ -611,7 +631,7 @@ export default function SheetView({
                           ? '#dbeafe'
                           : (play?.priority ? '#fef08a' : (rowIdx % 2 === 1 ? '#f8fafc' : 'transparent')),
                         padding: '2px',
-                        minHeight: '18px',
+                        height: '22px',
                         color: '#334155',
                         display: 'flex',
                         alignItems: 'center',
@@ -773,7 +793,7 @@ export default function SheetView({
                 textAlign: 'center',
                 background: headerBg,
                 borderLeft: cIdx === 0 && gIdx > 0 ? '2px solid rgba(0,0,0,0.2)' : '1px solid rgba(255,255,255,0.3)',
-                minHeight: '18px',
+                height: '22px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -1406,9 +1426,65 @@ export default function SheetView({
 
                   if (!isEditing && visibleBoxes.length === 0) return null;
 
-                  // Section grid dimensions
+                  // Section grid: COLS controls width distribution, ROWS controls default content rows for boxes
                   const sectionCols = section.gridColumns || 8;
-                  const sectionRows = section.gridRows || 6;
+                  const sectionDefaultRows = section.gridRows || 5; // Default content rows for boxes in this section
+
+                  // Calculate row spans for each box based on content rows
+                  // +2 for box header row AND column header row (so 10 content rows = 12 grid rows)
+                  const getBoxRowSpan = (box) => {
+                    if (box.type === 'grid') return (box.gridRows || 5) + 2; // box header + column header + content
+                    if (box.type === 'script') return (box.rows?.length || 10) + 2; // box header + column header + content
+                    if (box.type === 'fzdnd') return (box.gridRows || box.rowCount || 5) + 2; // box header + column header + content
+                    if (box.type === 'matrix') return 3 + 1; // Matrix has built-in headers, just +1 for box header
+                    return 5 + 2; // Default
+                  };
+
+                  // Calculate max row span to know total grid rows needed
+                  let maxGridRow = 0;
+                  const boxPlacements = [];
+                  const occupiedCells = new Set();
+
+                  // Simulate grid placement (dense packing)
+                  visibleBoxes.forEach((box, bIdx) => {
+                    const colSpan = Math.min(Number(box.colSpan) || 2, sectionCols);
+                    const rowSpan = getBoxRowSpan(box);
+
+                    // Find first available position
+                    let placed = false;
+                    for (let r = 0; !placed; r++) {
+                      for (let c = 0; c <= sectionCols - colSpan && !placed; c++) {
+                        let canPlace = true;
+                        for (let dr = 0; dr < rowSpan && canPlace; dr++) {
+                          for (let dc = 0; dc < colSpan && canPlace; dc++) {
+                            if (occupiedCells.has(`${r + dr},${c + dc}`)) canPlace = false;
+                          }
+                        }
+                        if (canPlace) {
+                          for (let dr = 0; dr < rowSpan; dr++) {
+                            for (let dc = 0; dc < colSpan; dc++) {
+                              occupiedCells.add(`${r + dr},${c + dc}`);
+                            }
+                          }
+                          boxPlacements.push({ row: r, col: c, rowSpan, colSpan });
+                          maxGridRow = Math.max(maxGridRow, r + rowSpan);
+                          placed = true;
+                        }
+                      }
+                    }
+                  });
+
+                  // Find empty cells for "+" placeholders (only in edit mode)
+                  const emptyCells = [];
+                  if (isEditing && maxGridRow > 0) {
+                    for (let r = 0; r < maxGridRow; r++) {
+                      for (let c = 0; c < sectionCols; c++) {
+                        if (!occupiedCells.has(`${r},${c}`)) {
+                          emptyCells.push({ row: r, col: c });
+                        }
+                      }
+                    }
+                  }
 
                   return (
                     <div
@@ -1482,16 +1558,17 @@ export default function SheetView({
                                 style={{ width: '36px', padding: '2px 4px', fontSize: '0.65rem', borderRadius: '3px', border: '1px solid #cbd5e1' }}
                               />
                             </div>
-                            {/* Grid Rows */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.65rem' }}>
+                            {/* Default Content Rows for new boxes */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', fontSize: '0.65rem' }} title="Default play rows for new boxes in this section">
                               <span style={{ color: '#64748b' }}>Rows:</span>
                               <input
                                 type="number"
                                 min="1"
                                 max="20"
-                                value={section.gridRows || 6}
-                                onChange={(e) => onUpdateSection(sIdx, { ...section, gridRows: parseInt(e.target.value) || 6 })}
+                                value={section.gridRows || 5}
+                                onChange={(e) => onUpdateSection(sIdx, { ...section, gridRows: parseInt(e.target.value) || 5 })}
                                 style={{ width: '36px', padding: '2px 4px', fontSize: '0.65rem', borderRadius: '3px', border: '1px solid #cbd5e1' }}
+                                title="Default play rows for new boxes"
                               />
                             </div>
                             <button
@@ -1512,21 +1589,41 @@ export default function SheetView({
                         )}
                       </div>
 
-                      {/* Section Content - Grid with fixed row count */}
+                      {/* Section Content - CSS Grid with row spans for content height */}
                       <div style={{
                         display: 'grid',
-                        gridTemplateColumns: `repeat(${sectionCols}, 1fr)`,
-                        gridTemplateRows: `repeat(${sectionRows}, 1fr)`,
+                        gridTemplateColumns: `20px repeat(${sectionCols}, 1fr)`, // Row numbers + content columns
+                        gridTemplateRows: maxGridRow > 0 ? `repeat(${maxGridRow}, 22px)` : 'auto', // Fixed row height for alignment
                         gridAutoFlow: 'dense',
-                        gap: isEditing ? '4px' : '1px',
+                        columnGap: isEditing ? '4px' : '1px', // Space between columns
+                        rowGap: '0px', // No vertical gap so boxes align with row numbers
                         padding: isEditing ? '4px' : '0',
-                        flex: 1,
-                        alignItems: 'stretch'
+                        flex: 1
                       }}>
+                        {/* Row numbers on the left (like spreadsheet) */}
+                        {maxGridRow > 0 && Array.from({ length: maxGridRow }, (_, rowIdx) => (
+                          <div
+                            key={`row-${rowIdx}`}
+                            style={{
+                              gridColumn: '1',
+                              gridRow: rowIdx + 1,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '0.6rem',
+                              color: '#94a3b8',
+                              background: '#f8fafc',
+                              borderRight: '1px solid #e2e8f0',
+                              userSelect: 'none'
+                            }}
+                          >
+                            {rowIdx + 1}
+                          </div>
+                        ))}
                         {visibleBoxes.map((box, bIdx) => {
                           const colSpan = Math.min(Number(box.colSpan) || 2, sectionCols);
-                          // Default to spanning all rows so boxes fill section height
-                          const rowSpan = Number(box.rowSpan) || sectionRows;
+                          const rowSpan = getBoxRowSpan(box);
+                          const placement = boxPlacements[bIdx] || { row: 0, col: 0 };
                           return (
                             <div
                               key={bIdx}
@@ -1537,16 +1634,21 @@ export default function SheetView({
                               onDragLeave={(e) => handleDragLeave(e, sIdx, bIdx)}
                               onDrop={(e) => handleDrop(e, sIdx, bIdx)}
                               style={{
-                                gridColumn: `span ${colSpan}`,
-                                gridRow: `span ${rowSpan}`,
-                                border: isEditing
-                                  ? '1px solid #e2e8f0'
+                                gridColumn: `${placement.col + 2} / span ${colSpan}`, // +2 because col 1 is row numbers
+                                gridRow: `${placement.row + 1} / span ${rowSpan}`,
+                                border: isTargetingMode
+                                  ? '2px solid #8b5cf6'
+                                  : (isEditing
+                                    ? '1px solid #e2e8f0'
+                                    : (playDragOverBox?.sectionIdx === sIdx && playDragOverBox?.boxIdx === bIdx
+                                      ? '2px dashed #3b82f6'
+                                      : '1px solid #e2e8f0')),
+                                background: isTargetingMode
+                                  ? '#f5f3ff'
                                   : (playDragOverBox?.sectionIdx === sIdx && playDragOverBox?.boxIdx === bIdx
-                                    ? '2px dashed #3b82f6'
-                                    : '1px solid #e2e8f0'),
-                                background: playDragOverBox?.sectionIdx === sIdx && playDragOverBox?.boxIdx === bIdx
-                                  ? '#eff6ff'
-                                  : 'white',
+                                    ? '#eff6ff'
+                                    : 'white'),
+                                boxShadow: isTargetingMode ? '0 0 0 2px rgba(139, 92, 246, 0.3)' : 'none',
                                 cursor: isEditing ? 'grab' : 'pointer',
                                 display: 'flex',
                                 flexDirection: 'column',
@@ -1563,10 +1665,13 @@ export default function SheetView({
                                 <div
                                   className="box-header"
                                   style={{
-                                    padding: box.type === 'matrix' ? '2px 4px' : '4px 8px',
+                                    height: '22px', // Match grid row height
+                                    minHeight: '22px',
+                                    maxHeight: '22px',
+                                    padding: '0 8px',
                                     background: box.type === 'matrix' ? '#f1f5f9' : (box.color || '#3b82f6'),
                                     color: box.type === 'matrix' ? '#64748b' : 'white',
-                                    fontSize: '0.75rem',
+                                    fontSize: '0.7rem',
                                     fontWeight: 'bold',
                                     display: box.type === 'matrix' && !isEditing ? 'none' : 'flex',
                                     justifyContent: 'space-between',
@@ -1593,16 +1698,7 @@ export default function SheetView({
                                         style={{ width: '28px', padding: '1px 2px', fontSize: '0.6rem', borderRadius: '2px', border: box.type === 'matrix' ? '1px solid #cbd5e1' : 'none', textAlign: 'center' }}
                                         title="Column span"
                                       />
-                                      <span style={{ fontSize: '0.6rem', opacity: 0.8 }}>×</span>
-                                      <input
-                                        type="number"
-                                        min="1"
-                                        max={sectionRows}
-                                        value={box.rowSpan || 1}
-                                        onChange={(e) => onUpdateBox(sIdx, bIdx, { ...box, rowSpan: parseInt(e.target.value) || 1 })}
-                                        style={{ width: '28px', padding: '1px 2px', fontSize: '0.6rem', borderRadius: '2px', border: box.type === 'matrix' ? '1px solid #cbd5e1' : 'none', textAlign: 'center' }}
-                                        title="Row span"
-                                      />
+                                      <span style={{ fontSize: '0.6rem', opacity: 0.8 }}>cols</span>
                                       <div
                                         onClick={() => onDeleteBox(sIdx, bIdx)}
                                         style={{ cursor: 'pointer', padding: '0 2px', marginLeft: '4px', color: box.type === 'matrix' ? '#ef4444' : 'white' }}
@@ -1626,29 +1722,76 @@ export default function SheetView({
                                 </div>
                               )}
                               {/* Box Content */}
-                              <div className="box-content" style={{ padding: '6px', fontSize: '0.7rem', flex: 1 }}>
+                              <div className="box-content" style={{ fontSize: '0.7rem', flex: 1, overflow: 'hidden' }}>
                                 {renderBoxContent(box, false)}
                               </div>
                             </div>
                           );
                         })}
 
-                        {/* Add Box Button */}
+                        {/* Empty cell placeholders - clickable to add box in that spot */}
+                        {isEditing && emptyCells.map((cell, idx) => (
+                          <div
+                            key={`empty-${cell.row}-${cell.col}`}
+                            style={{
+                              gridColumn: `${cell.col + 2} / ${cell.col + 3}`, // +2 because col 1 is row numbers
+                              gridRow: `${cell.row + 1} / ${cell.row + 2}`,
+                              border: '1px dashed #cbd5e1',
+                              borderRadius: '2px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              color: '#94a3b8',
+                              fontSize: '1.2rem',
+                              background: 'transparent',
+                              transition: 'all 0.15s'
+                            }}
+                            onClick={() => onAddBox(sIdx)}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#e0f2fe';
+                              e.currentTarget.style.borderColor = '#3b82f6';
+                              e.currentTarget.style.color = '#3b82f6';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'transparent';
+                              e.currentTarget.style.borderColor = '#cbd5e1';
+                              e.currentTarget.style.color = '#94a3b8';
+                            }}
+                            title="Add box"
+                          >
+                            +
+                          </div>
+                        ))}
+
+                        {/* Add Box Button at the end */}
                         {isEditing && (
                           <div
                             style={{
+                              gridColumn: 'span 2',
+                              minHeight: '60px',
                               border: '2px dashed #e2e8f0',
                               borderRadius: '4px',
-                              minHeight: '120px',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
                               cursor: 'pointer',
                               color: '#64748b',
                               fontWeight: '500',
-                              background: '#f8fafc'
+                              background: '#f8fafc',
+                              transition: 'all 0.15s'
                             }}
                             onClick={() => onAddBox(sIdx)}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#e0f2fe';
+                              e.currentTarget.style.borderColor = '#3b82f6';
+                              e.currentTarget.style.color = '#3b82f6';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = '#f8fafc';
+                              e.currentTarget.style.borderColor = '#e2e8f0';
+                              e.currentTarget.style.color = '#64748b';
+                            }}
                           >
                             + Add Box
                           </div>

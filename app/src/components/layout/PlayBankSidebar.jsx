@@ -51,7 +51,11 @@ export default function PlayBankSidebar({
     selectPlayForAssign,
     clearSelectedPlay,
     triggerQuickAdd,
-    highlightFocuses
+    highlightFocuses,
+    targetingMode,
+    targetingPlays,
+    startTargetingMode,
+    cancelTargetingMode
   } = usePlayBank();
 
   // Local state
@@ -733,6 +737,24 @@ export default function PlayBankSidebar({
           </button>
         </div>
 
+        {/* Targeting Mode Banner */}
+        {targetingMode && targetingPlays.length > 0 && (
+          <div className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MousePointer size={18} className="animate-pulse" />
+              <span className="font-medium">{targetingPlays.length} plays ready</span>
+              <span className="text-violet-200 text-sm">Click a target to place</span>
+            </div>
+            <button
+              onClick={cancelTargetingMode}
+              className="p-1 rounded hover:bg-white/20 transition-colors"
+              title="Cancel"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2.5 bg-slate-800 border-b border-slate-600">
           <div className="flex items-center gap-2">
@@ -1131,6 +1153,24 @@ export default function PlayBankSidebar({
                 )}
               </div>
               <div className="p-2 space-y-1 overflow-y-auto flex-1">
+                {/* Click to Place option - available on all contexts */}
+                <button
+                  onClick={() => {
+                    startTargetingMode(pendingBatchPlays);
+                    setShowDestinationSelector(false);
+                    setPendingBatchPlays([]);
+                    setSelectedPlayIds(new Set());
+                    setInternalBatchMode(false);
+                  }}
+                  className="w-full px-4 py-3 text-left rounded-lg bg-gradient-to-r from-violet-50 to-purple-50 border-2 border-violet-200 text-violet-700 hover:border-violet-400 transition-colors mb-2"
+                >
+                  <div className="flex items-center gap-2 font-medium">
+                    <MousePointer size={16} />
+                    Click to Place
+                  </div>
+                  <div className="text-xs text-violet-500 mt-0.5">Click on any wristband slot, practice segment, or game plan box</div>
+                </button>
+                <div className="border-t border-slate-200 my-2" />
                 {/* Context: Game Plan - Show Call Sheet Boxes */}
                 {currentPageContext === 'gameplan' && callSheetBoxes.length > 0 ? (
                   <>

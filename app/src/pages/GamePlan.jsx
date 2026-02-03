@@ -18,10 +18,12 @@ import {
   Plus,
   Target,
   MapPin,
+  Map,
   Zap,
   ExternalLink,
   CheckSquare,
-  Package
+  Package,
+  Undo2
 } from 'lucide-react';
 import '../styles/gameplan.css';
 
@@ -254,6 +256,10 @@ export default function GamePlan() {
   const [showAddBoxModal, setShowAddBoxModal] = useState(false);
   const [addBoxSectionIdx, setAddBoxSectionIdx] = useState(null);
 
+  // Undo history for layouts
+  const [layoutHistory, setLayoutHistory] = useState([]);
+  const MAX_HISTORY = 20;
+
   // Get game plan data from current week
   const gamePlan = currentWeek?.offensiveGamePlan || { sets: [], miniScripts: [] };
 
@@ -273,7 +279,7 @@ export default function GamePlan() {
   }, [currentWeek, updateWeek]);
 
   // Batch Add State
-  const { startBatchSelect, cancelBatchSelect, quickAddRequest, batchAddEvent, clearBatchAddEvent } = usePlayBank();
+  const { startBatchSelect, cancelBatchSelect, quickAddRequest, batchAddEvent, clearBatchAddEvent, targetingMode, targetingPlays, completeTargeting } = usePlayBank();
   const [isTargetingBox, setIsTargetingBox] = useState(false);
   const [pendingBatchPlays, setPendingBatchPlays] = useState([]);
 
@@ -368,11 +374,30 @@ export default function GamePlan() {
   // Add Section modal state
   const [showAddSectionModal, setShowAddSectionModal] = useState(false);
 
-  // Update layouts in current week
-  const handleUpdateLayouts = useCallback((newLayouts) => {
+  // Update layouts in current week (with history tracking)
+  const handleUpdateLayouts = useCallback((newLayouts, skipHistory = false) => {
     if (!currentWeek) return;
+
+    // Save current state to history before updating (unless skipping for undo)
+    if (!skipHistory && gamePlanLayouts) {
+      setLayoutHistory(prev => {
+        const newHistory = [...prev, JSON.parse(JSON.stringify(gamePlanLayouts))];
+        // Keep only last MAX_HISTORY items
+        return newHistory.slice(-MAX_HISTORY);
+      });
+    }
+
     updateWeek(currentWeek.id, { gamePlanLayouts: newLayouts });
-  }, [currentWeek, updateWeek]);
+  }, [currentWeek, updateWeek, gamePlanLayouts]);
+
+  // Undo last layout change
+  const handleUndo = useCallback(() => {
+    if (layoutHistory.length === 0) return;
+
+    const previousLayout = layoutHistory[layoutHistory.length - 1];
+    setLayoutHistory(prev => prev.slice(0, -1));
+    handleUpdateLayouts(previousLayout, true); // Skip adding to history
+  }, [layoutHistory, handleUpdateLayouts]);
 
   // Get plays for a specific set
   const getPlaysForSet = useCallback((setId) => {
@@ -1076,6 +1101,14 @@ export default function GamePlan() {
 
   // Handle Box Click (Intercept for Batch Add)
   const handleBoxClick = useCallback(async (box, sectionIdx, boxIdx) => {
+    // Handle context-level targeting mode (from PlayBank "Click to Place")
+    if (targetingMode && targetingPlays.length > 0) {
+      const playIdsToAdd = completeTargeting();
+      await batchAssignPlaysToBox(box.setId, playIdsToAdd);
+      return;
+    }
+
+    // Handle local targeting mode (from Batch Add button)
     if (isTargetingBox && pendingBatchPlays.length > 0) {
       await batchAssignPlaysToBox(box.setId, pendingBatchPlays);
 
@@ -1087,7 +1120,7 @@ export default function GamePlan() {
       // Normal edit behavior
       setEditingBox({ box, sectionIdx, boxIdx });
     }
-  }, [isTargetingBox, pendingBatchPlays, batchAssignPlaysToBox, cancelBatchSelect]);
+  }, [isTargetingBox, pendingBatchPlays, batchAssignPlaysToBox, cancelBatchSelect, targetingMode, targetingPlays, completeTargeting]);
 
   // Get play display name (includes wristband slot if assigned)
   const getPlayDisplayName = useCallback((play) => {
@@ -1193,6 +1226,23 @@ export default function GamePlan() {
               </button>
             )}
 
+            {/* Undo Button - show when editing or has history */}
+            {(isSheetEditing || layoutHistory.length > 0) && (
+              <button
+                onClick={handleUndo}
+                disabled={layoutHistory.length === 0}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                  layoutHistory.length === 0
+                    ? 'bg-slate-800/50 text-slate-600 cursor-not-allowed'
+                    : 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 border border-amber-500/30'
+                }`}
+                title={layoutHistory.length > 0 ? `Undo (${layoutHistory.length} available)` : 'Nothing to undo'}
+              >
+                <Undo2 size={16} />
+                <span className="text-sm">Undo{layoutHistory.length > 0 ? ` (${layoutHistory.length})` : ''}</span>
+              </button>
+            )}
+
             {/* Print Controls */}
             <div className="flex items-center gap-2">
               <select
@@ -1267,6 +1317,8 @@ export default function GamePlan() {
             onUpdateBox={handleUpdateSheetBox}
             onBoxDrop={handleSheetBoxDrop}
             onBoxClick={handleBoxClick}
+            isTargetingMode={targetingMode || isTargetingBox}
+            targetingPlayCount={targetingMode ? targetingPlays.length : pendingBatchPlays.length}
             onAddPlayToSet={handleAddPlayToSet}
             onRemovePlayFromSet={handleRemovePlayFromSet}
             getPlaysForSet={getPlaysForSet}
