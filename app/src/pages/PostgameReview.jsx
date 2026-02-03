@@ -327,6 +327,199 @@ function ColumnMappingModal({ isOpen, onClose, onSave, availableColumns, current
   );
 }
 
+// New Terms Modal - prompts coach to add newly discovered terms to glossary
+function NewTermsModal({ isOpen, onClose, onSave, newTerms, isLight }) {
+  const [selectedTerms, setSelectedTerms] = useState({});
+  const [abbreviations, setAbbreviations] = useState({});
+
+  // Initialize selections when modal opens
+  useEffect(() => {
+    if (isOpen && newTerms) {
+      const initial = {};
+      const abbrevs = {};
+      Object.entries(newTerms).forEach(([category, terms]) => {
+        terms.forEach(term => {
+          const key = `${category}:${term}`;
+          initial[key] = true; // Select all by default
+          // Auto-generate simple abbreviation (first 3 chars or first letters)
+          const words = term.split(/\s+/);
+          if (words.length > 1) {
+            abbrevs[key] = words.map(w => w[0]).join('').toUpperCase();
+          } else if (term.length > 3) {
+            abbrevs[key] = term.substring(0, 3).toUpperCase();
+          } else {
+            abbrevs[key] = term.toUpperCase();
+          }
+        });
+      });
+      setSelectedTerms(initial);
+      setAbbreviations(abbrevs);
+    }
+  }, [isOpen, newTerms]);
+
+  const toggleTerm = (key) => {
+    setSelectedTerms(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const updateAbbrev = (key, value) => {
+    setAbbreviations(prev => ({ ...prev, [key]: value.toUpperCase() }));
+  };
+
+  const handleSave = () => {
+    // Build terms to add grouped by category
+    const termsToAdd = {};
+    const abbrevsToAdd = {};
+
+    Object.entries(selectedTerms).forEach(([key, isSelected]) => {
+      if (isSelected) {
+        const [category, term] = key.split(':');
+        if (!termsToAdd[category]) termsToAdd[category] = [];
+        termsToAdd[category].push(term);
+        if (abbreviations[key]) {
+          abbrevsToAdd[term.toUpperCase()] = abbreviations[key];
+        }
+      }
+    });
+
+    onSave(termsToAdd, abbrevsToAdd);
+    onClose();
+  };
+
+  const totalNew = Object.values(newTerms || {}).flat().length;
+  const selectedCount = Object.values(selectedTerms).filter(Boolean).length;
+
+  if (!isOpen || !newTerms || totalNew === 0) return null;
+
+  const categoryLabels = {
+    formation: 'Formations',
+    backfield: 'Backfields',
+    motion: 'Motions',
+    playType: 'Play Types',
+    playDir: 'Directions'
+  };
+
+  const categoryColors = {
+    formation: 'sky',
+    backfield: 'purple',
+    motion: 'amber',
+    playType: 'emerald',
+    playDir: 'rose'
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" onClick={onClose}>
+      <div
+        className={`w-full max-w-lg mx-4 rounded-xl shadow-2xl overflow-hidden ${
+          isLight ? 'bg-white' : 'bg-slate-900'
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className={`px-6 py-4 border-b ${isLight ? 'border-gray-200' : 'border-slate-700'}`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className={`text-lg font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                New Terms Found
+              </h2>
+              <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                {totalNew} new term{totalNew !== 1 ? 's' : ''} from this import
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className={`p-2 rounded-lg ${isLight ? 'hover:bg-gray-100' : 'hover:bg-slate-800'}`}
+            >
+              <X size={20} className={isLight ? 'text-gray-500' : 'text-slate-400'} />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 max-h-[60vh] overflow-y-auto space-y-4">
+          <p className={`text-sm ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+            These terms aren't in your glossary yet. Select which to add and set abbreviations for wristbands.
+          </p>
+
+          {Object.entries(newTerms).map(([category, terms]) => {
+            if (terms.length === 0) return null;
+            const color = categoryColors[category] || 'slate';
+
+            return (
+              <div key={category}>
+                <h3 className={`text-sm font-semibold mb-2 text-${color}-${isLight ? '600' : '400'}`}>
+                  {categoryLabels[category] || category} ({terms.length})
+                </h3>
+                <div className="space-y-2">
+                  {terms.map(term => {
+                    const key = `${category}:${term}`;
+                    const isSelected = selectedTerms[key];
+
+                    return (
+                      <div
+                        key={key}
+                        className={`flex items-center gap-3 p-2 rounded-lg ${
+                          isLight ? 'bg-gray-50' : 'bg-slate-800/50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected || false}
+                          onChange={() => toggleTerm(key)}
+                          className="w-4 h-4 rounded"
+                        />
+                        <span className={`flex-1 text-sm font-medium ${
+                          isSelected
+                            ? (isLight ? 'text-gray-900' : 'text-white')
+                            : (isLight ? 'text-gray-400' : 'text-slate-500')
+                        }`}>
+                          {term}
+                        </span>
+                        <input
+                          type="text"
+                          value={abbreviations[key] || ''}
+                          onChange={(e) => updateAbbrev(key, e.target.value)}
+                          placeholder="Abbrev"
+                          disabled={!isSelected}
+                          className={`w-20 px-2 py-1 rounded text-sm text-center ${
+                            isLight
+                              ? 'bg-white border border-gray-300 text-gray-900 disabled:bg-gray-100 disabled:text-gray-400'
+                              : 'bg-slate-700 border border-slate-600 text-white disabled:bg-slate-800 disabled:text-slate-500'
+                          } focus:outline-none focus:border-amber-500`}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className={`px-6 py-4 border-t flex items-center justify-between ${isLight ? 'border-gray-200' : 'border-slate-700'}`}>
+          <span className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+            {selectedCount} of {totalNew} selected
+          </span>
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                isLight ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+              }`}
+            >
+              Skip
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={selectedCount === 0}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Add to Glossary
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Play Matching Modal
 function PlayMatchingModal({ isOpen, onClose, gamePlay, plays, onMatch, isLight }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -1142,6 +1335,8 @@ export default function PostgameReview() {
   const [showFilmWizard, setShowFilmWizard] = useState(false);
   const [showColumnMapping, setShowColumnMapping] = useState(false);
   const [showPlayMatching, setShowPlayMatching] = useState(false);
+  const [showNewTerms, setShowNewTerms] = useState(false);
+  const [detectedNewTerms, setDetectedNewTerms] = useState(null);
   const [selectedGamePlay, setSelectedGamePlay] = useState(null);
   const [availableColumns, setAvailableColumns] = useState([]);
   const [importError, setImportError] = useState(null);
@@ -1480,6 +1675,13 @@ export default function PostgameReview() {
         await updateSetupConfig({ hudlColumnMapping: effectiveMapping });
       }
 
+      // Detect new terms and prompt to add to glossary
+      const newTerms = detectNewTerms(matchedPlays);
+      if (newTerms) {
+        setDetectedNewTerms(newTerms);
+        setShowNewTerms(true);
+      }
+
     } catch (err) {
       console.error('Import error:', err);
       setImportError('Failed to parse file. Make sure it\'s a valid Excel file.');
@@ -1489,7 +1691,7 @@ export default function PostgameReview() {
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  }, [columnMapping, gameReview, currentWeek, autoMatchPlays, saveGameReview, updateSetupConfig]);
+  }, [columnMapping, gameReview, currentWeek, autoMatchPlays, saveGameReview, updateSetupConfig, detectNewTerms]);
 
   // Handle column mapping save
   const handleSaveColumnMapping = useCallback(async (newMapping) => {
@@ -1499,6 +1701,105 @@ export default function PostgameReview() {
       handleFileImport({ target: { files: fileInputRef.current.files } });
     }
   }, [updateSetupConfig, handleFileImport]);
+
+  // Detect new terms from imported plays that aren't in termLibrary
+  const detectNewTerms = useCallback((importedPlays) => {
+    const termLibrary = setupConfig?.termLibrary?.OFFENSE || {};
+    const existingTerms = new Set();
+
+    // Collect all existing terms (uppercase for comparison)
+    Object.values(termLibrary).forEach(terms => {
+      if (Array.isArray(terms)) {
+        terms.forEach(t => existingTerms.add((t.label || t).toUpperCase()));
+      }
+    });
+
+    // Also check abbreviations as existing
+    const abbreviations = setupConfig?.wristbandAbbreviations || {};
+    Object.keys(abbreviations).forEach(term => existingTerms.add(term.toUpperCase()));
+
+    // Extract unique terms from imported plays
+    const newTerms = {
+      formation: new Set(),
+      backfield: new Set(),
+      motion: new Set(),
+      playType: new Set(),
+      playDir: new Set()
+    };
+
+    importedPlays.forEach(play => {
+      if (play.odk !== 'O') return; // Only offense for now
+
+      const checkAndAdd = (value, category) => {
+        if (!value || typeof value !== 'string') return;
+        const normalized = value.trim().toUpperCase();
+        if (normalized && !existingTerms.has(normalized)) {
+          newTerms[category].add(value.trim()); // Keep original case for display
+        }
+      };
+
+      checkAndAdd(play.formation, 'formation');
+      checkAndAdd(play.backfield, 'backfield');
+      checkAndAdd(play.motion, 'motion');
+      checkAndAdd(play.playType, 'playType');
+      checkAndAdd(play.playDir, 'playDir');
+    });
+
+    // Convert sets to arrays and filter empty categories
+    const result = {};
+    Object.entries(newTerms).forEach(([category, termSet]) => {
+      const arr = Array.from(termSet).sort();
+      if (arr.length > 0) result[category] = arr;
+    });
+
+    return Object.keys(result).length > 0 ? result : null;
+  }, [setupConfig]);
+
+  // Handle saving new terms to glossary
+  const handleSaveNewTerms = useCallback(async (termsToAdd, abbrevsToAdd) => {
+    const termLibrary = { ...(setupConfig?.termLibrary || {}) };
+    const offenseTerms = { ...(termLibrary.OFFENSE || {}) };
+
+    // Map categories to syntax part IDs (or create if needed)
+    const categoryToPartId = {
+      formation: 'formation',
+      backfield: 'backfield',
+      motion: 'motion',
+      playType: 'playType',
+      playDir: 'playDir'
+    };
+
+    // Add terms to appropriate categories
+    Object.entries(termsToAdd).forEach(([category, terms]) => {
+      const partId = categoryToPartId[category] || category;
+      const existing = offenseTerms[partId] || [];
+      const existingLabels = new Set(existing.map(t => (t.label || t).toUpperCase()));
+
+      terms.forEach(term => {
+        if (!existingLabels.has(term.toUpperCase())) {
+          existing.push({
+            id: `term_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            label: term.toUpperCase()
+          });
+        }
+      });
+
+      offenseTerms[partId] = existing;
+    });
+
+    termLibrary.OFFENSE = offenseTerms;
+
+    // Merge abbreviations
+    const newAbbreviations = {
+      ...(setupConfig?.wristbandAbbreviations || {}),
+      ...abbrevsToAdd
+    };
+
+    await updateSetupConfig({
+      termLibrary,
+      wristbandAbbreviations: newAbbreviations
+    });
+  }, [setupConfig, updateSetupConfig]);
 
   // Calculate average rating
   const avgRating = useMemo(() => {
@@ -1755,6 +2056,18 @@ export default function PostgameReview() {
         gamePlay={selectedGamePlay}
         plays={plays}
         onMatch={handleMatchPlay}
+        isLight={isLight}
+      />
+
+      {/* New Terms Modal */}
+      <NewTermsModal
+        isOpen={showNewTerms}
+        onClose={() => {
+          setShowNewTerms(false);
+          setDetectedNewTerms(null);
+        }}
+        onSave={handleSaveNewTerms}
+        newTerms={detectedNewTerms}
         isLight={isLight}
       />
 
