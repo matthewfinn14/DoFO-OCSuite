@@ -15,7 +15,8 @@ import {
   ChevronUp,
   CheckSquare,
   Library,
-  ExternalLink
+  ExternalLink,
+  Settings
 } from 'lucide-react';
 
 // Card tab definitions
@@ -118,6 +119,8 @@ export default function WristbandBuilder() {
   const [activeCardId, setActiveCardId] = useState('card100');
   const [cardDimensions, setCardDimensions] = useState({ width: 4.75, height: 2.8 }); // inches
   const [wizPrintVariant, setWizPrintVariant] = useState('skill'); // 'skill' or 'oline' for WIZ cards
+  const [showCardSettings, setShowCardSettings] = useState(false);
+  const cardSettingsRef = useRef(null);
 
   // WIZ editing state
   const [editingSkillPlay, setEditingSkillPlay] = useState(null);
@@ -175,6 +178,73 @@ export default function WristbandBuilder() {
     const settings = currentWeek.wristbandSettings || {};
     return settings[selectedLevel] || {};
   }, [currentWeek, selectedLevel]);
+
+  // Get enabled cards for this week (default to 100s-400s enabled)
+  const enabledCards = useMemo(() => {
+    const defaultEnabled = ['card100', 'card200', 'card300', 'card400'];
+    return wristbandSettings?.enabledCards || defaultEnabled;
+  }, [wristbandSettings]);
+
+  // Filter card tabs to only show enabled cards
+  const availableCardTabs = useMemo(() => {
+    return CARD_TABS.filter(tab => enabledCards.includes(tab.id));
+  }, [enabledCards]);
+
+  // Ensure activeCardId is valid when enabled cards change
+  useEffect(() => {
+    if (!enabledCards.includes(activeCardId) && enabledCards.length > 0) {
+      setActiveCardId(enabledCards[0]);
+    }
+  }, [enabledCards, activeCardId]);
+
+  // Close card settings dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (cardSettingsRef.current && !cardSettingsRef.current.contains(event.target)) {
+        setShowCardSettings(false);
+      }
+    }
+    if (showCardSettings) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showCardSettings]);
+
+  // Toggle a card's enabled status
+  const toggleCardEnabled = (cardId) => {
+    if (!currentWeek) return;
+    const currentEnabled = enabledCards;
+    let newEnabled;
+
+    if (currentEnabled.includes(cardId)) {
+      // Don't allow disabling if it's the only card left
+      if (currentEnabled.length === 1) return;
+      newEnabled = currentEnabled.filter(id => id !== cardId);
+    } else {
+      newEnabled = [...currentEnabled, cardId];
+    }
+
+    // Sort to keep consistent order
+    newEnabled.sort((a, b) => {
+      const orderA = CARD_TABS.findIndex(t => t.id === a);
+      const orderB = CARD_TABS.findIndex(t => t.id === b);
+      return orderA - orderB;
+    });
+
+    const newWristbandSettings = {
+      ...(currentWeek.wristbandSettings || {}),
+      [selectedLevel]: {
+        ...wristbandSettings,
+        enabledCards: newEnabled
+      }
+    };
+    updateWeek(currentWeek.id, { wristbandSettings: newWristbandSettings });
+
+    // If current active card got disabled, switch to first enabled card
+    if (!newEnabled.includes(activeCardId)) {
+      setActiveCardId(newEnabled[0]);
+    }
+  };
 
   // Get current card settings
   const currentCard = useMemo(() => {
@@ -262,9 +332,10 @@ export default function WristbandBuilder() {
     return { protections, runBlocking };
   }, [setupConfig]);
 
-  // Get position colors and names for diagram editor
+  // Get position colors, names, and WIZ abbreviations for diagram editor
   const positionColors = useMemo(() => setupConfig?.positionColors || {}, [setupConfig]);
   const positionNames = useMemo(() => setupConfig?.positionNames || {}, [setupConfig]);
+  const positionWizAbbreviations = useMemo(() => setupConfig?.positionWizAbbreviations || {}, [setupConfig]);
 
   // Update card settings
   const updateCardSettings = (updates) => {
@@ -630,19 +701,56 @@ export default function WristbandBuilder() {
           </div>
         </div>
 
-        {/* Card Tabs */}
+        {/* Card Tabs - All cards shown, disabled ones are dimmed */}
         <div className="flex items-center gap-1 mb-4 bg-slate-900 p-1 rounded-lg border border-slate-800">
-          {CARD_TABS.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveCardId(tab.id)}
-              className={`px-4 py-2 rounded text-sm font-medium ${
-                activeCardId === tab.id ? 'bg-sky-500 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+          {CARD_TABS.map(tab => {
+            const isEnabled = enabledCards.includes(tab.id);
+            const isActive = activeCardId === tab.id;
+
+            if (isEnabled) {
+              // Enabled card - normal tab behavior, right-click to disable
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveCardId(tab.id)}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    if (enabledCards.length > 1) {
+                      toggleCardEnabled(tab.id);
+                    }
+                  }}
+                  className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-sky-500 text-white'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  }`}
+                  title="Right-click to disable this card"
+                >
+                  {tab.label}
+                </button>
+              );
+            } else {
+              // Disabled card - click to enable
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => toggleCardEnabled(tab.id)}
+                  className="px-4 py-2 rounded text-sm font-medium text-slate-600 hover:text-slate-400 hover:bg-slate-800/50 border border-dashed border-slate-700 opacity-50 hover:opacity-75 transition-all"
+                  title={`Click to enable ${tab.label} for this week`}
+                >
+                  <span className="flex items-center gap-1">
+                    <Plus size={12} />
+                    {tab.label}
+                  </span>
+                </button>
+              );
+            }
+          })}
+
+          {/* Disable card button - appears when hovering over enabled tabs */}
+          <div className="ml-auto flex items-center gap-2 text-xs text-slate-500">
+            <span className="hidden sm:inline">Right-click tab to disable</span>
+          </div>
         </div>
 
         {/* Settings Row */}
@@ -805,6 +913,7 @@ export default function WristbandBuilder() {
               offensePositions={offensePositions}
               positionColors={positionColors}
               positionNames={positionNames}
+              positionWizAbbreviations={positionWizAbbreviations}
               customDefaultPositions={customDefaultPositions}
               onSaveDefaultPositions={handleSaveDefaultPositions}
               playName={editingSkillPlay.formation ? `${editingSkillPlay.formation} ${editingSkillPlay.name}` : editingSkillPlay.name}

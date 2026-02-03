@@ -53,11 +53,13 @@ export default function PlayEditor({
   }, [updateSetupConfig]);
 
   // Get offense positions (non-OL) from setup config for WIZ Skill editor
+  // Core skill positions match Setup.jsx defaults: QB, RB, X, Y, Z, H
+  // WR, FB, TE, F are NOT defaults - must be added as custom positions
   const offensePositions = useMemo(() => {
     const hidden = setupConfig?.hiddenPositions?.OFFENSE || [];
     const custom = setupConfig?.customPositions?.OFFENSE || [];
-    const defaults = ['QB', 'RB', 'FB', 'WR', 'TE', 'X', 'Y', 'Z', 'H', 'F'];
-    const visible = defaults.filter(p => !hidden.includes(p));
+    const coreSkillPositions = ['QB', 'RB', 'X', 'Y', 'Z', 'H'];
+    const visible = coreSkillPositions.filter(p => !hidden.includes(p));
     const customKeys = custom.map(p => p.key).filter(Boolean);
     return [...visible, ...customKeys];
   }, [setupConfig?.hiddenPositions?.OFFENSE, setupConfig?.customPositions?.OFFENSE]);

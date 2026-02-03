@@ -11,6 +11,7 @@ export default function PrintSettingsPanel({
   weekData,
   roster,
   staff,
+  selectedLevelId,
   layout = 'vertical'
 }) {
   if (!template) {
@@ -32,9 +33,9 @@ export default function PrintSettingsPanel({
     const props = { settings, onChange: updateSetting, layout };
     switch (template.id) {
       case 'wristband':
-        return <WristbandSettings {...props} weekData={weekData} />;
+        return <WristbandSettings {...props} weekData={weekData} selectedLevelId={selectedLevelId} />;
       case 'coach_wristband':
-        return <CoachWristbandSettings {...props} weekData={weekData} />;
+        return <CoachWristbandSettings {...props} weekData={weekData} selectedLevelId={selectedLevelId} />;
       case 'depth_chart':
         return <DepthChartSettings {...props} />;
       case 'practice_plan':
@@ -92,8 +93,8 @@ function CommonSettings({ settings, onChange, layout }) {
 }
 
 // Wristband-specific settings
-function WristbandSettings({ settings, onChange, weekData, layout }) {
-  const cardOptions = [
+function WristbandSettings({ settings, onChange, weekData, layout, selectedLevelId }) {
+  const allCardOptions = [
     { id: 'card100', label: '100s' },
     { id: 'card200', label: '200s' },
     { id: 'card300', label: '300s' },
@@ -102,6 +103,20 @@ function WristbandSettings({ settings, onChange, weekData, layout }) {
     { id: 'card600', label: '600s' },
     { id: 'cardStaples', label: 'Staples' },
   ];
+
+  // Get enabled cards from week settings (default to 100s-400s)
+  const wristbandSettings = weekData?.wristbandSettings?.[selectedLevelId] || {};
+  const enabledCards = wristbandSettings.enabledCards || ['card100', 'card200', 'card300', 'card400'];
+
+  // Filter card options to only show enabled cards for this week
+  const cardOptions = allCardOptions.filter(opt => enabledCards.includes(opt.id));
+
+  // Auto-filter cardSelection to only include enabled cards
+  const currentSelection = settings.cardSelection || [enabledCards[0]];
+  const validSelection = currentSelection.filter(id => enabledCards.includes(id));
+
+  // If selection became empty after filtering, select first enabled card
+  const effectiveSelection = validSelection.length > 0 ? validSelection : [enabledCards[0]];
 
   return (
     <>
@@ -120,8 +135,8 @@ function WristbandSettings({ settings, onChange, weekData, layout }) {
           id="print-settings-wristband-cards"
           label="Cards"
           options={cardOptions}
-          selectedIds={settings.cardSelection || ['card100']}
-          onChange={(updated) => onChange('cardSelection', updated)}
+          selectedIds={effectiveSelection}
+          onChange={(updated) => onChange('cardSelection', updated.filter(id => enabledCards.includes(id)))}
         />
       ) : (
         <div className="mb-4">
@@ -131,13 +146,12 @@ function WristbandSettings({ settings, onChange, weekData, layout }) {
               <SettingsCheckbox
                 key={card.id}
                 id={`print-settings-wristband-card-${card.id}`}
-                checked={(settings.cardSelection || ['card100']).includes(card.id)}
+                checked={effectiveSelection.includes(card.id)}
                 onChange={(e) => {
-                  const current = settings.cardSelection || ['card100'];
                   const updated = e.target.checked
-                    ? [...current, card.id]
-                    : current.filter(c => c !== card.id);
-                  onChange('cardSelection', updated);
+                    ? [...effectiveSelection, card.id]
+                    : effectiveSelection.filter(c => c !== card.id);
+                  onChange('cardSelection', updated.length > 0 ? updated : [enabledCards[0]]);
                 }}
                 label={card.label}
               />
@@ -155,58 +169,40 @@ function WristbandSettings({ settings, onChange, weekData, layout }) {
           <option value="oline">OLINE</option>
         </select>
       </SettingsField>
-
-      <SettingsCheckbox
-        id="print-settings-wristband-show-slot-numbers"
-        checked={settings.showSlotNumbers !== false}
-        onChange={(e) => onChange('showSlotNumbers', e.target.checked)}
-        label="Show slot numbers"
-        layout={layout}
-      />
-
-      <SettingsCheckbox
-        id="print-settings-wristband-show-formation"
-        checked={settings.showFormation === true}
-        onChange={(e) => onChange('showFormation', e.target.checked)}
-        label="Show formation names"
-        layout={layout}
-      />
     </>
   );
 }
 
-// Coach's consolidated wristband settings
-function CoachWristbandSettings({ settings, onChange, weekData, layout }) {
+// Coach's Play Sheet settings - just WIZ type for SKILL/OLINE
+function CoachWristbandSettings({ settings, onChange, weekData, layout, selectedLevelId }) {
+  // Get enabled cards from week settings (default to 100s-400s)
+  const wristbandSettings = weekData?.wristbandSettings?.[selectedLevelId] || {};
+  const enabledCards = wristbandSettings.enabledCards || ['card100', 'card200', 'card300', 'card400'];
+
+  // Coach sheets print all enabled cards except Staples
+  const printableCards = enabledCards.filter(id => id !== 'cardStaples');
+  const cardLabels = {
+    'card100': '100s', 'card200': '200s', 'card300': '300s',
+    'card400': '400s', 'card500': '500s', 'card600': '600s'
+  };
+
   return (
     <>
-      <SettingsField label="Consolidation Mode" layout={layout} id="print-settings-coach-wristband-consolidation-mode">
+      <SettingsField label="WIZ Card Type" layout={layout} id="print-settings-coach-wristband-wiz-type">
         <select
-          value={settings.consolidationMode || 'byCard'}
-          onChange={(e) => onChange('consolidationMode', e.target.value)}
+          value={settings.wizType || 'skill'}
+          onChange={(e) => onChange('wizType', e.target.value)}
         >
-          <option value="byCard">Grouped by Card (100s, 200s, etc.)</option>
-          <option value="merged">All Slots Merged</option>
+          <option value="skill">SKILL</option>
+          <option value="oline">OLINE</option>
         </select>
       </SettingsField>
-
-      <SettingsField label="Font Size" layout={layout} id="print-settings-coach-wristband-font-size">
-        <select
-          value={settings.fontSize || 'medium'}
-          onChange={(e) => onChange('fontSize', e.target.value)}
-        >
-          <option value="small">Small (8pt)</option>
-          <option value="medium">Medium (10pt)</option>
-          <option value="large">Large (12pt)</option>
-        </select>
-      </SettingsField>
-
-      <SettingsCheckbox
-        id="print-settings-coach-wristband-show-color-coding"
-        checked={settings.showColorCoding !== false}
-        onChange={(e) => onChange('showColorCoding', e.target.checked)}
-        label="Show color coding"
-        layout={layout}
-      />
+      {layout === 'horizontal' && (
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          <span className="font-semibold uppercase tracking-wide">Cards:</span>
+          <span>{printableCards.map(id => cardLabels[id]).join(', ') || 'None'}</span>
+        </div>
+      )}
     </>
   );
 }

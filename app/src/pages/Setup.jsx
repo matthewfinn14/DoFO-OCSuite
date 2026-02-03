@@ -592,7 +592,8 @@ const DEFAULT_POSITION_COLORS = {
   A: '#f97316', B: '#3b82f6',
   DE: '#ef4444', DT: '#dc2626', NT: '#b91c1c', OLB: '#f59e0b', ILB: '#fbbf24',
   MLB: '#f59e0b', CB: '#10b981', FS: '#14b8a6', SS: '#0d9488', NB: '#6ee7b7', DB: '#34d399',
-  K: '#8b5cf6', P: '#8b5cf6', LS: '#64748b', KR: '#3b82f6', PR: '#3b82f6', G: '#f97316', PP: '#94a3b8'
+  T: '#64748b', G: '#64748b', // WIZ abbreviations for tackles and guards (gray like OL)
+  K: '#8b5cf6', P: '#8b5cf6', LS: '#64748b', KR: '#3b82f6', PR: '#3b82f6', PP: '#94a3b8'
 };
 
 // Phase tabs
@@ -817,6 +818,22 @@ export default function Setup() {
       needsSave = true;
     }
 
+    // Clean any empty keys from objects (Firebase doesn't allow empty string keys)
+    const cleanEmptyKeys = (obj) => {
+      if (!obj || typeof obj !== 'object') return obj;
+      const cleaned = { ...obj };
+      if ('' in cleaned) {
+        delete cleaned[''];
+        needsSave = true; // Mark for save to clean up the data
+      }
+      return cleaned;
+    };
+    if (updated.positionColors) updated.positionColors = cleanEmptyKeys(updated.positionColors);
+    if (updated.positionNames) updated.positionNames = cleanEmptyKeys(updated.positionNames);
+    if (updated.positionDescriptions) updated.positionDescriptions = cleanEmptyKeys(updated.positionDescriptions);
+    if (updated.positionTypes) updated.positionTypes = cleanEmptyKeys(updated.positionTypes);
+    if (updated.positionWizAbbreviations) updated.positionWizAbbreviations = cleanEmptyKeys(updated.positionWizAbbreviations);
+
     updated._needsDefaultSave = needsSave;
     return updated;
   };
@@ -875,8 +892,23 @@ export default function Setup() {
       setError(null);
 
       try {
-        await updateSetupConfig(localConfig);
-        initialConfigRef.current = localConfig;
+        // Clean empty keys before saving
+        const cleanEmptyKeys = (obj) => {
+          if (!obj || typeof obj !== 'object') return obj;
+          const cleaned = { ...obj };
+          delete cleaned[''];
+          return cleaned;
+        };
+        const configToSave = { ...localConfig };
+        if (configToSave.positionColors) configToSave.positionColors = cleanEmptyKeys(configToSave.positionColors);
+        if (configToSave.positionNames) configToSave.positionNames = cleanEmptyKeys(configToSave.positionNames);
+        if (configToSave.positionDescriptions) configToSave.positionDescriptions = cleanEmptyKeys(configToSave.positionDescriptions);
+        if (configToSave.positionTypes) configToSave.positionTypes = cleanEmptyKeys(configToSave.positionTypes);
+        if (configToSave.positionWizAbbreviations) configToSave.positionWizAbbreviations = cleanEmptyKeys(configToSave.positionWizAbbreviations);
+
+        await updateSetupConfig(configToSave);
+        initialConfigRef.current = configToSave;
+        setLocalConfig(configToSave);
         setSaveStatus('saved');
       } catch (err) {
         console.error('Autosave error:', err);
@@ -969,16 +1001,43 @@ export default function Setup() {
     setLocalConfig(prev => ({ ...prev, [key]: value }));
   };
 
+  // Ref to track the latest localConfig for immediate saves
+  const localConfigRef = useRef(localConfig);
+  useEffect(() => {
+    localConfigRef.current = localConfig;
+  }, [localConfig]);
+
   // Helper to update local config AND immediately save to Firebase
   // Use this for critical changes that shouldn't rely on autosave (add/remove positions, etc.)
-  const updateLocalAndSave = async (key, value) => {
+  // Can accept a single key/value OR an object with multiple keys to batch update
+  const updateLocalAndSave = async (keyOrUpdates, value) => {
     // Clear any pending autosave
     if (autosaveTimeoutRef.current) {
       clearTimeout(autosaveTimeoutRef.current);
     }
 
-    const newConfig = { ...localConfig, [key]: value };
+    // Support both single key/value and batch updates object
+    const updates = typeof keyOrUpdates === 'object' ? keyOrUpdates : { [keyOrUpdates]: value };
+
+    // Build new config from the ref (always has latest)
+    const newConfig = { ...localConfigRef.current, ...updates };
+
+    // Clean empty keys from objects that Firebase doesn't allow
+    const cleanEmptyKeys = (obj) => {
+      if (!obj || typeof obj !== 'object') return obj;
+      const cleaned = { ...obj };
+      delete cleaned[''];
+      return cleaned;
+    };
+    if (newConfig.positionColors) newConfig.positionColors = cleanEmptyKeys(newConfig.positionColors);
+    if (newConfig.positionNames) newConfig.positionNames = cleanEmptyKeys(newConfig.positionNames);
+    if (newConfig.positionDescriptions) newConfig.positionDescriptions = cleanEmptyKeys(newConfig.positionDescriptions);
+    if (newConfig.positionTypes) newConfig.positionTypes = cleanEmptyKeys(newConfig.positionTypes);
+    if (newConfig.positionWizAbbreviations) newConfig.positionWizAbbreviations = cleanEmptyKeys(newConfig.positionWizAbbreviations);
+
+    // Update state and ref
     setLocalConfig(newConfig);
+    localConfigRef.current = newConfig;
 
     setSaving(true);
     setSaveStatus('saving');
@@ -1367,6 +1426,7 @@ export default function Setup() {
               positionColors={localConfig.positionColors || {}}
               positionDescriptions={localConfig.positionDescriptions || {}}
               positionTypes={localConfig.positionTypes || {}}
+              positionWizAbbreviations={localConfig.positionWizAbbreviations || {}}
               hiddenPositions={localConfig.hiddenPositions || {}}
               customPositions={localConfig.customPositions || {}}
               onUpdate={updateLocal}
@@ -1655,7 +1715,7 @@ const DEFAULT_POSITION_TYPES = {
 };
 
 // Positions Tab Component
-function PositionsTab({ phase, positions, positionNames, positionColors, positionDescriptions, positionTypes, hiddenPositions, customPositions, onUpdate, onImmediateSave, isLight = false }) {
+function PositionsTab({ phase, positions, positionNames, positionColors, positionDescriptions, positionTypes, positionWizAbbreviations, hiddenPositions, customPositions, onUpdate, onImmediateSave, isLight = false }) {
   const addPosition = async () => {
     const key = prompt('Enter Position Key (1-3 letters, e.g., "F" or "S2"):');
     if (!key) return;
@@ -1694,29 +1754,47 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
     const newDisplayName = value.toUpperCase().slice(0, 3);
     const oldDisplayName = positionNames[key] || key;
 
-    // Update the name mapping
-    onUpdate('positionNames', { ...positionNames, [key]: newDisplayName });
+    // Don't allow empty display names - use key as fallback
+    const effectiveDisplayName = newDisplayName || key;
+
+    // Update the name mapping (only store if different from key)
+    const newNames = { ...positionNames };
+    if (effectiveDisplayName === key) {
+      delete newNames[key]; // Remove entry if it matches the key
+    } else {
+      newNames[key] = effectiveDisplayName;
+    }
+    // Clean any empty keys
+    delete newNames[''];
+    onUpdate('positionNames', newNames);
 
     // Migrate color from old display name to new display name
-    // Check for color stored under old display name OR under the key
     const existingColor = positionColors[oldDisplayName] || positionColors[key];
-    if (existingColor && newDisplayName !== oldDisplayName) {
+    if (existingColor && effectiveDisplayName !== oldDisplayName) {
       const updatedColors = { ...positionColors };
       // Remove color from old display name (if stored there)
       if (positionColors[oldDisplayName] && oldDisplayName !== key) {
         delete updatedColors[oldDisplayName];
       }
-      // Store under new display name
-      updatedColors[newDisplayName] = existingColor;
+      // Store under new display name (never empty)
+      if (effectiveDisplayName) {
+        updatedColors[effectiveDisplayName] = existingColor;
+      }
+      // Clean any empty keys
+      delete updatedColors[''];
       onUpdate('positionColors', updatedColors);
     }
   };
 
   const updatePositionColor = (key, value) => {
     // Store color under the DISPLAY NAME, not the internal key
-    // This way when diagram shows "B", it looks up positionColors['B']
     const displayName = positionNames[key] || key;
-    onUpdate('positionColors', { ...positionColors, [displayName]: value });
+    // Never store under empty key
+    if (!displayName) return;
+    const updatedColors = { ...positionColors, [displayName]: value };
+    // Clean any empty keys
+    delete updatedColors[''];
+    onUpdate('positionColors', updatedColors);
   };
 
   const updatePositionDesc = (key, value) => {
@@ -1725,6 +1803,11 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
 
   const updatePositionType = (key, value) => {
     onUpdate('positionTypes', { ...(positionTypes || {}), [key]: value });
+  };
+
+  const updatePositionWizAbbrev = (key, value) => {
+    const abbrev = value.toUpperCase().slice(0, 4); // Allow slightly longer for WIZ
+    onUpdate('positionWizAbbreviations', { ...(positionWizAbbreviations || {}), [key]: abbrev });
   };
 
   const getPositionType = (key) => {
@@ -1769,39 +1852,73 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
               />
             </div>
 
-            {/* Color picker and name input - use display name for color lookup */}
+            {/* Color picker and abbreviation inputs */}
             {(() => {
               const displayName = positionNames[pos.key] || pos.default;
+              const wizAbbrev = positionWizAbbreviations?.[pos.key] || '';
               const colorValue = positionColors[displayName] || positionColors[pos.key] || DEFAULT_POSITION_COLORS[pos.key] || '#64748b';
               return (
-                <div className="flex gap-2 items-stretch">
-                  <div className="relative flex-shrink-0">
-                    <input
-                      id={`position-color-${pos.key}`}
-                      type="color"
-                      value={colorValue}
-                      onChange={(e) => updatePositionColor(pos.key, e.target.value)}
-                      aria-label={`${displayName} color`}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
-                    />
-                    <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center border-2 border-white/20"
-                      style={{ backgroundColor: colorValue }}
-                    >
-                      <Edit3 size={14} className="text-white/70" />
+                <div className="space-y-2">
+                  {/* Color picker and main abbreviation */}
+                  <div className="flex gap-2 items-stretch">
+                    <div className="relative flex-shrink-0">
+                      <input
+                        id={`position-color-${pos.key}`}
+                        type="color"
+                        value={colorValue}
+                        onChange={(e) => updatePositionColor(pos.key, e.target.value)}
+                        aria-label={`${displayName} color`}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                      />
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center border-2 border-white/20"
+                        style={{ backgroundColor: colorValue }}
+                      >
+                        <Edit3 size={14} className="text-white/70" />
+                      </div>
                     </div>
+                    <input
+                      id={`position-name-${pos.key}`}
+                      type="text"
+                      value={positionNames[pos.key] ?? pos.default}
+                      onChange={(e) => updatePositionName(pos.key, e.target.value)}
+                      placeholder={pos.default}
+                      maxLength={3}
+                      aria-label={`${pos.default} abbreviation`}
+                      title="Abbreviation (used everywhere)"
+                      className="flex-1 min-w-0 px-2 py-2 text-center font-bold text-white rounded-lg border border-slate-600"
+                      style={{ backgroundColor: colorValue }}
+                    />
                   </div>
-                  <input
-                    id={`position-name-${pos.key}`}
-                    type="text"
-                    value={positionNames[pos.key] ?? pos.default}
-                    onChange={(e) => updatePositionName(pos.key, e.target.value)}
-                    placeholder={pos.default}
-                    maxLength={3}
-                    aria-label={`${pos.default} abbreviation`}
-                    className="flex-1 min-w-0 px-2 py-2 text-center font-bold text-white rounded-lg border border-slate-600"
-                    style={{ backgroundColor: colorValue }}
-                  />
+                  {/* WIZ Abbreviation - for all Offense positions */}
+                  {phase === 'OFFENSE' && (() => {
+                    // Linemen have fixed WIZ abbreviations
+                    const fixedWizAbbrevs = { LT: 'T', LG: 'G', C: 'C', RG: 'G', RT: 'T' };
+                    const isLineman = ['LT', 'LG', 'C', 'RG', 'RT'].includes(pos.key);
+                    const fixedValue = fixedWizAbbrevs[pos.key];
+
+                    return (
+                      <div className="flex items-center gap-1 mt-1">
+                        <span className={`text-[10px] shrink-0 ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>WIZ</span>
+                        <input
+                          id={`position-wiz-${pos.key}`}
+                          type="text"
+                          value={isLineman ? fixedValue : (wizAbbrev || '')}
+                          onChange={(e) => !isLineman && updatePositionWizAbbrev(pos.key, e.target.value)}
+                          placeholder={displayName}
+                          maxLength={4}
+                          disabled={isLineman}
+                          aria-label={`${pos.default} WIZ abbreviation`}
+                          title={isLineman ? "Lineman WIZ abbreviation (fixed)" : "WIZ abbreviation (for wristband diagrams)"}
+                          className={`w-full px-1 py-0.5 text-[10px] text-center font-mono border rounded ${
+                            isLineman
+                              ? (isLight ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed' : 'bg-slate-900 border-slate-700 text-slate-500 cursor-not-allowed')
+                              : (isLight ? 'bg-gray-50 border-gray-300 text-gray-700' : 'bg-slate-800 border-slate-600 text-slate-300')
+                          }`}
+                        />
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })()}
@@ -1843,31 +1960,35 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
       <div className="mt-6 pt-6 border-t border-slate-700">
         <button
           onClick={async () => {
-            if (!confirm('Reset all position settings to defaults? This will:\n• Show all default positions\n• Remove custom positions\n• Clear all position renames and colors\n\nThis cannot be undone.')) return;
+            if (!confirm('Reset ALL position settings to defaults? This will:\n• Show all default positions\n• Remove custom positions\n• Clear all position renames\n• Reset all colors to defaults\n• Clear all descriptions\n\nThis resets positions for Offense, Defense, AND Special Teams.\nThis cannot be undone.')) return;
 
-            // Clear hidden positions for this phase
-            const newHidden = { ...hiddenPositions };
-            delete newHidden[phase];
+            // Batch all resets into a single update
+            const resetData = {
+              hiddenPositions: { OFFENSE: [], DEFENSE: [], SPECIAL_TEAMS: [] },
+              customPositions: { OFFENSE: [], DEFENSE: [], SPECIAL_TEAMS: [] },
+              positionNames: {},
+              positionColors: { ...DEFAULT_POSITION_COLORS },
+              positionDescriptions: {},
+              positionTypes: {},
+              positionWizAbbreviations: {},
+              defaultFormationPositions: {}
+            };
 
-            // Clear custom positions for this phase
-            const newCustom = { ...customPositions };
-            delete newCustom[phase];
-
-            // Clear position names, colors, descriptions, types
             if (onImmediateSave) {
-              await onImmediateSave('hiddenPositions', newHidden);
-              await onImmediateSave('customPositions', newCustom);
-              await onImmediateSave('positionNames', {});
-              await onImmediateSave('positionColors', {});
-              await onImmediateSave('positionDescriptions', {});
-              await onImmediateSave('positionTypes', {});
+              try {
+                await onImmediateSave(resetData);
+              } catch (err) {
+                console.error('Reset failed:', err);
+                alert('Reset failed: ' + err.message);
+                return;
+              }
             }
 
-            alert('Positions reset to defaults!');
+            alert('All positions reset to defaults! Please refresh the page.');
           }}
           className="px-4 py-2 text-sm bg-red-600/20 text-red-400 border border-red-600/30 rounded-lg hover:bg-red-600/30 transition-colors"
         >
-          Reset Positions to Defaults
+          Reset ALL Positions to Defaults
         </button>
       </div>
 

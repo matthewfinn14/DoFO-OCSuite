@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useSchool } from '../../../context/SchoolContext';
 
-// Card definitions
+// Card definitions - standard wristband cards
 const CARD_TABS = [
   { id: 'card100', label: '100s', startSlot: 101, count: 48 },
   { id: 'card200', label: '200s', startSlot: 201, count: 48 },
@@ -12,17 +12,27 @@ const CARD_TABS = [
   { id: 'cardStaples', label: 'Staples', startSlot: 10, count: 80 }
 ];
 
+// Color map for alternating row shades
+const COLOR_MAP = {
+  'green-light': '#d1fae5', 'green-medium': '#a7f3d0',
+  'orange-light': '#fed7aa', 'orange-medium': '#fdba74',
+  'red-light': '#fecaca', 'red-medium': '#fca5a5',
+  'blue-light': '#bfdbfe', 'blue-medium': '#93c5fd',
+  'yellow-light': '#fef08a', 'yellow-medium': '#fde047',
+  'purple-light': '#e9d5ff', 'purple-medium': '#d8b4fe',
+  'teal-light': '#99f6e4', 'teal-medium': '#5eead4',
+  'pink-light': '#fbcfe8', 'pink-medium': '#f9a8d4'
+};
+
 /**
- * Coach's Consolidated Wristband - All slots on one mega-card page
- * 8.5" x 11" landscape, organized by card sections
+ * Coach's Play Sheet - Large wristband cards for sideline use
+ * Portrait orientation, 2 cards per page (half page each)
+ * Page 1: 100s + 200s, Page 2: 300s + 400s
  */
 export default function CoachWristbandPrint({
   weekId,
   levelId,
-  cardSelection = ['card100', 'card200', 'card300', 'card400'],
-  consolidationMode = 'byCard',
-  fontSize = 'medium',
-  showColorCoding = true
+  wizType = 'skill' // 'skill' or 'oline'
 }) {
   const { playsArray, weeks, programLevels, activeLevelId, settings } = useSchool();
 
@@ -34,15 +44,21 @@ export default function CoachWristbandPrint({
   // Get selected level
   const selectedLevel = levelId || activeLevelId || programLevels?.[0]?.id || 'varsity';
 
-  // Get wristband settings
+  // Get wristband settings for current week and level
   const wristbandSettings = useMemo(() => {
     if (!currentWeek) return {};
-    const settings = currentWeek.wristbandSettings || {};
-    return settings[selectedLevel] || {};
+    const ws = currentWeek.wristbandSettings || {};
+    return ws[selectedLevel] || {};
   }, [currentWeek, selectedLevel]);
 
-  // Build slot map
-  const slotMap = useMemo(() => {
+  // Get enabled cards for this week (default to 100s-400s)
+  const enabledCards = useMemo(() => {
+    const defaultEnabled = ['card100', 'card200', 'card300', 'card400'];
+    return wristbandSettings.enabledCards || defaultEnabled;
+  }, [wristbandSettings.enabledCards]);
+
+  // Build global slot map for quick lookup
+  const globalSlotMap = useMemo(() => {
     const map = {};
     playsArray.forEach(p => {
       if (p.wristbandSlot) map[p.wristbandSlot] = p;
@@ -51,165 +67,353 @@ export default function CoachWristbandPrint({
     return map;
   }, [playsArray]);
 
-  // Get populated slots for selected cards
-  const cardSections = useMemo(() => {
-    return cardSelection
-      .map(cardId => {
-        const tab = CARD_TABS.find(t => t.id === cardId);
-        if (!tab) return null;
+  // Play lookup by ID
+  const playById = useMemo(() => {
+    const map = {};
+    playsArray.forEach(p => {
+      map[p.id] = p;
+    });
+    return map;
+  }, [playsArray]);
 
-        const cardSettings = wristbandSettings[cardId] || {};
-        const slots = [];
+  // Get play for a slot - check card-specific slots first, then global
+  const getPlayForSlot = (cardId, slot) => {
+    // Check card-specific slots first
+    const cardSettings = wristbandSettings[cardId];
+    if (cardSettings?.slots?.[slot]?.playId) {
+      return playById[cardSettings.slots[slot].playId] || null;
+    }
+    // Fallback to global slot map
+    return globalSlotMap[slot] || null;
+  };
 
-        for (let i = 0; i < tab.count; i++) {
-          const slotNum = tab.startSlot + i;
-          const play = slotMap[slotNum];
-          if (play) {
-            slots.push({ slot: slotNum, play, cardSettings });
+  // Filter to only enabled cards that aren't STAPLES (100s-600s only for coach sheets)
+  const cardIds = enabledCards.filter(id => id !== 'cardStaples');
+
+  // Build card data
+  const cards = cardIds.map(cardId => {
+    const tab = CARD_TABS.find(t => t.id === cardId);
+    if (!tab) return null;
+
+    const cardSettings = wristbandSettings[cardId] || {
+      type: 'standard',
+      opponent: currentWeek?.opponent || '',
+      iteration: '1',
+      color: 'white'
+    };
+
+    const isWiz = cardSettings.type === 'wiz';
+    const slotCount = isWiz ? 16 : 48;
+    const slots = Array.from({ length: slotCount }, (_, i) => tab.startSlot + i);
+
+    return {
+      id: cardId,
+      tab,
+      settings: cardSettings,
+      slots,
+      isWiz
+    };
+  }).filter(Boolean);
+
+  // Split into pages (2 cards per page)
+  const pages = [];
+  for (let i = 0; i < cards.length; i += 2) {
+    pages.push(cards.slice(i, i + 2));
+  }
+
+  const opponent = currentWeek?.opponent || 'OPPONENT';
+
+  return (
+    <div className="coach-playsheet-print">
+      <style>{`
+        @media print {
+          @page {
+            size: letter portrait;
+            margin: 0.25in;
+          }
+          body {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
         }
 
-        return {
-          id: cardId,
-          label: tab.label,
-          slots,
-          color: cardSettings.color || 'white'
-        };
-      })
-      .filter(Boolean)
-      .filter(section => section.slots.length > 0);
-  }, [cardSelection, wristbandSettings, slotMap]);
+        .coach-playsheet-print {
+          background: white;
+          width: 8in;
+        }
 
-  // Merged mode - combine all slots
-  const allSlots = useMemo(() => {
-    if (consolidationMode !== 'merged') return [];
-    return cardSections
-      .flatMap(section => section.slots)
-      .sort((a, b) => a.slot - b.slot);
-  }, [cardSections, consolidationMode]);
+        .coach-playsheet-page {
+          width: 8in;
+          height: 10.5in;
+          display: flex;
+          flex-direction: column;
+          gap: 0.15in;
+          page-break-after: always;
+          break-after: page;
+        }
 
-  const fontSizeClass = {
-    small: 'text-[8pt]',
-    medium: 'text-[10pt]',
-    large: 'text-[12pt]'
-  }[fontSize] || 'text-[10pt]';
+        .coach-playsheet-page:last-child {
+          page-break-after: avoid;
+          break-after: avoid;
+        }
 
-  return (
-    <div className="coach-megacard-print bg-white p-4" style={{ width: '10in', minHeight: '7.5in' }}>
-      {/* Header */}
-      <div className="flex items-center justify-between pb-2 mb-3 border-b-2 border-black">
-        <div className="flex items-center gap-3">
-          {settings?.teamLogo && (
-            <img src={settings.teamLogo} alt="Team Logo" className="h-10 w-auto" />
-          )}
-          <div>
-            <div className="font-bold text-lg">Coach's Play Sheet</div>
-            <div className="text-sm text-gray-600">
-              {currentWeek?.name} {currentWeek?.opponent && `vs ${currentWeek.opponent}`}
+        .coach-card {
+          flex: 1;
+          border: 2px solid black;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          background: white;
+        }
+
+        .coach-card-header {
+          background: black;
+          color: white;
+          font-weight: bold;
+          font-size: 14pt;
+          padding: 4px 12px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-shrink: 0;
+        }
+
+        /* Standard layout - 2 column grid */
+        .coach-slot-grid {
+          flex: 1;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          grid-template-rows: repeat(24, 1fr);
+          overflow: hidden;
+        }
+
+        .coach-slot-row {
+          display: flex;
+          border-bottom: 1px solid #ccc;
+          border-right: 1px solid #ccc;
+        }
+
+        .coach-slot-row:nth-child(even) {
+          border-right: none;
+        }
+
+        .coach-slot-num {
+          font-weight: bold;
+          font-size: 11pt;
+          min-width: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-right: 1px solid #333;
+          background: #f8fafc;
+        }
+
+        .coach-slot-play {
+          flex: 1;
+          font-size: 10pt;
+          font-weight: 600;
+          padding: 0 6px;
+          display: flex;
+          align-items: center;
+          overflow: hidden;
+        }
+
+        .coach-slot-play span {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        /* WIZ layout - 4x4 grid */
+        .coach-wiz-grid {
+          flex: 1;
+          display: grid;
+          grid-template-rows: repeat(4, 1fr);
+          border-top: 1px solid black;
+        }
+
+        .coach-wiz-row {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          border-bottom: 1px solid black;
+        }
+
+        .coach-wiz-row:last-child {
+          border-bottom: none;
+        }
+
+        .coach-wiz-cell {
+          outline: 1px solid black;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+
+        .coach-wiz-diagram {
+          flex: 1;
+          background: #f9fafb;
+        }
+
+        .coach-wiz-label {
+          display: flex;
+          border-top: 1px solid black;
+          background: white;
+          height: 24px;
+          flex-shrink: 0;
+        }
+
+        .coach-wiz-slot-num {
+          width: 32px;
+          min-width: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 10pt;
+          font-weight: bold;
+          border-right: 1px solid black;
+        }
+
+        .coach-wiz-play-name {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          font-size: 10pt;
+          font-weight: bold;
+          padding: 0 4px;
+          overflow: hidden;
+        }
+
+        .coach-wiz-play-name span {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      `}</style>
+
+      {pages.map((pageCards, pageIdx) => (
+        <div key={pageIdx} className="coach-playsheet-page">
+          {pageCards.map(card => (
+            <div key={card.id} className="coach-card">
+              {/* Header */}
+              <div className="coach-card-header" style={{
+                background: card.isWiz ? '#dc2626' : 'black'
+              }}>
+                <span>
+                  {card.tab.label}
+                  {card.isWiz && ` ${wizType.toUpperCase()}`}
+                </span>
+                <span>{opponent} {card.settings.iteration || '1'}</span>
+              </div>
+
+              {/* Content */}
+              {card.isWiz ? (
+                <WizLayout
+                  card={card}
+                  getPlayForSlot={getPlayForSlot}
+                  wizType={wizType}
+                />
+              ) : (
+                <StandardLayout
+                  card={card}
+                  getPlayForSlot={getPlayForSlot}
+                />
+              )}
             </div>
-          </div>
-        </div>
-        <div className="text-right text-sm text-gray-500">
-          {new Date().toLocaleDateString()}
-        </div>
-      </div>
-
-      {/* Content */}
-      {consolidationMode === 'merged' ? (
-        <MergedView slots={allSlots} fontSizeClass={fontSizeClass} showColorCoding={showColorCoding} />
-      ) : (
-        <ByCardView sections={cardSections} fontSizeClass={fontSizeClass} showColorCoding={showColorCoding} />
-      )}
-    </div>
-  );
-}
-
-// View grouped by card (100s, 200s, etc.)
-function ByCardView({ sections, fontSizeClass, showColorCoding }) {
-  // Calculate grid columns based on number of sections
-  const cols = Math.min(sections.length, 4);
-
-  return (
-    <div
-      className="grid gap-3"
-      style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
-    >
-      {sections.map(section => (
-        <div key={section.id} className="border border-gray-300 rounded">
-          <div
-            className="font-bold text-center py-1 border-b border-gray-300"
-            style={{
-              backgroundColor: showColorCoding ? getCardBgColor(section.color) : '#f1f5f9'
-            }}
-          >
-            {section.label}
-          </div>
-          <div className={`p-2 ${fontSizeClass}`}>
-            {section.slots.map(({ slot, play }) => (
-              <div
-                key={slot}
-                className="flex gap-2 py-0.5 border-b border-dotted border-gray-200 last:border-0"
-              >
-                <span className="font-bold min-w-[28px]">{slot}</span>
-                <span className="truncate">{play.name}</span>
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
       ))}
     </div>
   );
 }
 
-// Merged view - all slots in columns
-function MergedView({ slots, fontSizeClass, showColorCoding }) {
-  // Split into 4 columns
-  const colSize = Math.ceil(slots.length / 4);
-  const columns = [
-    slots.slice(0, colSize),
-    slots.slice(colSize, colSize * 2),
-    slots.slice(colSize * 2, colSize * 3),
-    slots.slice(colSize * 3)
-  ].filter(col => col.length > 0);
+// Standard 2-column layout for regular cards
+function StandardLayout({ card, getPlayForSlot }) {
+  const cardColor = card.settings.color || 'white';
 
-  return (
-    <div className="grid grid-cols-4 gap-3">
-      {columns.map((column, colIdx) => (
-        <div key={colIdx} className="border border-gray-300 rounded p-2">
-          <div className={fontSizeClass}>
-            {column.map(({ slot, play, cardSettings }) => (
-              <div
-                key={slot}
-                className="flex gap-2 py-0.5 border-b border-dotted border-gray-200 last:border-0"
-                style={{
-                  backgroundColor: showColorCoding
-                    ? `${getCardBgColor(cardSettings?.color)}20`
-                    : 'transparent'
-                }}
-              >
-                <span className="font-bold min-w-[28px]">{slot}</span>
-                <span className="truncate">{play.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// Helper to get card background color
-function getCardBgColor(color) {
-  const colors = {
-    white: '#ffffff',
-    green: '#d1fae5',
-    orange: '#fed7aa',
-    blue: '#bfdbfe',
-    yellow: '#fef08a',
-    red: '#fecaca',
-    purple: '#e9d5ff',
-    pink: '#fbcfe8',
-    teal: '#99f6e4'
+  const getRowColor = (rowIndex) => {
+    if (!cardColor || cardColor === 'white') return 'transparent';
+    const shade = rowIndex % 2 === 0 ? 'light' : 'medium';
+    return COLOR_MAP[`${cardColor}-${shade}`] || 'transparent';
   };
-  return colors[color] || colors.white;
+
+  // Split slots into pairs (odd/even for 2 columns)
+  const col1 = card.slots.filter((_, i) => i % 2 === 0);
+  const col2 = card.slots.filter((_, i) => i % 2 === 1);
+
+  const rows = [];
+  for (let i = 0; i < Math.max(col1.length, col2.length); i++) {
+    rows.push([col1[i], col2[i]]);
+  }
+
+  return (
+    <div className="coach-slot-grid">
+      {rows.map((pair, rowIdx) => (
+        pair.map((slot, colIdx) => {
+          if (slot === undefined) return <div key={`empty-${rowIdx}-${colIdx}`} className="coach-slot-row" />;
+
+          const play = getPlayForSlot(card.id, slot);
+          const playName = play?.name || '';
+
+          return (
+            <div
+              key={slot}
+              className="coach-slot-row"
+              style={{ background: getRowColor(rowIdx) }}
+            >
+              <div className="coach-slot-num">{slot}</div>
+              <div className="coach-slot-play">
+                <span>{playName}</span>
+              </div>
+            </div>
+          );
+        })
+      ))}
+    </div>
+  );
+}
+
+// WIZ 4x4 grid layout
+function WizLayout({ card, getPlayForSlot, wizType }) {
+  // Split 16 slots into 4 rows of 4
+  const rows = [];
+  for (let i = 0; i < card.slots.length; i += 4) {
+    rows.push(card.slots.slice(i, i + 4));
+  }
+
+  return (
+    <div className="coach-wiz-grid">
+      {rows.map((rowSlots, rIndex) => (
+        <div key={rIndex} className="coach-wiz-row">
+          {rowSlots.map(slot => {
+            const play = getPlayForSlot(card.id, slot);
+
+            // For SKILL: show play name/abbreviation
+            // For OLINE: show OL scheme name
+            let displayName = '';
+            if (play) {
+              if (wizType === 'oline') {
+                displayName = play.wizOlineRef?.name || '';
+              } else {
+                displayName = play.wizAbbreviation || play.name || '';
+              }
+            }
+
+            return (
+              <div key={slot} className="coach-wiz-cell">
+                <div className="coach-wiz-diagram">
+                  {/* Diagram placeholder */}
+                </div>
+                <div className="coach-wiz-label">
+                  <div className="coach-wiz-slot-num">{slot}</div>
+                  <div className="coach-wiz-play-name">
+                    <span>{displayName}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
 }

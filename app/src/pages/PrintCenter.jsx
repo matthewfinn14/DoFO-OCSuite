@@ -41,7 +41,7 @@ import '../styles/print-center.css';
 const PRINT_TEMPLATES = [
   {
     id: 'wristband',
-    name: 'Wristbands',
+    name: 'Player Wristbands',
     description: 'Player or coach wristband cards',
     icon: Watch,
     category: 'gameday',
@@ -57,18 +57,15 @@ const PRINT_TEMPLATES = [
   },
   {
     id: 'coach_wristband',
-    name: "Coach's Play Sheet",
-    description: 'Consolidated mega-card with all plays',
+    name: "Coach's Wristband Sheet",
+    description: 'Large wristband cards for sideline (2 per page)',
     icon: ClipboardList,
     category: 'gameday',
     component: CoachWristbandPrint,
     defaultSettings: {
-      cardSelection: ['card100', 'card200', 'card300', 'card400'],
-      consolidationMode: 'byCard',
-      fontSize: 'medium',
-      showColorCoding: true
+      wizType: 'skill'
     },
-    orientation: 'landscape'
+    orientation: 'portrait'
   },
   {
     id: 'depth_chart',
@@ -442,6 +439,7 @@ export default function PrintCenter() {
                     weekData={weekData}
                     roster={roster}
                     staff={staff}
+                    selectedLevelId={selectedLevelId}
                     layout="horizontal"
                   />
                 </div>

@@ -73,6 +73,7 @@ const SHAPES = [
 const DEFAULT_POSITION_COLORS = {
   QB: '#1e3a5f', RB: '#3b82f6', FB: '#0891b2', WR: '#a855f7', TE: '#f97316',
   LT: '#64748b', LG: '#64748b', C: '#64748b', RG: '#64748b', RT: '#64748b',
+  T: '#64748b', G: '#64748b', // WIZ abbreviations for tackles and guards
   X: '#a855f7', Y: '#22c55e', Z: '#eab308', H: '#06b6d4', F: '#f97316',
   A: '#f97316', B: '#3b82f6'
 };
@@ -98,6 +99,9 @@ const getDefaultWizOLFormation = () => {
 // Matches the 6 core skill positions: QB, RB, X, Y, Z, H
 const DEFAULT_SKILL_POSITIONS = ['QB', 'RB', 'X', 'Y', 'Z', 'H'];
 
+// OL positions - these always use default gray color in WIZ diagrams
+const OL_POSITIONS = ['LT', 'LG', 'C', 'RG', 'RT'];
+
 // Default position placements on the canvas (wiz-card viewBox 950x450 - 2.1:1 ratio)
 // LOS is around y=290, backfield around y=340-390
 const SKILL_POSITION_PLACEMENTS = {
@@ -115,12 +119,26 @@ const SKILL_POSITION_PLACEMENTS = {
 };
 
 // Generate WIZ Skill Formation based on personnel grouping
-const getWizSkillFormation = (positionColors = {}, positionNames = {}, skillPositions = DEFAULT_SKILL_POSITIONS) => {
-  // Get color for a position, handling renamed positions
-  // Colors are stored by display name, so need to convert key → display name first
-  const getColor = (pos, fallback) => {
-    const displayName = positionNames[pos] || pos;
-    return positionColors[displayName] || positionColors[pos] || DEFAULT_POSITION_COLORS[pos] || fallback;
+// positionColors: colors stored by DISPLAY NAME (positionNames[key] or key)
+// positionNames: display names/abbreviations by position key
+// positionWizAbbreviations: WIZ-specific abbreviations for OL (T, G, C, G, T)
+// skillPositions: array of skill position keys to include
+const getWizSkillFormation = (positionColors = {}, positionNames = {}, positionWizAbbreviations = {}, skillPositions = DEFAULT_SKILL_POSITIONS) => {
+  // Get color for a position - colors are stored by DISPLAY NAME
+  // Priority: positionColors[displayName] → positionColors[key] → DEFAULT_POSITION_COLORS[key] → fallback
+  const getColor = (posKey, fallback) => {
+    const displayName = positionNames[posKey] || posKey;
+    return positionColors[displayName] || positionColors[posKey] || DEFAULT_POSITION_COLORS[posKey] || fallback;
+  };
+
+  // Get label for OL position: WIZ abbreviation → default (T/G/C)
+  const getOLLabel = (posKey, defaultLabel) => {
+    return positionWizAbbreviations[posKey] || defaultLabel;
+  };
+
+  // Get label for skill position: positionNames → key
+  const getSkillLabel = (posKey) => {
+    return positionNames[posKey] || posKey;
   };
 
   const wizCenter = 475; // 950/2 for wiz-card viewBox
@@ -129,18 +147,17 @@ const getWizSkillFormation = (positionColors = {}, positionNames = {}, skillPosi
   const spacing = 38;    // OL spacing (tighter gaps)
   const olY = wizLos;    // OL on the LOS
 
-  const cOL = '#64748b';
   const baseTime = Date.now();
   const olGroupId = `ol-group-${baseTime}`; // Group ID for OL
 
-  // Always include 5 OL (grouped by default) - positionKey used for saving/restoring defaults
-  // Use user's abbreviation from positionNames, falling back to default
+  // Always include 5 OL (grouped by default)
+  // OL uses: color from positionColors[key], label from positionWizAbbreviations[key]
   const elements = [
-    { id: baseTime + 1, type: 'player', points: [{ x: wizCenter, y: olY }], color: getColor('C', cOL), label: positionNames['C'] || 'C', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'C' },
-    { id: baseTime + 2, type: 'player', points: [{ x: wizCenter - spacing, y: olY }], color: getColor('LG', cOL), label: positionNames['LG'] || 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'LG' },
-    { id: baseTime + 3, type: 'player', points: [{ x: wizCenter + spacing, y: olY }], color: getColor('RG', cOL), label: positionNames['RG'] || 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'RG' },
-    { id: baseTime + 4, type: 'player', points: [{ x: wizCenter - (spacing * 2), y: olY }], color: getColor('LT', cOL), label: positionNames['LT'] || 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'LT' },
-    { id: baseTime + 5, type: 'player', points: [{ x: wizCenter + (spacing * 2), y: olY }], color: getColor('RT', cOL), label: positionNames['RT'] || 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'RT' },
+    { id: baseTime + 1, type: 'player', points: [{ x: wizCenter, y: olY }], color: getColor('C', '#64748b'), label: getOLLabel('C', 'C'), shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'C' },
+    { id: baseTime + 2, type: 'player', points: [{ x: wizCenter - spacing, y: olY }], color: getColor('LG', '#64748b'), label: getOLLabel('LG', 'G'), shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'LG' },
+    { id: baseTime + 3, type: 'player', points: [{ x: wizCenter + spacing, y: olY }], color: getColor('RG', '#64748b'), label: getOLLabel('RG', 'G'), shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'RG' },
+    { id: baseTime + 4, type: 'player', points: [{ x: wizCenter - (spacing * 2), y: olY }], color: getColor('LT', '#64748b'), label: getOLLabel('LT', 'T'), shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'LT' },
+    { id: baseTime + 5, type: 'player', points: [{ x: wizCenter + (spacing * 2), y: olY }], color: getColor('RT', '#64748b'), label: getOLLabel('RT', 'T'), shape: 'text-only', variant: 'filled', fontSize: initialSize, groupId: olGroupId, positionKey: 'RT' },
   ];
 
   // Add skill players based on the provided positions
@@ -151,7 +168,7 @@ const getWizSkillFormation = (positionColors = {}, positionNames = {}, skillPosi
       type: 'player',
       points: [{ x: placement.x, y: placement.y }],
       color: getColor(pos, '#3b82f6'),
-      label: positionNames[pos] || pos,
+      label: getSkillLabel(pos),
       shape: 'circle',
       variant: 'filled',
       positionKey: pos // Store original position key for personnel changes
@@ -179,6 +196,7 @@ export default function PlayDiagramEditor({
   offensePositions = [], // Available offense positions from setup
   positionColors = {},
   positionNames = {},
+  positionWizAbbreviations = {}, // WIZ abbreviations for positions (used for OL labels: T, G, C)
   customDefaultPositions = {}, // User's custom default positions { positionKey: { x, y } }
   playName = '', // Optional play name to display in toolbar
   olCallText = '', // OL call text (protection/scheme name) to display next to play name
@@ -192,9 +210,6 @@ export default function PlayDiagramEditor({
   // ViewBox settings based on mode (wiz-skill uses wider aspect ratio to fit wristband cells)
   const viewBox = isWizSkill ? '0 0 950 450' : '0 0 950 450';
   const aspectRatio = '950 / 450';
-
-  // Get available skill positions (non-OL positions)
-  const OL_POSITIONS = ['LT', 'LG', 'C', 'RG', 'RT'];
 
   // Helper: Get color for a position label (which may be a display name OR a key)
   // Colors are stored by display name (e.g., 'BZ' not 'RB')
@@ -228,7 +243,12 @@ export default function PlayDiagramEditor({
 
   // Find base personnel grouping (marked with isBase) for default formation
   const basePersonnel = personnelGroupings.find(p => p.isBase) || personnelGroupings[0];
-  const baseSkillPositions = basePersonnel?.positions?.filter(p => !['LT', 'LG', 'C', 'RG', 'RT'].includes(p)) || DEFAULT_SKILL_POSITIONS;
+  // Filter personnel positions to only include valid positions from offensePositions
+  // This removes legacy positions like WR, FB, TE that are no longer in the user's setup
+  const rawSkillPositions = basePersonnel?.positions?.filter(p => !['LT', 'LG', 'C', 'RG', 'RT'].includes(p)) || [];
+  const filteredSkillPositions = rawSkillPositions.filter(p => availableSkillPositions.includes(p));
+  // If filtering removed all positions, fall back to defaults
+  const finalBaseSkillPositions = filteredSkillPositions.length > 0 ? filteredSkillPositions : DEFAULT_SKILL_POSITIONS;
 
   // Track selected personnel grouping - default to base personnel if available
   const [selectedPersonnelId, setSelectedPersonnelId] = useState(basePersonnel?.id || '');
@@ -238,6 +258,9 @@ export default function PlayDiagramEditor({
     if (initialData && initialData.elements && initialData.elements.length > 0) {
       // Convert stored labels to current display names and update colors
       // This ensures renamed positions show their new names and colors
+      // Also filter out positions that no longer exist in offensePositions
+      const validPositions = offensePositions.length > 0 ? offensePositions : [...OL_POSITIONS, ...DEFAULT_SKILL_POSITIONS];
+
       return initialData.elements.map(el => {
         if (el.type !== 'player') return el;
 
@@ -265,37 +288,70 @@ export default function PlayDiagramEditor({
           }
         }
 
-        // Get the correct color for this position
-        // Check positionColors by display name first, then by key, then defaults
-        let color = el.color;
-        if (positionColors[displayName]) {
-          color = positionColors[displayName];
-        } else if (positionColors[posKey]) {
-          color = positionColors[posKey];
-        } else if (DEFAULT_POSITION_COLORS[posKey]) {
-          color = DEFAULT_POSITION_COLORS[posKey];
+        // Check if this position still exists in the valid positions list
+        // If not, mark it for removal
+        if (!validPositions.includes(posKey) && !validPositions.includes(el.label)) {
+          // Position no longer exists - return null to filter out
+          return null;
+        }
+
+        // Determine if this is an OL position
+        const isOLPosition = OL_POSITIONS.includes(posKey);
+
+        // Get color from positionColors - colors are stored by DISPLAY NAME, not key
+        // For OL positions, displayName should be the custom name (e.g., positionNames['LT']) or the key
+        const colorLookupName = positionNames[posKey] || posKey;
+        const color = positionColors[colorLookupName] || positionColors[posKey] || DEFAULT_POSITION_COLORS[posKey] || el.color;
+
+        // Get label: OL uses WIZ abbreviations, skill uses positionNames
+        let label;
+        if (isOLPosition) {
+          // OL: use WIZ abbreviation, fall back to standard abbreviation (T, G, C)
+          const defaultOLLabels = { LT: 'T', LG: 'G', C: 'C', RG: 'G', RT: 'T' };
+          label = positionWizAbbreviations[posKey] || defaultOLLabels[posKey] || posKey;
+        } else {
+          // Skill: use positionNames display name
+          label = positionNames[posKey] || el.label;
         }
 
         return {
           ...el,
-          label: displayName,
+          label: label,
           color: color,
           positionKey: posKey
         };
-      });
+      }).filter(Boolean); // Remove null entries (deleted positions)
     }
     if (isWizSkill) {
       // Use base personnel positions if available, otherwise fall back to defaults
-      const defaultSkillPos = baseSkillPositions.length > 0
-        ? baseSkillPositions
+      const defaultSkillPos = finalBaseSkillPositions.length > 0
+        ? finalBaseSkillPositions
         : DEFAULT_SKILL_POSITIONS;
-      return getWizSkillFormation(positionColors, positionNames, defaultSkillPos);
+      return getWizSkillFormation(positionColors, positionNames, positionWizAbbreviations, defaultSkillPos);
     }
     if (isWizOline) {
       return getDefaultWizOLFormation();
     }
     return [];
   });
+
+  // Filter out invalid positions when offensePositions changes
+  useEffect(() => {
+    if (!isWizSkill) return;
+
+    const validPositions = offensePositions.length > 0
+      ? [...OL_POSITIONS, ...offensePositions]
+      : [...OL_POSITIONS, ...DEFAULT_SKILL_POSITIONS];
+
+    setElements(prev => {
+      const filtered = prev.filter(el => {
+        if (el.type !== 'player') return true;
+        const posKey = el.positionKey || el.label;
+        return validPositions.includes(posKey) || validPositions.includes(el.label);
+      });
+      return filtered.length !== prev.length ? filtered : prev;
+    });
+  }, [offensePositions, isWizSkill]);
 
   const [selectedTool, setSelectedTool] = useState('select');
   const [color, setColor] = useState('#000000');
@@ -626,14 +682,23 @@ export default function PlayDiagramEditor({
       }
 
       // Get the current display name from positionNames using the determined key
-      const displayName = positionNames[posKey] || pos.label;
+      const displayName = positionNames[posKey] || posKey;
+
+      // For OL, use WIZ abbreviations for labels; for skill, use display name
+      let label;
+      if (isOL) {
+        const defaultOLLabels = { LT: 'T', LG: 'G', C: 'C', RG: 'G', RT: 'T' };
+        label = positionWizAbbreviations[posKey] || defaultOLLabels[posKey] || pos.label;
+      } else {
+        label = displayName;
+      }
 
       newElements.push({
         id: baseTime + idx,
         type: 'player',
         points: [{ x, y }],
         color: getPositionColor(displayName),
-        label: displayName,
+        label: label,
         shape: pos.shape || defaultConfig.shape || 'circle',
         variant: pos.variant || defaultConfig.variant || 'filled',
         fontSize: pos.fontSize || defaultConfig.fontSize,
@@ -663,8 +728,10 @@ export default function PlayDiagramEditor({
     });
 
     // Create new skill players based on the grouping
+    // Filter against availableSkillPositions to remove legacy positions (WR, FB, etc.)
     const newSkillPlayers = [];
-    const skillPositions = grouping.positions.filter(pos => !OL_POSITIONS.includes(pos));
+    const rawPositions = grouping.positions.filter(pos => !OL_POSITIONS.includes(pos));
+    const skillPositions = rawPositions.filter(pos => availableSkillPositions.includes(pos));
 
     skillPositions.forEach((pos, idx) => {
       const placement = SKILL_POSITION_PLACEMENTS[pos] || { x: 377, y: 360 };
@@ -694,10 +761,12 @@ export default function PlayDiagramEditor({
     setSelectedPersonnelId(groupingId);
 
     // Get skill positions from the grouping (excluding OL)
-    const skillPositions = grouping.positions.filter(pos => !OL_POSITIONS.includes(pos));
+    // Filter against availableSkillPositions to remove legacy positions (WR, FB, etc.)
+    const rawPositions = grouping.positions.filter(pos => !OL_POSITIONS.includes(pos));
+    const skillPositions = rawPositions.filter(pos => availableSkillPositions.includes(pos));
 
     // Generate new formation with these positions
-    const newElements = getWizSkillFormation(positionColors, positionNames, skillPositions);
+    const newElements = getWizSkillFormation(positionColors, positionNames, positionWizAbbreviations, skillPositions);
     setElements(newElements);
     updateHistory(newElements);
   };
@@ -708,13 +777,22 @@ export default function PlayDiagramEditor({
     const wizLos = 290;
 
     const isOL = ['C', 'LT', 'LG', 'RG', 'RT'].includes(posKey);
-    // Use user's abbreviation from positionNames, falling back to position key
+
+    // Get display name for color lookup (colors stored by display name)
+    const displayName = positionNames[posKey] || posKey;
+
+    // OL uses WIZ abbreviations (T, G, C), skill uses positionNames
+    const defaultOLLabels = { LT: 'T', LG: 'G', C: 'C', RG: 'G', RT: 'T' };
+    const label = isOL
+      ? (positionWizAbbreviations[posKey] || defaultOLLabels[posKey] || posKey)
+      : displayName;
+
     const newPlayer = {
       id: Date.now(),
       type: 'player',
       points: [{ x: wizCenter, y: wizLos + (isOL ? 0 : 60) }],
-      color: getPositionColor(positionNames[posKey] || posKey),
-      label: positionNames[posKey] || posKey,
+      color: getPositionColor(displayName),
+      label: label,
       shape: isOL ? 'text-only' : 'circle',
       variant: 'filled',
       fontSize: isOL ? 50 : undefined,
@@ -1085,12 +1163,18 @@ export default function PlayDiagramEditor({
   const resetFormation = () => {
     if (!confirm('Reset to default formation? This will clear your current diagram.')) return;
     // If a personnel is selected, use its positions; otherwise use base personnel
+    // Filter against availableSkillPositions to remove legacy positions (WR, FB, etc.)
     const selectedGrouping = personnelGroupings.find(g => g.id === selectedPersonnelId);
-    const positionsToUse = selectedGrouping
-      ? selectedGrouping.positions.filter(p => !OL_POSITIONS.includes(p))
-      : baseSkillPositions;
+    let positionsToUse;
+    if (selectedGrouping) {
+      const rawPositions = selectedGrouping.positions.filter(p => !OL_POSITIONS.includes(p));
+      const filtered = rawPositions.filter(p => availableSkillPositions.includes(p));
+      positionsToUse = filtered.length > 0 ? filtered : DEFAULT_SKILL_POSITIONS;
+    } else {
+      positionsToUse = finalBaseSkillPositions;
+    }
     const defaultFormation = isWizSkill
-      ? getWizSkillFormation(positionColors, positionNames, positionsToUse.length > 0 ? positionsToUse : DEFAULT_SKILL_POSITIONS)
+      ? getWizSkillFormation(positionColors, positionNames, positionWizAbbreviations, positionsToUse.length > 0 ? positionsToUse : DEFAULT_SKILL_POSITIONS)
       : getDefaultWizOLFormation();
     setElements(defaultFormation);
     updateHistory(defaultFormation);
@@ -1246,7 +1330,9 @@ export default function PlayDiagramEditor({
       const pointerEvents = isInteractionTool ? 'all' : 'none';
 
       // Always use latest color from positionColors, handling renamed positions
-      const effectiveColor = getPositionColor(el.label) || el.color;
+      // Use positionKey (e.g., 'LG') if available, otherwise fall back to label (e.g., 'G')
+      const colorLookupKey = el.positionKey || el.label;
+      const effectiveColor = getPositionColor(positionNames[colorLookupKey] || colorLookupKey) || el.color;
 
       if (el.shape === 'text-only') {
         const tSize = el.fontSize || (isWizOline ? 170 : 50);

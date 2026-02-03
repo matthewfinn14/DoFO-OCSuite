@@ -89,9 +89,11 @@ const renderArrowHead = (points, color, strokeWidth = 7) => {
 };
 
 // Default position colors - matches the colors shown in Name Positions tab
+// Includes T and G for WIZ abbreviation compatibility (old data may have these labels)
 const DEFAULT_POSITION_COLORS = {
   QB: '#1e3a5f', RB: '#3b82f6', FB: '#0891b2', WR: '#a855f7', TE: '#f97316',
   LT: '#64748b', LG: '#64748b', C: '#64748b', RG: '#64748b', RT: '#64748b',
+  T: '#64748b', G: '#64748b', // WIZ abbreviations for tackles and guards
   X: '#a855f7', Y: '#22c55e', Z: '#eab308', H: '#06b6d4', F: '#f97316',
   A: '#f97316', B: '#3b82f6'
 };
@@ -174,33 +176,44 @@ export default function DiagramPreview({
     return label;
   };
 
-  // Helper to get effective color for a position label, handling renamed positions
-  const getEffectiveColor = (label, storedColor) => {
-    // 1. Direct lookup by label (display name)
+  // Helper to get effective color for a position, handling renamed positions
+  // positionKey is the canonical key (e.g., 'LG'), label is what's displayed (e.g., 'G')
+  const getEffectiveColor = (label, storedColor, positionKey) => {
+    // 1. Check by positionKey first (most specific - e.g., 'LG' instead of 'G')
+    if (positionKey && positionColors[positionKey]) {
+      return positionColors[positionKey];
+    }
+
+    // 2. Check defaults by positionKey
+    if (positionKey && DEFAULT_POSITION_COLORS[positionKey]) {
+      return DEFAULT_POSITION_COLORS[positionKey];
+    }
+
+    // 3. Direct lookup by label (display name)
     if (positionColors[label]) {
       return positionColors[label];
     }
 
-    // 2. Reverse lookup: find position key where positionNames[key] === label
-    const posKey = Object.keys(positionNames).find(key => positionNames[key] === label);
+    // 4. Reverse lookup: find position key where positionNames[key] === label
+    const foundKey = Object.keys(positionNames).find(key => positionNames[key] === label);
 
-    // 3. Check positionColors by original key
-    if (posKey && positionColors[posKey]) {
-      return positionColors[posKey];
+    // 5. Check positionColors by found key
+    if (foundKey && positionColors[foundKey]) {
+      return positionColors[foundKey];
     }
 
-    // 4. Check defaults using the original key (preferred) or label
-    const keyForDefault = posKey || label;
+    // 6. Check defaults using the found key or label
+    const keyForDefault = foundKey || label;
     if (DEFAULT_POSITION_COLORS[keyForDefault]) {
       return DEFAULT_POSITION_COLORS[keyForDefault];
     }
 
-    // 5. Also check defaults with label directly
+    // 7. Also check defaults with label directly
     if (DEFAULT_POSITION_COLORS[label]) {
       return DEFAULT_POSITION_COLORS[label];
     }
 
-    // 6. Fall back to stored color (might be stale but better than nothing)
+    // 8. Fall back to stored color (might be stale but better than nothing)
     if (storedColor) {
       return storedColor;
     }
@@ -220,7 +233,8 @@ export default function DiagramPreview({
         // Get the current display name for this position (handles renamed positions)
         const displayLabel = getEffectiveLabel(el.label, el.positionKey);
         // Use positionColors lookup, falling back to stored color, then defaults
-        const effectiveColor = getEffectiveColor(displayLabel, el.color);
+        // Pass positionKey so it can check specific keys (LG/RG) before generic (G)
+        const effectiveColor = getEffectiveColor(displayLabel, el.color, el.positionKey);
 
         if (el.shape === 'text-only') {
           const tSize = el.fontSize || (isWizSkill ? 50 : 170);

@@ -804,13 +804,18 @@ export function SchoolProvider({ children }) {
   const playsArray = Object.values(plays);
 
   /**
-   * Get offense positions (non-OL skill positions) from setup config
+   * Get offense positions from setup config
+   * Matches the positions shown in Setup.jsx Name Positions tab
    */
   const offensePositions = (() => {
     const hidden = setupConfig?.hiddenPositions?.OFFENSE || [];
     const custom = setupConfig?.customPositions?.OFFENSE || [];
-    const defaults = ['QB', 'RB', 'FB', 'WR', 'TE', 'X', 'Y', 'Z', 'H', 'F', 'A', 'B'];
-    const visible = defaults.filter(p => !hidden.includes(p));
+    // Core positions that match Setup.jsx DEFAULT_POSITIONS.OFFENSE
+    // OL: LT, LG, C, RG, RT (linemen)
+    // Skill: QB, RB, X, Y, Z, H
+    // Note: WR, TE, FB, F, A, B are NOT defaults - must be added as custom positions
+    const corePositions = ['LT', 'LG', 'C', 'RG', 'RT', 'QB', 'RB', 'X', 'Y', 'Z', 'H'];
+    const visible = corePositions.filter(p => !hidden.includes(p));
     const customKeys = custom.map(p => p.key).filter(Boolean);
     return [...visible, ...customKeys];
   })();
