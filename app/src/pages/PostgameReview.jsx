@@ -1101,43 +1101,269 @@ function GamePlayCard({ gamePlay, matchedPlay, plays, onOpenMatch, onUpdateRevie
   );
 }
 
+// Calculate detailed stats for a set of plays
+function calculateDetailedStats(plays) {
+  if (!plays || plays.length === 0) return null;
+
+  let rushAttempts = 0;
+  let rushYards = 0;
+  let passAttempts = 0;
+  let passYards = 0;
+  let completions = 0;
+  let explosives = 0;
+
+  // Down efficiency tracking
+  const downStats = {
+    1: { attempts: 0, successful: 0 },
+    2: { attempts: 0, successful: 0 },
+    3: { attempts: 0, successful: 0 },
+    4: { attempts: 0, successful: 0 }
+  };
+
+  // Track best plays
+  const allPlays = [];
+
+  plays.forEach(p => {
+    const yards = p.gainLoss || 0;
+    const result = (p.result || '').toLowerCase();
+    const isRun = p.playType === 'Run' || result.includes('rush') || result.includes('run');
+    const isIncomplete = result.includes('inc') || result.includes('incomplete');
+    const isSack = result.includes('sack');
+
+    // Track all plays for "best plays"
+    allPlays.push({
+      ...p,
+      yards,
+      isRun
+    });
+
+    if (isRun) {
+      rushAttempts++;
+      rushYards += yards;
+      if (yards >= 12) explosives++;
+    } else {
+      passAttempts++;
+      passYards += yards;
+      // Count completions (positive yards or result contains completion indicators, not incomplete/sack)
+      if (!isIncomplete && !isSack && yards > 0) {
+        completions++;
+      }
+      if (yards >= 16) explosives++;
+    }
+
+    // Down efficiency
+    const down = p.down;
+    if (down >= 1 && down <= 4) {
+      downStats[down].attempts++;
+      const distance = p.distance || 0;
+      // Success = got the first down or TD
+      const gotFirstDown = yards >= distance;
+      const gotTD = result.includes('td') || result.includes('touchdown');
+      if (gotFirstDown || gotTD) {
+        downStats[down].successful++;
+      }
+    }
+  });
+
+  // Sort for best plays (top 3 by yards)
+  const bestPlays = allPlays
+    .filter(p => (p.yards || 0) > 0)
+    .sort((a, b) => (b.yards || 0) - (a.yards || 0))
+    .slice(0, 3);
+
+  return {
+    rushAttempts,
+    rushYards,
+    passAttempts,
+    passYards,
+    completions,
+    explosives,
+    totalYards: rushYards + passYards,
+    yardsPerCarry: rushAttempts > 0 ? (rushYards / rushAttempts).toFixed(1) : '0.0',
+    yardsPerAttempt: passAttempts > 0 ? (passYards / passAttempts).toFixed(1) : '0.0',
+    yardsPerCompletion: completions > 0 ? (passYards / completions).toFixed(1) : '0.0',
+    downStats,
+    bestPlays
+  };
+}
+
 // Summary Stats Card
 function SummaryStatsCard({ summary, isLight }) {
   if (!summary) return null;
 
+  const stats = summary.detailedStats;
+
   return (
-    <div className={`grid grid-cols-5 gap-4 p-4 rounded-xl ${
+    <div className={`rounded-xl ${
       isLight ? 'bg-gray-50 border border-gray-200' : 'bg-slate-800/30 border border-slate-700'
     }`}>
-      <div className="text-center">
-        <div className={`text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
-          {summary.totalPlays}
+      {/* Top row - main stats */}
+      <div className="grid grid-cols-6 gap-4 p-4 border-b border-slate-700/50">
+        <div className="text-center">
+          <div className={`text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+            {summary.offensivePlays}
+          </div>
+          <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Plays</div>
         </div>
-        <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Total Plays</div>
+        <div className="text-center">
+          <div className={`text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+            {stats?.totalYards || 0}
+          </div>
+          <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Total Yards</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-emerald-400">
+            {stats?.rushYards || 0}
+          </div>
+          <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Rush Yds</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-sky-400">
+            {stats?.passYards || 0}
+          </div>
+          <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Pass Yds</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-amber-400">
+            {stats?.explosives || 0}
+          </div>
+          <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Explosives</div>
+        </div>
+        <div className="text-center">
+          <div className={`text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+            {((stats?.totalYards || 0) / (summary.offensivePlays || 1)).toFixed(1)}
+          </div>
+          <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Yds/Play</div>
+        </div>
       </div>
-      <div className="text-center">
-        <div className={`text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
-          {summary.offensivePlays}
+
+      {/* Second row - rushing and passing details */}
+      <div className="grid grid-cols-2 gap-4 p-4">
+        {/* Rushing */}
+        <div className={`p-3 rounded-lg ${isLight ? 'bg-emerald-50' : 'bg-emerald-500/10'}`}>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
+            <span className={`text-sm font-medium ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
+              Rushing
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div>
+              <div className={`text-lg font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                {stats?.rushAttempts || 0}
+              </div>
+              <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Carries</div>
+            </div>
+            <div>
+              <div className={`text-lg font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                {stats?.rushYards || 0}
+              </div>
+              <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Yards</div>
+            </div>
+            <div>
+              <div className={`text-lg font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                {stats?.yardsPerCarry || '0.0'}
+              </div>
+              <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>YPC</div>
+            </div>
+          </div>
         </div>
-        <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Offensive</div>
+
+        {/* Passing */}
+        <div className={`p-3 rounded-lg ${isLight ? 'bg-sky-50' : 'bg-sky-500/10'}`}>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-2 h-2 rounded-full bg-sky-400"></div>
+            <span className={`text-sm font-medium ${isLight ? 'text-sky-700' : 'text-sky-400'}`}>
+              Passing
+            </span>
+          </div>
+          <div className="grid grid-cols-4 gap-2 text-center">
+            <div>
+              <div className={`text-lg font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                {stats?.completions || 0}/{stats?.passAttempts || 0}
+              </div>
+              <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Comp/Att</div>
+            </div>
+            <div>
+              <div className={`text-lg font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                {stats?.passYards || 0}
+              </div>
+              <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Yards</div>
+            </div>
+            <div>
+              <div className={`text-lg font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                {stats?.yardsPerAttempt || '0.0'}
+              </div>
+              <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>YPA</div>
+            </div>
+            <div>
+              <div className={`text-lg font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                {stats?.yardsPerCompletion || '0.0'}
+              </div>
+              <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Y/C</div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div className="text-center">
-        <div className="text-2xl font-bold text-emerald-400">
-          {summary.runsVsPasses?.runs || 0}
+
+      {/* Third row - down efficiency and best plays */}
+      <div className="grid grid-cols-2 gap-4 p-4 pt-0">
+        {/* Down Efficiency */}
+        <div className={`p-3 rounded-lg ${isLight ? 'bg-gray-100' : 'bg-slate-700/30'}`}>
+          <div className={`text-sm font-medium mb-2 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+            Down Efficiency
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {[1, 2, 3, 4].map(down => {
+              const ds = stats?.downStats?.[down] || { attempts: 0, successful: 0 };
+              const pct = ds.attempts > 0 ? Math.round((ds.successful / ds.attempts) * 100) : 0;
+              return (
+                <div key={down} className="text-center">
+                  <div className={`text-sm font-bold ${
+                    pct >= 50 ? 'text-emerald-400' : pct >= 30 ? 'text-amber-400' : isLight ? 'text-gray-900' : 'text-white'
+                  }`}>
+                    {ds.successful}/{ds.attempts}
+                  </div>
+                  <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
+                    {down === 1 ? '1st' : down === 2 ? '2nd' : down === 3 ? '3rd' : '4th'}
+                  </div>
+                  <div className={`text-xs ${
+                    pct >= 50 ? 'text-emerald-400' : pct >= 30 ? 'text-amber-400' : isLight ? 'text-gray-400' : 'text-slate-500'
+                  }`}>
+                    {pct}%
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Runs</div>
-      </div>
-      <div className="text-center">
-        <div className="text-2xl font-bold text-sky-400">
-          {summary.runsVsPasses?.passes || 0}
+
+        {/* Best Plays */}
+        <div className={`p-3 rounded-lg ${isLight ? 'bg-amber-50' : 'bg-amber-500/10'}`}>
+          <div className={`text-sm font-medium mb-2 ${isLight ? 'text-amber-700' : 'text-amber-400'}`}>
+            Best Plays
+          </div>
+          <div className="space-y-1">
+            {(stats?.bestPlays || []).length > 0 ? (
+              stats.bestPlays.map((play, idx) => (
+                <div key={idx} className={`flex items-center justify-between text-xs ${
+                  isLight ? 'text-gray-600' : 'text-slate-400'
+                }`}>
+                  <span className="truncate flex-1">
+                    {play.playName || play.odCall || `Play ${play.rowNumber || idx + 1}`}
+                  </span>
+                  <span className={`font-bold ml-2 ${play.isRun ? 'text-emerald-400' : 'text-sky-400'}`}>
+                    +{play.yards}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className={`text-xs ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
+                No plays yet
+              </div>
+            )}
+          </div>
         </div>
-        <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Passes</div>
-      </div>
-      <div className="text-center">
-        <div className="text-2xl font-bold text-amber-400">
-          {summary.explosivePlays || 0}
-        </div>
-        <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Explosives</div>
       </div>
     </div>
   );
@@ -1218,8 +1444,9 @@ function SeriesGroup({ seriesNum, plays, outcome, children, isLight, isExpanded,
 
   const colors = colorClasses[outcome.color] || colorClasses.slate;
 
-  // Calculate series stats
-  const totalYards = plays.reduce((sum, p) => sum + (p.gainLoss || 0), 0);
+  // Calculate detailed series stats
+  const seriesStats = calculateDetailedStats(plays);
+  const totalYards = seriesStats?.totalYards || 0;
   const firstPlay = plays[0];
   const lastPlay = plays[plays.length - 1];
 
@@ -1246,6 +1473,21 @@ function SeriesGroup({ seriesNum, plays, outcome, children, isLight, isExpanded,
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {/* Mini stats for series */}
+          <div className="hidden sm:flex items-center gap-3">
+            {seriesStats?.rushAttempts > 0 && (
+              <div className="flex items-center gap-1">
+                <span className="text-emerald-400 text-xs font-medium">{seriesStats.rushYards}</span>
+                <span className={`text-xs ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>rush</span>
+              </div>
+            )}
+            {seriesStats?.passAttempts > 0 && (
+              <div className="flex items-center gap-1">
+                <span className="text-sky-400 text-xs font-medium">{seriesStats.passYards}</span>
+                <span className={`text-xs ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>pass</span>
+              </div>
+            )}
+          </div>
           <div className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
             {firstPlay?.yardLine < 0 ? `Own ${Math.abs(firstPlay?.yardLine)}` : `Opp ${firstPlay?.yardLine}`}
             {' → '}
@@ -1254,6 +1496,41 @@ function SeriesGroup({ seriesNum, plays, outcome, children, isLight, isExpanded,
           {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
         </div>
       </button>
+
+      {/* Expanded Stats Bar */}
+      {isExpanded && seriesStats && (
+        <div className={`px-4 py-2 border-t ${isLight ? 'border-gray-200 bg-gray-50' : 'border-slate-700 bg-slate-800/50'}`}>
+          <div className="flex flex-wrap items-center gap-4 text-xs">
+            {/* Rushing stats */}
+            {seriesStats.rushAttempts > 0 && (
+              <div className="flex items-center gap-2">
+                <span className={`font-medium ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`}>Rush:</span>
+                <span className={isLight ? 'text-gray-600' : 'text-slate-400'}>
+                  {seriesStats.rushAttempts} att, {seriesStats.rushYards} yds, {seriesStats.yardsPerCarry} YPC
+                </span>
+              </div>
+            )}
+            {/* Passing stats */}
+            {seriesStats.passAttempts > 0 && (
+              <div className="flex items-center gap-2">
+                <span className={`font-medium ${isLight ? 'text-sky-600' : 'text-sky-400'}`}>Pass:</span>
+                <span className={isLight ? 'text-gray-600' : 'text-slate-400'}>
+                  {seriesStats.completions}/{seriesStats.passAttempts}, {seriesStats.passYards} yds, {seriesStats.yardsPerAttempt} YPA
+                </span>
+              </div>
+            )}
+            {/* Best play in series */}
+            {seriesStats.bestPlays?.[0] && (
+              <div className="flex items-center gap-2">
+                <span className={`font-medium ${isLight ? 'text-amber-600' : 'text-amber-400'}`}>Best:</span>
+                <span className={isLight ? 'text-gray-600' : 'text-slate-400'}>
+                  {seriesStats.bestPlays[0].playName || seriesStats.bestPlays[0].odCall || 'Play'} (+{seriesStats.bestPlays[0].yards})
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Plays */}
       {isExpanded && (
@@ -1390,36 +1667,18 @@ export default function PostgameReview() {
     const allPlays = gameReview.plays || [];
     const offensive = allPlays.filter(p => p.odk === 'O' || !p.odk);
 
-    let runs = 0;
-    let passes = 0;
-    let explosives = 0;
-    let efficient = 0;
-
-    offensive.forEach(p => {
-      // Count runs vs passes
-      if (p.playType === 'Run' || p.result?.toLowerCase().includes('rush')) {
-        runs++;
-        // Explosive run = 12+ yards
-        if ((p.gainLoss || 0) >= 12) explosives++;
-        // Efficient run = gained expected yards based on down
-        const expected = p.down === 1 ? 4 : p.down === 2 ? Math.ceil((p.distance || 0) / 2) : p.distance || 0;
-        if ((p.gainLoss || 0) >= expected) efficient++;
-      } else {
-        passes++;
-        // Explosive pass = 16+ yards
-        if ((p.gainLoss || 0) >= 16) explosives++;
-        // Efficient pass = similar logic
-        const expected = p.down === 1 ? 4 : p.down === 2 ? Math.ceil((p.distance || 0) / 2) : p.distance || 0;
-        if ((p.gainLoss || 0) >= expected) efficient++;
-      }
-    });
+    // Calculate detailed stats using the helper function
+    const detailedStats = calculateDetailedStats(offensive);
 
     return {
       totalPlays: allPlays.length,
       offensivePlays: offensive.length,
-      runsVsPasses: { runs, passes },
-      efficiency: { efficient, total: offensive.length },
-      explosivePlays: explosives
+      runsVsPasses: {
+        runs: detailedStats?.rushAttempts || 0,
+        passes: detailedStats?.passAttempts || 0
+      },
+      explosivePlays: detailedStats?.explosives || 0,
+      detailedStats
     };
   }, [gameReview.plays]);
 
@@ -1959,6 +2218,24 @@ export default function PostgameReview() {
                 >
                   <Upload size={14} />
                   Re-import
+                </button>
+                <button
+                  onClick={() => {
+                    const newTerms = detectNewTerms(offensivePlays);
+                    if (newTerms) {
+                      setDetectedNewTerms(newTerms);
+                      setShowNewTerms(true);
+                    } else {
+                      // No new terms found - could show a toast/message
+                      alert('No new terms detected in the imported plays.');
+                    }
+                  }}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium ${
+                    isLight ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  }`}
+                >
+                  <Search size={14} />
+                  Scan for Terms
                 </button>
                 <button
                   onClick={() => setShowFilmWizard(true)}
