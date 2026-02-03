@@ -37,7 +37,6 @@ export default function PlayEditor({
   // Get position colors and names from setup config for WIZ Skill editor
   const positionColors = useMemo(() => setupConfig?.positionColors || {}, [setupConfig?.positionColors]);
   const positionNames = useMemo(() => setupConfig?.positionNames || {}, [setupConfig?.positionNames]);
-  const positionWizAbbreviations = useMemo(() => setupConfig?.positionWizAbbreviations || {}, [setupConfig?.positionWizAbbreviations]);
   const personnelGroupings = useMemo(() => setupConfig?.personnelGroupings || [], [setupConfig?.personnelGroupings]);
   const customDefaultPositions = useMemo(() => setupConfig?.defaultFormationPositions || {}, [setupConfig?.defaultFormationPositions]);
 
@@ -2132,7 +2131,6 @@ export default function PlayEditor({
               offensePositions={offensePositions}
               positionColors={positionColors}
               positionNames={positionNames}
-              positionWizAbbreviations={positionWizAbbreviations}
               customDefaultPositions={customDefaultPositions}
               onSaveDefaultPositions={handleSaveDefaultPositions}
               playName={formData.formation ? `${formData.formation} ${formData.name}` : formData.name}

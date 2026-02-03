@@ -179,29 +179,27 @@ export default function DiagramPreview({
   // Helper to get effective color for a position, handling renamed positions
   // positionKey is the canonical key (e.g., 'LG'), label is what's displayed (e.g., 'G')
   const getEffectiveColor = (label, storedColor, positionKey) => {
-    // Priority: User colors (positionColors) > Defaults > Stored color
-
     // 1. Check by positionKey first (most specific - e.g., 'LG' instead of 'G')
     if (positionKey && positionColors[positionKey]) {
       return positionColors[positionKey];
     }
 
-    // 2. Direct lookup by label (display name)
+    // 2. Check defaults by positionKey
+    if (positionKey && DEFAULT_POSITION_COLORS[positionKey]) {
+      return DEFAULT_POSITION_COLORS[positionKey];
+    }
+
+    // 3. Direct lookup by label (display name)
     if (positionColors[label]) {
       return positionColors[label];
     }
 
-    // 3. Reverse lookup: find position key where positionNames[key] === label
+    // 4. Reverse lookup: find position key where positionNames[key] === label
     const foundKey = Object.keys(positionNames).find(key => positionNames[key] === label);
 
-    // 4. Check positionColors by found key
+    // 5. Check positionColors by found key
     if (foundKey && positionColors[foundKey]) {
       return positionColors[foundKey];
-    }
-
-    // 5. NOW check defaults - only after exhausting positionColors
-    if (positionKey && DEFAULT_POSITION_COLORS[positionKey]) {
-      return DEFAULT_POSITION_COLORS[positionKey];
     }
 
     // 6. Check defaults using the found key or label
