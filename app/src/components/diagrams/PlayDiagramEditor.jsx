@@ -1335,6 +1335,9 @@ export default function PlayDiagramEditor({
       const colorLookupKey = el.positionKey || el.label;
       const effectiveColor = getPositionColor(positionNames[colorLookupKey] || colorLookupKey) || el.color;
 
+      // Get effective label: WIZ abbreviation → positionNames → stored label
+      const effectiveLabel = positionWizAbbreviations[el.positionKey] || positionWizAbbreviations[el.label] || positionNames[el.positionKey] || positionNames[el.label] || el.label;
+
       if (el.shape === 'text-only') {
         const tSize = el.fontSize || (isWizOline ? 170 : 50);
         return (
@@ -1378,7 +1381,7 @@ export default function PlayDiagramEditor({
               fill={effectiveColor}
               style={{ pointerEvents: 'none', userSelect: 'none', fontFamily: 'Arial, sans-serif' }}
             >
-              {positionNames[el.label] || el.label}
+              {effectiveLabel}
             </text>
           </g>
         );
@@ -1425,7 +1428,7 @@ export default function PlayDiagramEditor({
             fill={textColor}
             style={{ pointerEvents: 'none', userSelect: 'none', fontFamily: 'Arial, sans-serif' }}
           >
-            {positionNames[el.label] || el.label}
+            {effectiveLabel}
           </text>
         </g>
       );
