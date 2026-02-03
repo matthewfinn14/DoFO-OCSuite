@@ -19,8 +19,10 @@ import {
   UserCheck,
   HelpCircle,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Mic
 } from 'lucide-react';
+import { VoiceAlignmentWizard } from '../components/wizard/VoiceAlignmentWizard';
 
 // Collapsible Help Section component
 function HelpSection({ title, children, isLight = false }) {
@@ -196,6 +198,15 @@ export default function Dashboard() {
   // Local state for debounced updates
   const [localCulture, setLocalCulture] = useState(null);
 
+  // Voice wizard state
+  const [showVoiceWizard, setShowVoiceWizard] = useState(false);
+
+  // Handle saving from voice wizard
+  const handleVoiceWizardSave = (newCulture) => {
+    setLocalCulture(newCulture);
+    updateCulture(newCulture);
+  };
+
   // Use local state if editing, otherwise use context
   const currentCulture = localCulture || culture;
 
@@ -326,14 +337,37 @@ export default function Dashboard() {
 
   return (
     <div className="p-4 max-w-7xl mx-auto">
+      {/* Voice Alignment Wizard */}
+      <VoiceAlignmentWizard
+        isOpen={showVoiceWizard}
+        onClose={() => setShowVoiceWizard(false)}
+        culture={currentCulture}
+        onSave={handleVoiceWizardSave}
+        isLight={isLight}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <h1 className={`text-xl font-bold flex items-center gap-2 ${isLight ? 'text-gray-800' : 'text-white'}`}>
           <Target size={24} /> Alignment Dashboard
         </h1>
-        {!isHeadCoach && (
-          <span className={`text-xs px-3 py-1 rounded-full ${isLight ? 'text-gray-500 bg-gray-200' : 'text-slate-400 bg-slate-800'}`}>View Only</span>
-        )}
+        <div className="flex items-center gap-3">
+          {isHeadCoach && (
+            <button
+              onClick={() => setShowVoiceWizard(true)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${isLight
+                ? 'bg-sky-100 text-sky-700 hover:bg-sky-200 border border-sky-200'
+                : 'bg-sky-500/20 text-sky-400 hover:bg-sky-500/30 border border-sky-500/30'
+              }`}
+            >
+              <Mic size={16} />
+              DoFO Guided Setup
+            </button>
+          )}
+          {!isHeadCoach && (
+            <span className={`text-xs px-3 py-1 rounded-full ${isLight ? 'text-gray-500 bg-gray-200' : 'text-slate-400 bg-slate-800'}`}>View Only</span>
+          )}
+        </div>
       </div>
 
       {/* Help Section */}
