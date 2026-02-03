@@ -136,9 +136,10 @@ const getWizSkillFormation = (positionColors = {}, positionNames = {}, positionW
     return positionWizAbbreviations[posKey] || defaultLabel;
   };
 
-  // Get label for skill position: positionNames → key
+  // Get label for skill position: WIZ abbreviation → positionNames → key
+  // WIZ abbreviations allow shorter labels specifically for wristband cards
   const getSkillLabel = (posKey) => {
-    return positionNames[posKey] || posKey;
+    return positionWizAbbreviations[posKey] || positionNames[posKey] || posKey;
   };
 
   const wizCenter = 475; // 950/2 for wiz-card viewBox

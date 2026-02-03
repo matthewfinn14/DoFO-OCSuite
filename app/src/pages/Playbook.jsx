@@ -285,6 +285,7 @@ export default function Playbook() {
   // Position colors and names from setupConfig (for diagram previews)
   const positionColors = useMemo(() => setupConfig?.positionColors || {}, [setupConfig?.positionColors]);
   const positionNames = useMemo(() => setupConfig?.positionNames || {}, [setupConfig?.positionNames]);
+  const positionWizAbbreviations = useMemo(() => setupConfig?.positionWizAbbreviations || {}, [setupConfig?.positionWizAbbreviations]);
 
   // Filter plays
   const filteredPlays = useMemo(() => {
@@ -792,6 +793,7 @@ export default function Playbook() {
               onOpenDetails={openPlayDetails}
               positionColors={positionColors}
               positionNames={positionNames}
+              positionWizAbbreviations={positionWizAbbreviations}
             />
           ))}
         </div>

@@ -108,7 +108,8 @@ export default function DiagramPreview({
   fillContainer = false, // When true, fills parent container without borders
   showBackground = true,
   positionColors = {}, // User's position colors from setup
-  positionNames = {} // User's position names from setup (for reverse lookup of renamed positions)
+  positionNames = {}, // User's position names from setup (for reverse lookup of renamed positions)
+  positionWizAbbreviations = {} // WIZ-specific short labels for positions
 }) {
   // Generate unique ID for this preview instance
   const previewId = useMemo(() => `preview-${Math.random().toString(36).substr(2, 9)}`, []);
@@ -163,57 +164,71 @@ export default function DiagramPreview({
   }
 
   // Helper to get effective label, converting from key to display name if renamed
+  // Priority: WIZ abbreviation → positionNames → stored label
   const getEffectiveLabel = (label, positionKey) => {
-    // Priority 1: If positionKey is set and has a display name, use that (most reliable)
+    // Priority 1: Check for WIZ abbreviation (short labels for wristband cards)
+    if (positionKey && positionWizAbbreviations[positionKey]) {
+      return positionWizAbbreviations[positionKey];
+    }
+    if (positionWizAbbreviations[label]) {
+      return positionWizAbbreviations[label];
+    }
+    // Priority 2: If positionKey is set and has a display name, use that
     if (positionKey && positionNames[positionKey]) {
       return positionNames[positionKey];
     }
-    // Priority 2: If label is a key that has been renamed, use the display name
+    // Priority 3: If label is a key that has been renamed, use the display name
     if (positionNames[label]) {
       return positionNames[label];
     }
-    // Otherwise return the original label (might be current display name or unmapped position)
+    // Otherwise return the original label
     return label;
   };
 
   // Helper to get effective color for a position, handling renamed positions
-  // positionKey is the canonical key (e.g., 'LG'), label is what's displayed (e.g., 'G')
+  // Colors are stored by DISPLAY NAME in positionColors (e.g., if H is renamed to A, color is under 'A')
+  // positionKey is the canonical key (e.g., 'H'), label is what's currently displayed (e.g., 'A')
   const getEffectiveColor = (label, storedColor, positionKey) => {
-    // 1. Check by positionKey first (most specific - e.g., 'LG' instead of 'G')
+    // First, get the current display name for this position key
+    // This handles renamed positions: positionNames['H'] = 'A'
+    const displayName = positionKey ? (positionNames[positionKey] || positionKey) : label;
+
+    // 1. Check positionColors by display name (how colors are stored in Setup)
+    if (positionColors[displayName]) {
+      return positionColors[displayName];
+    }
+
+    // 2. Check positionColors by positionKey (fallback for legacy data)
     if (positionKey && positionColors[positionKey]) {
       return positionColors[positionKey];
     }
 
-    // 2. Check defaults by positionKey
-    if (positionKey && DEFAULT_POSITION_COLORS[positionKey]) {
-      return DEFAULT_POSITION_COLORS[positionKey];
-    }
-
-    // 3. Direct lookup by label (display name)
+    // 3. Check positionColors by label directly
     if (positionColors[label]) {
       return positionColors[label];
     }
 
     // 4. Reverse lookup: find position key where positionNames[key] === label
     const foundKey = Object.keys(positionNames).find(key => positionNames[key] === label);
-
-    // 5. Check positionColors by found key
     if (foundKey && positionColors[foundKey]) {
       return positionColors[foundKey];
     }
 
-    // 6. Check defaults using the found key or label
-    const keyForDefault = foundKey || label;
-    if (DEFAULT_POSITION_COLORS[keyForDefault]) {
-      return DEFAULT_POSITION_COLORS[keyForDefault];
+    // 5. NOW check defaults - only after exhausting all positionColors lookups
+    // Check by positionKey first (most specific for OL: LG, RG, etc.)
+    if (positionKey && DEFAULT_POSITION_COLORS[positionKey]) {
+      return DEFAULT_POSITION_COLORS[positionKey];
     }
 
-    // 7. Also check defaults with label directly
+    // 6. Check defaults by display name or label
+    if (DEFAULT_POSITION_COLORS[displayName]) {
+      return DEFAULT_POSITION_COLORS[displayName];
+    }
     if (DEFAULT_POSITION_COLORS[label]) {
       return DEFAULT_POSITION_COLORS[label];
     }
 
-    // 8. Fall back to stored color (might be stale but better than nothing)
+    // 7. Fall back to stored color (might be stale but better than nothing)
     if (storedColor) {
       return storedColor;
     }
