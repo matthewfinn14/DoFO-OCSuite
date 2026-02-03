@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { X, Save, Trash2, Upload, ChevronDown, ChevronRight, Edit3, Library, GripVertical, Handshake, Link2, MapPin, Hash, AlertTriangle, Eye, Layers, History, Calendar, ClipboardList, Trophy } from 'lucide-react';
+import { X, Save, Trash2, Upload, ChevronDown, ChevronRight, Edit3, Library, GripVertical, Handshake, Link2, MapPin, Hash, AlertTriangle, Eye, Layers, History, Calendar, ClipboardList, Trophy, Star, Film } from 'lucide-react';
 import { useSchool } from '../../context/SchoolContext';
 import PlayDiagramEditor from '../diagrams/PlayDiagramEditor';
 import DiagramPreview from '../diagrams/DiagramPreview';
@@ -62,9 +62,9 @@ export default function PlayEditor({
     return [...visible, ...customKeys];
   }, [setupConfig?.hiddenPositions?.OFFENSE, setupConfig?.customPositions?.OFFENSE]);
 
-  // Calculate play history - finds all practice script instances and game calls for this play
+  // Calculate play history - finds all practice script instances, game calls, and film reviews for this play
   const playHistory = useMemo(() => {
-    if (!play?.id || !weeks) return { practiceInstances: [], gameInstances: [] };
+    if (!play?.id || !weeks) return { practiceInstances: [], gameInstances: [], filmReviews: [] };
 
     const practiceInstances = [];
     const gameInstances = [];
@@ -121,6 +121,14 @@ export default function PlayEditor({
       });
     });
 
+    // Get film reviews from the play itself
+    const filmReviews = (play.filmReviews || []).sort((a, b) => {
+      if (!a.date && !b.date) return 0;
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return new Date(b.date) - new Date(a.date);
+    });
+
     // Sort by date (most recent first)
     practiceInstances.sort((a, b) => {
       if (!a.date && !b.date) return 0;
@@ -136,8 +144,8 @@ export default function PlayEditor({
       return new Date(b.date) - new Date(a.date);
     });
 
-    return { practiceInstances, gameInstances };
-  }, [play?.id, weeks]);
+    return { practiceInstances, gameInstances, filmReviews };
+  }, [play?.id, play?.filmReviews, weeks]);
 
   // Play type options for offense
   const PLAY_TYPES = [
@@ -944,181 +952,7 @@ export default function PlayEditor({
                 </>
               )}
 
-              {/* Play Call Chain Parsing - only in Advanced mode or when syntax has more than 2 parts */}
-              {isAdvancedMode && playCallSyntax.length > 2 && (
-                <div className="pt-3 border-t border-slate-700">
-                  <label className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">
-                    Play Call Breakdown
-                    <span className="ml-2 text-purple-400 text-[10px] font-normal">(Advanced)</span>
-                  </label>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {/* Show tokens from formation + play name */}
-                    {(formData.formation || formData.name) ? (
-                      `${formData.formation || ''} ${formData.name || ''}`.trim().split(/\s+/).filter(w => w.trim()).map((word, idx) => {
-                        // Check if word is used in any slot (including concatenated values)
-                        const isUsed = Object.values(formData.playCallParts || {}).some(
-                          val => val && val.split(/\s+/).includes(word)
-                        );
-                        return (
-                          <div
-                            key={`${word}-${idx}`}
-                            draggable={!isUsed}
-                            onDragStart={(e) => {
-                              setDraggedWord(word);
-                              e.dataTransfer.setData('text/plain', word);
-                            }}
-                            onDragEnd={() => setDraggedWord(null)}
-                            className={`px-2.5 py-1 rounded text-sm font-medium cursor-grab active:cursor-grabbing flex items-center gap-1 ${
-                              isUsed
-                                ? 'bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'
-                                : 'bg-sky-500/20 text-sky-400 border border-sky-500/30 hover:bg-sky-500/30'
-                            }`}
-                          >
-                            {!isUsed && <GripVertical size={10} />}
-                            {word}
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <span className="text-slate-500 text-sm italic">Enter formation or play name above to see tokens</span>
-                    )}
-                  </div>
-
-                  {/* Syntax slots */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {playCallSyntax.map((slot) => {
-                      const slotValue = formData.playCallParts?.[slot.id] || '';
-                      // Use source category items if defined, otherwise fall back to term library
-                      const sourceItems = slot.sourceCategory && slot.sourceCategory !== 'custom'
-                        ? getSourceItems(slot.sourceCategory)
-                        : [];
-                      const slotTerms = termLibrary[slot.id] || [];
-                      const dropdownItems = sourceItems.length > 0 ? sourceItems : slotTerms.map(t => t.label);
-
-                      // Check if selected term has signals and apply them
-                      const handleTermSelection = (selectedValue, slotId) => {
-                        if (!selectedValue) return;
-
-                        // Find the term in the term library to check for signals
-                        const slotTermsForSignals = termLibrary[slotId] || [];
-                        const selectedTerm = slotTermsForSignals.find(t => t.label === selectedValue);
-
-                        const updates = {
-                          playCallParts: { ...formData.playCallParts, [slotId]: selectedValue }
-                        };
-
-                        // Apply any signals from the selected term
-                        if (selectedTerm?.signals) {
-                          const signals = selectedTerm.signals;
-                          // Auto-fill signaled fields
-                          if (signals.playType) {
-                            updates.playType = signals.playType;
-                          }
-                          // Add signaled values to playCallParts for other fields
-                          Object.entries(signals).forEach(([key, value]) => {
-                            if (key !== 'playType' && value) {
-                              // Auto-fill other playCallParts if they're empty
-                              if (!formData.playCallParts?.[key]) {
-                                updates.playCallParts[key] = value;
-                              }
-                            }
-                          });
-                        }
-
-                        setFormData(prev => ({ ...prev, ...updates }));
-                      };
-
-                      // Check if this slot's value was auto-filled by a signal
-                      const wasAutoFilled = (() => {
-                        // Check all terms in the library for signals that match this slot
-                        const allTerms = Object.values(termLibrary).flat();
-                        return allTerms.some(termGroup => {
-                          if (Array.isArray(termGroup)) {
-                            return termGroup.some(t =>
-                              t.signals?.[slot.id] === slotValue &&
-                              Object.values(formData.playCallParts || {}).includes(t.label)
-                            );
-                          }
-                          return false;
-                        });
-                      })();
-
-                      return (
-                        <div
-                          key={slot.id}
-                          onDragOver={(e) => {
-                            e.preventDefault();
-                            e.currentTarget.classList.add('border-sky-500', 'bg-sky-500/10');
-                          }}
-                          onDragLeave={(e) => {
-                            e.currentTarget.classList.remove('border-sky-500', 'bg-sky-500/10');
-                          }}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            e.currentTarget.classList.remove('border-sky-500', 'bg-sky-500/10');
-                            const word = e.dataTransfer.getData('text/plain');
-                            if (word) {
-                              // If slot already has a value, concatenate with space
-                              const existingValue = formData.playCallParts?.[slot.id] || '';
-                              if (existingValue) {
-                                const newValue = `${existingValue} ${word}`;
-                                setFormData(prev => ({
-                                  ...prev,
-                                  playCallParts: { ...prev.playCallParts, [slot.id]: newValue }
-                                }));
-                              } else {
-                                handleTermSelection(word, slot.id);
-                              }
-                            }
-                          }}
-                          className={`p-2 bg-slate-800 border border-dashed rounded-lg transition-colors ${
-                            wasAutoFilled ? 'border-amber-500/50 bg-amber-500/5' : 'border-slate-600'
-                          }`}
-                        >
-                          <div className="flex items-center gap-1 mb-1">
-                            <span className="text-[10px] text-slate-500 uppercase tracking-wide">
-                              {slot.label}
-                            </span>
-                            {wasAutoFilled && (
-                              <span className="text-[9px] px-1 py-0.5 bg-amber-500/20 text-amber-400 rounded">auto</span>
-                            )}
-                          </div>
-                          {slotValue ? (
-                            <div className="flex items-center justify-between">
-                              <span className="text-white font-medium text-sm">{slotValue}</span>
-                              <button
-                                onClick={() => setFormData(prev => ({
-                                  ...prev,
-                                  playCallParts: { ...prev.playCallParts, [slot.id]: '' }
-                                }))}
-                                className="p-0.5 text-slate-400 hover:text-red-400"
-                              >
-                                <X size={12} />
-                              </button>
-                            </div>
-                          ) : dropdownItems.length > 0 ? (
-                            <select
-                              id={`play-editor-slot-${slot.id}`}
-                              onChange={(e) => handleTermSelection(e.target.value, slot.id)}
-                              className="w-full px-1 py-0.5 bg-slate-700 border border-slate-600 rounded text-xs text-slate-400"
-                              value=""
-                            >
-                              <option value="">Select or drop...</option>
-                              {dropdownItems.map((item, i) => (
-                                <option key={i} value={item}>{item}</option>
-                              ))}
-                            </select>
-                          ) : (
-                            <div className="text-slate-500 text-xs">Drop here</div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Bucket & Concept Group - hidden in Basic mode, and hidden in Advanced when bucket already selected above */}
+              {/* Bucket & Concept Group */}
               {!isBasicMode && !(isAdvancedMode && phase === 'OFFENSE') && (
                 <div className="pt-3 border-t border-slate-700">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1374,253 +1208,45 @@ export default function PlayEditor({
                     </div>
                   </div>
                 )}
+
+                {/* Hash Preference */}
+                <div>
+                  <label className="flex items-center gap-1.5 text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
+                    <Hash size={12} />
+                    Hash Preference
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { id: 'left', label: 'Left Hash', icon: '◀' },
+                      { id: 'middle', label: 'Middle', icon: '⬛' },
+                      { id: 'right', label: 'Right Hash', icon: '▶' },
+                      { id: 'any', label: 'Any Hash', icon: '↔' },
+                    ].map(hash => {
+                      const isSelected = formData.hashPreference === hash.id;
+                      return (
+                        <button
+                          key={hash.id}
+                          type="button"
+                          onClick={() => setFormData(prev => ({
+                            ...prev,
+                            hashPreference: isSelected ? '' : hash.id
+                          }))}
+                          className={`px-2 py-1 rounded text-xs font-medium transition-all flex items-center gap-1 ${
+                            isSelected
+                              ? 'bg-sky-600 text-white ring-2 ring-sky-400 ring-offset-1 ring-offset-slate-900'
+                              : 'bg-slate-700/50 text-slate-400 hover:bg-slate-600/50'
+                          }`}
+                        >
+                          <span>{hash.icon}</span>
+                          {hash.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </Section>
           )}
-
-          {/* Game Plan Intel Section */}
-          <Section
-            title={
-              <span className="flex items-center gap-2">
-                <span className="text-sky-400">Game Plan Intel</span>
-                {(formData.playRating || formData.playObjectives?.length > 0 || formData.setupPlayId || formData.premiumLooks || formData.targetProgressions?.length > 0) && (
-                  <span className="px-1.5 py-0.5 bg-sky-500/20 text-sky-400 text-xs rounded">
-                    Tagged
-                  </span>
-                )}
-              </span>
-            }
-            isOpen={expandedSections.gameplan}
-            onToggle={() => toggleSection('gameplan')}
-            isLight={isLight}
-          >
-            <div className="space-y-5">
-              {/* How Do We Like It? */}
-              <div>
-                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
-                  How Do We Like It?
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { id: 'love', label: 'Love It', color: '#22c55e', emoji: '🔥' },
-                    { id: 'like', label: 'Like It', color: '#3b82f6', emoji: '👍' },
-                    { id: 'situational', label: 'Situational', color: '#f59e0b', emoji: '🎯' },
-                    { id: 'developing', label: 'Developing', color: '#8b5cf6', emoji: '🔧' },
-                  ].map(rating => {
-                    const isSelected = formData.playRating === rating.id;
-                    return (
-                      <button
-                        key={rating.id}
-                        type="button"
-                        onClick={() => setFormData(prev => ({
-                          ...prev,
-                          playRating: isSelected ? '' : rating.id
-                        }))}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
-                          isSelected
-                            ? 'ring-2 ring-offset-1 ring-offset-slate-900'
-                            : 'opacity-60 hover:opacity-100'
-                        }`}
-                        style={{
-                          backgroundColor: isSelected ? rating.color : 'rgba(100,116,139,0.3)',
-                          color: isSelected ? '#fff' : '#94a3b8',
-                          ringColor: rating.color
-                        }}
-                      >
-                        <span>{rating.emoji}</span>
-                        {rating.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Play Objectives */}
-              <div>
-                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
-                  What Are We Trying To Accomplish?
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { id: 'efficiency', label: 'Base Down Efficiency', color: '#22c55e' },
-                    { id: 'convert', label: 'Convert First Down', color: '#3b82f6' },
-                    { id: 'score', label: 'Score', color: '#ef4444' },
-                    { id: 'break-keys', label: 'Break Defensive Keys', color: '#f59e0b' },
-                    { id: 'chunk', label: 'Chunk Play', color: '#8b5cf6' },
-                    { id: 'safe', label: 'Safe/Protect Lead', color: '#64748b' },
-                  ].map(obj => {
-                    const isSelected = (formData.playObjectives || []).includes(obj.id);
-                    return (
-                      <button
-                        key={obj.id}
-                        type="button"
-                        onClick={() => {
-                          const current = formData.playObjectives || [];
-                          const updated = isSelected
-                            ? current.filter(o => o !== obj.id)
-                            : [...current, obj.id];
-                          setFormData(prev => ({ ...prev, playObjectives: updated }));
-                        }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                          isSelected
-                            ? 'ring-2 ring-offset-1 ring-offset-slate-900'
-                            : 'opacity-60 hover:opacity-100'
-                        }`}
-                        style={{
-                          backgroundColor: isSelected ? obj.color : 'rgba(100,116,139,0.3)',
-                          color: isSelected ? '#fff' : '#94a3b8',
-                          ringColor: obj.color
-                        }}
-                      >
-                        {obj.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Hash Preference */}
-              <div>
-                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
-                  Where Do We Like It? (Hash)
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { id: 'left', label: 'Left Hash', icon: '◀' },
-                    { id: 'middle', label: 'Middle', icon: '⬛' },
-                    { id: 'right', label: 'Right Hash', icon: '▶' },
-                    { id: 'any', label: 'Anywhere', icon: '↔' },
-                  ].map(hash => {
-                    const isSelected = formData.hashPreference === hash.id;
-                    return (
-                      <button
-                        key={hash.id}
-                        type="button"
-                        onClick={() => setFormData(prev => ({ ...prev, hashPreference: hash.id }))}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${
-                          isSelected
-                            ? 'bg-sky-600 text-white ring-2 ring-sky-400 ring-offset-1 ring-offset-slate-900'
-                            : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
-                        }`}
-                      >
-                        <span>{hash.icon}</span>
-                        {hash.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Setup Play */}
-              <div>
-                <label htmlFor="play-editor-setup-play" className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
-                  Setup By Another Play?
-                </label>
-                <select
-                  id="play-editor-setup-play"
-                  value={formData.setupPlayId || ''}
-                  onChange={e => setFormData(prev => ({ ...prev, setupPlayId: e.target.value }))}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
-                >
-                  <option value="">No setup play needed</option>
-                  {availablePlays
-                    .filter(p => p.id !== play?.id && (p.phase || 'OFFENSE') === phase)
-                    .map(p => (
-                      <option key={p.id} value={p.id}>
-                        {p.formation ? `${p.formation} ` : ''}{p.name}
-                      </option>
-                    ))}
-                </select>
-                {formData.setupPlayId && (
-                  <p className="mt-1 text-xs text-slate-500">
-                    This play works best after running the selected setup play.
-                  </p>
-                )}
-              </div>
-
-              {/* Target Progressions */}
-              <div>
-                <label className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
-                  Who Are We Targeting? (Progressions)
-                </label>
-                <div className="space-y-2">
-                  {(formData.targetProgressions || []).map((target, idx) => (
-                    <div key={idx} className="flex items-center gap-2 p-2 bg-slate-800 rounded-lg">
-                      <label htmlFor={`play-editor-target-position-${idx}`} className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${
-                        idx === 0 ? 'bg-amber-500 text-white' : 'bg-slate-600 text-slate-300'
-                      }`}>
-                        {idx + 1}
-                      </label>
-                      <input
-                        id={`play-editor-target-position-${idx}`}
-                        type="text"
-                        value={target.position || ''}
-                        onChange={e => {
-                          const updated = [...(formData.targetProgressions || [])];
-                          updated[idx] = { ...updated[idx], position: e.target.value };
-                          setFormData(prev => ({ ...prev, targetProgressions: updated }));
-                        }}
-                        placeholder="Position/Player (e.g., X, Z, RB)"
-                        className="flex-1 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
-                      />
-                      <input
-                        id={`play-editor-target-note-${idx}`}
-                        type="text"
-                        value={target.note || ''}
-                        onChange={e => {
-                          const updated = [...(formData.targetProgressions || [])];
-                          updated[idx] = { ...updated[idx], note: e.target.value };
-                          setFormData(prev => ({ ...prev, targetProgressions: updated }));
-                        }}
-                        placeholder="Note (e.g., vs Cover 2)"
-                        className="w-32 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-sm"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = (formData.targetProgressions || []).filter((_, i) => i !== idx);
-                          setFormData(prev => ({ ...prev, targetProgressions: updated }));
-                        }}
-                        className="p-1 text-red-400 hover:text-red-300"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const updated = [...(formData.targetProgressions || []), { position: '', note: '' }];
-                      setFormData(prev => ({ ...prev, targetProgressions: updated }));
-                    }}
-                    className="w-full px-3 py-2 border-2 border-dashed border-slate-600 rounded-lg text-slate-400 text-sm hover:border-slate-500 hover:text-slate-300"
-                  >
-                    + Add Target/Progression
-                  </button>
-                </div>
-                {(formData.targetProgressions || []).length > 0 && (
-                  <p className="mt-1 text-xs text-slate-500">
-                    First target is primary. Order indicates read progression.
-                  </p>
-                )}
-              </div>
-
-              {/* Premium Looks */}
-              <div>
-                <label htmlFor="play-editor-premium-looks" className="block text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
-                  Premium Looks (Fronts/Coverages/Blitzes)
-                </label>
-                <textarea
-                  id="play-editor-premium-looks"
-                  value={formData.premiumLooks || ''}
-                  onChange={e => setFormData(prev => ({ ...prev, premiumLooks: e.target.value }))}
-                  placeholder="What defensive looks make this a great call? (e.g., Cover 3, single-high, man-free...)"
-                  rows={2}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm placeholder-slate-500 resize-none"
-                />
-              </div>
-            </div>
-          </Section>
 
           {/* Diagrams Section - Only for Offense */}
           {phase === 'OFFENSE' && (
@@ -2250,9 +1876,17 @@ export default function PlayEditor({
                 <span className="flex items-center gap-2">
                   <History size={16} className="text-sky-400" />
                   Play History
-                  {(playHistory.practiceInstances.length + playHistory.gameInstances.length) > 0 && (
+                  {(playHistory.practiceInstances.length + playHistory.gameInstances.length + playHistory.filmReviews.length) > 0 && (
                     <span className="px-1.5 py-0.5 bg-sky-500/20 text-sky-400 text-xs rounded">
-                      {playHistory.practiceInstances.length + playHistory.gameInstances.length}
+                      {playHistory.practiceInstances.length + playHistory.gameInstances.length + playHistory.filmReviews.length}
+                    </span>
+                  )}
+                  {playHistory.filmReviews.length > 0 && (
+                    <span className="flex items-center gap-1">
+                      <Star size={12} className="text-amber-400 fill-amber-400" />
+                      <span className="text-xs text-amber-400">
+                        {(playHistory.filmReviews.reduce((sum, r) => sum + (r.rating || 0), 0) / playHistory.filmReviews.length).toFixed(1)}
+                      </span>
                     </span>
                   )}
                 </span>
@@ -2351,8 +1985,71 @@ export default function PlayEditor({
                   )}
                 </div>
 
-                {/* Summary stats placeholder */}
-                {(playHistory.practiceInstances.length + playHistory.gameInstances.length) > 0 && (
+                {/* Film Reviews */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Film size={14} className="text-violet-400" />
+                    <span className="text-sm font-medium text-slate-300">Film Reviews</span>
+                    <span className="text-xs text-slate-500">({playHistory.filmReviews.length})</span>
+                    {playHistory.filmReviews.length > 0 && (
+                      <span className="flex items-center gap-1 ml-2">
+                        <Star size={12} className="text-amber-400 fill-amber-400" />
+                        <span className="text-xs text-amber-400">
+                          {(playHistory.filmReviews.reduce((sum, r) => sum + (r.rating || 0), 0) / playHistory.filmReviews.length).toFixed(1)}
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                  {playHistory.filmReviews.length > 0 ? (
+                    <div className="space-y-1 max-h-48 overflow-y-auto">
+                      {playHistory.filmReviews.map((review, idx) => (
+                        <div
+                          key={`film-${idx}`}
+                          className="px-3 py-2 bg-slate-800/50 rounded border border-slate-700/50 text-xs"
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-3">
+                              <span className="text-slate-300">{review.weekName}</span>
+                              <span className="text-slate-500">•</span>
+                              <span className="text-slate-400">{review.day}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {[1, 2, 3, 4, 5].map(star => (
+                                <Star
+                                  key={star}
+                                  size={12}
+                                  className={star <= review.rating ? 'text-amber-400 fill-amber-400' : 'text-slate-600'}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          {(review.workedTags?.length > 0 || review.didntWorkTags?.length > 0) && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {review.workedTags?.map(tagId => (
+                                <span key={tagId} className="px-1.5 py-0.5 bg-emerald-500/20 text-emerald-400 rounded text-[10px]">
+                                  {tagId}
+                                </span>
+                              ))}
+                              {review.didntWorkTags?.map(tagId => (
+                                <span key={tagId} className="px-1.5 py-0.5 bg-orange-500/20 text-orange-400 rounded text-[10px]">
+                                  {tagId}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {review.notes && (
+                            <p className="text-slate-500 mt-1 truncate">{review.notes}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-500 italic">No film reviews yet - Review plays in Practice Review</p>
+                  )}
+                </div>
+
+                {/* Summary stats */}
+                {(playHistory.practiceInstances.length + playHistory.gameInstances.length + playHistory.filmReviews.length) > 0 && (
                   <div className="pt-3 border-t border-slate-700">
                     <div className="flex items-center gap-4 text-xs text-slate-400">
                       <span>
@@ -2360,6 +2057,9 @@ export default function PlayEditor({
                       </span>
                       <span>
                         <strong className="text-amber-400">{playHistory.gameInstances.length}</strong> game calls
+                      </span>
+                      <span>
+                        <strong className="text-violet-400">{playHistory.filmReviews.length}</strong> film reviews
                       </span>
                     </div>
                   </div>

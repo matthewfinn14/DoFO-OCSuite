@@ -317,7 +317,7 @@ export default function GamePlan() {
       return;
     }
 
-    // Handle Game Planner destinations
+    // Handle Game Plan/Call Sheet destinations
     if (destination === 'gameplan-quicklist') {
       // Add to the currently editing box's quick list, or add to all boxes' quick lists
       if (editingBox) {

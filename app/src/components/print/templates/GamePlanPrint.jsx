@@ -258,7 +258,7 @@ function SheetView({ gamePlan, playMap, sections, pageIndex = 0, totalPages = 1 
                       <div key={playIdx} className="py-0.5">
                         {play?.name || playId}
                         {playRef.wristbandSlot && (
-                          <span className="ml-1 text-blue-600 font-bold">
+                          <span className="ml-1 text-rose-600 font-bold">
                             [{playRef.wristbandSlot}]
                           </span>
                         )}
@@ -348,7 +348,7 @@ function FZDnDView({ gamePlan, playMap, sections, pageIndex = 0, totalPages = 1 
                       <div className="text-xs">
                         {playMap[cell.play]?.name || cell.play}
                         {cell.wristbandSlot && (
-                          <span className="ml-1 text-blue-600 font-bold">[{cell.wristbandSlot}]</span>
+                          <span className="ml-1 text-rose-600 font-bold">[{cell.wristbandSlot}]</span>
                         )}
                       </div>
                     )}
@@ -417,7 +417,7 @@ function MatrixView({ gamePlan, playMap, sections, pageIndex = 0, totalPages = 1
                           <div key={playIdx} className="matrix-play-item bg-gray-100 rounded p-1 mb-0.5 last:mb-0">
                             <span className="play-name">{play?.name || playId}</span>
                             {playRef.wristbandSlot && (
-                              <span className="wristband-slot text-blue-600 font-bold ml-1">
+                              <span className="wristband-slot text-rose-600 font-bold ml-1">
                                 [{playRef.wristbandSlot}]
                               </span>
                             )}

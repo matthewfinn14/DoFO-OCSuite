@@ -168,7 +168,7 @@ export default function GameplanAudit({
         <h3 className="text-lg font-medium text-slate-400 mb-2">No Game Plan</h3>
         <p className="text-sm text-slate-500">
           No game plan found for the selected week(s).
-          Use the Game Planner to build your call sheet.
+          Use the Game Plan/Call Sheet tool to build your call sheet.
         </p>
       </div>
     );

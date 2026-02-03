@@ -30,7 +30,8 @@ import {
   Lightbulb,
   UserPlus,
   BarChart3,
-  ClipboardCheck
+  ClipboardCheck,
+  Star
 } from 'lucide-react';
 
 // Enhanced collapsible category component
@@ -274,6 +275,12 @@ export default function Sidebar() {
                     isLight={isLight}
                   />
                   <WeeklyToolItem
+                    to={`/week/${currentWeekId}/practice-review`}
+                    icon={Star}
+                    label="Practice Review"
+                    isLight={isLight}
+                  />
+                  <WeeklyToolItem
                     to={`/week/${currentWeekId}/wristband`}
                     icon={Watch}
                     label="Wristband Builder"
@@ -282,7 +289,7 @@ export default function Sidebar() {
                   <WeeklyToolItem
                     to={`/week/${currentWeekId}/game-plan`}
                     icon={Clipboard}
-                    label="Game Planner"
+                    label="Game Plan/Call Sheet"
                     isLight={isLight}
                   />
                   <WeeklyToolItem

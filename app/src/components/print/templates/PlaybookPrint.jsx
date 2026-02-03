@@ -133,8 +133,8 @@ function CardsView({ plays, cardsPerPage, showDiagrams, showFormation, showTags,
 
           {/* Additional Info */}
           {play.wristbandSlot && (
-            <div className="text-xs text-blue-600 font-bold mt-1">
-              Wristband: {play.wristbandSlot}
+            <div className="text-xs text-rose-600 font-bold mt-1">
+              {play.wristbandSlot}{play.wristbandType === 'wiz' ? 'W' : ''}
             </div>
           )}
         </div>
@@ -166,8 +166,8 @@ function ListView({ plays, showFormation, showTags }) {
               <td>{play.phase || '-'}</td>
               <td>{play.bucket || '-'}</td>
               {showTags && <td>{play.conceptGroup || '-'}</td>}
-              <td className="text-blue-600 font-bold">
-                {play.wristbandSlot || '-'}
+              <td className="text-rose-600 font-bold">
+                {play.wristbandSlot ? `${play.wristbandSlot}${play.wristbandType === 'wiz' ? 'W' : ''}` : '-'}
               </td>
             </tr>
           ))}

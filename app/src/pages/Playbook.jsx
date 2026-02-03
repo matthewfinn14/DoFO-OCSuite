@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
 import { PlayCard, PlayEditor } from '../components/playbook';
 import { usePlayDetailsModal } from '../components/PlayDetailsModal';
+import { getWristbandDisplay } from '../utils/wristband';
 import {
   Plus,
   Search,
@@ -260,8 +261,8 @@ export default function Playbook() {
     };
   }, [setupConfig]);
 
-  // Get play purposes from setupConfig
-  const playPurposes = setupConfig?.qualityControlDefinitions?.playPurposes || [];
+  // Get play purposes from setupConfig (defined in Offense Setup > Define Situations)
+  const playPurposes = setupConfig?.playPurposes || [];
 
   // Filter plays by phase
   const phasePlays = useMemo(() => {
@@ -722,7 +723,7 @@ export default function Playbook() {
           {/* Play Purpose */}
           <div>
             <label htmlFor="playbook-filter-purpose" className="block text-xs font-medium text-slate-500 uppercase mb-1">
-              Purpose
+              Play Purpose
             </label>
             <select
               id="playbook-filter-purpose"
@@ -730,7 +731,7 @@ export default function Playbook() {
               onChange={e => setFilters(prev => ({ ...prev, playPurpose: e.target.value }))}
               className="w-full h-[38px] px-3 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
             >
-              <option value="">All Purposes</option>
+              <option value="">All Play Purposes</option>
               {playPurposes.map(purpose => (
                 <option key={purpose.id} value={purpose.id}>{purpose.name}</option>
               ))}
@@ -878,8 +879,8 @@ function PlayRow({ play, isSelected, onToggleSelect, onEdit }) {
 
       {/* Wristband slot */}
       {play.wristbandSlot && (
-        <span className="px-2 py-0.5 bg-sky-500 text-black text-xs font-bold rounded">
-          #{play.wristbandSlot}
+        <span className="px-1.5 py-0.5 bg-rose-600 text-white text-[10px] font-bold rounded" title="Wristband coordinate">
+          {getWristbandDisplay(play)}
         </span>
       )}
 

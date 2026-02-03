@@ -647,7 +647,7 @@ export default function PlayBankSidebar({
           </div>
           {/* Wristband coordinate badge */}
           {wristbandSlot && (
-            <span className="flex-shrink-0 ml-1 px-1 py-0 text-[9px] font-bold bg-red-600 text-white rounded" title="Wristband coordinate">
+            <span className="flex-shrink-0 ml-1 px-1 py-0 text-[9px] font-bold bg-rose-600 text-white rounded" title="Wristband coordinate">
               {wristbandSlot}
             </span>
           )}
@@ -1197,7 +1197,7 @@ export default function PlayBankSidebar({
                       <div className="text-xs text-slate-500">Add to current script segment</div>
                     </button>
                     <div className="border-t border-slate-200 my-2" />
-                    <div className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase">Game Planner</div>
+                    <div className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase">Game Plan/Call Sheet</div>
                     <button
                       onClick={() => handleDestinationSelect('gameplan-quicklist')}
                       className="w-full px-4 py-3 text-left rounded-lg hover:bg-sky-50 text-slate-700 hover:text-sky-700 transition-colors"

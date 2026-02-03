@@ -30,7 +30,7 @@ const PRODUCT_PHASES = [
     opacity: 1,
     features: [
       { icon: 'Book', name: 'Master Playbook', desc: 'Organize all plays' },
-      { icon: 'Clipboard', name: 'Game Planner', desc: 'Situational call sheets' },
+      { icon: 'Clipboard', name: 'Game Plan/Call Sheet', desc: 'Situational call sheets' },
       { icon: 'FileText', name: 'Practice Scripts', desc: 'Daily practice plans' },
       { icon: 'Grid3X3', name: 'Wristband Builder', desc: 'Print play cards' },
       { icon: 'Users', name: 'Depth Charts', desc: 'Manage rotations' },

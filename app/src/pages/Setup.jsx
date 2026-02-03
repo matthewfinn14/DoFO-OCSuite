@@ -262,22 +262,103 @@ const TAB_HELP = {
     content: (
       <div className="pt-3 space-y-3">
         <p>
-          <strong className="text-white">Purpose:</strong> Define your play call structure (e.g., Formation → Motion → Play → Tag)
-          and create a library of terms for each component (formations, motions, protections, etc.).
+          <strong className="text-white">Purpose:</strong> A conceptual planning tool to visualize and document your play call syntax
+          (e.g., Formation → Motion → Play → Tag). Use it to define the structure of how plays are called.
         </p>
         <p>
-          <strong className="text-white">Prefix & Suffix:</strong> These characters wrap around each component on wristband calls,
-          helping coaches and players visually identify which part of the play call chain they're reading. For example,
-          you might use quotes around formations ("Trips") or brackets around tags [X Shallow] so the parts are clearly separated.
+          <strong className="text-white">Components:</strong> Add components to represent each part of your play call—formations,
+          motions, protections, tags, etc. Arrange them left-to-right in the order they're called.
         </p>
         <p>
-          <strong className="text-white">Connections:</strong> The play call chain feeds into the Playbook's play entry system,
-          providing dropdowns and autocomplete for consistent naming. Terms defined here also populate the Glossary.
+          <strong className="text-white">Connections:</strong> This is a planning/documentation tool. Actual term management
+          happens in <strong>Parse & Abbreviate</strong>, where you can scan plays, categorize terms, and set abbreviations.
         </p>
         <p>
-          <strong className="text-white">Why set this up?</strong> A standardized vocabulary prevents "Trips" vs "Trio" confusion.
-          The structured syntax ensures every coach writes plays the same way, and clear visual separators on wristbands
-          make it easier for players to read calls quickly under pressure.
+          <strong className="text-white">Why use this?</strong> Document your syntax structure for staff reference and onboarding.
+          Helps ensure everyone understands the order and meaning of each part of a play call.
+        </p>
+      </div>
+    )
+  },
+  'shifts-motions': {
+    title: "About Shifts & Motions",
+    content: (
+      <div className="pt-3 space-y-3">
+        <p>
+          <strong className="text-white">Purpose:</strong> Define your library of shifts and motions—Jet, Orbit, Trade, Zip,
+          and any other pre-snap movements your offense uses.
+        </p>
+        <p>
+          <strong className="text-white">Connections:</strong> Shifts/Motions can be tagged on plays in the Playbook and
+          used for filtering in Practice Scripts and Game Plans. They also appear in Parse & Abbreviate.
+        </p>
+        <p>
+          <strong className="text-white">Why set this up?</strong> A standardized motion library ensures consistent terminology
+          across your staff and helps with tendency analysis in Self-Scout.
+        </p>
+      </div>
+    )
+  },
+  'read-types': {
+    title: "About Read Types",
+    content: (
+      <div className="pt-3 space-y-3">
+        <p>
+          <strong className="text-white">Purpose:</strong> Define how your QB reads plays—Pre-snap Read, Post-snap Read,
+          Give Read, Pull Read, etc. Helps categorize plays by decision-making process.
+        </p>
+        <p>
+          <strong className="text-white">Connections:</strong> Read types can be tagged on plays and used for filtering.
+          Useful for Self-Scout analysis to see how often you're asking the QB to make certain types of reads.
+        </p>
+        <p>
+          <strong className="text-white">Why set this up?</strong> Understanding your read distribution helps balance
+          the mental load on your QB and ensures you have variety in your play calling approach.
+        </p>
+      </div>
+    )
+  },
+  'look-alike-series': {
+    title: "About Look-Alike Series",
+    content: (
+      <div className="pt-3 space-y-3">
+        <p>
+          <strong className="text-white">Purpose:</strong> Group plays that look identical pre-snap or in the backfield action
+          but have different concepts. Example: Inside Zone, Play Action Boot, and Zone Read all from the same look.
+        </p>
+        <p>
+          <strong className="text-white">Connections:</strong> Series tags help with install planning—teaching plays that
+          share the same look together creates carryover and reduces defensive keys.
+        </p>
+        <p>
+          <strong className="text-white">Why set this up?</strong> Organizing by series helps you build constraint plays
+          off your base concepts and ensures defenders can't key on backfield action to diagnose plays.
+        </p>
+      </div>
+    )
+  },
+  'wristband-abbreviations': {
+    title: "About Parse & Abbreviate",
+    content: (
+      <div className="pt-3 space-y-3">
+        <p>
+          <strong className="text-white">Purpose:</strong> The central hub for managing your play call terminology.
+          Scan plays to extract terms, categorize them, merge multi-word terms, and set abbreviations for wristbands.
+        </p>
+        <p>
+          <strong className="text-white">Key Features:</strong>
+        </p>
+        <ul className="list-disc list-inside space-y-1 text-slate-300">
+          <li><strong>Scan Plays:</strong> Extract all unique terms from your playbook automatically</li>
+          <li><strong>Merge Terms:</strong> Combine split terms like "A" + "THRU" into "A THRU"</li>
+          <li><strong>Categorize:</strong> Assign terms to categories (Formation, Motion, Concept, etc.)</li>
+          <li><strong>Add Parts:</strong> Create custom categories for your unique terminology</li>
+          <li><strong>Abbreviate:</strong> Set short versions of terms to fit on wristbands</li>
+          <li><strong>Auto-Generate:</strong> Automatically create common abbreviations</li>
+        </ul>
+        <p>
+          <strong className="text-white">Connections:</strong> Abbreviations are used in Game Plan boxes and Wristband Builder
+          when play names are too long. Categorized terms flow to the Glossary for definitions.
         </p>
       </div>
     )
@@ -288,11 +369,11 @@ const TAB_HELP = {
       <div className="pt-3 space-y-3">
         <p>
           <strong className="text-white">Purpose:</strong> A centralized dictionary of all terms used in your system.
-          Add definitions for formations, motions, concepts, and any terminology your staff needs to know.
+          View and define formations, motions, concepts, and any terminology your staff needs to know.
         </p>
         <p>
-          <strong className="text-white">Connections:</strong> Terms are automatically compiled from your Play Call Chain.
-          You can also add custom terms. Definitions help new coaches learn your system quickly.
+          <strong className="text-white">Connections:</strong> Terms are pulled from Parse & Abbreviate where you categorize them.
+          Add definitions here to create a reference document for your staff.
         </p>
         <p>
           <strong className="text-white">Why set this up?</strong> Every program has unique terminology.
@@ -400,16 +481,35 @@ const TAB_HELP = {
       </div>
     )
   },
+  'film-review-definitions': {
+    title: "About Film Review Tags",
+    content: (
+      <div className="pt-3 space-y-3">
+        <p>
+          <strong className="text-white">Purpose:</strong> Define the quick-select tags used during film review to note
+          why plays worked or didn't work. These become clickable buttons in the Film Review wizard.
+        </p>
+        <p>
+          <strong className="text-white">Connections:</strong> Tags you create here appear in the Practice Review film
+          wizard. When you tag a play, that data is saved to the play's history in the Play Library.
+        </p>
+        <p>
+          <strong className="text-white">Why set this up?</strong> Quick tagging speeds up film review significantly.
+          Consistent tags across the staff enable better analytics on what's working and what needs improvement.
+        </p>
+      </div>
+    )
+  },
   'gameplan-templates': {
     title: "About Game Plan Templates",
     content: (
       <div className="pt-3 space-y-3">
         <p>
           <strong className="text-white">Purpose:</strong> Save and reuse game plan structures. Templates are created
-          from the Game Planner using "Save as Template."
+          from the Game Plan/Call Sheet tool using "Save as Template."
         </p>
         <p>
-          <strong className="text-white">Connections:</strong> Templates can be loaded in Game Planner to quickly
+          <strong className="text-white">Connections:</strong> Templates can be loaded in Game Plan/Call Sheet to quickly
           set up a new week's game plan with your standard sections.
         </p>
         <p>
@@ -500,10 +600,10 @@ const PHASES = [
   { id: 'PROGRAM', label: 'Program Setup' },
   { id: 'SEASON', label: 'Season Setup' },
   { id: 'OFFENSE', label: 'Offense Setup' },
-  { id: 'DEFENSE', label: 'Defense Setup' },
-  { id: 'SPECIAL_TEAMS', label: 'Special Teams Setup' },
+  { id: 'DEFENSE', label: 'Defense Setup', beta: true },
+  { id: 'SPECIAL_TEAMS', label: 'Special Teams Setup', beta: true },
   { id: 'PRACTICE', label: 'Practice Setup' },
-  { id: 'SELF_SCOUT', label: 'Self-Scout Setup' }
+  { id: 'SELF_SCOUT', label: 'Self-Scout Setup', beta: true }
 ];
 
 export default function Setup() {
@@ -907,14 +1007,12 @@ export default function Setup() {
         { id: 'drills-library', label: 'Skills & Drills', icon: Dumbbell }
       ];
     }
-    // Check if in basic mode
-    const isBasicMode = (localConfig.setupMode?.[phase] || 'standard') === 'basic';
-
     // Self-Scout Setup has its own tabs
     if (isSelfScout) {
       return [
         { id: 'formation-families', label: 'Formation Families', icon: LayoutGrid },
-        { id: 'quality-control', label: 'Quality Control Definitions', icon: ClipboardCheck }
+        { id: 'quality-control', label: 'Quality Control Definitions', icon: ClipboardCheck },
+        { id: 'film-review-definitions', label: 'Film Review Tags', icon: Video }
       ];
     }
 
@@ -930,10 +1028,7 @@ export default function Setup() {
         { id: 'concept-groups', label: 'Concepts/Groups', icon: Grid }
       );
     }
-    // Hide Play Call Chain in Basic mode
-    if (!isBasicMode) {
-      tabs.push({ id: 'play-call-chain', label: 'Play Call Chain', icon: List });
-    }
+    tabs.push({ id: 'play-call-chain', label: 'Play Call Chain', icon: List });
 
     // Add divider after stationary items
     tabs.push({ divider: true });
@@ -946,77 +1041,22 @@ export default function Setup() {
       );
     }
 
-    // Middle section - ordered by play call syntax sequence
-    const savedSyntax = setupConfig?.syntax?.[phase] || [];
-    // Track which tabs we've added to avoid duplicates - pre-populate with IDs already in top section
-    const addedTabs = new Set(tabs.filter(t => t.id).map(t => t.id));
-
-    // Map sourceCategory to tab config
-    const categoryToTab = {
-      formations: { id: 'formations', label: 'Formations', icon: LayoutGrid },
-      formationFamilies: { id: 'formation-families', label: 'Formation Families', icon: LayoutGrid }, // Now in Self-Scout
-      shiftMotions: { id: 'shifts-motions', label: 'Shifts/Motions', icon: ArrowRightLeft },
-      conceptGroups: { id: 'concept-groups', label: 'Concepts/Groups', icon: Grid },
-      readTypes: { id: 'read-types', label: 'Read Types', icon: Eye },
-      lookAlikeSeries: { id: 'look-alike-series', label: 'Look-Alike Series', icon: Copy },
-      passProtections: { id: 'oline-schemes', label: 'WIZ Library for OL', icon: Shield },
-      runBlocking: { id: 'oline-schemes', label: 'WIZ Library for OL', icon: Shield },
-    };
-
-    // Add tabs in the order they appear in the play call syntax (skip in Basic mode)
-    if (!isBasicMode) {
-      savedSyntax.forEach(syntaxPart => {
-        if (syntaxPart.sourceCategory && syntaxPart.sourceCategory !== 'custom') {
-          const tabConfig = categoryToTab[syntaxPart.sourceCategory];
-          if (tabConfig && !addedTabs.has(tabConfig.id)) {
-            tabs.push({ ...tabConfig });
-            addedTabs.add(tabConfig.id);
-          }
-        } else if ((!syntaxPart.sourceCategory || syntaxPart.sourceCategory === 'custom') &&
-          syntaxPart.label && syntaxPart.label !== 'New') {
-          // Custom syntax tab - hidden in Basic mode
-          tabs.push({
-            id: `custom-syntax-${syntaxPart.id}`,
-            label: syntaxPart.label,
-            icon: FileText,
-            isCustomSyntax: true,
-            syntaxPartId: syntaxPart.id
-          });
-        }
-      });
-    }
-
-    // Add remaining tabs that weren't in the syntax (for offense)
-    // Note: concept-groups is now in the top section for offense, so skip it here
+    // Middle section - these tabs are always shown for offense
     if (isOffense) {
-      if (!addedTabs.has('formations')) {
-        tabs.push({ id: 'formations', label: 'Formations', icon: LayoutGrid });
-      }
-      if (!addedTabs.has('shifts-motions')) {
-        tabs.push({ id: 'shifts-motions', label: 'Shifts/Motions', icon: ArrowRightLeft });
-      }
-      if (!addedTabs.has('read-types')) {
-        tabs.push({ id: 'read-types', label: 'Read Types', icon: Eye });
-      }
-      if (!addedTabs.has('look-alike-series')) {
-        tabs.push({ id: 'look-alike-series', label: 'Look-Alike Series', icon: Copy });
-      }
-      if (!addedTabs.has('oline-schemes')) {
-        tabs.push({ id: 'oline-schemes', label: 'WIZ Library for OL', icon: Shield });
-      }
+      tabs.push({ id: 'formations', label: 'Formations', icon: LayoutGrid });
+      tabs.push({ id: 'shifts-motions', label: 'Shifts/Motions', icon: ArrowRightLeft });
+      tabs.push({ id: 'read-types', label: 'Read Types', icon: Eye });
+      tabs.push({ id: 'look-alike-series', label: 'Look-Alike Series', icon: Copy });
+      tabs.push({ id: 'oline-schemes', label: 'WIZ Library for OL', icon: Shield });
     } else {
-      // Defense/ST - add formations if not added
-      if (!addedTabs.has('formations')) {
-        tabs.push({ id: 'formations', label: 'Formation/Front Setup', icon: LayoutGrid });
-      }
+      // Defense/ST - add formations
+      tabs.push({ id: 'formations', label: 'Formation/Front Setup', icon: LayoutGrid });
     }
 
-    // Bottom - Parse & Abbreviate and Glossary (with divider) - hidden in Basic mode
-    if (!isBasicMode) {
-      tabs.push({ divider: true });
-      tabs.push({ id: 'wristband-abbreviations', label: 'Parse & Abbreviate', icon: Watch });
-      tabs.push({ id: 'glossary', label: 'Glossary', icon: BookOpen });
-    }
+    // Bottom - Parse & Abbreviate and Glossary
+    tabs.push({ divider: true });
+    tabs.push({ id: 'wristband-abbreviations', label: 'Parse & Abbreviate', icon: Watch });
+    tabs.push({ id: 'glossary', label: 'Glossary', icon: BookOpen });
 
     return tabs;
   };
@@ -1135,12 +1175,15 @@ export default function Setup() {
             </p>
           </div>
           <div>
-            <h4 className={`font-medium mb-1 ${isLight ? 'text-gray-900' : 'text-white'}`}>The Four Phases</h4>
+            <h4 className={`font-medium mb-1 ${isLight ? 'text-gray-900' : 'text-white'}`}>Setup Areas</h4>
             <ul className="list-disc list-inside space-y-1">
-              <li><strong>Offense:</strong> Set up offensive positions, formations, personnel groupings, play buckets, and OL schemes</li>
-              <li><strong>Defense:</strong> Configure defensive positions, fronts, coverages, and blitz categories</li>
-              <li><strong>Special Teams:</strong> Define special teams positions, packages, and play categories</li>
-              <li><strong>Practice:</strong> Customize practice segment types, focus items, and save templates</li>
+              <li><strong>Program:</strong> Team info, levels (Varsity/JV/Freshman), and staff assignments</li>
+              <li><strong>Season:</strong> Season phases, weeks, schedule, and program events</li>
+              <li><strong>Offense:</strong> Positions, formations, personnel, play buckets, motions, OL schemes, and terminology</li>
+              <li><strong>Defense:</strong> Positions, fronts, coverages, and blitz categories <span className={`text-xs px-1 rounded ${isLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-500/20 text-amber-400'}`}>BETA</span></li>
+              <li><strong>Special Teams:</strong> Positions, packages, and play categories <span className={`text-xs px-1 rounded ${isLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-500/20 text-amber-400'}`}>BETA</span></li>
+              <li><strong>Practice:</strong> Segment types, focus items, drills library, and templates</li>
+              <li><strong>Self-Scout:</strong> Formation families and quality control definitions <span className={`text-xs px-1 rounded ${isLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-500/20 text-amber-400'}`}>BETA</span></li>
             </ul>
           </div>
           <div>
@@ -1160,7 +1203,7 @@ export default function Setup() {
           <button
             key={p.id}
             onClick={() => handlePhaseChange(p.id)}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${phase === p.id
+            className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${phase === p.id
               ? 'bg-sky-600 text-white'
               : isLight
                 ? 'bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-300'
@@ -1168,118 +1211,21 @@ export default function Setup() {
               }`}
           >
             {p.label}
+            {p.beta && (
+              <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${
+                phase === p.id
+                  ? 'bg-white/20 text-white'
+                  : isLight
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-amber-500/20 text-amber-400'
+              }`}>
+                BETA
+              </span>
+            )}
           </button>
         ))}
       </div>
 
-      {/* Setup Mode Selector - Offense/Defense/ST */}
-      {(isOffense || isDefense || isST) && (
-        <div className={`mb-6 p-4 rounded-lg border ${isLight
-          ? 'bg-white border-gray-200 shadow-sm'
-          : 'bg-slate-800/50 border-slate-700'
-          }`}>
-          <div className="flex flex-col gap-4">
-            {/* Header with mode buttons */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className={`font-medium flex items-center gap-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
-                  Setup Mode
-                  <span className={`text-xs px-2 py-0.5 rounded ${(localConfig.setupMode?.[phase] || 'standard') === 'basic'
-                    ? isLight ? 'bg-sky-100 text-sky-700' : 'bg-sky-600/30 text-sky-400'
-                    : (localConfig.setupMode?.[phase] || 'standard') === 'standard'
-                      ? isLight ? 'bg-green-100 text-green-700' : 'bg-green-600/30 text-green-400'
-                      : isLight ? 'bg-purple-100 text-purple-700' : 'bg-purple-600/30 text-purple-400'
-                    }`}>
-                    {(localConfig.setupMode?.[phase] || 'standard') === 'basic' ? 'Basic' :
-                      (localConfig.setupMode?.[phase] || 'standard') === 'standard' ? 'Standard' : 'Advanced'}
-                  </span>
-                </h3>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => updateLocal('setupMode', { ...localConfig.setupMode, [phase]: 'basic' })}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${(localConfig.setupMode?.[phase] || 'standard') === 'basic'
-                    ? 'bg-sky-600 text-white'
-                    : isLight
-                      ? 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                    }`}
-                >
-                  Basic
-                </button>
-
-                <button
-                  onClick={() => updateLocal('setupMode', { ...localConfig.setupMode, [phase]: 'advanced' })}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${(localConfig.setupMode?.[phase] || 'standard') === 'advanced'
-                    ? 'bg-purple-600 text-white'
-                    : isLight
-                      ? 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-300'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                    }`}
-                >
-                  Advanced
-                </button>
-              </div>
-            </div>
-
-            {/* Mode description cards */}
-            <div className="grid md:grid-cols-2 gap-3">
-              {/* Basic Mode Card */}
-              <div className={`p-3 rounded-lg border transition-all ${(localConfig.setupMode?.[phase] || 'standard') === 'basic'
-                ? isLight
-                  ? 'bg-sky-50 border-sky-400 shadow-sm'
-                  : 'bg-sky-900/20 border-sky-600/50'
-                : isLight
-                  ? 'bg-white border-gray-200 opacity-60'
-                  : 'bg-slate-800/30 border-slate-700/50 opacity-60'
-                }`}>
-                <h4 className={`font-medium text-sm mb-2 ${(localConfig.setupMode?.[phase] || 'standard') === 'basic'
-                  ? isLight ? 'text-sky-700' : 'text-sky-400'
-                  : isLight ? 'text-gray-700' : 'text-slate-300'
-                  }`}>Basic Mode</h4>
-                <ul className={`text-xs space-y-1 ${(localConfig.setupMode?.[phase] || 'standard') === 'basic'
-                  ? isLight ? 'text-sky-600' : 'text-sky-300'
-                  : isLight ? 'text-gray-500' : 'text-slate-400'
-                  }`}>
-                  <li>• Type entire play call in one field</li>
-                  <li>• No syntax parsing or breakdown</li>
-                  <li>• Practice scripts and game plans work</li>
-                  <li>• Situation tagging still available</li>
-                </ul>
-              </div>
-
-              {/* Advanced Mode Card */}
-              <div className={`p-3 rounded-lg border transition-all ${(localConfig.setupMode?.[phase] || 'standard') === 'advanced'
-                ? isLight
-                  ? 'bg-purple-50 border-purple-400 shadow-sm'
-                  : 'bg-purple-900/20 border-purple-600/50'
-                : isLight
-                  ? 'bg-white border-gray-200 opacity-60'
-                  : 'bg-slate-800/30 border-slate-700/50 opacity-60'
-                }`}>
-                <h4 className={`font-medium text-sm mb-2 ${(localConfig.setupMode?.[phase] || 'standard') === 'advanced'
-                  ? isLight ? 'text-purple-700' : 'text-purple-400'
-                  : isLight ? 'text-gray-700' : 'text-slate-300'
-                  }`}>Advanced Mode</h4>
-                <ul className={`text-xs space-y-1 ${(localConfig.setupMode?.[phase] || 'standard') === 'advanced'
-                  ? isLight ? 'text-purple-600' : 'text-purple-300'
-                  : isLight ? 'text-gray-500' : 'text-slate-400'
-                  }`}>
-                  <li>• Custom syntax per play bucket</li>
-                  <li>• Term signals auto-fill fields</li>
-                  <li>• Deep filtering for self-scout</li>
-                  <li>• Full play call chain parsing</li>
-                </ul>
-              </div>
-            </div>
-
-            {/* Info note */}
-            <p className={`text-xs italic ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
-              You can switch modes anytime. Your data is preserved when switching - just different entry/filtering options.
-            </p>
-          </div>
-        </div>
-      )}
 
       {/* Offense Setup Overview */}
       {phase === 'OFFENSE' && !isPractice && !isProgram && (
@@ -1298,46 +1244,44 @@ export default function Setup() {
                   Define Your Building Blocks
                 </h4>
                 <p className={`text-sm ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
-                  Start with the top section: <strong>Name Positions</strong> to customize position labels,
-                  <strong> Personnel Groupings</strong> for your packages (11, 12, 21, etc.),
-                  <strong> Situations</strong> for down/distance and field zones, and
-                  <strong> Play Buckets</strong> to organize your playbook into categories.
+                  Start with <strong>Name Positions</strong>, <strong>Personnel Groupings</strong> (11, 12, 21),
+                  <strong> Situations</strong> (down/distance, field zones), and <strong>Play Buckets</strong> to
+                  organize your playbook into categories like Run, Pass, RPO.
                 </p>
               </div>
 
               <div className={`rounded-lg p-3 ${isLight ? 'bg-white border border-gray-200 shadow-sm' : 'bg-slate-700/30'}`}>
                 <h4 className={`font-medium mb-2 flex items-center gap-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
                   <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs flex items-center justify-center">2</span>
-                  Build Your Play Call Syntax
+                  Add Your Terminology
                 </h4>
                 <p className={`text-sm ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
-                  The <strong>Play Call Chain</strong> defines how your plays are called. Each part of the call
-                  (formation, motion, protection, play name, tag) can pull from the categories you've defined,
-                  ensuring consistency across your staff.
+                  Define <strong>Formations</strong>, <strong>Shifts/Motions</strong>, <strong>Read Types</strong>,
+                  <strong> Look-Alike Series</strong>, and <strong>OL Schemes</strong>. These become the building
+                  blocks for your plays and filtering options.
                 </p>
               </div>
 
               <div className={`rounded-lg p-3 ${isLight ? 'bg-white border border-gray-200 shadow-sm' : 'bg-slate-700/30'}`}>
                 <h4 className={`font-medium mb-2 flex items-center gap-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
                   <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs flex items-center justify-center">3</span>
-                  Customize the Middle Section
+                  Parse & Abbreviate
                 </h4>
                 <p className={`text-sm ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
-                  The tabs below the line are ordered by your play call syntax. Define your <strong>Formations</strong>,
-                  <strong> Shifts/Motions</strong>, <strong>Concepts</strong>, and other elements. These become
-                  the options available when building plays.
+                  Use <strong>Scan Plays</strong> to extract terms from your playbook. <strong>Merge</strong> split
+                  terms, <strong>categorize</strong> them, and set <strong>abbreviations</strong> for wristbands.
+                  Add custom categories with <strong>+ Add Part</strong>.
                 </p>
               </div>
 
               <div className={`rounded-lg p-3 ${isLight ? 'bg-white border border-gray-200 shadow-sm' : 'bg-slate-700/30'}`}>
                 <h4 className={`font-medium mb-2 flex items-center gap-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
                   <span className="w-6 h-6 rounded-full bg-sky-600 text-white text-xs flex items-center justify-center">4</span>
-                  Why This Matters
+                  Document in Glossary
                 </h4>
                 <p className={`text-sm ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
-                  When you add a play, you'll select from these defined options instead of typing freeform.
-                  This means consistent naming, powerful filtering, and the ability to quickly build
-                  wristbands and game plans by situation, formation family, or concept.
+                  The <strong>Glossary</strong> shows all your categorized terms. Add definitions to create a
+                  reference document for your staff—great for onboarding new coaches or GA's.
                 </p>
               </div>
             </div>
@@ -1467,7 +1411,6 @@ export default function Setup() {
               buckets={getPlayBuckets()}
               allBuckets={localConfig.playBuckets || []}
               onUpdate={updateLocal}
-              setupMode={localConfig.setupMode?.[phase] || 'standard'}
               setupConfig={localConfig}
               isLight={isLight}
             />
@@ -1524,27 +1467,9 @@ export default function Setup() {
               syntaxTemplates={localConfig.syntaxTemplates || {}}
               termLibrary={localConfig.termLibrary || {}}
               setupConfig={localConfig}
-              setupMode={localConfig.setupMode?.[phase] || 'standard'}
               onUpdate={updateLocal}
             />
           )}
-
-          {/* Custom Syntax Term Tabs */}
-          {activeTab.startsWith('custom-syntax-') && !isPractice && !isProgram && (() => {
-            const syntaxPartId = activeTab.replace('custom-syntax-', '');
-            const currentSyntax = localConfig.syntax?.[phase] || [];
-            const syntaxPart = currentSyntax.find(s => s.id === syntaxPartId);
-            if (!syntaxPart) return null;
-            return (
-              <CustomSyntaxTermsTab
-                phase={phase}
-                syntaxPart={syntaxPart}
-                termLibrary={localConfig.termLibrary || {}}
-                syntax={localConfig.syntax || {}}
-                onUpdate={updateLocal}
-              />
-            );
-          })()}
 
           {/* Wristband Abbreviations Tab */}
           {activeTab === 'wristband-abbreviations' && !isPractice && !isProgram && (
@@ -1630,6 +1555,15 @@ export default function Setup() {
               passProtections={localConfig.passProtections || []}
               runBlocking={localConfig.runBlocking || []}
               plays={playsArray || []}
+              onUpdate={updateLocal}
+              isLight={isLight}
+            />
+          )}
+
+          {/* Film Review Tags Tab */}
+          {activeTab === 'film-review-definitions' && isSelfScout && (
+            <FilmReviewDefinitionsTab
+              filmReviewTags={localConfig.filmReviewTags || { worked: [], didntWork: [] }}
               onUpdate={updateLocal}
               isLight={isLight}
             />
@@ -3611,7 +3545,7 @@ function ShiftMotionsTab({ shiftMotions, onUpdate, isLight = false }) {
 }
 
 // Play Buckets Tab Component (called Categories for Defense/ST)
-function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupMode, setupConfig, isLight = false }) {
+function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupConfig, isLight = false }) {
   const phaseLabel = phase === 'DEFENSE' ? 'Defensive Categories' : phase === 'SPECIAL_TEAMS' ? 'Special Teams Categories' : 'Play Buckets';
   const itemLabel = phase === 'OFFENSE' ? 'Bucket' : 'Category';
 
@@ -5023,14 +4957,10 @@ function TeachPlayCallModal({ isOpen, onClose, phase, currentSyntax, termLibrary
   );
 }
 
-// Play Call Chain Tab Component - now with template support and mode awareness
-function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupConfig, setupMode, onUpdate }) {
-  const isBasicMode = setupMode === 'basic';
-  const isStandardMode = setupMode === 'standard';
-  const isAdvancedMode = setupMode === 'advanced';
-
-  // Template is determined by setup mode: Advanced = custom, Basic/Standard = quick
-  const selectedTemplate = isAdvancedMode ? 'custom' : 'quick';
+// Play Call Chain Tab Component - conceptual syntax planning tool
+function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupConfig, onUpdate }) {
+  // Always use custom template
+  const selectedTemplate = 'custom';
 
   // State for teach modal
   const [showTeachModal, setShowTeachModal] = useState(false);
@@ -5187,85 +5117,6 @@ function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupCo
   // Check if any components use custom source (need term library)
   const hasCustomComponents = currentSyntax.some(item => !item.sourceCategory || item.sourceCategory === 'custom');
 
-  // Check if using default template (not yet customized)
-  const isUsingDefault = phase === 'OFFENSE' &&
-    selectedTemplate !== 'custom' &&
-    (!syntaxTemplates?.[phase]?.[selectedTemplate]?.length);
-
-  // Basic mode - show simple message
-  if (isBasicMode) {
-    return (
-      <div className="text-center py-16 text-slate-400">
-        <BookOpen size={64} className="mx-auto mb-6 opacity-30" />
-        <h3 className="text-xl font-semibold text-white mb-3">Play Call Chain Not Used in Basic Mode</h3>
-        <p className="text-slate-400 max-w-md mx-auto mb-6">
-          In Basic mode, play calls are entered as a single text field with no parsing or breakdown.
-          This keeps things simple for practice scripts and game plans.
-        </p>
-        <p className="text-sm text-slate-500">
-          Switch to <span className="text-green-400">Standard</span> or <span className="text-purple-400">Advanced</span> mode
-          to enable play call syntax and filtering.
-        </p>
-      </div>
-    );
-  }
-
-  // Standard mode - show simplified info
-  if (isStandardMode) {
-    return (
-      <div>
-        <div className="mb-6 p-4 bg-green-900/20 border border-green-600/30 rounded-lg">
-          <h3 className="text-lg font-semibold text-green-400 mb-2">Standard Mode: Formation + Motion + Play</h3>
-          <p className="text-slate-400 text-sm">
-            In Standard mode, plays are entered as <strong>Formation</strong> + <strong>Motion/Tag</strong> (optional) + <strong>Play Name</strong>.
-            This enables filtering by formation and basic organization by buckets.
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
-            <h4 className="text-white font-medium mb-3">Example Play Calls</h4>
-            <ul className="space-y-3 text-sm">
-              <li className="flex flex-wrap items-center gap-1">
-                <span className="text-slate-500">Formation:</span>
-                <span className="text-emerald-400">Trips Right</span>
-                <span className="text-slate-500">Motion:</span>
-                <span className="text-amber-400">Z Jet</span>
-                <span className="text-slate-500">Play:</span>
-                <span className="text-emerald-400">94 Mesh</span>
-              </li>
-              <li className="flex flex-wrap items-center gap-1">
-                <span className="text-slate-500">Formation:</span>
-                <span className="text-emerald-400">Ace</span>
-                <span className="text-slate-500">Motion:</span>
-                <span className="text-slate-400 italic">-</span>
-                <span className="text-slate-500">Play:</span>
-                <span className="text-emerald-400">Inside Zone</span>
-              </li>
-            </ul>
-          </div>
-
-          <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-700">
-            <h4 className="text-white font-medium mb-3">What You Can Do</h4>
-            <ul className="space-y-1 text-sm text-slate-400">
-              <li>• Filter plays by formation</li>
-              <li>• Filter plays by motion/tag</li>
-              <li>• Organize plays by bucket</li>
-              <li>• Tag plays with situations</li>
-              <li>• Build practice scripts and game plans</li>
-            </ul>
-          </div>
-        </div>
-
-        <p className="mt-6 text-sm text-slate-500 text-center">
-          Switch to <span className="text-purple-400">Advanced</span> mode to customize play call syntax
-          per bucket and enable term signals.
-        </p>
-      </div>
-    );
-  }
-
-  // Advanced mode - show full syntax editor
   return (
     <div>
       {/* Play Call Structure - Horizontal Layout */}
@@ -5285,14 +5136,6 @@ function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupCo
                 <BookOpen size={16} /> Teach from Example
               </button>
             )}
-            {isUsingDefault && (
-              <button
-                onClick={initializeTemplate}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-              >
-                <Check size={16} /> Use Default Template
-              </button>
-            )}
             <button
               onClick={addSyntaxComponent}
               className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700"
@@ -5305,12 +5148,8 @@ function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupCo
         {currentSyntax.length === 0 ? (
           <div className="text-center py-12 text-slate-400 border-2 border-dashed border-slate-600 rounded-lg">
             <BookOpen size={48} className="mx-auto mb-4 opacity-30" />
-            <p>No play components defined for this template.</p>
-            {isUsingDefault ? (
-              <p className="text-sm mt-2">Click "Use Default Template" to start with recommended components, or "Add Component" to build from scratch.</p>
-            ) : (
-              <p className="text-sm mt-2">Click "Add Component" to start building your play call structure.</p>
-            )}
+            <p>No play components defined yet.</p>
+            <p className="text-sm mt-2">Click "Add Component" to start building your play call structure.</p>
           </div>
         ) : (
           <>
@@ -5531,7 +5370,7 @@ function PlayCallChainTab({ phase, syntax, syntaxTemplates, termLibrary, setupCo
 }
 
 // Scanned Term Row - for categorizing extracted play call terms
-function ScannedTermRow({ term, count, syntaxParts, onAdd, onDismiss }) {
+function ScannedTermRow({ term, count, syntaxParts, onAdd, onDismiss, isSelected, onToggleSelect }) {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [abbrev, setAbbrev] = useState('');
 
@@ -5543,7 +5382,14 @@ function ScannedTermRow({ term, count, syntaxParts, onAdd, onDismiss }) {
   };
 
   return (
-    <div className="flex items-center gap-2 bg-slate-800/50 rounded px-3 py-2">
+    <div className={`flex items-center gap-2 rounded px-3 py-2 ${isSelected ? 'bg-amber-900/30 border border-amber-600/50' : 'bg-slate-800/50'}`}>
+      <input
+        type="checkbox"
+        checked={isSelected}
+        onChange={() => onToggleSelect(term)}
+        className="w-4 h-4 rounded border-slate-600 bg-slate-700 text-amber-500 focus:ring-amber-500 cursor-pointer"
+        title="Select to merge with other terms"
+      />
       <div className="flex-1 min-w-0">
         <span className="text-sm text-white font-medium">{term}</span>
         <span className="text-xs text-slate-500 ml-2">({count}x)</span>
@@ -5600,6 +5446,9 @@ function WristbandAbbreviationsSection({ phase, setupConfig, onUpdate, plays }) 
   const [collapsedCategories, setCollapsedCategories] = useState({});
   const [showScanResults, setShowScanResults] = useState(false);
   const [scannedTerms, setScannedTerms] = useState([]);
+  const [showAddPartModal, setShowAddPartModal] = useState(false);
+  const [newPartName, setNewPartName] = useState('');
+  const [selectedForMerge, setSelectedForMerge] = useState(new Set());
 
   // Toggle category collapse
   const toggleCategory = (category) => {
@@ -5607,6 +5456,51 @@ function WristbandAbbreviationsSection({ phase, setupConfig, onUpdate, plays }) 
       ...prev,
       [category]: !prev[category]
     }));
+  };
+
+  // Toggle term selection for merge
+  const toggleSelectForMerge = (term) => {
+    setSelectedForMerge(prev => {
+      const next = new Set(prev);
+      if (next.has(term)) {
+        next.delete(term);
+      } else {
+        next.add(term);
+      }
+      return next;
+    });
+  };
+
+  // Merge selected terms into one
+  const mergeSelectedTerms = () => {
+    if (selectedForMerge.size < 2) return;
+
+    // Get the selected terms in the order they appear in scannedTerms
+    const termsToMerge = scannedTerms
+      .filter(t => selectedForMerge.has(t.term))
+      .map(t => t.term);
+
+    // Combine into one term (space-separated)
+    const mergedTerm = termsToMerge.join(' ');
+
+    // Sum the counts
+    const mergedCount = scannedTerms
+      .filter(t => selectedForMerge.has(t.term))
+      .reduce((sum, t) => sum + t.count, 0);
+
+    // Remove merged terms and add the combined one
+    setScannedTerms(prev => {
+      const filtered = prev.filter(t => !selectedForMerge.has(t.term));
+      return [{ term: mergedTerm, count: mergedCount }, ...filtered];
+    });
+
+    // Clear selection
+    setSelectedForMerge(new Set());
+  };
+
+  // Clear merge selection
+  const clearMergeSelection = () => {
+    setSelectedForMerge(new Set());
   };
 
   // Expand/collapse all categories
@@ -5619,11 +5513,79 @@ function WristbandAbbreviationsSection({ phase, setupConfig, onUpdate, plays }) 
     setCollapsedCategories(allCollapsed);
   };
 
-  // Get syntax parts for categorization
+  // Get syntax parts for categorization (includes custom parts)
   const syntaxParts = useMemo(() => {
     const parts = setupConfig?.syntax?.[phase] || [];
     return parts.filter(p => p.label); // Only parts with labels
   }, [setupConfig?.syntax, phase]);
+
+  // Get all available categories (syntax parts + built-in categories)
+  const allCategories = useMemo(() => {
+    const categories = new Set();
+    // Add syntax parts
+    syntaxParts.forEach(p => categories.add(p.label));
+    // Add built-in categories
+    ['Formation', 'Personnel', 'Motion', 'Bucket', 'Concept', 'Read Type', 'Protection', 'Run Scheme'].forEach(c => categories.add(c));
+    return Array.from(categories).sort();
+  }, [syntaxParts]);
+
+  // Add a new custom part/category
+  const addCustomPart = () => {
+    if (!newPartName.trim()) return;
+
+    const existingSyntax = setupConfig?.syntax?.[phase] || [];
+    const newPart = {
+      id: `custom_${Date.now()}`,
+      label: newPartName.trim(),
+      prefix: '',
+      suffix: '',
+      isCustom: true
+    };
+
+    const newSyntax = {
+      ...setupConfig?.syntax,
+      [phase]: [...existingSyntax, newPart]
+    };
+
+    onUpdate('syntax', newSyntax);
+    setNewPartName('');
+    setShowAddPartModal(false);
+  };
+
+  // Change a term's category
+  const changeTermCategory = (term, oldCategory, newCategory) => {
+    if (oldCategory === newCategory) return;
+
+    // Find the syntax part ID for the new category
+    const newPart = syntaxParts.find(p => p.label === newCategory);
+    const newCategoryId = newPart?.id || newCategory.toLowerCase().replace(/\s+/g, '_');
+
+    // Add term to new category in termLibrary
+    const termLibrary = setupConfig?.termLibrary || {};
+    const phaseTerms = termLibrary[phase] || {};
+    const categoryTerms = phaseTerms[newCategoryId] || [];
+
+    // Check if already exists in new category
+    if (!categoryTerms.some(t => t.label?.toLowerCase() === term.toLowerCase())) {
+      const newTermLibrary = {
+        ...termLibrary,
+        [phase]: {
+          ...phaseTerms,
+          [newCategoryId]: [...categoryTerms, { id: `term_${Date.now()}`, label: term }]
+        }
+      };
+
+      // Also remove from old category if it was in termLibrary
+      const oldPart = syntaxParts.find(p => p.label === oldCategory);
+      const oldCategoryId = oldPart?.id || oldCategory.toLowerCase().replace(/\s+/g, '_');
+      if (newTermLibrary[phase][oldCategoryId]) {
+        newTermLibrary[phase][oldCategoryId] = newTermLibrary[phase][oldCategoryId]
+          .filter(t => t.label?.toLowerCase() !== term.toLowerCase());
+      }
+
+      onUpdate('termLibrary', newTermLibrary);
+    }
+  };
 
   // Scan plays and extract unique terms
   const scanPlays = () => {
@@ -5989,7 +5951,64 @@ function WristbandAbbreviationsSection({ phase, setupConfig, onUpdate, plays }) 
             >
               Auto-Generate
             </button>
+            <button
+              onClick={() => setShowAddPartModal(true)}
+              className="px-4 py-2 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
+              title="Add a new custom syntax part/category"
+            >
+              + Add Part
+            </button>
           </div>
+
+          {/* Add Part Modal */}
+          {showAddPartModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-slate-800 rounded-lg p-6 w-full max-w-md border border-slate-700">
+                <h3 className="text-lg font-semibold text-white mb-4">Add Custom Part</h3>
+                <p className="text-sm text-slate-400 mb-4">
+                  Create a new syntax part/category for organizing terms. This will appear in the play call chain builder and as a category option for terms.
+                </p>
+                <input
+                  type="text"
+                  value={newPartName}
+                  onChange={(e) => setNewPartName(e.target.value)}
+                  placeholder="e.g., Tag, Check, Formation Mod"
+                  className="w-full px-3 py-2 bg-slate-700 border border-slate-600 rounded text-white placeholder-slate-400 mb-4"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newPartName.trim()) {
+                      addCustomPart();
+                    } else if (e.key === 'Escape') {
+                      setShowAddPartModal(false);
+                      setNewPartName('');
+                    }
+                  }}
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => {
+                      setShowAddPartModal(false);
+                      setNewPartName('');
+                    }}
+                    className="px-4 py-2 bg-slate-700 text-slate-300 text-sm rounded hover:bg-slate-600"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={addCustomPart}
+                    disabled={!newPartName.trim()}
+                    className={`px-4 py-2 text-sm rounded font-medium ${
+                      newPartName.trim()
+                        ? 'bg-purple-600 text-white hover:bg-purple-700'
+                        : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                    }`}
+                  >
+                    Add Part
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Scan Results Panel */}
           {showScanResults && scannedTerms.length > 0 && (
@@ -6008,6 +6027,34 @@ function WristbandAbbreviationsSection({ phase, setupConfig, onUpdate, plays }) 
               <p className="text-xs text-slate-400 mb-3">
                 Assign each term to a category and optionally add an abbreviation. Terms already in your system are hidden.
               </p>
+
+              {/* Merge Bar - shows when 2+ terms selected */}
+              {selectedForMerge.size >= 2 && (
+                <div className="mb-3 p-3 bg-amber-900/30 border border-amber-600/50 rounded-lg flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-amber-400 font-medium">
+                      {selectedForMerge.size} terms selected
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      → "{Array.from(selectedForMerge).join(' ')}"
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={mergeSelectedTerms}
+                      className="px-3 py-1.5 bg-amber-600 text-white text-xs rounded hover:bg-amber-700 font-medium"
+                    >
+                      Merge Terms
+                    </button>
+                    <button
+                      onClick={clearMergeSelection}
+                      className="px-2 py-1.5 text-slate-400 hover:text-white text-xs"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="space-y-2 max-h-[300px] overflow-y-auto">
                 {scannedTerms
                   .filter(t => !isTermCategorized(t.term))
@@ -6020,6 +6067,8 @@ function WristbandAbbreviationsSection({ phase, setupConfig, onUpdate, plays }) 
                       syntaxParts={syntaxParts}
                       onAdd={addTermToCategory}
                       onDismiss={dismissScannedTerm}
+                      isSelected={selectedForMerge.has(term)}
+                      onToggleSelect={toggleSelectForMerge}
                     />
                   ))}
               </div>
@@ -6068,8 +6117,18 @@ function WristbandAbbreviationsSection({ phase, setupConfig, onUpdate, plays }) 
                       <div className="p-3 bg-slate-800/30">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                           {terms.map(({ term }) => (
-                            <div key={term} className="flex items-center gap-2 bg-slate-700/50 rounded px-3 py-1.5">
+                            <div key={term} className="flex items-center gap-2 bg-slate-700/50 rounded px-3 py-1.5 group">
                               <span className="flex-1 text-sm text-white truncate" title={term}>{term}</span>
+                              <select
+                                value={category}
+                                onChange={(e) => changeTermCategory(term, category, e.target.value)}
+                                className="w-20 px-1 py-0.5 bg-slate-600 border border-slate-500 rounded text-xs text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                title="Move to different category"
+                              >
+                                {allCategories.map(cat => (
+                                  <option key={cat} value={cat}>{cat}</option>
+                                ))}
+                              </select>
                               <span className="text-slate-500">→</span>
                               <input
                                 type="text"
@@ -9566,7 +9625,7 @@ const LEVEL_TOOLS = [
   { key: 'playbook', label: 'Playbook', description: 'Access to playbook for this level' },
   { key: 'depthChart', label: 'Depth Chart', description: 'Manage depth chart' },
   { key: 'practiceScripts', label: 'Practice Scripts', description: 'Create practice scripts' },
-  { key: 'gamePlan', label: 'Game Planner', description: 'Build game plans' },
+  { key: 'gamePlan', label: 'Game Plan/Call Sheet', description: 'Build game plans' },
   { key: 'wristband', label: 'Wristband Builder', description: 'Create wristbands' }
 ];
 
@@ -11239,6 +11298,224 @@ function QualityControlDefinitionsTab({ qualityControlDefinitions, onUpdate, isL
                 className={`w-24 px-3 py-2 border rounded text-center ${isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-700 border-slate-600 text-white'}`}
               />
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Film Review Tags Tab - Define reasons plays worked/didn't work
+function FilmReviewDefinitionsTab({ filmReviewTags, onUpdate, isLight = false }) {
+  const [newWorkedTag, setNewWorkedTag] = useState('');
+  const [newDidntWorkTag, setNewDidntWorkTag] = useState('');
+
+  const worked = filmReviewTags?.worked || [];
+  const didntWork = filmReviewTags?.didntWork || [];
+
+  const addWorkedTag = () => {
+    if (!newWorkedTag.trim()) return;
+    const newTag = {
+      id: `worked_${Date.now()}`,
+      label: newWorkedTag.trim()
+    };
+    onUpdate('filmReviewTags', {
+      ...filmReviewTags,
+      worked: [...worked, newTag]
+    });
+    setNewWorkedTag('');
+  };
+
+  const addDidntWorkTag = () => {
+    if (!newDidntWorkTag.trim()) return;
+    const newTag = {
+      id: `didnt_${Date.now()}`,
+      label: newDidntWorkTag.trim()
+    };
+    onUpdate('filmReviewTags', {
+      ...filmReviewTags,
+      didntWork: [...didntWork, newTag]
+    });
+    setNewDidntWorkTag('');
+  };
+
+  const removeWorkedTag = (tagId) => {
+    onUpdate('filmReviewTags', {
+      ...filmReviewTags,
+      worked: worked.filter(t => t.id !== tagId)
+    });
+  };
+
+  const removeDidntWorkTag = (tagId) => {
+    onUpdate('filmReviewTags', {
+      ...filmReviewTags,
+      didntWork: didntWork.filter(t => t.id !== tagId)
+    });
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Help Section */}
+      <HelpSection title="What are Film Review Tags?" isLight={isLight}>
+        <div className="pt-3 space-y-3">
+          <p>
+            Film Review Tags are quick-select buttons used during post-practice film review.
+            Instead of typing notes, you tap buttons to tag why each play worked or didn't work.
+          </p>
+          <p>
+            <strong className={isLight ? "text-slate-900" : "text-white"}>Reasons Worked:</strong> Positive outcomes like "Great Execution", "QB Decision", "Protection Held"
+          </p>
+          <p>
+            <strong className={isLight ? "text-slate-900" : "text-white"}>Reasons Didn't Work:</strong> Areas to improve like "Missed Assignment", "Poor Technique", "Coverage Breakdown"
+          </p>
+        </div>
+      </HelpSection>
+
+      {/* Reasons It Worked */}
+      <div className={`rounded-lg border overflow-hidden ${isLight ? 'bg-white border-slate-200' : 'bg-slate-800 border-slate-700'}`}>
+        <div className={`px-4 py-3 border-b ${isLight ? 'border-slate-200 bg-emerald-50' : 'border-slate-700 bg-emerald-900/20'}`}>
+          <h3 className={`font-medium flex items-center gap-2 ${isLight ? 'text-emerald-800' : 'text-emerald-400'}`}>
+            <Check size={18} />
+            Reasons It Worked
+          </h3>
+          <p className={`text-xs ${isLight ? 'text-emerald-600' : 'text-emerald-500/70'}`}>
+            Tags for successful plays and positive execution
+          </p>
+        </div>
+        <div className="p-4">
+          {/* Add new tag */}
+          <div className="flex items-center gap-2 mb-4">
+            <input
+              type="text"
+              value={newWorkedTag}
+              onChange={(e) => setNewWorkedTag(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addWorkedTag()}
+              placeholder="Add a reason (e.g., Great Execution)"
+              className={`flex-1 px-3 py-2 rounded-lg text-sm ${
+                isLight
+                  ? 'bg-slate-100 border border-slate-200 text-slate-900 placeholder-slate-400'
+                  : 'bg-slate-900 border border-slate-700 text-white placeholder-slate-500'
+              } focus:outline-none focus:border-emerald-500`}
+            />
+            <button
+              onClick={addWorkedTag}
+              disabled={!newWorkedTag.trim()}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Plus size={16} />
+            </button>
+          </div>
+
+          {/* Tag list */}
+          <div className="flex flex-wrap gap-2">
+            {worked.map(tag => (
+              <div
+                key={tag.id}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
+                  isLight
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                    : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                }`}
+              >
+                <span>{tag.label}</span>
+                <button
+                  onClick={() => removeWorkedTag(tag.id)}
+                  className="hover:text-red-500"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+            {worked.length === 0 && (
+              <p className={`text-sm ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
+                No tags yet. Add reasons why plays work well.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Reasons It Didn't Work */}
+      <div className={`rounded-lg border overflow-hidden ${isLight ? 'bg-white border-slate-200' : 'bg-slate-800 border-slate-700'}`}>
+        <div className={`px-4 py-3 border-b ${isLight ? 'border-slate-200 bg-orange-50' : 'border-slate-700 bg-orange-900/20'}`}>
+          <h3 className={`font-medium flex items-center gap-2 ${isLight ? 'text-orange-800' : 'text-orange-400'}`}>
+            <AlertTriangle size={18} />
+            Reasons It Didn't Work
+          </h3>
+          <p className={`text-xs ${isLight ? 'text-orange-600' : 'text-orange-500/70'}`}>
+            Tags for areas needing improvement
+          </p>
+        </div>
+        <div className="p-4">
+          {/* Add new tag */}
+          <div className="flex items-center gap-2 mb-4">
+            <input
+              type="text"
+              value={newDidntWorkTag}
+              onChange={(e) => setNewDidntWorkTag(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addDidntWorkTag()}
+              placeholder="Add a reason (e.g., Missed Assignment)"
+              className={`flex-1 px-3 py-2 rounded-lg text-sm ${
+                isLight
+                  ? 'bg-slate-100 border border-slate-200 text-slate-900 placeholder-slate-400'
+                  : 'bg-slate-900 border border-slate-700 text-white placeholder-slate-500'
+              } focus:outline-none focus:border-orange-500`}
+            />
+            <button
+              onClick={addDidntWorkTag}
+              disabled={!newDidntWorkTag.trim()}
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Plus size={16} />
+            </button>
+          </div>
+
+          {/* Tag list */}
+          <div className="flex flex-wrap gap-2">
+            {didntWork.map(tag => (
+              <div
+                key={tag.id}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${
+                  isLight
+                    ? 'bg-orange-100 text-orange-800 border border-orange-200'
+                    : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
+                }`}
+              >
+                <span>{tag.label}</span>
+                <button
+                  onClick={() => removeDidntWorkTag(tag.id)}
+                  className="hover:text-red-500"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+            {didntWork.length === 0 && (
+              <p className={`text-sm ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
+                No tags yet. Add reasons why plays need improvement.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Example tags suggestion */}
+      <div className={`rounded-lg p-4 ${isLight ? 'bg-sky-50 border border-sky-200' : 'bg-sky-900/20 border border-sky-800'}`}>
+        <h4 className={`text-sm font-medium mb-2 ${isLight ? 'text-sky-800' : 'text-sky-400'}`}>
+          Suggested Tags to Add
+        </h4>
+        <div className="grid grid-cols-2 gap-4 text-xs">
+          <div>
+            <p className={`font-medium mb-1 ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>Worked:</p>
+            <p className={isLight ? 'text-slate-600' : 'text-slate-400'}>
+              Great Execution, QB Decision, Protection Held, Good Read, Scheme Win, Athlete Made Play, Great Route
+            </p>
+          </div>
+          <div>
+            <p className={`font-medium mb-1 ${isLight ? 'text-orange-700' : 'text-orange-400'}`}>Didn't Work:</p>
+            <p className={isLight ? 'text-slate-600' : 'text-slate-400'}>
+              Missed Assignment, Poor Technique, Coverage Breakdown, Bad Ball, Pressure, Wrong Read, Dropped
+            </p>
           </div>
         </div>
       </div>

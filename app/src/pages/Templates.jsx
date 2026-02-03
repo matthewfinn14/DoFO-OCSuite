@@ -229,7 +229,7 @@ export default function Templates() {
       <div className="mb-6 p-4 bg-sky-500/10 border border-sky-500/30 rounded-lg">
         <p className="text-sm text-sky-300">
           <strong>How to create templates:</strong> Templates are saved from their respective tools.
-          Use "Save as Template" in Practice Planner, Game Planner, or Pregame to add templates here.
+          Use "Save as Template" in Practice Planner, Game Plan/Call Sheet, or Pregame to add templates here.
           Click a template name to rename it.
         </p>
       </div>

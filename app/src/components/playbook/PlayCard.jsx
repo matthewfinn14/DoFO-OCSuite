@@ -1,5 +1,6 @@
 import { Edit2, Check, Handshake } from 'lucide-react';
 import DiagramPreview from '../diagrams/DiagramPreview';
+import { getWristbandDisplay } from '../../utils/wristband';
 
 // Tag categories for formatting
 const MOTION_TAGS = ['Jet', 'Orbit', 'Zoom', 'Rocket', 'Fly', 'Shift'];
@@ -182,8 +183,8 @@ export default function PlayCard({
           </div>
           <div className="flex gap-1 flex-shrink-0">
             {play.wristbandSlot && (
-              <span className="px-1.5 py-0.5 bg-sky-500 text-black text-xs font-bold rounded">
-                #{play.wristbandSlot}
+              <span className="px-1.5 py-0.5 bg-rose-600 text-white text-[10px] font-bold rounded" title="Wristband coordinate">
+                {getWristbandDisplay(play)}
               </span>
             )}
             {play.staplesSlot && (
