@@ -612,7 +612,8 @@ export default function PlayDiagramEditor({
       phase: 'OFFENSE',
       personnelGroupingId: newFormationPersonnel || null,
       personnelCode: personnelCode,
-      positions
+      positions,
+      saveVersion: 2  // Version 2 uses correct 450 height for Y calculation
     };
 
     if (onSaveFormation) {
@@ -647,11 +648,21 @@ export default function PlayDiagramEditor({
     const hasOLGroup = formation.positions.some(p => p.groupId);
     const olGroupId = hasOLGroup ? `ol-group-${baseTime}` : null;
 
+    // Migration: old formations (saveVersion < 2 or missing) were saved with Y/600
+    // New formations use Y/450. Scale old Y values by 600/450 = 1.333... to correct
+    const needsYMigration = !formation.saveVersion || formation.saveVersion < 2;
+
     const wizCenter = 475;
     formation.positions.forEach((pos, idx) => {
       // Convert percentage (0-100) to pixel coordinates for wiz-card viewBox (950x450)
       const x = (pos.x / 100) * 950;
-      const y = (pos.y / 100) * 450;
+      // Apply migration correction for old formations
+      let y = (pos.y / 100) * 450;
+      if (needsYMigration) {
+        // Old Y was saved as (pixel/600)*100, so stored percentage is too small
+        // Correct by scaling: y = (pos.y / 100) * 600 (what it was intended to be)
+        y = (pos.y / 100) * 600;
+      }
 
       // Determine position KEY from stored data
       // Priority: pos.positionKey (if stored) > pos.label lookup > reverse lookup
