@@ -6962,6 +6962,9 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
                     elements={prot.diagramData}
                     width={160}
                     height={112}
+                    positionColors={localConfig.positionColors}
+                    positionNames={localConfig.positionNames}
+                    positionWizAbbreviations={localConfig.positionWizAbbreviations}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-slate-800 text-slate-500">
@@ -7054,6 +7057,9 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
                     elements={scheme.diagramData}
                     width={160}
                     height={112}
+                    positionColors={localConfig.positionColors}
+                    positionNames={localConfig.positionNames}
+                    positionWizAbbreviations={localConfig.positionWizAbbreviations}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-slate-800 text-slate-500">

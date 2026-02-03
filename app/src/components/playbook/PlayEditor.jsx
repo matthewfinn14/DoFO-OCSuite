@@ -1294,6 +1294,7 @@ export default function PlayEditor({
                         onClick={() => setShowSkillEditor(true)}
                         positionColors={positionColors}
                         positionNames={positionNames}
+                        positionWizAbbreviations={positionWizAbbreviations}
                       />
                       {/* Start from Template Search - when diagram exists */}
                       {playsWithSkillDiagrams.length > 0 && (
@@ -1467,6 +1468,7 @@ export default function PlayEditor({
                               width="100%"
                               positionColors={positionColors}
                               positionNames={positionNames}
+                              positionWizAbbreviations={positionWizAbbreviations}
                             />
                           )}
                         </div>
@@ -1478,6 +1480,7 @@ export default function PlayEditor({
                           onClick={() => setShowOLEditor(true)}
                           positionColors={positionColors}
                           positionNames={positionNames}
+                          positionWizAbbreviations={positionWizAbbreviations}
                         />
                       )}
                       {/* Search for Pre-existing OL Scheme - when diagram exists */}
@@ -2303,6 +2306,7 @@ export default function PlayEditor({
                           height={100}
                           positionColors={positionColors}
                           positionNames={positionNames}
+                          positionWizAbbreviations={positionWizAbbreviations}
                         />
                       </button>
                     ))}
@@ -2337,6 +2341,7 @@ export default function PlayEditor({
                           height={100}
                           positionColors={positionColors}
                           positionNames={positionNames}
+                          positionWizAbbreviations={positionWizAbbreviations}
                         />
                       </button>
                     ))}

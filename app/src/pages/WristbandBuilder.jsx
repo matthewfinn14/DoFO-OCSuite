@@ -980,6 +980,7 @@ export default function WristbandBuilder() {
                           height={100}
                           positionColors={positionColors}
                           positionNames={positionNames}
+                          positionWizAbbreviations={positionWizAbbreviations}
                         />
                       </button>
                     ))}
@@ -1007,6 +1008,7 @@ export default function WristbandBuilder() {
                           height={100}
                           positionColors={positionColors}
                           positionNames={positionNames}
+                          positionWizAbbreviations={positionWizAbbreviations}
                         />
                       </button>
                     ))}

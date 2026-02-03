@@ -107,6 +107,7 @@ function CardsView({ plays, cardsPerPage, showDiagrams, showFormation, showTags,
                   diagramData={play.diagramData}
                   positionColors={setupConfig?.positionColors}
                   positionNames={setupConfig?.positionNames}
+                  positionWizAbbreviations={setupConfig?.positionWizAbbreviations}
                   width="100%"
                   height="100%"
                 />
