@@ -272,30 +272,38 @@ function ColumnMappingModal({ isOpen, onClose, onSave, availableColumns, current
         </div>
 
         <div className="p-6 max-h-[60vh] overflow-y-auto">
-          <div className="space-y-3">
-            {mappingFields.map(field => (
-              <div key={field.key} className="flex items-center gap-3">
-                <label className={`w-28 text-sm font-medium ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
-                  {field.label}
-                  {field.required && <span className="text-red-400 ml-1">*</span>}
-                </label>
-                <select
-                  value={mapping[field.key] || ''}
-                  onChange={(e) => setMapping({ ...mapping, [field.key]: e.target.value })}
-                  className={`flex-1 px-3 py-2 rounded-lg text-sm ${
-                    isLight
-                      ? 'bg-gray-100 border border-gray-300 text-gray-900'
-                      : 'bg-slate-800 border border-slate-700 text-white'
-                  } focus:outline-none focus:border-amber-500`}
-                >
-                  <option value="">-- Select Column --</option>
-                  {availableColumns.map(col => (
-                    <option key={col} value={col}>{col}</option>
-                  ))}
-                </select>
-              </div>
-            ))}
-          </div>
+          {availableColumns.length === 0 ? (
+            <div className={`text-center py-8 ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+              <FileSpreadsheet size={40} className="mx-auto mb-3 opacity-50" />
+              <p className="font-medium mb-1">No columns available yet</p>
+              <p className="text-sm">Import an Excel file first to see available columns for mapping.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {mappingFields.map(field => (
+                <div key={field.key} className="flex items-center gap-3">
+                  <label className={`w-28 text-sm font-medium ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+                    {field.label}
+                    {field.required && <span className="text-red-400 ml-1">*</span>}
+                  </label>
+                  <select
+                    value={mapping[field.key] || ''}
+                    onChange={(e) => setMapping({ ...mapping, [field.key]: e.target.value })}
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm ${
+                      isLight
+                        ? 'bg-gray-100 border border-gray-300 text-gray-900'
+                        : 'bg-slate-800 border border-slate-700 text-white'
+                    } focus:outline-none focus:border-amber-500`}
+                  >
+                    <option value="">-- Select Column --</option>
+                    {availableColumns.map(col => (
+                      <option key={col} value={col}>{col}</option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className={`px-6 py-4 border-t flex justify-end gap-3 ${isLight ? 'border-gray-200' : 'border-slate-700'}`}>
@@ -501,16 +509,13 @@ function GameFilmReviewWizard({
     onUpdatePlayReview(currentGamePlay.id, { didntWorkTags: newTags });
   };
 
-  // Build display name - show Hudl formation if no playbook match
-  const playName = matchedPlay
-    ? (matchedPlay.formation ? `${matchedPlay.formation} ${matchedPlay.name}` : matchedPlay.name)
-    : currentGamePlay?.formation
-      ? `${currentGamePlay.formation} ${currentGamePlay.playName}`
-      : currentGamePlay?.playName || 'Unknown Play';
+  // Get display values - prefer matched play data, fall back to imported data
+  const formation = matchedPlay?.formation || currentGamePlay?.formation || '';
+  const backfield = currentGamePlay?.backfield || '';
+  const playName = matchedPlay?.name || currentGamePlay?.playName || 'Unknown Play';
 
-  // Build tags for additional info
+  // Build tags for additional info (motion, type, direction - NOT backfield anymore)
   const playTags = [];
-  if (currentGamePlay?.backfield) playTags.push(currentGamePlay.backfield);
   if (currentGamePlay?.motion) playTags.push(currentGamePlay.motion);
   if (currentGamePlay?.playType) playTags.push(currentGamePlay.playType);
   if (currentGamePlay?.playDir) playTags.push(currentGamePlay.playDir);
@@ -592,8 +597,16 @@ function GameFilmReviewWizard({
                     <span className="px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 text-xs">Unmatched</span>
                   )}
                 </div>
-                <h3 className={`text-2xl font-bold mb-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
-                  {playName}
+                <h3 className={`text-2xl font-bold mb-2 flex items-center gap-2 flex-wrap ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                  {formation && (
+                    <span className={isLight ? 'text-sky-600' : 'text-sky-400'}>{formation}</span>
+                  )}
+                  {formation && backfield && <span className={`text-lg ${isLight ? 'text-gray-300' : 'text-slate-600'}`}>|</span>}
+                  {backfield && (
+                    <span className={isLight ? 'text-purple-600' : 'text-purple-400'}>{backfield}</span>
+                  )}
+                  {(formation || backfield) && <span className={`text-lg ${isLight ? 'text-gray-300' : 'text-slate-600'}`}>|</span>}
+                  <span>{playName}</span>
                 </h3>
                 <div className={`flex flex-wrap gap-2 text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
                   {/* Show backfield, motion, type, direction tags */}
@@ -785,18 +798,15 @@ function GameFilmReviewWizard({
 
 // Game Play Card for list view
 function GamePlayCard({ gamePlay, matchedPlay, plays, onOpenMatch, onUpdateReview, isLight, index }) {
-  // Build display name - show Hudl formation if no playbook match
-  const playName = matchedPlay
-    ? (matchedPlay.formation ? `${matchedPlay.formation} ${matchedPlay.name}` : matchedPlay.name)
-    : gamePlay.formation
-      ? `${gamePlay.formation} ${gamePlay.playName}`
-      : gamePlay.playName || 'Unknown';
+  // Get display values - prefer matched play data, fall back to imported data
+  const formation = matchedPlay?.formation || gamePlay.formation || '';
+  const backfield = gamePlay.backfield || '';
+  const playName = matchedPlay?.name || gamePlay.playName || 'Unknown';
 
   const review = gamePlay.review || {};
 
-  // Build tags for additional info
+  // Build tags for additional info (motion, type, direction - NOT backfield anymore)
   const tags = [];
-  if (gamePlay.backfield) tags.push(gamePlay.backfield);
   if (gamePlay.motion) tags.push(gamePlay.motion);
   if (gamePlay.playType) tags.push(gamePlay.playType);
   if (gamePlay.playDir) tags.push(gamePlay.playDir);
@@ -824,39 +834,51 @@ function GamePlayCard({ gamePlay, matchedPlay, plays, onOpenMatch, onUpdateRevie
           </div>
         </div>
 
-        {/* Play name and details */}
-        <div className="flex-1 min-w-0">
-          <div className={`font-medium truncate ${isLight ? 'text-gray-900' : 'text-white'}`}>
+        {/* Formation | Backfield | Play - as distinct columns */}
+        <div className="flex-1 min-w-0 flex items-center gap-1">
+          {formation && (
+            <span className={`text-sm font-medium ${isLight ? 'text-sky-600' : 'text-sky-400'}`}>
+              {formation}
+            </span>
+          )}
+          {formation && backfield && <span className={`${isLight ? 'text-gray-300' : 'text-slate-600'}`}>|</span>}
+          {backfield && (
+            <span className={`text-sm ${isLight ? 'text-purple-600' : 'text-purple-400'}`}>
+              {backfield}
+            </span>
+          )}
+          {(formation || backfield) && <span className={`${isLight ? 'text-gray-300' : 'text-slate-600'}`}>|</span>}
+          <span className={`font-medium truncate ${isLight ? 'text-gray-900' : 'text-white'}`}>
             {playName}
-          </div>
-          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-            {/* Show backfield/motion/type tags if present */}
-            {tags.length > 0 && (
-              <div className="flex items-center gap-1">
-                {tags.map((tag, i) => (
-                  <span key={i} className={`text-xs px-1.5 py-0.5 rounded ${
-                    isLight ? 'bg-gray-100 text-gray-600' : 'bg-slate-700 text-slate-400'
-                  }`}>
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-            {gamePlay.matchedPlayId ? (
-              <span className="flex items-center gap-1 text-xs text-emerald-400">
-                <Link2 size={10} />
-                Matched
-              </span>
-            ) : (
-              <button
-                onClick={() => onOpenMatch(gamePlay)}
-                className="flex items-center gap-1 text-xs text-orange-400 hover:text-orange-300"
-              >
-                <LinkIcon size={10} />
-                Match to playbook
-              </button>
-            )}
-          </div>
+          </span>
+        </div>
+
+        {/* Tags and match status */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {tags.length > 0 && (
+            <div className="flex items-center gap-1">
+              {tags.map((tag, i) => (
+                <span key={i} className={`text-xs px-1.5 py-0.5 rounded ${
+                  isLight ? 'bg-gray-100 text-gray-600' : 'bg-slate-700 text-slate-400'
+                }`}>
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+          {gamePlay.matchedPlayId ? (
+            <span className="flex items-center gap-1 text-xs text-emerald-400">
+              <Link2 size={10} />
+            </span>
+          ) : (
+            <button
+              onClick={() => onOpenMatch(gamePlay)}
+              className="flex items-center gap-1 text-xs text-orange-400 hover:text-orange-300"
+            >
+              <LinkIcon size={10} />
+              Match
+            </button>
+          )}
         </div>
 
         {/* Result */}
@@ -1536,10 +1558,11 @@ export default function PostgameReview() {
             )}
             <button
               onClick={() => setShowColumnMapping(true)}
-              className={`p-2 rounded-lg ${isLight ? 'hover:bg-gray-100 text-gray-500' : 'hover:bg-slate-800 text-slate-400'}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm ${isLight ? 'hover:bg-gray-100 text-gray-500' : 'hover:bg-slate-800 text-slate-400'}`}
               title="Configure column mapping"
             >
-              <Settings size={18} />
+              <Settings size={16} />
+              <span className="hidden sm:inline">Columns</span>
             </button>
           </div>
         </div>
