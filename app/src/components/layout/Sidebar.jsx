@@ -31,7 +31,8 @@ import {
   UserPlus,
   BarChart3,
   ClipboardCheck,
-  Star
+  Star,
+  Trophy
 } from 'lucide-react';
 
 // Enhanced collapsible category component
@@ -296,6 +297,12 @@ export default function Sidebar() {
                     to={`/week/${currentWeekId}/pregame`}
                     icon={Clock}
                     label="Pre-Game Timeline"
+                    isLight={isLight}
+                  />
+                  <WeeklyToolItem
+                    to={`/week/${currentWeekId}/postgame-review`}
+                    icon={Trophy}
+                    label="Postgame Review"
                     isLight={isLight}
                   />
                   <WeeklyToolItem

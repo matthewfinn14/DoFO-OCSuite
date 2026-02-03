@@ -38,6 +38,7 @@ import {
   PracticePlans,
   QualityControl,
   PracticeReview,
+  PostgameReview,
   // Sub-level pages
   SubLevelView,
   SubLevelSchedule,
@@ -141,6 +142,7 @@ function AppRoutes() {
         <Route path="/:year/:phase/:week/pregame" element={<Pregame />} />
         <Route path="/:year/:phase/:week/quality-control" element={<QualityControl />} />
         <Route path="/:year/:phase/:week/practice-review" element={<PracticeReview />} />
+        <Route path="/:year/:phase/:week/postgame-review" element={<PostgameReview />} />
 
         {/* Legacy week routes (for backwards compatibility) */}
         <Route path="/week/:weekId/notes" element={<CoachesNotes />} />
@@ -154,6 +156,7 @@ function AppRoutes() {
         <Route path="/week/:weekId/pregame" element={<Pregame />} />
         <Route path="/week/:weekId/quality-control" element={<QualityControl />} />
         <Route path="/week/:weekId/practice-review" element={<PracticeReview />} />
+        <Route path="/week/:weekId/postgame-review" element={<PostgameReview />} />
 
         {/* Legacy weekly tools (non-week-specific) */}
         <Route path="/game-plan" element={<GamePlan />} />

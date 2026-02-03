@@ -12,7 +12,8 @@ import {
   Watch,
   Clock,
   ClipboardCheck,
-  Star
+  Star,
+  Trophy
 } from 'lucide-react';
 
 // Navigation item for weekly tools
@@ -57,6 +58,7 @@ const SEASON_MENU = [
   { to: (weekId) => `/week/${weekId}/wristband`, icon: Watch, label: 'Wristband Builder', usesWeekId: true },
   { to: (weekId) => `/week/${weekId}/game-plan`, icon: Clipboard, label: 'Game Plan/Call Sheet', usesWeekId: true },
   { to: (weekId) => `/week/${weekId}/pregame`, icon: Clock, label: 'Pre-Game Timeline', usesWeekId: true },
+  { to: (weekId) => `/week/${weekId}/postgame-review`, icon: Trophy, label: 'Postgame Review', usesWeekId: true },
   { to: (weekId) => `/week/${weekId}/quality-control`, icon: ClipboardCheck, label: 'X&O Quality Control', usesWeekId: true },
 ];
 

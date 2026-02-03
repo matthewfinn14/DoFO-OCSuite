@@ -18,11 +18,104 @@ import {
   AlertTriangle,
   Zap,
   FileText,
-  X
+  X,
+  HelpCircle
 } from 'lucide-react';
 
 // Days of the week for practice
 const PRACTICE_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+// Helper Box Component for new coaches
+function CoachHelperBox({ isLight, showByDefault = true }) {
+  const [isExpanded, setIsExpanded] = useState(showByDefault);
+  const [isDismissed, setIsDismissed] = useState(false);
+
+  if (isDismissed) return null;
+
+  return (
+    <div className={`mb-6 rounded-xl border ${
+      isLight
+        ? 'bg-violet-50 border-violet-200'
+        : 'bg-violet-900/20 border-violet-800'
+    }`}>
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className={`w-full px-4 py-3 flex items-center justify-between text-left ${
+          isLight ? 'hover:bg-violet-100/50' : 'hover:bg-violet-900/30'
+        } rounded-xl transition-colors`}
+      >
+        <div className="flex items-center gap-2">
+          <HelpCircle size={18} className={isLight ? 'text-violet-600' : 'text-violet-400'} />
+          <span className={`font-medium ${isLight ? 'text-violet-800' : 'text-violet-300'}`}>
+            New to Practice Review? Here's how it works
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsDismissed(true);
+            }}
+            className={`text-xs px-2 py-1 rounded ${
+              isLight ? 'text-violet-600 hover:bg-violet-200' : 'text-violet-400 hover:bg-violet-800'
+            }`}
+          >
+            Dismiss
+          </button>
+          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        </div>
+      </button>
+
+      {isExpanded && (
+        <div className={`px-4 pb-4 ${isLight ? 'text-violet-900' : 'text-violet-100'}`}>
+          <div className="grid md:grid-cols-2 gap-4 text-sm">
+            <div>
+              <h4 className="font-semibold mb-2 flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-violet-500 text-white flex items-center justify-center text-xs">1</span>
+                Select a Practice Day
+              </h4>
+              <p className={`ml-8 ${isLight ? 'text-violet-700' : 'text-violet-300'}`}>
+                Use the sidebar to pick which day's practice you want to review. Only days with practice plans will be available.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-2 flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-violet-500 text-white flex items-center justify-center text-xs">2</span>
+                Start Film Review
+              </h4>
+              <p className={`ml-8 ${isLight ? 'text-violet-700' : 'text-violet-300'}`}>
+                Click "Start Film Review" to slide through each scripted rep. Watch the film, then rate how well the play was executed.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-2 flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-violet-500 text-white flex items-center justify-center text-xs">3</span>
+                Tag What Worked (or Didn't)
+              </h4>
+              <p className={`ml-8 ${isLight ? 'text-violet-700' : 'text-violet-300'}`}>
+                Use the quick-tap tags to note why a play succeeded or failed. Tags are set up in Self-Scout Setup and help you spot trends.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-2 flex items-center gap-2">
+                <span className="w-6 h-6 rounded-full bg-violet-500 text-white flex items-center justify-center text-xs">4</span>
+                Rate Position Groups
+              </h4>
+              <p className={`ml-8 ${isLight ? 'text-violet-700' : 'text-violet-300'}`}>
+                After reviewing plays, scroll down to rate each position group's overall practice performance and add coaching notes.
+              </p>
+            </div>
+          </div>
+          <div className={`mt-4 pt-3 border-t text-xs ${
+            isLight ? 'border-violet-200 text-violet-600' : 'border-violet-700 text-violet-400'
+          }`}>
+            <strong>Pro tip:</strong> In the Film Review wizard, use keyboard shortcuts: Arrow keys to navigate, 1-5 to rate, Esc to close. Reviews are saved to each play's history automatically.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Star Rating Component
 function StarRating({ rating, onChange, size = 'normal', disabled = false }) {
@@ -1143,6 +1236,9 @@ export default function PracticeReview() {
 
         {/* Main Content */}
         <div className="flex-1 overflow-y-auto p-6">
+          {/* Helper box for new coaches */}
+          <CoachHelperBox isLight={isLight} showByDefault={daysWithPractice.length === 0} />
+
           {daysWithPractice.length === 0 ? (
             <div className={`text-center py-12 ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
               <Calendar size={48} className="mx-auto mb-4 opacity-50" />
