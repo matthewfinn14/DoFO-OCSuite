@@ -21,22 +21,33 @@ const OL_POSITIONS = [
 // OL position keys to exclude from skill positions
 const OL_POSITION_KEYS = ['LT', 'LG', 'C', 'RG', 'RT'];
 
-// Default offense positions - matches the 11 core positions in Setup.jsx
+// Default offense positions - matches SchoolContext.jsx offensePositions defaults
 // This is the CANONICAL list - all other files should reference this
 // OL positions (LT, LG, C, RG, RT) are handled separately via OL_POSITIONS
+// Includes extended skill positions: A (Adjuster), B (B-back), F (Fullback), FB, WR, TE
 const DEFAULT_OFFENSE_POSITIONS = [
-  'QB', 'RB', 'X', 'Y', 'Z', 'H'
+  'QB', 'RB', 'FB', 'WR', 'TE', 'X', 'Y', 'Z', 'H', 'F', 'A', 'B'
 ];
 
 // Export the full default positions for other files to use
 // This includes both skill and OL positions as objects with key/default pairs
+// Teams can HIDE positions they don't use via Setup > Name Positions
 export const CANONICAL_OFFENSE_POSITIONS = [
+  // Core skill positions
   { key: 'QB', default: 'QB' },
   { key: 'RB', default: 'RB' },
   { key: 'X', default: 'X' },
   { key: 'Y', default: 'Y' },
   { key: 'Z', default: 'Z' },
   { key: 'H', default: 'H' },
+  // Extended skill positions
+  { key: 'A', default: 'A' },
+  { key: 'B', default: 'B' },
+  { key: 'F', default: 'F' },
+  { key: 'FB', default: 'FB' },
+  { key: 'WR', default: 'WR' },
+  { key: 'TE', default: 'TE' },
+  // OL positions
   { key: 'LT', default: 'LT' },
   { key: 'LG', default: 'LG' },
   { key: 'C', default: 'C' },
