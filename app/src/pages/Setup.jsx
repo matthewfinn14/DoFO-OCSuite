@@ -969,6 +969,34 @@ export default function Setup() {
     setLocalConfig(prev => ({ ...prev, [key]: value }));
   };
 
+  // Helper to update local config AND immediately save to Firebase
+  // Use this for critical changes that shouldn't rely on autosave (add/remove positions, etc.)
+  const updateLocalAndSave = async (key, value) => {
+    // Clear any pending autosave
+    if (autosaveTimeoutRef.current) {
+      clearTimeout(autosaveTimeoutRef.current);
+    }
+
+    const newConfig = { ...localConfig, [key]: value };
+    setLocalConfig(newConfig);
+
+    setSaving(true);
+    setSaveStatus('saving');
+
+    try {
+      await updateSetupConfig(newConfig);
+      initialConfigRef.current = newConfig;
+      setSaveStatus('saved');
+      console.log('DEBUG: Immediate save completed for', key);
+    } catch (err) {
+      console.error('Error saving setup:', err);
+      setSaveStatus('error');
+      setError(err.message || 'Failed to save changes');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Get positions for current phase
   // Core positions are always shown, custom positions can be added/deleted
   const getPositions = () => {
@@ -1343,6 +1371,7 @@ export default function Setup() {
               hiddenPositions={localConfig.hiddenPositions || {}}
               customPositions={localConfig.customPositions || {}}
               onUpdate={updateLocal}
+              onImmediateSave={updateLocalAndSave}
               isLight={isLight}
             />
           )}
@@ -1627,8 +1656,8 @@ const DEFAULT_POSITION_TYPES = {
 };
 
 // Positions Tab Component
-function PositionsTab({ phase, positions, positionNames, positionColors, positionDescriptions, positionTypes, hiddenPositions, customPositions, onUpdate, isLight = false }) {
-  const addPosition = () => {
+function PositionsTab({ phase, positions, positionNames, positionColors, positionDescriptions, positionTypes, hiddenPositions, customPositions, onUpdate, onImmediateSave, isLight = false }) {
+  const addPosition = async () => {
     const key = prompt('Enter Position Key (1-3 letters, e.g., "F" or "S2"):');
     if (!key) return;
     const cleanKey = key.toUpperCase().trim().slice(0, 3);
@@ -1643,13 +1672,23 @@ function PositionsTab({ phase, positions, positionNames, positionColors, positio
     const desc = prompt('Enter Description (e.g., "Flex Tight End"):') || cleanKey;
     const newPos = { key: cleanKey, default: cleanKey, description: desc, isCustom: true };
     const current = customPositions[phase] || [];
-    onUpdate('customPositions', { ...customPositions, [phase]: [...current, newPos] });
+    // Use immediate save for adding positions to ensure it syncs to database
+    if (onImmediateSave) {
+      await onImmediateSave('customPositions', { ...customPositions, [phase]: [...current, newPos] });
+    } else {
+      onUpdate('customPositions', { ...customPositions, [phase]: [...current, newPos] });
+    }
   };
 
-  const removePosition = (key) => {
+  const removePosition = async (key) => {
     if (!confirm(`Permanently delete custom position ${key}?`)) return;
     const current = customPositions[phase] || [];
-    onUpdate('customPositions', { ...customPositions, [phase]: current.filter(p => p.key !== key) });
+    // Use immediate save for removing positions to ensure it syncs to database
+    if (onImmediateSave) {
+      await onImmediateSave('customPositions', { ...customPositions, [phase]: current.filter(p => p.key !== key) });
+    } else {
+      onUpdate('customPositions', { ...customPositions, [phase]: current.filter(p => p.key !== key) });
+    }
   };
 
   const updatePositionName = (key, value) => {
