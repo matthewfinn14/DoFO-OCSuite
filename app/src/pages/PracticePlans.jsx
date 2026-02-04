@@ -3359,9 +3359,9 @@ export default function PracticePlans() {
                               Quick List ({focusPlays.length})
                             </div>
                             <div className="max-h-[400px] overflow-y-auto">
-                              {focusPlays.map(play => (
+                              {focusPlays.map((play, playIdx) => (
                                 <button
-                                  key={play.id}
+                                  key={`${play.id}-${playIdx}`}
                                   onClick={() => addPlayToNextEmptyRow(seg.id, play)}
                                   className={`w-full px-3 py-1.5 text-left text-xs border-b transition-colors ${
                                     isLight
