@@ -1355,6 +1355,15 @@ export default function PlayEditor({
                     </div>
                   ) : (
                     <div className="space-y-2 flex-1 flex flex-col">
+                      {/* Draw Diagram button - primary action */}
+                      <button
+                        type="button"
+                        onClick={() => setShowSkillEditor(true)}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-800 border-2 border-dashed border-slate-600 rounded-lg text-slate-400 hover:border-sky-500 hover:text-sky-400 transition-colors"
+                      >
+                        <Edit3 size={18} />
+                        Draw Diagram
+                      </button>
                       {/* Start from Template Search */}
                       {playsWithSkillDiagrams.length > 0 && (
                         <div className="relative">
@@ -1394,14 +1403,6 @@ export default function PlayEditor({
                           )}
                         </div>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => setShowSkillEditor(true)}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-slate-800 border-2 border-dashed border-slate-600 rounded-lg text-slate-400 hover:border-sky-500 hover:text-sky-400 transition-colors"
-                      >
-                        <Edit3 size={18} />
-                        Draw Diagram
-                      </button>
                       <label htmlFor="play-editor-wiz-skill-upload" className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-400 hover:bg-slate-700 cursor-pointer transition-colors text-sm">
                         <Upload size={14} />
                         Upload Image
