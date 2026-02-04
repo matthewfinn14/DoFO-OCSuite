@@ -1,8 +1,93 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 /**
+ * Score a voice for quality - higher is better
+ * Prioritizes neural/natural sounding voices across browsers
+ */
+function scoreVoice(voice) {
+  const name = voice.name.toLowerCase();
+  const lang = voice.lang;
+  let score = 0;
+
+  // Must be English
+  if (!lang.startsWith('en')) return -1000;
+
+  // Prefer US English, then UK, then Australian
+  if (lang === 'en-US') score += 50;
+  else if (lang === 'en-GB') score += 40;
+  else if (lang === 'en-AU') score += 30;
+  else score += 10;
+
+  // Google voices (Chrome) - very high quality neural voices
+  if (name.includes('google')) {
+    score += 200;
+    // Google US English voices are particularly good
+    if (lang === 'en-US') score += 50;
+  }
+
+  // Microsoft Online/Neural voices (Edge) - excellent quality
+  if (name.includes('microsoft') && (name.includes('online') || name.includes('natural'))) {
+    score += 180;
+  } else if (name.includes('microsoft')) {
+    score += 100;
+  }
+
+  // Apple premium voices (Safari/macOS)
+  // Enhanced/Premium voices have "(Enhanced)" or are the newer neural voices
+  if (name.includes('(enhanced)') || name.includes('(premium)')) {
+    score += 170;
+  }
+
+  // Specific high-quality Apple voices
+  const premiumAppleVoices = ['samantha', 'alex', 'karen', 'daniel', 'moira', 'tessa', 'fiona'];
+  if (premiumAppleVoices.some(v => name.includes(v))) {
+    score += 120;
+  }
+
+  // Siri voices on newer macOS/iOS
+  if (name.includes('siri')) {
+    score += 150;
+  }
+
+  // Avoid robotic/old voices
+  const roboticVoices = ['espeak', 'festival', 'mbrola'];
+  if (roboticVoices.some(v => name.includes(v))) {
+    score -= 100;
+  }
+
+  // Slight preference for non-local (cloud) voices as they're usually higher quality
+  if (!voice.localService) {
+    score += 20;
+  }
+
+  return score;
+}
+
+/**
+ * Select the best available voice from a list
+ */
+function selectBestVoice(voices) {
+  if (!voices || voices.length === 0) return null;
+
+  // Score all voices and sort by score descending
+  const scoredVoices = voices
+    .map(voice => ({ voice, score: scoreVoice(voice) }))
+    .filter(v => v.score > 0) // Only English voices
+    .sort((a, b) => b.score - a.score);
+
+  // Debug: log top voices (can be removed in production)
+  if (scoredVoices.length > 0) {
+    console.log('Top 3 TTS voices:', scoredVoices.slice(0, 3).map(v =>
+      `${v.voice.name} (${v.voice.lang}) - score: ${v.score}`
+    ));
+  }
+
+  return scoredVoices[0]?.voice || voices[0];
+}
+
+/**
  * Hook for browser speech synthesis (Text-to-Speech)
- * Uses Web Speech API SpeechSynthesis
+ * Uses Web Speech API SpeechSynthesis with smart voice selection
  */
 export function useSpeechSynthesis() {
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -13,6 +98,7 @@ export function useSpeechSynthesis() {
   const [selectedVoice, setSelectedVoice] = useState(null);
 
   const utteranceRef = useRef(null);
+  const hasAutoSelectedRef = useRef(false);
 
   // Check browser support and load voices
   useEffect(() => {
@@ -27,15 +113,13 @@ export function useSpeechSynthesis() {
       const availableVoices = window.speechSynthesis.getVoices();
       setVoices(availableVoices);
 
-      // Try to select a good default voice (prefer US English)
-      if (availableVoices.length > 0 && !selectedVoice) {
-        const usEnglish = availableVoices.find(
-          v => v.lang === 'en-US' && v.localService
-        );
-        const anyEnglish = availableVoices.find(
-          v => v.lang.startsWith('en')
-        );
-        setSelectedVoice(usEnglish || anyEnglish || availableVoices[0]);
+      // Auto-select best voice only once
+      if (availableVoices.length > 0 && !hasAutoSelectedRef.current) {
+        const bestVoice = selectBestVoice(availableVoices);
+        if (bestVoice) {
+          setSelectedVoice(bestVoice);
+          hasAutoSelectedRef.current = true;
+        }
       }
     };
 
@@ -46,7 +130,7 @@ export function useSpeechSynthesis() {
     return () => {
       window.speechSynthesis.onvoiceschanged = null;
     };
-  }, [selectedVoice]);
+  }, []);
 
   // Speak text
   const speak = useCallback((text, options = {}) => {

@@ -41,10 +41,12 @@ import {
   Dumbbell,
   Video,
   ChevronRight,
-  Watch
+  Watch,
+  Sparkles
 } from 'lucide-react';
 import PlayDiagramEditor from '../components/diagrams/PlayDiagramEditor';
 import DiagramPreview from '../components/diagrams/DiagramPreview';
+import { SystemSetupWizard } from '../components/wizard';
 
 // Collapsible Help Section component
 function HelpSection({ title, children, defaultOpen = false, isLight = false }) {
@@ -666,6 +668,9 @@ export default function Setup() {
   };
   const [activeTab, setActiveTab] = useState(() => urlTab || getDefaultTab(phase));
 
+  // System Setup Wizard state
+  const [showSetupWizard, setShowSetupWizard] = useState(false);
+
   // Default position groups
   const DEFAULT_POSITION_GROUPS = {
     OFFENSE: [
@@ -1209,6 +1214,21 @@ export default function Setup() {
           </div>
         </div>
         <div className="flex items-center gap-4">
+          {/* Setup Wizard button (Offense only) */}
+          {phase === 'OFFENSE' && (
+            <button
+              onClick={() => setShowSetupWizard(true)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                isLight
+                  ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-200'
+                  : 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 border border-amber-500/30'
+              }`}
+            >
+              <Sparkles size={18} />
+              Setup Wizard
+            </button>
+          )}
+
           {/* Save status indicator */}
           <SaveStatusIndicator />
 
@@ -1696,6 +1716,172 @@ export default function Setup() {
           )}
         </div>
       </div>
+
+      {/* System Setup Wizard Modal */}
+      {showSetupWizard && (
+        <SystemSetupWizard
+          isOpen={showSetupWizard}
+          onClose={() => setShowSetupWizard(false)}
+          renderTabContent={(tabId) => {
+            // Render the appropriate tab content based on tabId
+            switch (tabId) {
+              case 'positions':
+                return (
+                  <PositionsTab
+                    phase="OFFENSE"
+                    positions={getPositions()}
+                    positionNames={localConfig.positionNames || {}}
+                    positionColors={localConfig.positionColors || {}}
+                    positionDescriptions={localConfig.positionDescriptions || {}}
+                    positionTypes={localConfig.positionTypes || {}}
+                    positionWizAbbreviations={localConfig.positionWizAbbreviations || {}}
+                    hiddenPositions={localConfig.hiddenPositions || {}}
+                    customPositions={localConfig.customPositions || {}}
+                    onUpdate={updateLocal}
+                    onImmediateSave={updateLocalAndSave}
+                    isLight={isLight}
+                  />
+                );
+              case 'personnel':
+                return (
+                  <PersonnelTab
+                    personnelGroupings={localConfig.personnelGroupings || []}
+                    positions={getPositions()}
+                    positionNames={localConfig.positionNames || {}}
+                    positionColors={localConfig.positionColors || {}}
+                    onUpdate={updateLocal}
+                    isLight={isLight}
+                  />
+                );
+              case 'play-buckets':
+                return (
+                  <PlayBucketsTab
+                    phase="OFFENSE"
+                    buckets={getPlayBuckets()}
+                    allBuckets={localConfig.playBuckets || []}
+                    onUpdate={updateLocal}
+                    setupConfig={localConfig}
+                    isLight={isLight}
+                  />
+                );
+              case 'formations':
+                return (
+                  <FormationsTab
+                    phase="OFFENSE"
+                    formations={(localConfig.formations || []).filter(f => f.phase === 'OFFENSE')}
+                    personnelGroupings={localConfig.personnelGroupings || []}
+                    formationFamilies={localConfig.formationFamilies || []}
+                    onUpdate={(formations) => {
+                      const otherFormations = (localConfig.formations || []).filter(f => f.phase !== 'OFFENSE');
+                      updateLocal('formations', [...otherFormations, ...formations]);
+                    }}
+                    onUpdateFamilies={(families) => updateLocal('formationFamilies', families)}
+                    positionColors={localConfig.positionColors || {}}
+                    positionNames={localConfig.positionNames || {}}
+                    hiddenPositions={localConfig.hiddenPositions?.OFFENSE || []}
+                    customPositions={localConfig.customPositions?.OFFENSE || []}
+                    customDefaultPositions={localConfig.defaultFormationPositions || {}}
+                    onSaveDefaultPositions={(positions) => updateLocal('defaultFormationPositions', positions)}
+                    customFamilyCategories={localConfig.customFamilyCategories || []}
+                    onUpdateCategories={(categories) => updateLocal('customFamilyCategories', categories)}
+                    isLight={isLight}
+                    hideFamilies={true}
+                  />
+                );
+              case 'shifts-motions':
+                return (
+                  <ShiftMotionsTab
+                    shiftMotions={localConfig.shiftMotions || []}
+                    onUpdate={(items) => updateLocal('shiftMotions', items)}
+                    isLight={isLight}
+                  />
+                );
+              case 'read-types':
+                return (
+                  <ReadTypesTab
+                    readTypes={localConfig.readTypes || []}
+                    onUpdate={updateLocal}
+                    isLight={isLight}
+                  />
+                );
+              case 'concept-groups':
+                return (
+                  <ConceptGroupsTab
+                    phase="OFFENSE"
+                    buckets={getPlayBuckets()}
+                    allBuckets={localConfig.playBuckets || []}
+                    onUpdate={updateLocal}
+                    isLight={isLight}
+                  />
+                );
+              case 'situations':
+                return (
+                  <DefineSituationsTab
+                    fieldZones={localConfig.fieldZones || []}
+                    downDistanceCategories={localConfig.downDistanceCategories || []}
+                    specialSituations={localConfig.specialSituations || []}
+                    playPurposes={localConfig.playPurposes || []}
+                    onUpdate={updateLocal}
+                    isLight={isLight}
+                  />
+                );
+              case 'look-alike-series':
+                return (
+                  <LookAlikeSeriesTab
+                    series={localConfig.lookAlikeSeries || []}
+                    buckets={getPlayBuckets()}
+                    plays={playsArray}
+                    onUpdate={updateLocal}
+                    isLight={isLight}
+                  />
+                );
+              case 'oline-schemes':
+                return (
+                  <OLSchemesTab
+                    passProtections={localConfig.passProtections || []}
+                    runBlocking={localConfig.runBlocking || []}
+                    onUpdate={updateLocal}
+                  />
+                );
+              case 'play-call-chain':
+                return (
+                  <PlayCallChainTab
+                    phase="OFFENSE"
+                    syntax={localConfig.syntax || {}}
+                    syntaxTemplates={localConfig.syntaxTemplates || {}}
+                    termLibrary={localConfig.termLibrary || {}}
+                    setupConfig={localConfig}
+                    onUpdate={updateLocal}
+                  />
+                );
+              case 'wristband-abbreviations':
+                return (
+                  <WristbandAbbreviationsSection
+                    phase="OFFENSE"
+                    setupConfig={localConfig}
+                    onUpdate={updateLocal}
+                    plays={playsArray || []}
+                  />
+                );
+              case 'glossary':
+                return (
+                  <GlossaryDefinitionsTab
+                    phase="OFFENSE"
+                    termLibrary={localConfig.termLibrary || {}}
+                    syntax={localConfig.syntax || {}}
+                    glossaryDefinitions={localConfig.glossaryDefinitions || {}}
+                    onUpdate={updateLocal}
+                  />
+                );
+              default:
+                return <div className="p-4 text-slate-400">Tab not found</div>;
+            }
+          }}
+          setupConfig={localConfig}
+          onUpdateConfig={updateLocal}
+          isLight={isLight}
+        />
+      )}
     </div>
   );
 }
