@@ -109,6 +109,14 @@ export function SchoolProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Save status for UI feedback: 'idle' | 'pending' | 'saving' | 'saved' | 'error'
+  const [saveStatus, setSaveStatus] = useState('idle');
+
+  // Debounce refs for batching rapid updates
+  const pendingUpdatesRef = useRef({});
+  const debounceTimerRef = useRef(null);
+  const saveStatusTimerRef = useRef(null);
+
   // School sub-collections
   const [roster, setRoster] = useState([]);
   const [plays, setPlays] = useState({});
@@ -570,9 +578,17 @@ export function SchoolProvider({ children }) {
   }, [loading, school, weeks.length, activeYear, setupConfig?.seasonPhases, devMode, currentSchool?.id]);
 
   /**
-   * Update school data
+   * Flush pending updates to Firebase/localStorage
+   * Called by debounce timer or can be called directly for immediate save
    */
-  const updateSchool = useCallback(async (updates) => {
+  const flushUpdates = useCallback(async () => {
+    const updates = pendingUpdatesRef.current;
+    if (Object.keys(updates).length === 0) return;
+
+    // Clear pending updates before async operation
+    pendingUpdatesRef.current = {};
+    setSaveStatus('saving');
+
     // Dev mode: save to localStorage
     if (devMode) {
       console.log('🔧 DEV MODE: Saving to localStorage', Object.keys(updates));
@@ -599,24 +615,28 @@ export function SchoolProvider({ children }) {
         if (updates.meetingNotes) setMeetingNotes(updates.meetingNotes);
         if (updates.practiceGrades) setPracticeGrades(updates.practiceGrades);
         if (updates.gameGrades) setGameGrades(updates.gameGrades);
+
+        setSaveStatus('saved');
+        // Reset to idle after showing "saved" briefly
+        clearTimeout(saveStatusTimerRef.current);
+        saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
       } catch (err) {
         console.error('Error saving dev data:', err);
         setError(err.message);
-        throw err;
+        setSaveStatus('error');
       }
       return;
     }
 
     if (!currentSchool?.id) {
-      const error = new Error('Cannot update school: No school ID available');
-      console.error(error.message);
-      setError(error.message);
-      throw error;
+      console.error('Cannot update school: No school ID available');
+      setSaveStatus('error');
+      return;
     }
 
     try {
       const schoolRef = doc(db, 'schools', currentSchool.id);
-      console.log(`Updating school ${currentSchool.id}:`, Object.keys(updates));
+      console.log(`Saving to Firebase:`, Object.keys(updates));
       // Clean undefined values before saving to Firestore
       const cleanedUpdates = removeUndefinedValues(updates);
       await updateDoc(schoolRef, {
@@ -624,12 +644,57 @@ export function SchoolProvider({ children }) {
         updatedAt: new Date().toISOString(),
         updatedBy: user?.uid
       });
+
+      setSaveStatus('saved');
+      // Reset to idle after showing "saved" briefly
+      clearTimeout(saveStatusTimerRef.current);
+      saveStatusTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (err) {
       console.error('Error updating school:', err);
       setError(err.message);
-      throw err;
+      setSaveStatus('error');
     }
   }, [currentSchool?.id, user?.uid, devMode]);
+
+  /**
+   * Update school data with debouncing
+   * Batches rapid updates and saves after 500ms of inactivity
+   */
+  const updateSchool = useCallback(async (updates) => {
+    // Merge new updates with any pending updates
+    pendingUpdatesRef.current = {
+      ...pendingUpdatesRef.current,
+      ...updates
+    };
+
+    // Show pending status immediately
+    setSaveStatus('pending');
+
+    // Clear existing timer
+    clearTimeout(debounceTimerRef.current);
+
+    // Set new timer to flush updates after 500ms
+    debounceTimerRef.current = setTimeout(() => {
+      flushUpdates();
+    }, 500);
+  }, [flushUpdates]);
+
+  /**
+   * Force immediate save (bypasses debounce)
+   * Use for critical saves like before navigation
+   */
+  const saveNow = useCallback(async () => {
+    clearTimeout(debounceTimerRef.current);
+    await flushUpdates();
+  }, [flushUpdates]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      clearTimeout(debounceTimerRef.current);
+      clearTimeout(saveStatusTimerRef.current);
+    };
+  }, []);
 
   /**
    * Update roster
@@ -878,9 +943,11 @@ export function SchoolProvider({ children }) {
     // State
     loading,
     error,
+    saveStatus,
 
     // Actions
     updateSchool,
+    saveNow,
     updateRoster,
     updatePlays,
     updatePlay,

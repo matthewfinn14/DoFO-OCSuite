@@ -21,32 +21,26 @@ const OL_POSITIONS = [
 // OL position keys to exclude from skill positions
 const OL_POSITION_KEYS = ['LT', 'LG', 'C', 'RG', 'RT'];
 
-// Default offense positions - matches SchoolContext.jsx offensePositions defaults
+// Default offense positions - matches Setup.jsx DEFAULT_POSITIONS.OFFENSE exactly
 // This is the CANONICAL list - all other files should reference this
 // OL positions (LT, LG, C, RG, RT) are handled separately via OL_POSITIONS
-// Includes extended skill positions: A (Adjuster), B (B-back), F (Fullback), FB, WR, TE
+// ONLY includes core defaults - extended positions (FB, WR, TE, A, B, F) must be added as custom
 const DEFAULT_OFFENSE_POSITIONS = [
-  'QB', 'RB', 'FB', 'WR', 'TE', 'X', 'Y', 'Z', 'H', 'F', 'A', 'B'
+  'QB', 'RB', 'X', 'Y', 'Z', 'H'
 ];
 
 // Export the full default positions for other files to use
 // This includes both skill and OL positions as objects with key/default pairs
-// Teams can HIDE positions they don't use via Setup > Name Positions
+// Matches Setup.jsx DEFAULT_POSITIONS.OFFENSE exactly
+// Extended positions (FB, WR, TE, A, B, F) must be added via Setup > Name Positions > Add Position
 export const CANONICAL_OFFENSE_POSITIONS = [
-  // Core skill positions
+  // Core skill positions (matches Setup.jsx defaults)
   { key: 'QB', default: 'QB' },
   { key: 'RB', default: 'RB' },
   { key: 'X', default: 'X' },
   { key: 'Y', default: 'Y' },
   { key: 'Z', default: 'Z' },
   { key: 'H', default: 'H' },
-  // Extended skill positions
-  { key: 'A', default: 'A' },
-  { key: 'B', default: 'B' },
-  { key: 'F', default: 'F' },
-  { key: 'FB', default: 'FB' },
-  { key: 'WR', default: 'WR' },
-  { key: 'TE', default: 'TE' },
   // OL positions
   { key: 'LT', default: 'LT' },
   { key: 'LG', default: 'LG' },
@@ -253,10 +247,10 @@ export function generateDepthChartPositions(levelId, programLevels, personnelGro
 
 /**
  * Get default positions when no personnel is configured
- * Defaults to standard 11 personnel layout
+ * Defaults to core skill positions (matches Setup.jsx defaults)
  */
 export function getDefaultPositions(positionNames = {}) {
-  const defaultKeys = ['QB', 'RB', 'X', 'Y', 'Z', 'TE'];
+  const defaultKeys = ['QB', 'RB', 'X', 'Y', 'Z', 'H'];
 
   const positions = defaultKeys.map(key => ({
     id: key,

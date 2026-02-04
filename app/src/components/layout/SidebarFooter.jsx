@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSchool } from '../../context/SchoolContext';
+import { SaveStatusIndicator } from '../shared';
 import {
   Settings,
   Shield,
@@ -50,6 +51,11 @@ export default function SidebarFooter({ collapsed }) {
 
   return (
     <div className={`px-2 py-1.5 border-t ${isLight ? 'border-gray-200' : 'border-slate-800'}`}>
+      {/* Save status indicator */}
+      <div className={`flex items-center ${collapsed ? 'justify-center' : 'px-1'} py-1 mb-1`}>
+        <SaveStatusIndicator compact={collapsed} isLight={isLight} />
+      </div>
+
       {/* Collapsible header - User info with toggle */}
       {!collapsed && (
         <button

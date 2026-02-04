@@ -38,21 +38,20 @@ const DEPTH_CHART_TYPES = [
   { id: 'pat', label: 'PAT' }
 ];
 
-// Default positions for grid view
+// Default positions for grid view - matches Setup.jsx DEFAULT_POSITIONS.OFFENSE
 const DEFAULT_POSITIONS = {
   offense: [
     { id: 'QB', label: 'QB', depth: 3 },
     { id: 'RB', label: 'RB', depth: 3 },
-    { id: 'FB', label: 'FB', depth: 2 },
-    { id: 'WR1', label: 'WR (X)', depth: 3 },
-    { id: 'WR2', label: 'WR (Z)', depth: 3 },
-    { id: 'WR3', label: 'Slot', depth: 3 },
-    { id: 'TE', label: 'TE', depth: 3 },
-    { id: 'LT', label: 'LT', depth: 2 },
-    { id: 'LG', label: 'LG', depth: 2 },
-    { id: 'C', label: 'C', depth: 2 },
-    { id: 'RG', label: 'RG', depth: 2 },
-    { id: 'RT', label: 'RT', depth: 2 }
+    { id: 'X', label: 'X', depth: 3 },
+    { id: 'Y', label: 'Y', depth: 3 },
+    { id: 'Z', label: 'Z', depth: 3 },
+    { id: 'H', label: 'H', depth: 3 },
+    { id: 'LT', label: 'LT', depth: 3 },
+    { id: 'LG', label: 'LG', depth: 3 },
+    { id: 'C', label: 'C', depth: 3 },
+    { id: 'RG', label: 'RG', depth: 3 },
+    { id: 'RT', label: 'RT', depth: 3 }
   ],
   defense: [
     { id: 'DE1', label: 'DE', depth: 2 },
@@ -188,6 +187,7 @@ const DEFAULT_POSITION_COORDS = {
 // LOS at y=40, O-Line tightly grouped (50px spacing), skill positions spread wide
 const DEFAULT_FORMATION_LAYOUTS = {
   offense: [
+    // Matches Setup.jsx DEFAULT_POSITIONS.OFFENSE (11 core positions)
     { id: 'X', label: 'X', x: 100, y: 60 },
     { id: 'LT', label: 'LT', x: 428, y: 60 },
     { id: 'LG', label: 'LG', x: 478, y: 60 },
@@ -198,8 +198,7 @@ const DEFAULT_FORMATION_LAYOUTS = {
     { id: 'Z', label: 'Z', x: 920, y: 100 },
     { id: 'H', label: 'H', x: 200, y: 100 },
     { id: 'QB', label: 'QB', x: 528, y: 140 },
-    { id: 'RB', label: 'RB', x: 528, y: 280 },
-    { id: 'FB', label: 'FB', x: 528, y: 210 }
+    { id: 'RB', label: 'RB', x: 528, y: 280 }
   ],
   defense: [
     // Flipped so LOS is at bottom - defense faces offense when printed together
@@ -1202,14 +1201,10 @@ export default function DepthCharts() {
   const hiddenPositions = setupConfig?.hiddenPositions?.OFFENSE || [];
 
   // Compute active positions: defaults + custom - hidden
+  // Defaults come from CANONICAL_OFFENSE_POSITIONS (matches Setup.jsx DEFAULT_POSITIONS.OFFENSE)
   const activePositions = useMemo(() => {
-    console.log('DEBUG: DEFAULT_OFFENSE_POSITIONS:', DEFAULT_OFFENSE_POSITIONS);
-    console.log('DEBUG: hiddenPositions:', hiddenPositions);
     const defaults = DEFAULT_OFFENSE_POSITIONS.filter(p => !hiddenPositions.includes(p.key));
-    console.log('DEBUG: defaults after filter:', defaults);
     const custom = customPositions.map(p => ({ key: p.key || p, default: p.default || p.key || p }));
-    console.log('DEBUG: custom:', custom);
-    console.log('DEBUG: final activePositions:', [...defaults, ...custom]);
     return [...defaults, ...custom];
   }, [customPositions, hiddenPositions]);
 
