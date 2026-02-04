@@ -2140,9 +2140,19 @@ export default function PlayEditor({
               onSaveDefaultPositions={handleSaveDefaultPositions}
               playName={formData.formation ? `${formData.formation} ${formData.name}` : formData.name}
               onSaveFormation={handleSaveFormation}
-              onSave={(data) => {
-                setFormData(prev => ({ ...prev, wizSkillData: data.elements }));
+              onSave={async (data) => {
+                const updatedWizSkillData = data.elements;
+                setFormData(prev => ({ ...prev, wizSkillData: updatedWizSkillData }));
                 setShowSkillEditor(false);
+
+                // Auto-save the play if editing an existing play
+                if (isEditing && play && onSave) {
+                  try {
+                    await onSave({ ...play, ...formData, wizSkillData: updatedWizSkillData });
+                  } catch (err) {
+                    console.error('Error auto-saving play after diagram edit:', err);
+                  }
+                }
               }}
               onOverwritePlay={async ({ playId, wizSkillData }) => {
                 // Find and update the existing play
@@ -2244,20 +2254,31 @@ export default function PlayEditor({
                   updateSetupConfig({ runBlocking: updatedList });
                 }
               }}
-              onSave={(data) => {
+              onSave={async (data) => {
+                let updatedFormData;
                 if (data.wizOlineRef) {
                   // Saving to library - link play to the scheme
-                  setFormData(prev => ({
-                    ...prev,
+                  updatedFormData = {
                     wizOlineRef: data.wizOlineRef,
                     wizOlineData: null,
                     olCall: data.wizOlineRef.name
-                  }));
+                  };
+                  setFormData(prev => ({ ...prev, ...updatedFormData }));
                 } else if (data.elements) {
                   // Legacy: direct save
-                  setFormData(prev => ({ ...prev, wizOlineData: data.elements, wizOlineRef: null }));
+                  updatedFormData = { wizOlineData: data.elements, wizOlineRef: null };
+                  setFormData(prev => ({ ...prev, ...updatedFormData }));
                 }
                 setShowOLEditor(false);
+
+                // Auto-save the play if editing an existing play
+                if (isEditing && play && onSave && updatedFormData) {
+                  try {
+                    await onSave({ ...play, ...formData, ...updatedFormData });
+                  } catch (err) {
+                    console.error('Error auto-saving play after OL diagram edit:', err);
+                  }
+                }
               }}
               onCancel={() => setShowOLEditor(false)}
             />
