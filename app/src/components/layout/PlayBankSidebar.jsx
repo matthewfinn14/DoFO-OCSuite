@@ -4,6 +4,7 @@ import { useSchool } from '../../context/SchoolContext';
 import { usePlayDetailsModal } from '../PlayDetailsModal';
 import { usePlayBank } from '../../context/PlayBankContext';
 import { getWristbandDisplay } from '../../utils/wristband';
+import { getAllRepsForWeek } from '../../utils/repTracking';
 import {
   ChevronLeft,
   ChevronRight,
@@ -192,6 +193,22 @@ export default function PlayBankSidebar({
 
   // Get current week
   const currentWeek = weeks.find(w => w.id === currentWeekId) || null;
+
+  // Get rep targets and current reps for quota coloring
+  const playRepTargets = currentWeek?.playRepTargets || {};
+  const currentWeekReps = useMemo(() => {
+    return getAllRepsForWeek(currentWeekId, weeks);
+  }, [currentWeekId, weeks]);
+
+  // Get quota status for a play: 'met' | 'partial' | 'none' | null
+  const getQuotaStatus = useCallback((playId) => {
+    const target = playRepTargets[playId];
+    if (!target || target <= 0) return null; // No quota set
+    const reps = currentWeekReps[playId] || 0;
+    if (reps >= target) return 'met';
+    if (reps > 0) return 'partial';
+    return 'none';
+  }, [playRepTargets, currentWeekReps]);
 
   // Determine current page context for batch add
   const currentPageContext = useMemo(() => {
@@ -580,6 +597,7 @@ export default function PlayBankSidebar({
     const isSingleSelected = singleSelectMode && contextSelectedPlayId === play.id;
     const isHighlighted = playMatchesHighlightFocuses(play);
     const usage = scriptUsageByPlay[play.id];
+    const quotaStatus = getQuotaStatus(play.id);
 
     // Determine click behavior
     const handleClick = () => {
@@ -593,11 +611,19 @@ export default function PlayBankSidebar({
     // Determine if clickable (batch or single select mode)
     const isClickable = isInBatchMode || singleSelectMode;
 
+    // Quota status colors (only apply if not selected/highlighted)
+    const quotaColor = (!isBatchSelected && !isSingleSelected && !isHighlighted && quotaStatus)
+      ? quotaStatus === 'met' ? 'bg-emerald-50'
+        : quotaStatus === 'partial' ? 'bg-amber-50'
+        : quotaStatus === 'none' ? 'bg-red-50'
+        : ''
+      : '';
+
     return (
       <div
         key={play.id}
         className={`group flex items-center py-0.5 border-b text-xs hover:bg-slate-50 ${isClickable ? 'cursor-pointer' : 'cursor-grab'
-          } ${isBatchSelected ? 'bg-sky-50 border-sky-200' : ''} ${isSingleSelected ? 'bg-emerald-50 border-emerald-300 border-2' : ''} ${isHighlighted && !isBatchSelected && !isSingleSelected ? 'bg-amber-50 border-l-4 border-l-amber-400 border-b-slate-100' : 'border-slate-100'}`}
+          } ${isBatchSelected ? 'bg-sky-50 border-sky-200' : ''} ${isSingleSelected ? 'bg-emerald-50 border-emerald-300 border-2' : ''} ${isHighlighted && !isBatchSelected && !isSingleSelected ? 'bg-amber-50 border-l-4 border-l-amber-400 border-b-slate-100' : `border-slate-100 ${quotaColor}`}`}
         draggable={!isClickable}
         onDragStart={(e) => !isClickable && handleDragStart(e, play)}
         onClick={handleClick}
@@ -663,7 +689,7 @@ export default function PlayBankSidebar({
         </div>
       </div>
     );
-  }, [handleDragStart, openPlayDetails, isInBatchMode, selectedPlayIds, togglePlaySelection, singleSelectMode, contextSelectedPlayId, selectPlayForAssign, triggerQuickAdd, playMatchesHighlightFocuses, scriptUsageByPlay]);
+  }, [handleDragStart, openPlayDetails, isInBatchMode, selectedPlayIds, togglePlaySelection, singleSelectMode, contextSelectedPlayId, selectPlayForAssign, triggerQuickAdd, playMatchesHighlightFocuses, scriptUsageByPlay, getQuotaStatus]);
 
   return (
     <div

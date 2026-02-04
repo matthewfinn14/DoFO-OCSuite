@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
 import { useAuth } from '../context/AuthContext';
 import { getWristbandDisplay } from '../utils/wristband';
-import { getAllHistoricalReps, getCurrentWeekReps } from '../utils/repTracking';
+import { getAllHistoricalReps, getAllRepsForWeek } from '../utils/repTracking';
 import PlayAssignmentWizard from '../components/install/PlayAssignmentWizard';
 import PlaySuggestionWizard from '../components/install/PlaySuggestionWizard';
 import ReviewSuggestionsModal from '../components/install/ReviewSuggestionsModal';
@@ -561,6 +561,21 @@ export default function InstallManager() {
   const historicalReps = useMemo(() => {
     return getAllHistoricalReps(weekId, weeks);
   }, [weekId, weeks]);
+
+  // Calculate current week reps for quota status coloring
+  const currentWeekReps = useMemo(() => {
+    return getAllRepsForWeek(weekId, weeks);
+  }, [weekId, weeks]);
+
+  // Get quota status for a play: 'met' | 'partial' | 'none' | null
+  const getQuotaStatus = useCallback((playId) => {
+    const target = playRepTargets[playId];
+    if (!target || target <= 0) return null; // No quota set
+    const reps = currentWeekReps[playId] || 0;
+    if (reps >= target) return 'met';
+    if (reps > 0) return 'partial';
+    return 'none';
+  }, [playRepTargets, currentWeekReps]);
 
   // Get categories from setupConfig for inline editing
   const phaseBuckets = useMemo(() =>
@@ -1500,9 +1515,26 @@ export default function InstallManager() {
                 const isProcessed = processedPlayIds.includes(play.id);
                 const targetReps = playRepTargets[play.id] || 0;
                 const histReps = historicalReps[play.id] || 0;
+                const quotaStatus = getQuotaStatus(play.id);
 
                 // Get bucket info
                 const bucket = (setupConfig?.playBuckets || []).find(b => b.id === play.bucketId);
+
+                // Quota status colors (only when not selected/processed)
+                const getQuotaColor = () => {
+                  if (isSelected || isProcessed || !quotaStatus) return '';
+                  if (isLight) {
+                    if (quotaStatus === 'met') return 'bg-emerald-50 hover:bg-emerald-100';
+                    if (quotaStatus === 'partial') return 'bg-amber-50 hover:bg-amber-100';
+                    if (quotaStatus === 'none') return 'bg-red-50 hover:bg-red-100';
+                  } else {
+                    if (quotaStatus === 'met') return 'bg-emerald-500/10 hover:bg-emerald-500/20';
+                    if (quotaStatus === 'partial') return 'bg-amber-500/10 hover:bg-amber-500/20';
+                    if (quotaStatus === 'none') return 'bg-red-500/10 hover:bg-red-500/20';
+                  }
+                  return '';
+                };
+                const quotaColor = getQuotaColor();
 
                 return (
                   <tr
@@ -1517,6 +1549,8 @@ export default function InstallManager() {
                           ? 'bg-sky-50 border-gray-200'
                           : isProcessed
                           ? 'bg-emerald-50/50 border-gray-200 hover:bg-emerald-50'
+                          : quotaColor
+                          ? `${quotaColor} border-gray-200`
                           : idx % 2 === 0
                           ? 'bg-white border-gray-200 hover:bg-gray-50'
                           : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
@@ -1524,6 +1558,8 @@ export default function InstallManager() {
                         ? 'bg-sky-500/10 border-slate-700'
                         : isProcessed
                         ? 'bg-emerald-500/5 border-slate-800 hover:bg-emerald-500/10'
+                        : quotaColor
+                        ? `${quotaColor} border-slate-800`
                         : idx % 2 === 0
                         ? 'bg-slate-900/50 border-slate-800 hover:bg-slate-800/50'
                         : 'bg-slate-900/30 border-slate-800 hover:bg-slate-800/30'
