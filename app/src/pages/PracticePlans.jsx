@@ -2280,8 +2280,9 @@ export default function PracticePlans() {
 
   // Add play from quick list to next empty script row
   const addPlayToNextEmptyRow = useCallback((segmentId, play) => {
+    if (!currentPlan?.segments || !play) return;
     const segment = currentPlan.segments.find(s => s.id === segmentId);
-    if (!segment?.script || !play) return;
+    if (!segment?.script) return;
 
     // Find first empty row (no playId and no playName)
     const emptyRow = segment.script.find(row => !row.playId && !row.playName);
