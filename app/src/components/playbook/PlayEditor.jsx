@@ -162,27 +162,17 @@ export default function PlayEditor({
   const [selectedPlayType, setSelectedPlayType] = useState('quick');
   const [selectedBucketId, setSelectedBucketId] = useState('');
 
-  // Check setup mode (basic, standard, advanced)
+  // Check setup mode (basic or standard)
   const setupMode = setupConfig?.setupMode?.[phase] || 'standard';
   const isBasicMode = setupMode === 'basic';
-  const isStandardMode = setupMode === 'standard';
-  const isAdvancedMode = setupMode === 'advanced';
+  const isStandardMode = setupMode === 'standard' || setupMode === 'advanced'; // Treat advanced as standard
 
-  // Get play call chain syntax for current phase based on bucket (advanced) or play type (standard)
+  // Get play call chain syntax for current phase based on play type
   const playCallSyntax = useMemo(() => {
     const phaseKey = phase === 'SPECIAL_TEAMS' ? 'SPECIAL_TEAMS' : phase;
     const playType = selectedPlayType || 'quick';
 
-    // In advanced mode, check for bucket-specific syntax first
-    if (isAdvancedMode && selectedBucketId) {
-      const buckets = setupConfig?.playBuckets || [];
-      const selectedBucket = buckets.find(b => b.id === selectedBucketId);
-      if (selectedBucket?.syntax?.length > 0) {
-        return selectedBucket.syntax;
-      }
-    }
-
-    // Standard mode: check syntaxTemplates for the specific play type
+    // Check syntaxTemplates for the specific play type
     const templates = setupConfig?.syntaxTemplates?.[phaseKey];
     if (templates && templates[playType]?.length > 0) {
       return templates[playType];
@@ -205,7 +195,7 @@ export default function PlayEditor({
       { id: 'formation', label: 'Formation', order: 1 },
       { id: 'play', label: 'Play', order: 2 }
     ];
-  }, [setupConfig, phase, selectedPlayType, isAdvancedMode, selectedBucketId]);
+  }, [setupConfig, phase, selectedPlayType, selectedBucketId]);
 
   // Get term library for current phase
   const termLibrary = useMemo(() => {
@@ -778,15 +768,10 @@ export default function PlayEditor({
                     className={`w-full px-3 py-3 border rounded-md text-lg font-medium ${isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-slate-800 border-slate-700 text-white placeholder-slate-500'}`}
                     autoFocus
                   />
-                  <div className={`mt-2 px-3 py-2 rounded-md flex items-center justify-between ${isLight ? 'bg-sky-50 border border-sky-200' : 'bg-slate-700/30'}`}>
-                    <div>
-                      <span className={`text-xs uppercase tracking-wide ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Play: </span>
-                      <span className={`font-semibold ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`}>
-                        {formData.name || '...'}
-                      </span>
-                    </div>
-                    <span className={`text-xs px-2 py-0.5 rounded ${isLight ? 'text-gray-500 bg-gray-200' : 'text-slate-400/70 bg-slate-600/30'}`}>
-                      Basic Mode
+                  <div className={`mt-2 px-3 py-2 rounded-md ${isLight ? 'bg-sky-50 border border-sky-200' : 'bg-slate-700/30'}`}>
+                    <span className={`text-xs uppercase tracking-wide ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Play: </span>
+                    <span className={`font-semibold ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`}>
+                      {formData.name || '...'}
                     </span>
                   </div>
                   <p className={`mt-2 text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
@@ -833,130 +818,19 @@ export default function PlayEditor({
                       ))}
                     </datalist>
                   </div>
-                  <div className="mt-2 px-3 py-2 bg-slate-700/30 rounded-md flex items-center justify-between">
-                    <div>
-                      <span className="text-xs text-slate-500 uppercase tracking-wide">Full Call: </span>
-                      <span className="text-emerald-400 font-semibold">
-                        {formData.formation || formData.formationTag || formData.name
-                          ? [formData.formation, formData.formationTag, formData.name].filter(Boolean).join(' ')
-                          : '...'}
-                      </span>
-                    </div>
-                    <span className="text-xs text-green-500/70 bg-green-500/10 px-2 py-0.5 rounded">
-                      Standard Mode
+                  <div className="mt-2 px-3 py-2 bg-slate-700/30 rounded-md">
+                    <span className="text-xs text-slate-500 uppercase tracking-wide">Full Call: </span>
+                    <span className="text-emerald-400 font-semibold">
+                      {formData.formation || formData.formationTag || formData.name
+                        ? [formData.formation, formData.formationTag, formData.name].filter(Boolean).join(' ')
+                        : '...'}
                     </span>
                   </div>
                 </div>
               )}
 
-              {/* ADVANCED MODE: Full Call first, then Bucket/Concept, then Breakdown */}
-              {isAdvancedMode && (
-                <>
-                  {/* Full Play Call - at the top */}
-                  <div>
-                    <label htmlFor="play-editor-formation-advanced" className="block text-sm font-medium text-slate-400 mb-1">
-                      Full Play Call *
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        id="play-editor-formation-advanced"
-                        type="text"
-                        value={formData.formation}
-                        onChange={e => setFormData(prev => ({ ...prev, formation: e.target.value }))}
-                        list="formations-list"
-                        placeholder="Formation"
-                        className="w-1/3 px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500 text-lg font-medium"
-                        autoFocus
-                      />
-                      <input
-                        id="play-editor-name-advanced"
-                        type="text"
-                        value={formData.name}
-                        onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder="Play Name"
-                        className="flex-1 px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500 text-lg font-medium"
-                      />
-                      <datalist id="formations-list">
-                        {availableFormations.map(f => (
-                          <option key={f} value={f} />
-                        ))}
-                      </datalist>
-                    </div>
-                    <div className="mt-2 px-3 py-2 bg-slate-700/30 rounded-md flex items-center justify-between">
-                      <div>
-                        <span className="text-xs text-slate-500 uppercase tracking-wide">Full Call: </span>
-                        <span className="text-emerald-400 font-semibold">
-                          {formData.formation || formData.name
-                            ? `${formData.formation}${formData.formation && formData.name ? ' ' : ''}${formData.name}`
-                            : '...'}
-                        </span>
-                      </div>
-                      <span className="text-xs text-purple-500/70 bg-purple-500/10 px-2 py-0.5 rounded">
-                        Advanced Mode
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Bucket & Concept Group Selectors - below Full Play Call */}
-                  {phase === 'OFFENSE' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="play-editor-bucket-advanced" className="block text-sm font-medium text-slate-400 mb-2">
-                          Play Bucket <span className="text-slate-500">(determines syntax)</span>
-                        </label>
-                        <select
-                          id="play-editor-bucket-advanced"
-                          value={selectedBucketId}
-                          onChange={e => {
-                            if (e.target.value === '__add_new__') {
-                              handleAddNewBucket();
-                            } else {
-                              setSelectedBucketId(e.target.value);
-                              setFormData(prev => ({ ...prev, playCategory: e.target.value, bucketId: '' }));
-                            }
-                          }}
-                          className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white"
-                        >
-                          <option value="">Select Bucket...</option>
-                          {playBuckets.filter(b => (b.phase || 'OFFENSE') === formData.phase).map(bucket => (
-                            <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
-                          ))}
-                          <option value="__add_new__" className="text-sky-400">+ Add New Bucket...</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label htmlFor="play-editor-concept-group-advanced" className="block text-sm font-medium text-slate-400 mb-2">
-                          Concept Group
-                        </label>
-                        <select
-                          id="play-editor-concept-group-advanced"
-                          value={formData.bucketId || ''}
-                          onChange={e => {
-                            if (e.target.value === '__add_new__') {
-                              handleAddNewConceptGroup();
-                            } else {
-                              setFormData(prev => ({ ...prev, bucketId: e.target.value }));
-                            }
-                          }}
-                          className="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white"
-                          disabled={!selectedBucketId}
-                        >
-                          <option value="">{selectedBucketId ? 'Select Group...' : 'Select bucket first'}</option>
-                          {conceptGroups
-                            .filter(cg => cg.categoryId === selectedBucketId)
-                            .map(group => (
-                              <option key={group.id} value={group.id}>{group.label}</option>
-                            ))}
-                          {selectedBucketId && <option value="__add_new__" className="text-sky-400">+ Add New Concept Group...</option>}
-                        </select>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-
               {/* Bucket & Concept Group */}
-              {!isBasicMode && !(isAdvancedMode && phase === 'OFFENSE') && (
+              {!isBasicMode && (
                 <div className="pt-3 border-t border-slate-700">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Category */}
