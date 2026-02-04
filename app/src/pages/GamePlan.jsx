@@ -9,6 +9,8 @@ import BoxEditorModal from '../components/gameplan/BoxEditorModal';
 import {
   List,
   Grid,
+  Grid3X3,
+  Layers,
   Printer,
   Lock,
   Unlock,
@@ -23,7 +25,8 @@ import {
   ExternalLink,
   CheckSquare,
   Package,
-  Undo2
+  Undo2,
+  Users
 } from 'lucide-react';
 import '../styles/gameplan.css';
 
@@ -255,6 +258,11 @@ export default function GamePlan() {
   // Add Box modal state
   const [showAddBoxModal, setShowAddBoxModal] = useState(false);
   const [addBoxSectionIdx, setAddBoxSectionIdx] = useState(null);
+
+  // Placement choice modal state (for Add All targeting)
+  const [showPlacementChoice, setShowPlacementChoice] = useState(false);
+  const [pendingPlacementBox, setPendingPlacementBox] = useState(null);
+  const [pendingPlacementPlays, setPendingPlacementPlays] = useState([]);
 
   // Undo history for layouts
   const [layoutHistory, setLayoutHistory] = useState([]);
@@ -890,6 +898,108 @@ export default function GamePlan() {
     handleUpdateLayouts(newLayouts);
   }, [gamePlanLayouts, handleUpdateLayouts]);
 
+  // Toggle box lock state
+  const handleToggleBoxLock = useCallback((sectionIdx, boxIdx) => {
+    const newLayouts = { ...gamePlanLayouts };
+    const section = { ...newLayouts.CALL_SHEET.sections[sectionIdx] };
+    const newBoxes = [...section.boxes];
+    const box = { ...newBoxes[boxIdx] };
+
+    if (box.locked) {
+      // Unlock: clear locked state and gridPosition to allow auto-flow
+      box.locked = false;
+      delete box.gridPosition;
+    } else {
+      // Lock: mark as locked (gridPosition will be set if box was dropped at specific position)
+      box.locked = true;
+    }
+
+    newBoxes[boxIdx] = box;
+    section.boxes = newBoxes;
+    newLayouts.CALL_SHEET.sections[sectionIdx] = section;
+    handleUpdateLayouts(newLayouts);
+  }, [gamePlanLayouts, handleUpdateLayouts]);
+
+  // Handle drop on empty cell - place box at specific position and lock it
+  const handleDropOnEmptyCell = useCallback((targetSectionIdx, targetRow, targetCol) => {
+    if (!draggedCell) return;
+
+    const { sectionIdx: srcSectionIdx, boxIdx: srcBoxIdx } = draggedCell;
+
+    const newLayouts = { ...gamePlanLayouts };
+    const sheet = { ...newLayouts.CALL_SHEET };
+    sheet.sections = [...sheet.sections];
+
+    // Get the source section and box
+    const srcSection = { ...sheet.sections[srcSectionIdx] };
+    const srcBoxes = [...srcSection.boxes];
+    const movedBox = { ...srcBoxes[srcBoxIdx] };
+
+    // Calculate box dimensions
+    const targetSection = sheet.sections[targetSectionIdx];
+    const sectionCols = targetSection.gridColumns || 8;
+    const colSpan = Math.min(Number(movedBox.colSpan) || 2, sectionCols);
+
+    // Calculate rowSpan based on box type (must match SheetView's getBoxRowSpan)
+    const getBoxRowSpan = (box) => {
+      if (box.type === 'grid') return (box.gridRows || 5) + 2;
+      if (box.type === 'script') return (box.rows?.length || 10) + 2;
+      if (box.type === 'fzdnd') return (box.gridRows || box.rowCount || 5) + 2;
+      if (box.type === 'matrix') return 3 + 1;
+      return 5 + 2;
+    };
+    const rowSpan = getBoxRowSpan(movedBox);
+
+    // Check if drop position would overlap with any OTHER locked boxes
+    const wouldOverlapLockedBox = targetSection.boxes.some((box, bIdx) => {
+      // Skip the box being moved (if same section)
+      if (srcSectionIdx === targetSectionIdx && bIdx === srcBoxIdx) return false;
+      // Only check locked boxes with explicit positions
+      if (!box.locked || !box.gridPosition) return false;
+
+      const lockedRow = box.gridPosition.row;
+      const lockedCol = box.gridPosition.col;
+      const lockedColSpan = Math.min(Number(box.colSpan) || 2, sectionCols);
+      const lockedRowSpan = getBoxRowSpan(box);
+
+      // Check for overlap
+      const horizontalOverlap = targetCol < lockedCol + lockedColSpan && targetCol + colSpan > lockedCol;
+      const verticalOverlap = targetRow < lockedRow + lockedRowSpan && targetRow + rowSpan > lockedRow;
+
+      return horizontalOverlap && verticalOverlap;
+    });
+
+    if (wouldOverlapLockedBox) {
+      // Don't allow drop that would overlap a locked box
+      setDraggedCell(null);
+      return;
+    }
+
+    // Set the explicit grid position and lock the box
+    movedBox.gridPosition = { row: targetRow, col: targetCol };
+    movedBox.locked = true;
+
+    if (srcSectionIdx === targetSectionIdx) {
+      // Same section - just update the box
+      srcBoxes[srcBoxIdx] = movedBox;
+      srcSection.boxes = srcBoxes;
+      sheet.sections[srcSectionIdx] = srcSection;
+    } else {
+      // Different section - remove from source, add to target
+      srcBoxes.splice(srcBoxIdx, 1);
+      srcSection.boxes = srcBoxes;
+      sheet.sections[srcSectionIdx] = srcSection;
+
+      const updatedTargetSection = { ...sheet.sections[targetSectionIdx] };
+      updatedTargetSection.boxes = [...updatedTargetSection.boxes, movedBox];
+      sheet.sections[targetSectionIdx] = updatedTargetSection;
+    }
+
+    newLayouts.CALL_SHEET = sheet;
+    handleUpdateLayouts(newLayouts);
+    setDraggedCell(null);
+  }, [draggedCell, gamePlanLayouts, handleUpdateLayouts]);
+
   // Handle box drop (reordering or play drop)
   const handleSheetBoxDrop = useCallback(async (e, targetSectionIdx, targetBoxIdx) => {
     e.preventDefault();
@@ -959,9 +1069,33 @@ export default function GamePlan() {
 
   // Batch assign plays to a box
   const batchAssignPlaysToBox = useCallback(async (boxId, newPlayIds) => {
-    if (!currentWeek || !newPlayIds.length) return;
+    if (!currentWeek || !newPlayIds.length || !boxId) return;
 
-    // Find the box (search sets and mini-scripts)
+    // First find the layout box to determine type and capacity
+    let layoutBox = null;
+    let sectionIdx = -1;
+    let boxIdx = -1;
+    let layoutKey = null;
+
+    // Search through layouts
+    Object.entries(gamePlanLayouts).some(([key, layout]) => {
+      return (layout.sections || []).some((section, sIdx) => {
+        return (section.boxes || []).some((box, bIdx) => {
+          if (box.setId === boxId) {
+            layoutBox = box;
+            sectionIdx = sIdx;
+            boxIdx = bIdx;
+            layoutKey = key;
+            return true;
+          }
+          return false;
+        });
+      });
+    });
+
+    if (!layoutBox) return;
+
+    // Find the box data (search sets and mini-scripts)
     let boxData = null;
     let boxType = 'set'; // 'set' or 'miniscript'
 
@@ -979,74 +1113,62 @@ export default function GamePlan() {
       }
     }
 
-    if (!boxData) return;
-
-    // Find the layout box to determine type and capacity
-    let layoutBox = null;
-    let sectionIdx = -1;
-    let boxIdx = -1;
-
-    // Search through layouts
-    Object.values(gamePlanLayouts).some(layout => {
-      return (layout.sections || []).some((section, sIdx) => {
-        return (section.boxes || []).some((box, bIdx) => {
-          if (box.setId === boxId) {
-            layoutBox = box;
-            sectionIdx = sIdx;
-            boxIdx = bIdx;
-            return true;
-          }
-          return false;
-        });
-      });
-    });
-
-    if (!layoutBox) return;
-
     // Handle Grid Box
     if (layoutBox.type === 'grid') {
       const cols = layoutBox.gridColumns || 4;
       const rows = layoutBox.gridRows || 5;
       const totalSlots = cols * rows;
 
-      const currentAssigned = [...(boxData.assignedPlayIds || [])];
+      // Get current assigned plays from boxData or empty array
+      const currentAssigned = [...(boxData?.assignedPlayIds || [])];
 
       // Ensure array is big enough
       while (currentAssigned.length < totalSlots) {
         currentAssigned.push(null);
       }
 
-      // Fill empty slots
+      // Track which plays were actually assigned
+      const assignedPlayIds = [];
       let playIdx = 0;
       for (let i = 0; i < totalSlots && playIdx < newPlayIds.length; i++) {
         // If slot is empty or GAP
         if (!currentAssigned[i] || currentAssigned[i] === 'GAP') {
           currentAssigned[i] = newPlayIds[playIdx];
+          assignedPlayIds.push(newPlayIds[playIdx]);
           playIdx++;
         }
       }
 
-      // Update the set/miniscript
-      if (boxType === 'set') {
-        // For sets, we also need to update playIds if not using assignedPlayIds exclusively
-        // But for grid boxes we usually rely on assignedPlayIds for positioning
-        const updatedGamePlan = { ...gamePlan };
-        const updatedSet = updatedGamePlan.sets.find(s => s.id === boxId);
-        updatedSet.assignedPlayIds = currentAssigned;
-        // Also ensure plays are in playIds for general tracking
-        const allIds = new Set([...(updatedSet.playIds || []), ...newPlayIds]);
-        updatedSet.playIds = Array.from(allIds);
+      // Update the set if it exists, or create one
+      const updatedGamePlan = { ...gamePlan };
+      let updatedSet = updatedGamePlan.sets?.find(s => s.id === boxId);
 
-        await handleUpdateGamePlan(updatedGamePlan);
+      if (!updatedSet) {
+        // Create a new set entry for this box
+        if (!updatedGamePlan.sets) updatedGamePlan.sets = [];
+        updatedSet = {
+          id: boxId,
+          name: layoutBox.header || 'New Set',
+          playIds: [],
+          assignedPlayIds: []
+        };
+        updatedGamePlan.sets.push(updatedSet);
       }
+
+      updatedSet.assignedPlayIds = currentAssigned;
+      // Remove assigned plays from Quick List (playIds) - they're now in the grid
+      updatedSet.playIds = (updatedSet.playIds || []).filter(id => !assignedPlayIds.includes(id));
+
+      await handleUpdateGamePlan(updatedGamePlan);
     }
     // Handle Script Box
     else if (layoutBox.type === 'script') {
-      // Scripts store data in layoutBox.rows, not in the set directly usually
-      // But we need to update the layout box rows
+      // Scripts store data in layoutBox.rows
       const scriptRows = [...(layoutBox.rows || [])];
       const scriptColumns = layoutBox.scriptColumns || 2;
 
+      // Track which plays were actually assigned
+      const assignedPlayIds = [];
       let playIdx = 0;
 
       // Iterate rows to find empty slots
@@ -1059,34 +1181,39 @@ export default function GamePlan() {
         // Fill left column if empty
         if (!scriptRows[r].content) {
           scriptRows[r] = { ...scriptRows[r], content: newPlayIds[playIdx] };
+          assignedPlayIds.push(newPlayIds[playIdx]);
           playIdx++;
         }
 
         // Fill right column if empty and using 2 columns
         if (playIdx < newPlayIds.length && scriptColumns === 2 && !scriptRows[r].contentRight) {
           scriptRows[r] = { ...scriptRows[r], contentRight: newPlayIds[playIdx] };
+          assignedPlayIds.push(newPlayIds[playIdx]);
           playIdx++;
         }
       }
 
-      // Update layout box
-      // We need to construct the full new layouts object
+      // Update layout box using the layoutKey we already found
       const newLayouts = { ...gamePlanLayouts };
-      // Find the specific layout key (e.g., CALL_SHEET)
-      const layoutKey = Object.keys(newLayouts).find(key =>
-        newLayouts[key].sections?.[sectionIdx]?.boxes?.[boxIdx]?.setId === boxId
-      );
-
       if (layoutKey) {
         newLayouts[layoutKey].sections[sectionIdx].boxes[boxIdx].rows = scriptRows;
         await handleUpdateLayouts(newLayouts);
       }
-    }
 
-    // Also add to quick list (set.playIds) for both types to ideally keep them in sync
-    if (boxType === 'set') {
+      // Update the set - remove assigned plays from Quick List
       const updatedGamePlan = { ...gamePlan };
-      const updatedSet = updatedGamePlan.sets.find(s => s.id === boxId);
+      let updatedSet = updatedGamePlan.sets?.find(s => s.id === boxId);
+
+      if (updatedSet) {
+        // Remove assigned plays from Quick List (playIds) - they're now in the script
+        updatedSet.playIds = (updatedSet.playIds || []).filter(id => !assignedPlayIds.includes(id));
+        await handleUpdateGamePlan(updatedGamePlan);
+      }
+    }
+    // Handle other box types (fzdnd, matrix, etc.) - add plays to set if it exists
+    else if (boxData) {
+      const updatedGamePlan = { ...gamePlan };
+      const updatedSet = updatedGamePlan.sets?.find(s => s.id === boxId);
       if (updatedSet) {
         const currentPlayIds = updatedSet.playIds || [];
         const newIdsToAdd = newPlayIds.filter(id => !currentPlayIds.includes(id));
@@ -1099,28 +1226,76 @@ export default function GamePlan() {
 
   }, [currentWeek, gamePlan, gamePlanLayouts, handleUpdateGamePlan, handleUpdateLayouts]);
 
+  // Add plays to quicklist only (not grid slots)
+  const addPlaysToQuicklistOnly = useCallback(async (boxId, newPlayIds) => {
+    if (!currentWeek || !newPlayIds.length || !boxId) return;
+
+    const updatedGamePlan = { ...gamePlan };
+    let updatedSet = updatedGamePlan.sets?.find(s => s.id === boxId);
+
+    // Find the layout box to get the header name
+    let boxHeader = 'New Set';
+    Object.values(gamePlanLayouts).some(layout => {
+      return (layout.sections || []).some(section => {
+        return (section.boxes || []).some(box => {
+          if (box.setId === boxId) {
+            boxHeader = box.header || 'New Set';
+            return true;
+          }
+          return false;
+        });
+      });
+    });
+
+    if (!updatedSet) {
+      // Create a new set entry for this box
+      if (!updatedGamePlan.sets) updatedGamePlan.sets = [];
+      updatedSet = {
+        id: boxId,
+        name: boxHeader,
+        playIds: []
+      };
+      updatedGamePlan.sets.push(updatedSet);
+    }
+
+    // Add plays to the set's playIds
+    const currentPlayIds = updatedSet.playIds || [];
+    const newIdsToAdd = newPlayIds.filter(id => !currentPlayIds.includes(id));
+    if (newIdsToAdd.length > 0) {
+      updatedSet.playIds = [...currentPlayIds, ...newIdsToAdd];
+      await handleUpdateGamePlan(updatedGamePlan);
+    }
+  }, [currentWeek, gamePlan, gamePlanLayouts, handleUpdateGamePlan]);
+
   // Handle Box Click (Intercept for Batch Add)
   const handleBoxClick = useCallback(async (box, sectionIdx, boxIdx) => {
     // Handle context-level targeting mode (from PlayBank "Click to Place")
     if (targetingMode && targetingPlays.length > 0) {
       const playIdsToAdd = completeTargeting();
-      await batchAssignPlaysToBox(box.setId, playIdsToAdd);
+      // Show placement choice modal
+      setPendingPlacementBox(box);
+      setPendingPlacementPlays(playIdsToAdd);
+      setShowPlacementChoice(true);
       return;
     }
 
     // Handle local targeting mode (from Batch Add button)
     if (isTargetingBox && pendingBatchPlays.length > 0) {
-      await batchAssignPlaysToBox(box.setId, pendingBatchPlays);
+      // Show placement choice modal
+      setPendingPlacementBox(box);
+      setPendingPlacementPlays([...pendingBatchPlays]);
+      setShowPlacementChoice(true);
 
-      // Reset state
+      // Reset batch state
       setIsTargetingBox(false);
       setPendingBatchPlays([]);
       cancelBatchSelect();
-    } else {
-      // Normal edit behavior
-      setEditingBox({ box, sectionIdx, boxIdx });
+      return;
     }
-  }, [isTargetingBox, pendingBatchPlays, batchAssignPlaysToBox, cancelBatchSelect, targetingMode, targetingPlays, completeTargeting]);
+
+    // Normal edit behavior
+    setEditingBox({ box, sectionIdx, boxIdx });
+  }, [isTargetingBox, pendingBatchPlays, cancelBatchSelect, targetingMode, targetingPlays, completeTargeting]);
 
   // Get play display name (includes wristband slot if assigned)
   const getPlayDisplayName = useCallback((play) => {
@@ -1316,6 +1491,8 @@ export default function GamePlan() {
             onDeleteBox={handleDeleteSheetBox}
             onUpdateBox={handleUpdateSheetBox}
             onBoxDrop={handleSheetBoxDrop}
+            onDropOnEmptyCell={handleDropOnEmptyCell}
+            onToggleBoxLock={handleToggleBoxLock}
             onBoxClick={handleBoxClick}
             isTargetingMode={targetingMode || isTargetingBox}
             targetingPlayCount={targetingMode ? targetingPlays.length : pendingBatchPlays.length}
@@ -1335,6 +1512,76 @@ export default function GamePlan() {
             onMatrixBoxRemove={handleMatrixBoxRemove}
           />
       </div>
+
+      {/* Placement Choice Modal */}
+      {showPlacementChoice && pendingPlacementBox && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-slate-800 rounded-xl shadow-2xl w-full max-w-md mx-4 border border-slate-700">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-700">
+              <h3 className="text-lg font-bold text-white">Add {pendingPlacementPlays.length} Plays</h3>
+              <p className="text-sm text-slate-400 mt-1">
+                Where would you like to add plays to "{pendingPlacementBox.header}"?
+              </p>
+            </div>
+
+            {/* Options */}
+            <div className="p-6 space-y-3">
+              {/* Grid Option */}
+              <button
+                onClick={async () => {
+                  await batchAssignPlaysToBox(pendingPlacementBox.setId, pendingPlacementPlays);
+                  setShowPlacementChoice(false);
+                  setPendingPlacementBox(null);
+                  setPendingPlacementPlays([]);
+                }}
+                className="w-full flex items-center gap-4 p-4 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors border border-slate-600 text-left"
+              >
+                <div className="w-12 h-12 rounded-lg bg-sky-500/20 flex items-center justify-center">
+                  <Grid3X3 size={24} className="text-sky-400" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-semibold text-white">Assign to Grid</div>
+                  <div className="text-sm text-slate-400">Place plays directly into grid cells</div>
+                </div>
+              </button>
+
+              {/* Quicklist Option */}
+              <button
+                onClick={async () => {
+                  await addPlaysToQuicklistOnly(pendingPlacementBox.setId, pendingPlacementPlays);
+                  setShowPlacementChoice(false);
+                  setPendingPlacementBox(null);
+                  setPendingPlacementPlays([]);
+                }}
+                className="w-full flex items-center gap-4 p-4 bg-slate-700 rounded-lg hover:bg-slate-600 transition-colors border border-slate-600 text-left"
+              >
+                <div className="w-12 h-12 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                  <List size={24} className="text-amber-400" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-semibold text-white">Stage in Quick List</div>
+                  <div className="text-sm text-slate-400">Add to sidebar for manual placement later</div>
+                </div>
+              </button>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-slate-700 flex justify-end">
+              <button
+                onClick={() => {
+                  setShowPlacementChoice(false);
+                  setPendingPlacementBox(null);
+                  setPendingPlacementPlays([]);
+                }}
+                className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Box Editor Modal */}
       {editingBox && (

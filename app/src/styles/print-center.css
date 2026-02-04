@@ -891,20 +891,20 @@
   min-height: calc(8in - 0.5in); /* Landscape height */
 }
 
-/* Header */
+/* Header - Compact for more script space */
 .pp2-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.1rem 0;
+  padding: 0.05rem 0;
   border-bottom: 1px solid #1e293b;
-  margin-bottom: 0.1rem;
+  margin-bottom: 0.05rem;
 }
 
 .pp2-header-left {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .pp2-logo-wrap {
@@ -914,23 +914,25 @@
 }
 
 .pp2-logo {
-  height: 28px;
+  height: 20px;
   width: auto;
-  max-width: 60px;
+  max-width: 40px;
   object-fit: contain;
 }
 
 .pp2-logo-emoji {
-  font-size: 1.5rem;
+  font-size: 1rem;
 }
 
 .pp2-header-title-group {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.5rem;
 }
 
 .pp2-day-badge {
-  font-size: 11pt;
+  font-size: 9pt;
   font-weight: 700;
   text-transform: uppercase;
   color: #1e293b;
@@ -939,7 +941,7 @@
 }
 
 .pp2-week-info {
-  font-size: 8pt;
+  font-size: 7pt;
   color: #475569;
   font-weight: 600;
 }
@@ -949,25 +951,27 @@
 }
 
 .pp2-start-time {
-  font-size: 9pt;
+  font-size: 8pt;
   font-weight: 700;
   color: #1e293b;
 }
 
-/* Coach Info Bar - 3 columns */
+/* Coach Info Bar - 3 columns, compact */
 .pp2-coach-info {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.15rem;
-  padding: 0.1rem;
+  display: flex;
+  gap: 1rem;
+  padding: 0.05rem 0.1rem;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 2px;
-  margin-bottom: 0.1rem;
+  margin-bottom: 0.05rem;
+  font-size: 6pt;
 }
 
 .pp2-info-box {
-  padding: 0.05rem 0.15rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .pp2-info-box h4 {
@@ -975,68 +979,66 @@
   font-weight: 600;
   text-transform: uppercase;
   color: #64748b;
-  margin: 0 0 0.025rem 0;
+  margin: 0;
   letter-spacing: 0.025em;
 }
 
 .pp2-coach-name {
-  font-size: 7pt;
+  font-size: 6pt;
   font-weight: 600;
   color: #1e293b;
 }
 
 .pp2-position-groups {
-  font-size: 6pt;
+  font-size: 5pt;
   color: #64748b;
-  margin-top: 1px;
+  margin-left: 4px;
 }
 
 .pp2-big3-list {
   display: flex;
-  flex-direction: column;
-  gap: 1px;
+  gap: 0.25rem;
 }
 
 .pp2-big3-item {
   display: flex;
-  align-items: flex-start;
-  gap: 0.15rem;
-  font-size: 6pt;
+  align-items: center;
+  gap: 2px;
+  font-size: 5pt;
 }
 
 .pp2-big3-num {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   background: #0ea5e9;
   color: white;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 5pt;
+  font-size: 4pt;
   font-weight: 600;
   flex-shrink: 0;
 }
 
 .pp2-big3-text {
   color: #1e293b;
-  line-height: 1.2;
+  line-height: 1;
 }
 
 .pp2-goals-list {
   display: flex;
-  flex-direction: column;
-  gap: 0px;
+  gap: 0.5rem;
 }
 
 .pp2-goal-item {
-  font-size: 6pt;
+  font-size: 5pt;
   color: #1e293b;
-  line-height: 1.1;
+  line-height: 1;
 }
 
 .pp2-empty-text {
-  font-size: 6pt;
+  font-size: 5pt;
   color: #94a3b8;
   font-style: italic;
 }
@@ -1161,22 +1163,36 @@
   color: #7c3aed;
 }
 
-/* Scripts Container */
+/* Scripts Container - 2-column layout */
 .pp2-scripts-container {
-  margin-top: 0.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  margin-top: 0.15rem;
+  column-count: 2;
+  column-gap: 0.25in;
+  column-fill: balance;
 }
 
-/* Script Section - allows breaking across pages for better fit */
+/* Script Section - stays together in column */
 .pp2-script-section {
   border: 1px solid #475569;
   background: white;
+  break-inside: avoid-column;
+  margin-bottom: 0.15rem;
 }
 
-/* Print: Convert script grid to table so headers repeat on page breaks */
+/* Print: 2-column script layout */
 @media print {
+  /* Scripts container uses CSS columns for 2-col flow */
+  .pp2-scripts-container {
+    column-count: 2 !important;
+    column-gap: 0.2in !important;
+    column-fill: auto !important;
+  }
+
+  .pp2-script-section {
+    break-inside: avoid-column !important;
+    page-break-inside: avoid !important;
+  }
+
   .pp2-script-grid {
     display: table !important;
     width: 100%;
@@ -1195,30 +1211,25 @@
     overflow: hidden;
   }
 
-  /* Fixed column widths for print - minimal whitespace */
+  /* Fixed column widths for print - 6 columns only (no DEF/NOTES) */
   .pp2-script-row-header > div:nth-child(1),
-  .pp2-script-row > div:nth-child(1) { width: 3%; text-align: center; }  /* # */
+  .pp2-script-row > div:nth-child(1) { width: 6%; text-align: center; }  /* # */
   .pp2-script-row-header > div:nth-child(2),
-  .pp2-script-row > div:nth-child(2) { width: 4%; text-align: center; }  /* Hash */
+  .pp2-script-row > div:nth-child(2) { width: 18%; } /* Situation */
   .pp2-script-row-header > div:nth-child(3),
-  .pp2-script-row > div:nth-child(3) { width: 3%; text-align: center; }  /* Dn */
+  .pp2-script-row > div:nth-child(3) { width: 10%; text-align: center; }  /* Hash */
   .pp2-script-row-header > div:nth-child(4),
-  .pp2-script-row > div:nth-child(4) { width: 4%; text-align: center; }  /* Dist */
+  .pp2-script-row > div:nth-child(4) { width: 6%; text-align: center; }  /* Dn */
   .pp2-script-row-header > div:nth-child(5),
-  .pp2-script-row > div:nth-child(5) { width: 12%; } /* Situation */
+  .pp2-script-row > div:nth-child(5) { width: 8%; text-align: center; }  /* Dist */
   .pp2-script-row-header > div:nth-child(6),
-  .pp2-script-row > div:nth-child(6) { width: 40%; } /* Play Call */
-  .pp2-script-row-header > div:nth-child(7),
-  .pp2-script-row > div:nth-child(7) { width: 6%; text-align: center; }  /* Defense */
-  .pp2-script-row-header > div:nth-child(8),
-  .pp2-script-row > div:nth-child(8) { width: 28%; } /* Notes */
+  .pp2-script-row > div:nth-child(6) { width: 52%; } /* Play Call */
 
   .pp2-script-row {
     display: table-row !important;
   }
 
   /* Alternating row colors for script tables */
-  /* Note: Header is child 1, so even children = odd data rows (1,3,5), odd children = even data rows (2,4,6) */
   .pp2-script-row:not(.pp2-script-row-header):nth-child(even) > div {
     background-color: #ffffff !important;
     -webkit-print-color-adjust: exact !important;
@@ -1231,7 +1242,7 @@
     print-color-adjust: exact !important;
   }
 
-  /* Add "(cont.)" to repeated headers */
+  /* Keep script headers with their content */
   .pp2-script-header {
     break-after: avoid;
   }
@@ -1243,8 +1254,8 @@
   align-items: center;
   background: #475569;
   color: white;
-  padding: 0.1rem 0.25rem;
-  font-size: 7pt;
+  padding: 0.05rem 0.15rem;
+  font-size: 5pt;
   font-weight: 600;
 }
 
@@ -1254,21 +1265,20 @@
 
 .pp2-script-duration {
   font-weight: 400;
+  font-size: 5pt;
 }
 
-/* Script Grid - tight columns, consistent widths */
+/* Script Grid - compact 6-column layout (no DEF/NOTES) */
 .pp2-script-grid {
   display: grid;
   grid-template-columns:
-    14px    /* # */
-    20px    /* Hash */
-    18px    /* Dn */
-    22px    /* Dist */
-    60px    /* Situation */
-    1fr     /* Play Call - takes remaining space */
-    30px    /* Defense */
-    1fr;    /* Notes - takes remaining space */
-  font-size: 6pt;
+    12px    /* # */
+    50px    /* Situation */
+    18px    /* Hash */
+    14px    /* Dn */
+    18px    /* Dist */
+    1fr;    /* Play Call */
+  font-size: 5pt;
   width: 100%;
   table-layout: fixed;
 }
@@ -1303,24 +1313,17 @@
   justify-content: center;
 }
 
-.pp2-script-row > div:nth-child(2),
 .pp2-script-row > div:nth-child(3),
 .pp2-script-row > div:nth-child(4),
-.pp2-script-row > div:nth-child(7) {
+.pp2-script-row > div:nth-child(5) {
   justify-content: center;
   text-align: center;
 }
 
 .pp2-play-call {
   font-weight: 600;
-  font-size: 6pt;
-  color: #1e293b;
-}
-
-.pp2-script-notes {
   font-size: 5pt;
-  line-height: 1.1;
-  color: #64748b;
+  color: #1e293b;
 }
 
 /* Print-only wrapper - hidden on screen, visible when printing */

@@ -436,36 +436,22 @@ export default function PracticePlanCoachView({
                     {/* Script Header */}
                     <div className="pp2-script-row pp2-script-row-header">
                       <div>#</div>
+                      <div>Situation</div>
                       <div>Hash</div>
                       <div>Dn</div>
                       <div>Dist</div>
-                      <div>Situation</div>
                       <div>Play Call</div>
-                      <div>Def</div>
-                      <div>Notes</div>
                     </div>
                     {/* Script Rows */}
                     {seg.script.map((row, rIdx) => {
-                      let notesText = '';
-                      if (row.notes && typeof row.notes === 'object') {
-                        const noteEntries = Object.entries(row.notes)
-                          .filter(([_, note]) => note && note.trim())
-                          .map(([noteCoachId, note]) => `${getCoachName(noteCoachId)}: ${note}`);
-                        notesText = noteEntries.join('; ');
-                      } else if (typeof row.notes === 'string') {
-                        notesText = row.notes;
-                      }
-
                       return (
                         <div key={rIdx} className="pp2-script-row">
                           <div>{rIdx + 1}</div>
+                          <div>{row.situation || '-'}</div>
                           <div>{row.hash || '-'}</div>
                           <div>{row.down || row.yardLine || '-'}</div>
                           <div>{row.distance || row.downDistance || '-'}</div>
-                          <div>{row.situation || '-'}</div>
                           <div className="pp2-play-call">{row.playName || row.playCall || '-'}</div>
-                          <div>{row.defense || '-'}</div>
-                          <div className="pp2-script-notes">{notesText || ''}</div>
                         </div>
                       );
                     })}

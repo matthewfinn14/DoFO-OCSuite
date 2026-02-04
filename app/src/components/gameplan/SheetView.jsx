@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Trash2, Plus, GripVertical } from 'lucide-react';
+import { Trash2, Plus, GripVertical, Lock, Unlock } from 'lucide-react';
 import { getPlayCall, abbreviatePlayCall } from '../../utils/playDisplay';
 
 /**
@@ -99,6 +99,8 @@ export default function SheetView({
   onDeleteBox,
   onUpdateBox,
   onBoxDrop,
+  onDropOnEmptyCell,
+  onToggleBoxLock,
   onAddPlayToSet,
   onRemovePlayFromSet,
   getPlaysForSet,
@@ -128,6 +130,15 @@ export default function SheetView({
 
   // Track which cell is being hovered during drag (for visual feedback)
   const [dragOverCell, setDragOverCell] = useState(null);
+
+  // Zoom level for page view (50% to 150%)
+  const [zoomLevel, setZoomLevel] = useState(100);
+
+  // Calculate row height based on orientation to fit content on page
+  // Landscape: ~720px usable / 60 rows = 12px
+  // Portrait: ~960px usable / 70 rows ≈ 13-14px
+  const isLandscape = pageOrientation === 'landscape';
+  const rowHeight = isLandscape ? 12 : 13;
 
   // Render grid box content
   const renderGridBox = (box, isPrintMode = false) => {
@@ -183,7 +194,7 @@ export default function SheetView({
       }}>
         {/* Header Row */}
         <div style={{
-          height: '22px',
+          height: `${rowHeight}px`,
           padding: '0 2px',
           fontSize: '0.55rem',
           fontWeight: 'bold',
@@ -196,7 +207,7 @@ export default function SheetView({
         </div>
         {headings.slice(0, cols).map((h, i) => (
           <div key={`h-${i}`} style={{
-            height: '22px',
+            height: `${rowHeight}px`,
             padding: '0 2px',
             fontSize: '0.55rem',
             fontWeight: 'bold',
@@ -235,7 +246,7 @@ export default function SheetView({
                 alignItems: 'center',
                 justifyContent: 'flex-end',
                 minWidth: '15px',
-                height: '22px',
+                height: `${rowHeight}px`,
                 borderBottom: '1px dotted #e2e8f0',
                 background: rowBg
               }}>
@@ -248,7 +259,7 @@ export default function SheetView({
                     overflow: 'hidden',
                     background: play?.priority ? '#fef08a' : rowBg,
                     padding: '2px',
-                    height: '22px',
+                    height: `${rowHeight}px`,
                     color: '#334155',
                     display: 'flex',
                     alignItems: 'center',
@@ -300,7 +311,7 @@ export default function SheetView({
         }}>
           {/* Header Row */}
           <div style={{
-            height: '22px',
+            height: `${rowHeight}px`,
             padding: '0 2px',
             fontSize: '0.55rem',
             fontWeight: 'bold',
@@ -312,7 +323,7 @@ export default function SheetView({
             #
           </div>
           <div style={{
-            height: '22px',
+            height: `${rowHeight}px`,
             padding: '0 2px',
             fontSize: '0.55rem',
             fontWeight: 'bold',
@@ -344,7 +355,7 @@ export default function SheetView({
                   alignItems: 'center',
                   justifyContent: 'flex-end',
                   minWidth: '15px',
-                  height: '22px',
+                  height: `${rowHeight}px`,
                   borderBottom: '1px dotted #e2e8f0',
                   background: rowBg
                 }}>
@@ -354,7 +365,7 @@ export default function SheetView({
                   overflow: 'hidden',
                   background: play?.priority ? '#fef08a' : rowBg,
                   padding: '2px',
-                  height: '22px',
+                  height: `${rowHeight}px`,
                   color: '#334155',
                   display: 'flex',
                   alignItems: 'center',
@@ -388,7 +399,7 @@ export default function SheetView({
       }}>
         {/* Header Row */}
         <div style={{
-          height: '22px',
+          height: `${rowHeight}px`,
           padding: '0 2px',
           fontSize: '0.55rem',
           fontWeight: 'bold',
@@ -400,7 +411,7 @@ export default function SheetView({
           #
         </div>
         <div style={{
-          height: '22px',
+          height: `${rowHeight}px`,
           padding: '0 2px',
           fontSize: '0.55rem',
           fontWeight: 'bold',
@@ -415,7 +426,7 @@ export default function SheetView({
           LEFT HASH
         </div>
         <div style={{
-          height: '22px',
+          height: `${rowHeight}px`,
           padding: '0 2px',
           fontSize: '0.55rem',
           fontWeight: 'bold',
@@ -448,7 +459,7 @@ export default function SheetView({
                 alignItems: 'center',
                 justifyContent: 'flex-end',
                 minWidth: '15px',
-                height: '22px',
+                height: `${rowHeight}px`,
                 borderBottom: '1px dotted #e2e8f0',
                 background: rowBg
               }}>
@@ -458,7 +469,7 @@ export default function SheetView({
                 overflow: 'hidden',
                 background: playLeft?.priority ? '#fef08a' : rowBg,
                 padding: '2px',
-                height: '22px',
+                height: `${rowHeight}px`,
                 color: '#334155',
                 display: 'flex',
                 alignItems: 'center',
@@ -480,7 +491,7 @@ export default function SheetView({
                 overflow: 'hidden',
                 background: playRight?.priority ? '#fef08a' : rowBg,
                 padding: '2px',
-                height: '22px',
+                height: `${rowHeight}px`,
                 color: '#334155',
                 display: 'flex',
                 alignItems: 'center',
@@ -631,7 +642,7 @@ export default function SheetView({
                           ? '#dbeafe'
                           : (play?.priority ? '#fef08a' : (rowIdx % 2 === 1 ? '#f8fafc' : 'transparent')),
                         padding: '2px',
-                        height: '22px',
+                        height: `${rowHeight}px`,
                         color: '#334155',
                         display: 'flex',
                         alignItems: 'center',
@@ -762,12 +773,12 @@ export default function SheetView({
     return (
       <div className="matrix-box-container" style={{ fontSize: '0.6rem' }}>
         {/* Single Header Row - uses box.color like other box headers */}
-        <div className="box-header" style={{ display: 'flex', borderBottom: '1px solid rgba(0,0,0,0.2)' }}>
+        <div className="box-header" style={{ display: 'flex', borderBottom: '1px solid rgba(0,0,0,0.2)', height: `${rowHeight}px` }}>
           {/* Corner cell with formation name */}
           <div style={{
             width: `${firstColWidth}px`,
             flexShrink: 0,
-            padding: '2px 4px',
+            padding: '1px 2px',
             fontSize: firstColFontSize,
             fontWeight: 'bold',
             textAlign: 'center',
@@ -776,7 +787,7 @@ export default function SheetView({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            minHeight: '18px'
+            height: `${rowHeight}px`
           }}>
             {formationName}
           </div>
@@ -793,7 +804,7 @@ export default function SheetView({
                 textAlign: 'center',
                 background: headerBg,
                 borderLeft: cIdx === 0 && gIdx > 0 ? '2px solid rgba(0,0,0,0.2)' : '1px solid rgba(255,255,255,0.3)',
-                height: '22px',
+                height: `${rowHeight}px`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
@@ -815,20 +826,21 @@ export default function SheetView({
           return (
             <div key={pt.id} style={{
               display: 'flex',
-              borderBottom: '1px solid #e2e8f0'
+              borderBottom: '1px solid #e2e8f0',
+              height: `${rowHeight}px`
             }}>
               {/* Play Type Label */}
               <div style={{
                 width: `${firstColWidth}px`,
                 flexShrink: 0,
-                padding: '2px 4px',
+                padding: '1px 2px',
                 fontSize: firstColFontSize,
                 fontWeight: 'bold',
                 color: firstColTextColor,
                 background: firstColBg,
                 display: 'flex',
                 alignItems: 'center',
-                minHeight: '18px'
+                height: `${rowHeight}px`
               }}>
                 {pt.label}
               </div>
@@ -845,8 +857,9 @@ export default function SheetView({
                     className="matrix-box-cell"
                     style={{
                       flex: 1,
-                      padding: '2px',
-                      minHeight: '22px',
+                      padding: '1px',
+                      height: `${rowHeight}px`,
+                      overflow: 'hidden',
                       background: dragOverCell?.boxId === box.setId && dragOverCell?.cellId === `${pt.id}_${colId}`
                         ? '#dbeafe'
                         : rowBg,
@@ -856,7 +869,7 @@ export default function SheetView({
                         : undefined,
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '1px',
+                      gap: '0px',
                       transition: 'background 0.1s, border 0.1s'
                     }}
                     onDrop={(e) => {
@@ -1171,8 +1184,6 @@ export default function SheetView({
     );
   };
 
-  const isLandscape = pageOrientation === 'landscape';
-
   // Determine actual paper orientation based on format + orientation combo
   // 2-page: orientation matches paper
   // 4-page portrait booklet (17" tall): paper is LANDSCAPE (pages stack vertically)
@@ -1198,9 +1209,73 @@ export default function SheetView({
   `;
 
   return (
-    <div className={`animate-fade-in ${is4Page ? 'print-4page' : 'print-2page'} ${isLandscape ? 'print-landscape' : 'print-portrait'}`} style={{ height: '100%', overflowY: 'auto', padding: '1rem' }}>
+    <div className={`animate-fade-in ${is4Page ? 'print-4page' : 'print-2page'} ${isLandscape ? 'print-landscape' : 'print-portrait'}`} style={{ height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       {/* Dynamic print orientation style */}
       <style dangerouslySetInnerHTML={{ __html: printOrientationStyle }} />
+
+      {/* Zoom Controls - only in edit mode */}
+      {isEditing && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          padding: '8px',
+          background: '#1e293b',
+          borderBottom: '1px solid #334155',
+          flexShrink: 0
+        }}>
+          <button
+            onClick={() => setZoomLevel(Math.max(50, zoomLevel - 10))}
+            style={{
+              padding: '4px 8px',
+              background: '#334155',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '0.8rem'
+            }}
+          >
+            −
+          </button>
+          <span style={{ color: 'white', fontSize: '0.75rem', minWidth: '50px', textAlign: 'center' }}>
+            {zoomLevel}%
+          </span>
+          <button
+            onClick={() => setZoomLevel(Math.min(150, zoomLevel + 10))}
+            style={{
+              padding: '4px 8px',
+              background: '#334155',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '0.8rem'
+            }}
+          >
+            +
+          </button>
+          <button
+            onClick={() => setZoomLevel(100)}
+            style={{
+              padding: '4px 8px',
+              background: '#475569',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '0.7rem',
+              marginLeft: '8px'
+            }}
+          >
+            Reset
+          </button>
+        </div>
+      )}
+
+      {/* Scrollable content area */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
       {/* Print Pages for 4-page booklet format */}
       {is4Page && (
         <div className="print-only-4page">
@@ -1362,6 +1437,11 @@ export default function SheetView({
           }
         }
 
+        // Page grid constraints based on orientation
+        // These define how many columns/rows fit on a printed page
+        const pageMaxCols = isLandscape ? 6 : 5;
+        const pageMaxRows = isLandscape ? 60 : 70;
+
         // Use full width, maintain aspect ratio for height
         const aspectRatio = pageHeightIn / pageWidthIn;
 
@@ -1379,35 +1459,48 @@ export default function SheetView({
               key={pageNum}
               className="page-container"
               style={{
-                width: '100%',
+                width: `${zoomLevel}%`,
                 aspectRatio: `${pageWidthIn} / ${pageHeightIn}`,
                 border: '2px solid #94a3b8',
                 borderRadius: '4px',
                 marginBottom: '1.5rem',
+                marginLeft: 'auto',
+                marginRight: 'auto',
                 background: 'white',
                 overflow: 'hidden',
                 boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                 display: 'flex',
-                flexDirection: 'column'
+                flexDirection: 'column',
+                transition: 'width 0.2s ease'
               }}
             >
-              {/* Page Header - editor only, not printed */}
-              <div className="hide-on-print" style={{
-                background: '#334155',
-                color: 'white',
-                padding: '4px 12px',
-                fontWeight: 'bold',
-                fontSize: '0.75rem',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexShrink: 0
-              }}>
-                <span>PAGE {pageNum}</span>
-                <span style={{ fontSize: '0.65rem', opacity: 0.7 }}>
-                  {pageWidthIn}" × {pageHeightIn}" | {pageSections.length} section{pageSections.length !== 1 ? 's' : ''}
-                </span>
-              </div>
+              {/* Page Header - editor only */}
+              {isEditing && (() => {
+                // Calculate total rows used by all sections on this page
+                const totalRowsUsed = pageSections.reduce((sum, { section }) => {
+                  return sum + (section.gridRows || 12);
+                }, 0);
+                const isOverLimit = totalRowsUsed > pageMaxRows;
+
+                return (
+                  <div style={{
+                    background: isOverLimit ? '#991b1b' : '#334155',
+                    color: 'white',
+                    padding: '4px 12px',
+                    fontWeight: 'bold',
+                    fontSize: '0.75rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexShrink: 0
+                  }}>
+                    <span>PAGE {pageNum}</span>
+                    <span style={{ fontSize: '0.65rem', opacity: isOverLimit ? 1 : 0.7 }}>
+                      {totalRowsUsed}/{pageMaxRows} rows used {isOverLimit && '⚠️ OVERFLOW'}
+                    </span>
+                  </div>
+                );
+              })()}
 
               {/* Page Content - overflow hidden */}
               <div style={{
@@ -1427,7 +1520,8 @@ export default function SheetView({
                   if (!isEditing && visibleBoxes.length === 0) return null;
 
                   // Section grid: COLS controls width distribution, ROWS controls default content rows for boxes
-                  const sectionCols = section.gridColumns || 8;
+                  // Constrain to page max columns
+                  const sectionCols = Math.min(section.gridColumns || pageMaxCols, pageMaxCols);
                   const sectionDefaultRows = section.gridRows || 5; // Default content rows for boxes in this section
 
                   // Calculate row spans for each box based on content rows
@@ -1436,7 +1530,11 @@ export default function SheetView({
                     if (box.type === 'grid') return (box.gridRows || 5) + 2; // box header + column header + content
                     if (box.type === 'script') return (box.rows?.length || 10) + 2; // box header + column header + content
                     if (box.type === 'fzdnd') return (box.gridRows || box.rowCount || 5) + 2; // box header + column header + content
-                    if (box.type === 'matrix') return 3 + 1; // Matrix has built-in headers, just +1 for box header
+                    if (box.type === 'matrix') {
+                      // Matrix: header row + play type rows (default 5)
+                      const playTypeCount = box.playTypes?.length || 5;
+                      return playTypeCount + 2; // +2 for header row and column headers
+                    }
                     return 5 + 2; // Default
                   };
 
@@ -1445,8 +1543,44 @@ export default function SheetView({
                   const boxPlacements = [];
                   const occupiedCells = new Set();
 
-                  // Simulate grid placement (dense packing)
+                  // Helper to mark cells as occupied
+                  const markOccupied = (row, col, rowSpan, colSpan) => {
+                    for (let dr = 0; dr < rowSpan; dr++) {
+                      for (let dc = 0; dc < colSpan; dc++) {
+                        occupiedCells.add(`${row + dr},${col + dc}`);
+                      }
+                    }
+                  };
+
+                  // Helper to check if cells are available
+                  const canPlaceAt = (row, col, rowSpan, colSpan) => {
+                    if (col + colSpan > sectionCols) return false;
+                    for (let dr = 0; dr < rowSpan; dr++) {
+                      for (let dc = 0; dc < colSpan; dc++) {
+                        if (occupiedCells.has(`${row + dr},${col + dc}`)) return false;
+                      }
+                    }
+                    return true;
+                  };
+
+                  // PHASE 1: Place locked boxes with explicit gridPosition first
                   visibleBoxes.forEach((box, bIdx) => {
+                    if (box.locked && box.gridPosition) {
+                      const colSpan = Math.min(Number(box.colSpan) || 2, sectionCols);
+                      const rowSpan = getBoxRowSpan(box);
+                      const { row, col } = box.gridPosition;
+
+                      // Place at explicit position (even if overlapping - locked takes priority)
+                      markOccupied(row, col, rowSpan, colSpan);
+                      boxPlacements[bIdx] = { row, col, rowSpan, colSpan, locked: true };
+                      maxGridRow = Math.max(maxGridRow, row + rowSpan);
+                    }
+                  });
+
+                  // PHASE 2: Auto-flow remaining (unlocked) boxes around locked ones
+                  visibleBoxes.forEach((box, bIdx) => {
+                    if (box.locked && box.gridPosition) return; // Already placed
+
                     const colSpan = Math.min(Number(box.colSpan) || 2, sectionCols);
                     const rowSpan = getBoxRowSpan(box);
 
@@ -1454,19 +1588,9 @@ export default function SheetView({
                     let placed = false;
                     for (let r = 0; !placed; r++) {
                       for (let c = 0; c <= sectionCols - colSpan && !placed; c++) {
-                        let canPlace = true;
-                        for (let dr = 0; dr < rowSpan && canPlace; dr++) {
-                          for (let dc = 0; dc < colSpan && canPlace; dc++) {
-                            if (occupiedCells.has(`${r + dr},${c + dc}`)) canPlace = false;
-                          }
-                        }
-                        if (canPlace) {
-                          for (let dr = 0; dr < rowSpan; dr++) {
-                            for (let dc = 0; dc < colSpan; dc++) {
-                              occupiedCells.add(`${r + dr},${c + dc}`);
-                            }
-                          }
-                          boxPlacements.push({ row: r, col: c, rowSpan, colSpan });
+                        if (canPlaceAt(r, c, rowSpan, colSpan)) {
+                          markOccupied(r, c, rowSpan, colSpan);
+                          boxPlacements[bIdx] = { row: r, col: c, rowSpan, colSpan, locked: false };
                           maxGridRow = Math.max(maxGridRow, r + rowSpan);
                           placed = true;
                         }
@@ -1485,6 +1609,9 @@ export default function SheetView({
                       }
                     }
                   }
+
+                  // Check if section overflows page row limit
+                  const sectionOverflows = maxGridRow > pageMaxRows;
 
                   return (
                     <div
@@ -1552,9 +1679,9 @@ export default function SheetView({
                               <input
                                 type="number"
                                 min="1"
-                                max="12"
-                                value={section.gridColumns || 8}
-                                onChange={(e) => onUpdateSection(sIdx, { ...section, gridColumns: parseInt(e.target.value) || 8 })}
+                                max={pageMaxCols}
+                                value={section.gridColumns || pageMaxCols}
+                                onChange={(e) => onUpdateSection(sIdx, { ...section, gridColumns: Math.min(parseInt(e.target.value) || pageMaxCols, pageMaxCols) })}
                                 style={{ width: '36px', padding: '2px 4px', fontSize: '0.65rem', borderRadius: '3px', border: '1px solid #cbd5e1' }}
                               />
                             </div>
@@ -1583,6 +1710,23 @@ export default function SheetView({
                             >
                               <Trash2 size={14} />
                             </button>
+                            {/* Overflow warning */}
+                            {sectionOverflows && (
+                              <span
+                                style={{
+                                  marginLeft: '8px',
+                                  padding: '2px 6px',
+                                  background: '#fef3c7',
+                                  color: '#92400e',
+                                  fontSize: '0.6rem',
+                                  borderRadius: '4px',
+                                  fontWeight: 'bold'
+                                }}
+                                title={`Section has ${maxGridRow} rows but page max is ${pageMaxRows}`}
+                              >
+                                {maxGridRow}/{pageMaxRows} rows
+                              </span>
+                            )}
                           </div>
                         ) : (
                           <span>{section.title}</span>
@@ -1590,18 +1734,27 @@ export default function SheetView({
                       </div>
 
                       {/* Section Content - CSS Grid with row spans for content height */}
+                      {(() => {
+                        // Use section's configured rows (ROWS setting), or content rows if larger
+                        const sectionMaxRows = section.gridRows || 12;
+                        const displayRows = isEditing
+                          ? Math.max(maxGridRow, sectionMaxRows) // Show at least section's configured rows
+                          : maxGridRow; // Print preview shows only content
+                        return (
                       <div style={{
                         display: 'grid',
-                        gridTemplateColumns: `20px repeat(${sectionCols}, 1fr)`, // Row numbers + content columns
-                        gridTemplateRows: maxGridRow > 0 ? `repeat(${maxGridRow}, 22px)` : 'auto', // Fixed row height for alignment
+                        gridTemplateColumns: isEditing
+                          ? `20px repeat(${sectionCols}, 1fr)` // Row numbers + content columns (edit mode)
+                          : `repeat(${sectionCols}, 1fr)`, // Content columns only (print preview)
+                        gridTemplateRows: displayRows > 0 ? `repeat(${displayRows}, ${rowHeight}px)` : 'auto', // Fixed row height for alignment
                         gridAutoFlow: 'dense',
                         columnGap: isEditing ? '4px' : '1px', // Space between columns
                         rowGap: '0px', // No vertical gap so boxes align with row numbers
                         padding: isEditing ? '4px' : '0',
                         flex: 1
                       }}>
-                        {/* Row numbers on the left (like spreadsheet) */}
-                        {maxGridRow > 0 && Array.from({ length: maxGridRow }, (_, rowIdx) => (
+                        {/* Row numbers on the left (like spreadsheet) - only in edit mode */}
+                        {isEditing && displayRows > 0 && Array.from({ length: displayRows }, (_, rowIdx) => (
                           <div
                             key={`row-${rowIdx}`}
                             style={{
@@ -1634,7 +1787,7 @@ export default function SheetView({
                               onDragLeave={(e) => handleDragLeave(e, sIdx, bIdx)}
                               onDrop={(e) => handleDrop(e, sIdx, bIdx)}
                               style={{
-                                gridColumn: `${placement.col + 2} / span ${colSpan}`, // +2 because col 1 is row numbers
+                                gridColumn: `${placement.col + (isEditing ? 2 : 1)} / span ${colSpan}`, // +2 in edit mode for row numbers column
                                 gridRow: `${placement.row + 1} / span ${rowSpan}`,
                                 border: isTargetingMode
                                   ? '2px solid #8b5cf6'
@@ -1665,9 +1818,9 @@ export default function SheetView({
                                 <div
                                   className="box-header"
                                   style={{
-                                    height: '22px', // Match grid row height
-                                    minHeight: '22px',
-                                    maxHeight: '22px',
+                                    height: `${rowHeight}px`, // Match grid row height
+                                    minHeight: `${rowHeight}px`,
+                                    maxHeight: `${rowHeight}px`,
                                     padding: '0 8px',
                                     background: box.type === 'matrix' ? '#f1f5f9' : (box.color || '#3b82f6'),
                                     color: box.type === 'matrix' ? '#64748b' : 'white',
@@ -1688,6 +1841,21 @@ export default function SheetView({
                                   )}
                                   {isEditing ? (
                                     <div style={{ display: 'flex', gap: '4px', alignItems: 'center', flex: box.type === 'matrix' ? 1 : 'none', justifyContent: box.type === 'matrix' ? 'flex-end' : 'flex-start' }} onClick={(e) => e.stopPropagation()}>
+                                      {/* Lock toggle button */}
+                                      <div
+                                        onClick={() => onToggleBoxLock && onToggleBoxLock(sIdx, bIdx)}
+                                        style={{
+                                          cursor: 'pointer',
+                                          padding: '2px',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          opacity: box.locked ? 1 : 0.6,
+                                          color: box.type === 'matrix' ? (box.locked ? '#3b82f6' : '#94a3b8') : 'white'
+                                        }}
+                                        title={box.locked ? 'Unlock box (allow auto-flow)' : 'Lock box in position'}
+                                      >
+                                        {box.locked ? <Lock size={12} /> : <Unlock size={12} />}
+                                      </div>
                                       {/* ColSpan × RowSpan controls */}
                                       <input
                                         type="number"
@@ -1706,19 +1874,7 @@ export default function SheetView({
                                         ×
                                       </div>
                                     </div>
-                                  ) : (
-                                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                                      <span style={{
-                                        fontSize: '0.7rem',
-                                        opacity: 0.9,
-                                        background: 'rgba(0,0,0,0.2)',
-                                        padding: '0 4px',
-                                        borderRadius: '4px'
-                                      }}>
-                                        {getPlaysForSet(box.setId).length}
-                                      </span>
-                                    </div>
-                                  )}
+                                  ) : null}
                                 </div>
                               )}
                               {/* Box Content */}
@@ -1729,14 +1885,14 @@ export default function SheetView({
                           );
                         })}
 
-                        {/* Empty cell placeholders - clickable to add box in that spot */}
+                        {/* Empty cell placeholders - clickable to add box OR drop targets for dragged boxes */}
                         {isEditing && emptyCells.map((cell, idx) => (
                           <div
                             key={`empty-${cell.row}-${cell.col}`}
                             style={{
                               gridColumn: `${cell.col + 2} / ${cell.col + 3}`, // +2 because col 1 is row numbers
                               gridRow: `${cell.row + 1} / ${cell.row + 2}`,
-                              border: '1px dashed #cbd5e1',
+                              border: draggedCell ? '2px dashed #94a3b8' : '1px dashed #cbd5e1',
                               borderRadius: '2px',
                               display: 'flex',
                               alignItems: 'center',
@@ -1745,22 +1901,46 @@ export default function SheetView({
                               color: '#94a3b8',
                               fontSize: '1.2rem',
                               background: 'transparent',
-                              transition: 'all 0.15s'
+                              transition: 'all 0.15s',
+                              minHeight: `${rowHeight}px`
                             }}
-                            onClick={() => onAddBox(sIdx)}
+                            onClick={() => !draggedCell && onAddBox(sIdx)}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.background = '#e0f2fe';
-                              e.currentTarget.style.borderColor = '#3b82f6';
-                              e.currentTarget.style.color = '#3b82f6';
+                              if (!draggedCell) {
+                                e.currentTarget.style.background = '#e0f2fe';
+                                e.currentTarget.style.borderColor = '#3b82f6';
+                                e.currentTarget.style.color = '#3b82f6';
+                              }
                             }}
                             onMouseLeave={(e) => {
+                              if (!draggedCell) {
+                                e.currentTarget.style.background = 'transparent';
+                                e.currentTarget.style.borderColor = '#cbd5e1';
+                                e.currentTarget.style.color = '#94a3b8';
+                              }
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.dataTransfer.dropEffect = 'move';
+                              e.currentTarget.style.background = '#dbeafe';
+                              e.currentTarget.style.borderColor = '#3b82f6';
+                            }}
+                            onDragLeave={(e) => {
+                              e.currentTarget.style.background = 'transparent';
+                              e.currentTarget.style.borderColor = draggedCell ? '#94a3b8' : '#cbd5e1';
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
                               e.currentTarget.style.background = 'transparent';
                               e.currentTarget.style.borderColor = '#cbd5e1';
-                              e.currentTarget.style.color = '#94a3b8';
+                              if (onDropOnEmptyCell && draggedCell) {
+                                onDropOnEmptyCell(sIdx, cell.row, cell.col);
+                              }
                             }}
-                            title="Add box"
+                            title={draggedCell ? 'Drop box here to lock in position' : 'Add box'}
                           >
-                            +
+                            {draggedCell ? '' : '+'}
                           </div>
                         ))}
 
@@ -1797,34 +1977,62 @@ export default function SheetView({
                           </div>
                         )}
                       </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}
 
-                {/* Add Section Button for this page */}
-                {isEditing && (
-                  <button
-                    style={{
-                      border: '2px dashed #cbd5e1',
-                      height: '60px',
-                      width: '100%',
-                      gridColumn: '1 / -1',
-                      background: '#f1f5f9',
-                      color: '#475569',
-                      fontWeight: '600',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      fontSize: '0.85rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px'
-                    }}
-                    onClick={() => onAddSection(pageNum)}
-                  >
-                    <span style={{ fontSize: '1rem' }}>+</span> Add Section to Page {pageNum}
-                  </button>
-                )}
+                {/* Rows remaining indicator and Add Section Button */}
+                {isEditing && (() => {
+                  const totalRowsUsed = pageSections.reduce((sum, { section }) => {
+                    return sum + (section.gridRows || 12);
+                  }, 0);
+                  const rowsRemaining = pageMaxRows - totalRowsUsed;
+
+                  return (
+                    <>
+                      {/* Rows remaining indicator */}
+                      <div style={{
+                        padding: '8px 12px',
+                        background: rowsRemaining < 0 ? '#fef2f2' : '#f0fdf4',
+                        border: `1px solid ${rowsRemaining < 0 ? '#fecaca' : '#bbf7d0'}`,
+                        borderRadius: '6px',
+                        color: rowsRemaining < 0 ? '#991b1b' : '#166534',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        textAlign: 'center'
+                      }}>
+                        {rowsRemaining >= 0
+                          ? `${rowsRemaining} rows remaining on this page`
+                          : `${Math.abs(rowsRemaining)} rows over limit!`}
+                      </div>
+
+                      {/* Add Section Button */}
+                      <button
+                        style={{
+                          border: '2px dashed #cbd5e1',
+                          height: '60px',
+                          width: '100%',
+                          gridColumn: '1 / -1',
+                          background: '#f1f5f9',
+                          color: '#475569',
+                          fontWeight: '600',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '0.85rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px'
+                        }}
+                        onClick={() => onAddSection(pageNum)}
+                      >
+                        <span style={{ fontSize: '1rem' }}>+</span> Add Section to Page {pageNum}
+                      </button>
+                    </>
+                  );
+                })()}
 
               </div>
             </div>
@@ -1833,6 +2041,7 @@ export default function SheetView({
 
         return pageContainers;
       })()}
+      </div>
     </div>
   );
 }

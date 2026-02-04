@@ -717,10 +717,10 @@ export default function Setup() {
 
   // Default Play Buckets
   const DEFAULT_PLAY_BUCKETS = [
-    { id: 'run', label: 'Run', color: '#3b82f6', phase: 'OFFENSE' },
-    { id: 'pass', label: 'Pass', color: '#8b5cf6', phase: 'OFFENSE' },
-    { id: 'screen', label: 'Screen', color: '#f97316', phase: 'OFFENSE' },
-    { id: 'rpo', label: 'RPO', color: '#10b981', phase: 'OFFENSE' }
+    { id: 'run', label: 'Run', color: '#3b82f6', phase: 'OFFENSE', bucketType: 'run' },
+    { id: 'pass', label: 'Pass', color: '#8b5cf6', phase: 'OFFENSE', bucketType: 'pass' },
+    { id: 'screen', label: 'Screen', color: '#f97316', phase: 'OFFENSE', bucketType: 'screen' },
+    { id: 'rpo', label: 'RPO', color: '#10b981', phase: 'OFFENSE', bucketType: 'rpo' }
   ];
 
   // Default Field Zones
@@ -3742,10 +3742,10 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupConfig, isL
 
   // Default buckets for Offense
   const DEFAULT_OFFENSE_BUCKETS = [
-    { id: 'run', label: 'Run', color: '#3b82f6', phase: 'OFFENSE' },
-    { id: 'pass', label: 'Pass', color: '#8b5cf6', phase: 'OFFENSE' },
-    { id: 'screen', label: 'Screen', color: '#f97316', phase: 'OFFENSE' },
-    { id: 'rpo', label: 'RPO', color: '#10b981', phase: 'OFFENSE' }
+    { id: 'run', label: 'Run', color: '#3b82f6', phase: 'OFFENSE', bucketType: 'run' },
+    { id: 'pass', label: 'Pass', color: '#8b5cf6', phase: 'OFFENSE', bucketType: 'pass' },
+    { id: 'screen', label: 'Screen', color: '#f97316', phase: 'OFFENSE', bucketType: 'screen' },
+    { id: 'rpo', label: 'RPO', color: '#10b981', phase: 'OFFENSE', bucketType: 'rpo' }
   ];
 
   // Initialize defaults if empty
@@ -3791,7 +3791,7 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupConfig, isL
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {buckets.map(bucket => (
           <div key={bucket.id} className={`rounded-lg border p-4 ${isLight ? 'bg-white border-gray-200 shadow-sm' : 'bg-slate-700/50 border-slate-600'}`}>
-            <div className="flex justify-between items-center gap-2">
+            <div className="flex justify-between items-center gap-2 mb-2">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <div className="relative flex-shrink-0">
                   <input
@@ -3822,6 +3822,27 @@ function PlayBucketsTab({ phase, buckets, allBuckets, onUpdate, setupConfig, isL
                 <Trash2 size={16} />
               </button>
             </div>
+            {/* Bucket Type Selector */}
+            {phase === 'OFFENSE' && (
+              <div className="flex items-center gap-2 mt-2">
+                <label htmlFor={`bucket-type-${bucket.id}`} className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                  Type:
+                </label>
+                <select
+                  id={`bucket-type-${bucket.id}`}
+                  value={bucket.bucketType || ''}
+                  onChange={(e) => updateBucket(bucket.id, { bucketType: e.target.value })}
+                  className={`flex-1 px-2 py-1 text-xs rounded ${isLight ? 'bg-gray-100 border border-gray-300 text-gray-700' : 'bg-slate-600 border border-slate-500 text-white'}`}
+                >
+                  <option value="">-- Select Type --</option>
+                  <option value="run">Run</option>
+                  <option value="pass">Pass</option>
+                  <option value="rpo">RPO</option>
+                  <option value="screen">Screen</option>
+                  <option value="special">Special</option>
+                </select>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -9603,6 +9624,59 @@ function SegmentFocusTab({
                   </div>
                 </div>
               </div>
+
+              {/* Preferred Bucket Types - shown for Offense phase */}
+              {selectedPhase === 'O' && (
+                <div className={`p-4 border-b ${isLight ? 'border-gray-200 bg-gray-50' : 'border-slate-600 bg-slate-700/30'}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <h5 className={`text-xs font-semibold uppercase tracking-wide ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                      Preferred Play Types
+                    </h5>
+                    <span className={`text-[10px] ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
+                      {(selectedType.preferredBucketTypes?.length || 0) === 0 ? 'All types shown' : `${selectedType.preferredBucketTypes.length} selected`}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { id: 'run', label: 'Run', color: '#3b82f6' },
+                      { id: 'pass', label: 'Pass', color: '#8b5cf6' },
+                      { id: 'rpo', label: 'RPO', color: '#10b981' },
+                      { id: 'screen', label: 'Screen', color: '#f97316' },
+                      { id: 'special', label: 'Special', color: '#ec4899' }
+                    ].map(bucketType => {
+                      const isSelected = (selectedType.preferredBucketTypes || []).includes(bucketType.id);
+                      return (
+                        <button
+                          key={bucketType.id}
+                          onClick={() => {
+                            const current = selectedType.preferredBucketTypes || [];
+                            const newTypes = isSelected
+                              ? current.filter(t => t !== bucketType.id)
+                              : [...current, bucketType.id];
+                            const updatedTypes = phaseSegmentTypes.map(t =>
+                              t.id === selectedTypeId ? { ...t, preferredBucketTypes: newTypes } : t
+                            );
+                            onUpdate('practiceSegmentTypes', { ...segmentTypes, [selectedPhase]: updatedTypes });
+                          }}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                            isSelected
+                              ? 'text-white shadow-sm'
+                              : isLight
+                                ? 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                                : 'bg-slate-600 text-slate-400 hover:bg-slate-500'
+                          }`}
+                          style={isSelected ? { backgroundColor: bucketType.color } : {}}
+                        >
+                          {bucketType.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className={`text-[10px] mt-2 ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
+                    Select types to filter plays in this segment. Leave empty to show all plays.
+                  </p>
+                </div>
+              )}
 
               {selectedTypeFocusMode === 'all' ? (
                 /* All Options Mode for this segment */

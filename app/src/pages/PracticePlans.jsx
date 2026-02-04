@@ -1924,9 +1924,77 @@ export default function PracticePlans() {
     return segType?.focusItems || [];
   }, [getSegmentTypesForPhase]);
 
-  // Get plays for a segment's Call Sheet focuses
+  // Get play buckets from setup config (needed for bucket type filtering)
+  const playBuckets = useMemo(() => setupConfig?.playBuckets || [], [setupConfig]);
+
+  // Get preferred bucket types for a specific segment type
+  const getPreferredBucketTypesForSegment = useCallback((segment) => {
+    if (!segment?.type) return [];
+    // Get segment phase (O, D, K, C) from segment.phase or default to O
+    const segPhase = segment.phase === 'OFFENSE' ? 'O'
+      : segment.phase === 'DEFENSE' ? 'D'
+      : segment.phase === 'SPECIAL_TEAMS' ? 'K'
+      : segment.group === 'D' ? 'D'
+      : segment.group === 'K' ? 'K'
+      : 'O';
+    const types = getSegmentTypesForPhase(segPhase);
+    const segType = types.find(t => t.name === segment.type || t.id === segment.type);
+    return segType?.preferredBucketTypes || [];
+  }, [getSegmentTypesForPhase]);
+
+  // Check if a play matches the preferred bucket types for a segment
+  const playMatchesPreferredTypes = useCallback((play, segment) => {
+    const preferredTypes = getPreferredBucketTypesForSegment(segment);
+    // If no preferred types, allow all plays
+    if (!preferredTypes || preferredTypes.length === 0) return true;
+    // Find the bucket for this play
+    const bucket = playBuckets.find(b => b.id === play?.bucketId);
+    // Check if the bucket's type is in the preferred list
+    return bucket?.bucketType && preferredTypes.includes(bucket.bucketType);
+  }, [getPreferredBucketTypesForSegment, playBuckets]);
+
+  // Get plays for a segment's Call Sheet focuses OR preferred bucket types
+  // Sorted by rep need (quota - current reps), highest need at top
   const getPlaysForSegmentFocuses = useCallback((segment) => {
     if (!segment || !week) return [];
+
+    const resultPlays = [];
+    const addedIds = new Set();
+    const installList = week?.installList || [];
+    const playRepTargets = week?.playRepTargets || {};
+    const weekReps = getAllRepsForWeek(week?.id, weeks);
+
+    // Get preferred bucket types for this segment
+    const preferredTypes = getPreferredBucketTypesForSegment(segment);
+    const hasPreferredTypes = preferredTypes && preferredTypes.length > 0;
+
+    // Helper: Check if play matches preferred bucket types
+    const matchesBucketTypes = (play) => {
+      if (!hasPreferredTypes) return true;
+      const bucket = playBuckets.find(b => b.id === play?.bucketId);
+      return bucket?.bucketType && preferredTypes.includes(bucket.bucketType);
+    };
+
+    // Helper: Add play with rep info
+    const addPlayWithRepInfo = (playId, extraProps = {}) => {
+      if (addedIds.has(playId)) return;
+      const play = plays?.[playId] || playsArray?.find(p => p.id === playId);
+      if (!play) return;
+      if (!matchesBucketTypes(play)) return;
+
+      const currentReps = weekReps[playId] || 0;
+      const targetReps = playRepTargets[playId] || 0;
+      const repNeed = targetReps > 0 ? targetReps - currentReps : -currentReps; // Higher = more needed
+
+      resultPlays.push({
+        ...play,
+        _currentReps: currentReps,
+        _targetReps: targetReps,
+        _repNeed: repNeed,
+        ...extraProps
+      });
+      addedIds.add(playId);
+    };
 
     // Collect all focuses from the segment
     const allFocuses = [
@@ -1935,11 +2003,6 @@ export default function PracticePlans() {
       ...(segment.defenseFocuses || [])
     ];
 
-    if (allFocuses.length === 0) return [];
-
-    const resultPlays = [];
-    const addedIds = new Set();
-
     // Handle Call Sheet category focuses
     const callSheetFocuses = allFocuses.filter(f => f.category === 'Call Sheet');
     if (callSheetFocuses.length > 0) {
@@ -1947,15 +2010,7 @@ export default function PracticePlans() {
       callSheetFocuses.forEach(focus => {
         const matchingSet = sets.find(s => s.id === focus.id);
         if (matchingSet?.playIds) {
-          matchingSet.playIds.forEach(id => {
-            if (!addedIds.has(id)) {
-              const play = plays?.[id] || playsArray?.find(p => p.id === id);
-              if (play) {
-                resultPlays.push(play);
-                addedIds.add(id);
-              }
-            }
-          });
+          matchingSet.playIds.forEach(id => addPlayWithRepInfo(id));
         }
       });
     }
@@ -1963,48 +2018,70 @@ export default function PracticePlans() {
     // Handle Practice category focuses
     const practiceFocuses = allFocuses.filter(f => f.category === 'Practice');
     if (practiceFocuses.length > 0) {
-      const installList = week?.installList || [];
-
       // Check for "priority_plays" focus
-      const priorityPlays = practiceFocuses.some(f => f.id === 'priority_plays');
-      if (priorityPlays) {
-        // Find priority plays from install list
+      if (practiceFocuses.some(f => f.id === 'priority_plays')) {
         installList.forEach(playId => {
-          if (!addedIds.has(playId)) {
-            const play = plays?.[playId] || playsArray?.find(p => p.id === playId);
-            if (play?.priority) {
-              resultPlays.push({ ...play, _isPriority: true });
-              addedIds.add(playId);
-            }
+          const play = plays?.[playId] || playsArray?.find(p => p.id === playId);
+          if (play?.priority) {
+            addPlayWithRepInfo(playId, { _isPriority: true });
           }
         });
       }
 
       // Check for "needs_reps" focus
-      const needsReps = practiceFocuses.some(f => f.id === 'needs_reps');
-      if (needsReps) {
-        // Get all reps for this week
-        const weekReps = getAllRepsForWeek(week?.id, weeks);
-
-        // Find plays with 0-1 reps
+      if (practiceFocuses.some(f => f.id === 'needs_reps')) {
         installList.forEach(playId => {
-          if (!addedIds.has(playId)) {
-            const reps = weekReps[playId] || 0;
-            if (reps <= 1) {
-              const play = plays?.[playId] || playsArray?.find(p => p.id === playId);
-              if (play) {
-                // Add rep count info to play for display
-                resultPlays.push({ ...play, _currentReps: reps });
-                addedIds.add(playId);
-              }
-            }
+          const reps = weekReps[playId] || 0;
+          if (reps <= 1) {
+            addPlayWithRepInfo(playId);
           }
         });
       }
     }
 
+    // If no focuses but has preferred bucket types, populate from install list
+    if (allFocuses.length === 0 && hasPreferredTypes) {
+      installList.forEach(playId => addPlayWithRepInfo(playId));
+    }
+
+    // Sorting behavior depends on whether focuses are selected
+    if (allFocuses.length > 0) {
+      // When focuses are selected (game plan boxes), randomize for variety
+      // Use Fisher-Yates shuffle
+      for (let i = resultPlays.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [resultPlays[i], resultPlays[j]] = [resultPlays[j], resultPlays[i]];
+      }
+    } else {
+      // When no focuses (just bucket type filtering), sort by rep need
+      // Priority: 1) Has quota and below it, 2) Has quota and at/above it, 3) No quota
+      resultPlays.sort((a, b) => {
+        // Priority plays first
+        if (a._isPriority && !b._isPriority) return -1;
+        if (!a._isPriority && b._isPriority) return 1;
+
+        // Then by rep need (higher need = more reps needed = closer to top)
+        const aHasQuota = (a._targetReps || 0) > 0;
+        const bHasQuota = (b._targetReps || 0) > 0;
+        const aBelowQuota = aHasQuota && a._currentReps < a._targetReps;
+        const bBelowQuota = bHasQuota && b._currentReps < b._targetReps;
+
+        // Plays below quota come first
+        if (aBelowQuota && !bBelowQuota) return -1;
+        if (!aBelowQuota && bBelowQuota) return 1;
+
+        // Among plays below quota, sort by need (highest need first)
+        if (aBelowQuota && bBelowQuota) {
+          return b._repNeed - a._repNeed;
+        }
+
+        // Among plays at/above quota or no quota, sort by current reps (lowest first)
+        return a._currentReps - b._currentReps;
+      });
+    }
+
     return resultPlays;
-  }, [week, weeks, plays, playsArray]);
+  }, [week, weeks, plays, playsArray, getPreferredBucketTypesForSegment, playBuckets]);
 
   // Get position groups from setup (use abbreviations for @mentions)
   const positionGroups = useMemo(() => {
@@ -2168,6 +2245,95 @@ export default function PracticePlans() {
 
   // Get play by ID
   const getPlay = useCallback((playId) => plays[playId], [plays]);
+
+  // Calculate bucket breakdown for a segment's script
+  const getSegmentBucketBreakdown = useCallback((segment) => {
+    if (!segment?.script || segment.script.length === 0) return [];
+
+    const bucketCounts = {};
+    let totalPlays = 0;
+
+    segment.script.forEach(row => {
+      if (row.playId) {
+        const play = plays[row.playId];
+        if (play) {
+          const bucketId = play.bucketId || 'unknown';
+          bucketCounts[bucketId] = (bucketCounts[bucketId] || 0) + 1;
+          totalPlays++;
+        }
+      }
+    });
+
+    if (totalPlays === 0) return [];
+
+    // Convert to array with bucket info and percentages
+    return Object.entries(bucketCounts).map(([bucketId, count]) => {
+      const bucket = playBuckets.find(b => b.id === bucketId);
+      return {
+        bucketId,
+        label: bucket?.label || bucket?.name || bucketId,
+        abbrev: bucket?.abbrev || (bucket?.label || bucketId).substring(0, 3).toUpperCase(),
+        color: bucket?.color || '#64748b',
+        count,
+        percentage: Math.round((count / totalPlays) * 100)
+      };
+    }).sort((a, b) => b.count - a.count);
+  }, [plays, playBuckets]);
+
+  // Simple Pie Chart SVG component
+  const BucketPieChart = useCallback(({ breakdown, size = 80 }) => {
+    if (!breakdown || breakdown.length === 0) {
+      return (
+        <div className="flex items-center justify-center h-full opacity-30">
+          <span className="text-xs text-slate-500">No plays</span>
+        </div>
+      );
+    }
+
+    const total = breakdown.reduce((sum, b) => sum + b.count, 0);
+    const radius = size / 2 - 2;
+    const center = size / 2;
+
+    let currentAngle = -90; // Start at top
+
+    const slices = breakdown.map((bucket, idx) => {
+      const sliceAngle = (bucket.count / total) * 360;
+      const startAngle = currentAngle;
+      const endAngle = currentAngle + sliceAngle;
+      currentAngle = endAngle;
+
+      // Calculate arc path
+      const startRad = (startAngle * Math.PI) / 180;
+      const endRad = (endAngle * Math.PI) / 180;
+
+      const x1 = center + radius * Math.cos(startRad);
+      const y1 = center + radius * Math.sin(startRad);
+      const x2 = center + radius * Math.cos(endRad);
+      const y2 = center + radius * Math.sin(endRad);
+
+      const largeArc = sliceAngle > 180 ? 1 : 0;
+
+      const pathD = sliceAngle >= 359.9
+        ? `M ${center} ${center - radius} A ${radius} ${radius} 0 1 1 ${center - 0.01} ${center - radius} Z`
+        : `M ${center} ${center} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+
+      return (
+        <path
+          key={idx}
+          d={pathD}
+          fill={bucket.color}
+          stroke="white"
+          strokeWidth="1"
+        />
+      );
+    });
+
+    return (
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        {slices}
+      </svg>
+    );
+  }, []);
 
   // Update a specific script row
   const updateScriptRow = useCallback((segmentId, rowId, field, value) => {
@@ -3350,48 +3516,117 @@ export default function PracticePlans() {
                         </div>
                       </div>
 
-                      {/* Script Content - Flex container for sidebar + table */}
+                      {/* Script Content - Flex container for sidebars + table */}
                       <div className="flex">
-                        {/* Quick List Sidebar - shows plays from focused call sheet boxes */}
+                        {/* Bucket Breakdown Sidebar - LEFT side */}
+                        {(() => {
+                          const breakdown = getSegmentBucketBreakdown(seg);
+                          const hasPlays = breakdown.length > 0;
+                          const preferredTypes = getPreferredBucketTypesForSegment(seg);
+                          const hasFilter = preferredTypes && preferredTypes.length > 0;
+                          return (
+                            <div className={`w-32 flex-shrink-0 border-r ${isLight ? 'border-gray-200 bg-gray-50' : 'border-slate-700 bg-slate-900/50'}`}>
+                              <div className={`px-2 py-2 text-xs font-semibold uppercase border-b text-center ${isLight ? 'border-gray-200 text-gray-500' : 'border-slate-700 text-slate-400'}`}>
+                                Buckets
+                              </div>
+                              {/* Show preferred type filter if set */}
+                              {hasFilter && (
+                                <div className={`px-2 py-1 border-b text-[9px] ${isLight ? 'border-gray-200 bg-sky-50' : 'border-slate-700 bg-sky-900/20'}`}>
+                                  <span className={isLight ? 'text-sky-600' : 'text-sky-400'}>Filter: </span>
+                                  <span className={isLight ? 'text-sky-700' : 'text-sky-300'}>
+                                    {preferredTypes.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ')}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="p-2 flex flex-col items-center gap-2">
+                                <BucketPieChart breakdown={breakdown} size={70} />
+                                {hasPlays && (
+                                  <div className="w-full space-y-0.5">
+                                    {breakdown.slice(0, 5).map((b, i) => (
+                                      <div key={i} className="flex items-center gap-1 text-[10px]">
+                                        <div
+                                          className="w-2 h-2 rounded-sm flex-shrink-0"
+                                          style={{ backgroundColor: b.color }}
+                                        />
+                                        <span className={`truncate flex-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                                          {b.abbrev}
+                                        </span>
+                                        <span className={`font-medium ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+                                          {b.count}
+                                        </span>
+                                        <span className={`${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
+                                          ({b.percentage}%)
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Quick List Sidebar - shows plays needing reps, sorted by need */}
                         {focusPlays.length > 0 && (
                           <div className={`w-48 flex-shrink-0 border-r ${isLight ? 'border-gray-200 bg-gray-50' : 'border-slate-700 bg-slate-900/50'}`}>
                             <div className={`px-3 py-2 text-xs font-semibold uppercase border-b ${isLight ? 'border-gray-200 text-gray-500' : 'border-slate-700 text-slate-400'}`}>
-                              Quick List ({focusPlays.length})
+                              Suggested ({focusPlays.length})
                             </div>
                             <div className="max-h-[400px] overflow-y-auto">
-                              {focusPlays.map((play, playIdx) => (
-                                <button
-                                  key={`${play.id}-${playIdx}`}
-                                  onClick={() => addPlayToNextEmptyRow(seg.id, play)}
-                                  className={`w-full px-3 py-1.5 text-left text-xs border-b transition-colors ${
-                                    isLight
-                                      ? 'border-gray-100 hover:bg-sky-50 text-gray-700'
-                                      : 'border-slate-800 hover:bg-slate-700 text-slate-300'
-                                  }`}
-                                  title={`Click to add: ${play.formation || ''} ${play.name || ''}`}
-                                >
-                                  <div className="flex items-center justify-between gap-1">
-                                    <span className="font-medium truncate flex items-center gap-1">
-                                      {play._isPriority && <Star size={10} className="text-amber-400 fill-amber-400 flex-shrink-0" />}
-                                      {play.formation ? `${play.formation} ${play.name}` : play.name}
-                                    </span>
-                                    {play._currentReps !== undefined && (
-                                      <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                                        play._currentReps === 0
-                                          ? 'bg-red-500/20 text-red-400'
-                                          : 'bg-amber-500/20 text-amber-400'
-                                      }`}>
-                                        {play._currentReps}
+                              {focusPlays.map((play, playIdx) => {
+                                const hasQuota = (play._targetReps || 0) > 0;
+                                const belowQuota = hasQuota && (play._currentReps || 0) < play._targetReps;
+                                const atQuota = hasQuota && (play._currentReps || 0) >= play._targetReps;
+                                const bucket = playBuckets.find(b => b.id === play.bucketId);
+                                const currentReps = play._currentReps || 0;
+                                const targetReps = play._targetReps || 0;
+
+                                return (
+                                  <button
+                                    key={`${play.id}-${playIdx}`}
+                                    onClick={() => addPlayToNextEmptyRow(seg.id, play)}
+                                    className={`w-full px-2 py-1.5 text-left text-xs border-b transition-colors ${
+                                      belowQuota
+                                        ? isLight ? 'border-red-100 bg-red-50/50 hover:bg-red-100 text-gray-700' : 'border-red-900/30 bg-red-900/10 hover:bg-red-900/20 text-slate-300'
+                                        : atQuota
+                                          ? isLight ? 'border-green-100 bg-green-50/30 hover:bg-green-100 text-gray-700' : 'border-green-900/30 bg-green-900/10 hover:bg-green-900/20 text-slate-300'
+                                          : isLight ? 'border-gray-100 hover:bg-sky-50 text-gray-700' : 'border-slate-800 hover:bg-slate-700 text-slate-300'
+                                    }`}
+                                    title={`Click to add: ${play.formation || ''} ${play.name || ''}${hasQuota ? ` (${currentReps}/${targetReps} reps)` : ''}`}
+                                  >
+                                    <div className="flex items-center justify-between gap-1">
+                                      <span className="font-medium truncate flex items-center gap-1 flex-1 min-w-0">
+                                        {play._isPriority && <Star size={10} className="text-amber-400 fill-amber-400 flex-shrink-0" />}
+                                        <span className="truncate">{play.formation ? `${play.formation} ${play.name}` : play.name}</span>
                                       </span>
-                                    )}
-                                  </div>
-                                  {play.bucketLabel && (
-                                    <div className={`text-[10px] ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
-                                      {play.bucketLabel}
+                                      {/* Rep count badge */}
+                                      <span className={`flex-shrink-0 px-1 py-0.5 rounded text-[9px] font-bold ${
+                                        belowQuota
+                                          ? 'bg-red-500 text-white'
+                                          : atQuota
+                                            ? 'bg-emerald-500 text-white'
+                                            : currentReps === 0
+                                              ? 'bg-slate-500 text-white'
+                                              : 'bg-amber-500 text-white'
+                                      }`}>
+                                        {hasQuota ? `${currentReps}/${targetReps}` : currentReps}
+                                      </span>
                                     </div>
-                                  )}
-                                </button>
-                              ))}
+                                    {/* Bucket label */}
+                                    {bucket && (
+                                      <div className="flex items-center gap-1 mt-0.5">
+                                        <div
+                                          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                          style={{ backgroundColor: bucket.color }}
+                                        />
+                                        <span className={`text-[9px] ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>
+                                          {bucket.label}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </button>
+                                );
+                              })}
                             </div>
                           </div>
                         )}
@@ -3409,11 +3644,11 @@ export default function PracticePlans() {
                           <thead>
                             <tr className={`border-b text-xs uppercase ${isLight ? 'border-gray-200 text-gray-500' : 'border-slate-700 text-slate-400'}`}>
                               <th className="px-2 py-2 text-center w-10">#</th>
+                              <th className="px-2 py-2 text-left w-24">Situation</th>
                               <th className="px-2 py-2 text-center w-16">Hash</th>
                               <th className="px-2 py-2 text-center w-12">Dn</th>
                               <th className="px-2 py-2 text-center w-12">Dist</th>
-                              <th className="px-2 py-2 text-left w-24">Situation</th>
-                              <th className="px-2 py-2 text-left min-w-[200px]">Play Call</th>
+                              <th className="px-2 py-2 text-left min-w-[140px]">Play Call</th>
                               <th className="px-2 py-2 text-left w-28">Defense</th>
                               <th className="px-2 py-2 text-left w-32">Notes</th>
                               <th className="px-2 py-2 text-center w-16">Act</th>
@@ -3429,6 +3664,17 @@ export default function PracticePlans() {
                                   onClick={targetingMode ? () => handleTargetingClick(seg.id, idx) : undefined}
                                 >
                                   <td className={`px-2 py-2 text-center ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>{idx + 1}</td>
+                                  <td className="px-2 py-2">
+                                    <input
+                                      id={`script-${seg.id}-${row.id}-situation`}
+                                      type="text"
+                                      value={row.situation || ''}
+                                      onChange={(e) => updateScriptRow(seg.id, row.id, 'situation', e.target.value)}
+                                      placeholder="Situation"
+                                      className={`w-full px-2 py-1 border rounded text-xs ${isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-slate-700 border-slate-600 text-white placeholder-slate-500'}`}
+                                      aria-label="Situation"
+                                    />
+                                  </td>
                                   <td className="px-2 py-2 text-center">
                                     <select
                                       id={`script-${seg.id}-${row.id}-hash`}
@@ -3470,17 +3716,6 @@ export default function PracticePlans() {
                                       placeholder=""
                                       className={`w-full px-1 py-1 border rounded text-xs text-center ${isLight ? 'bg-white border-gray-300 text-gray-900' : 'bg-slate-700 border-slate-600 text-white'}`}
                                       aria-label="Distance"
-                                    />
-                                  </td>
-                                  <td className="px-2 py-2">
-                                    <input
-                                      id={`script-${seg.id}-${row.id}-situation`}
-                                      type="text"
-                                      value={row.situation || ''}
-                                      onChange={(e) => updateScriptRow(seg.id, row.id, 'situation', e.target.value)}
-                                      placeholder="Situation"
-                                      className={`w-full px-2 py-1 border rounded text-xs ${isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-slate-700 border-slate-600 text-white placeholder-slate-500'}`}
-                                      aria-label="Situation"
                                     />
                                   </td>
                                   <td

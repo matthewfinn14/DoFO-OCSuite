@@ -8,6 +8,7 @@ import { getAllRepsForWeek } from '../../utils/repTracking';
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Search,
   Landmark,
   Settings,
