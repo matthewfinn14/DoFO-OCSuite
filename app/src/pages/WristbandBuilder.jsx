@@ -935,6 +935,9 @@ export default function WristbandBuilder() {
               playName={editingOLPlay.formation ? `${editingOLPlay.formation} ${editingOLPlay.name}` : editingOLPlay.name}
               olCallText={editingOLPlay.olCall || editingOLPlay.wizOlineRef?.name || ''}
               olSchemes={olSchemes}
+              positionColors={positionColors}
+              positionNames={positionNames}
+              positionWizAbbreviations={positionWizAbbreviations}
               onSaveToOLLibrary={handleSaveToOLLibrary}
               onSave={handleSaveOLDiagram}
               onCancel={() => setEditingOLPlay(null)}
