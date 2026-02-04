@@ -162,10 +162,6 @@ export default function PlayEditor({
   const [selectedPlayType, setSelectedPlayType] = useState('quick');
   const [selectedBucketId, setSelectedBucketId] = useState('');
 
-  // Check setup mode (basic or standard)
-  const setupMode = setupConfig?.setupMode?.[phase] || 'standard';
-  const isBasicMode = setupMode === 'basic';
-  const isStandardMode = setupMode === 'standard' || setupMode === 'advanced'; // Treat advanced as standard
 
   // Get play call chain syntax for current phase based on play type
   const playCallSyntax = useMemo(() => {
@@ -753,84 +749,24 @@ export default function PlayEditor({
             isLight={isLight}
           >
             <div className="space-y-4">
-              {/* BASIC MODE: Single text field for entire play call */}
-              {isBasicMode && (
-                <div>
-                  <label htmlFor="play-editor-name-basic" className={`block text-sm font-medium mb-1 ${isLight ? 'text-gray-700' : 'text-slate-400'}`}>
-                    Play Call *
-                  </label>
-                  <input
-                    id="play-editor-name-basic"
-                    type="text"
-                    value={formData.name}
-                    onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Enter entire play call (e.g., Trips Right Z Motion 94 Mesh)"
-                    className={`w-full px-3 py-3 border rounded-md text-lg font-medium ${isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-slate-800 border-slate-700 text-white placeholder-slate-500'}`}
-                    autoFocus
-                  />
-                  <div className={`mt-2 px-3 py-2 rounded-md ${isLight ? 'bg-sky-50 border border-sky-200' : 'bg-slate-700/30'}`}>
-                    <span className={`text-xs uppercase tracking-wide ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Play: </span>
-                    <span className={`font-semibold ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`}>
-                      {formData.name || '...'}
-                    </span>
-                  </div>
-                  <p className={`mt-2 text-xs ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
-                    Type your play call exactly as you say it. No parsing - just simple entry for practice scripts and game plans.
-                  </p>
-                </div>
-              )}
-
-              {/* STANDARD MODE: Formation + Motion/Tag + Play Name */}
-              {isStandardMode && (
-                <div>
-                  <label htmlFor="play-editor-formation-standard" className="block text-sm font-medium text-slate-400 mb-1">
-                    Full Play Call *
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      id="play-editor-formation-standard"
-                      type="text"
-                      value={formData.formation}
-                      onChange={e => setFormData(prev => ({ ...prev, formation: e.target.value }))}
-                      list="formations-list"
-                      placeholder="Formation"
-                      className="w-1/4 px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500 text-lg font-medium"
-                    />
-                    <input
-                      id="play-editor-motion-tag-standard"
-                      type="text"
-                      value={formData.formationTag || ''}
-                      onChange={e => setFormData(prev => ({ ...prev, formationTag: e.target.value }))}
-                      placeholder="Motion/Tag (optional)"
-                      className="w-1/4 px-3 py-2.5 bg-slate-800 border border-slate-600 rounded-md text-white placeholder-slate-500 text-base"
-                    />
-                    <input
-                      id="play-editor-name-standard"
-                      type="text"
-                      value={formData.name}
-                      onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Play Name"
-                      className="flex-1 px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-md text-white placeholder-slate-500 text-lg font-medium"
-                    />
-                    <datalist id="formations-list">
-                      {availableFormations.map(f => (
-                        <option key={f} value={f} />
-                      ))}
-                    </datalist>
-                  </div>
-                  <div className="mt-2 px-3 py-2 bg-slate-700/30 rounded-md">
-                    <span className="text-xs text-slate-500 uppercase tracking-wide">Full Call: </span>
-                    <span className="text-emerald-400 font-semibold">
-                      {formData.formation || formData.formationTag || formData.name
-                        ? [formData.formation, formData.formationTag, formData.name].filter(Boolean).join(' ')
-                        : '...'}
-                    </span>
-                  </div>
-                </div>
-              )}
+              {/* Single text field for entire play call */}
+              <div>
+                <label htmlFor="play-editor-name" className={`block text-sm font-medium mb-1 ${isLight ? 'text-gray-700' : 'text-slate-400'}`}>
+                  Play Call *
+                </label>
+                <input
+                  id="play-editor-name"
+                  type="text"
+                  value={formData.name}
+                  onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Enter play call (e.g., Trips Right Z Motion 94 Mesh)"
+                  className={`w-full px-3 py-3 border rounded-md text-lg font-medium ${isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-slate-800 border-slate-700 text-white placeholder-slate-500'}`}
+                  autoFocus
+                />
+              </div>
 
               {/* Bucket & Concept Group */}
-              {!isBasicMode && (
+              {playBuckets.length > 0 && (
                 <div className="pt-3 border-t border-slate-700">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Category */}
@@ -886,8 +822,8 @@ export default function PlayEditor({
                 </div>
               )}
 
-              {/* Read Type & Series - hidden in Basic mode */}
-              {!isBasicMode && (
+              {/* Read Type & Series */}
+              {phase === 'OFFENSE' && (
                 <div className="pt-3 border-t border-slate-700">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Read Type */}
