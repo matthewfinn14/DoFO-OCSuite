@@ -263,6 +263,67 @@ export default function PlayBankSidebar({
     return segments;
   }, [currentWeek?.practicePlans]);
 
+  // Get game plan boxes with their plays for the Game Plan tab
+  const gamePlanBoxesWithPlays = useMemo(() => {
+    const layouts = currentWeek?.gamePlanLayouts;
+    const gamePlan = currentWeek?.offensiveGamePlan || { sets: [] };
+    const sets = gamePlan.sets || [];
+
+    if (!layouts?.CALL_SHEET?.sections) return [];
+
+    const boxes = [];
+    layouts.CALL_SHEET.sections.forEach((section) => {
+      (section.boxes || []).forEach((box) => {
+        if (!box.setId) return;
+
+        // Find the matching set for this box
+        const set = sets.find(s => s.id === box.setId);
+        const playIds = set?.playIds || [];
+        const assignedPlayIds = set?.assignedPlayIds || [];
+
+        // Get play objects for quicklist and assigned
+        const quicklistPlays = playIds
+          .filter(id => id) // Filter out nulls
+          .map(id => playsArray.find(p => p.id === id))
+          .filter(p => p && !p.archived);
+
+        const assignedPlays = assignedPlayIds
+          .map(id => playsArray.find(p => p.id === id))
+          .filter(p => p && !p.archived);
+
+        // Only add box if it has plays
+        if (quicklistPlays.length > 0 || assignedPlays.length > 0) {
+          boxes.push({
+            header: box.header,
+            setId: box.setId,
+            sectionTitle: section.title,
+            color: box.color || '#3b82f6',
+            quicklistPlays,
+            assignedPlays,
+            totalPlays: quicklistPlays.length + assignedPlays.length
+          });
+        }
+      });
+    });
+
+    return boxes;
+  }, [currentWeek?.gamePlanLayouts, currentWeek?.offensiveGamePlan, playsArray]);
+
+  // State for expanded game plan boxes
+  const [expandedGamePlanBoxes, setExpandedGamePlanBoxes] = useState(new Set());
+
+  const toggleGamePlanBox = useCallback((setId) => {
+    setExpandedGamePlanBoxes(prev => {
+      const next = new Set(prev);
+      if (next.has(setId)) {
+        next.delete(setId);
+      } else {
+        next.add(setId);
+      }
+      return next;
+    });
+  }, []);
+
   // Handle drag start for plays
   const handleDragStart = useCallback((e, play) => {
     e.dataTransfer.setData('application/react-dnd', JSON.stringify({ playId: play.id, name: play.name }));
@@ -1030,10 +1091,69 @@ export default function PlayBankSidebar({
           )}
 
           {activeTab === 'gameplan' && (
-            <div className="py-8 text-center text-slate-400 text-sm">
-              <p>Game plan view coming soon</p>
-              <p className="text-xs mt-1">Drag plays to call sheet sections</p>
-            </div>
+            <>
+              {gamePlanBoxesWithPlays.length > 0 ? (
+                <div className="divide-y divide-slate-200">
+                  {gamePlanBoxesWithPlays.map((box) => {
+                    const isExpanded = expandedGamePlanBoxes.has(box.setId);
+                    return (
+                      <div key={box.setId}>
+                        {/* Box Header */}
+                        <button
+                          onClick={() => toggleGamePlanBox(box.setId)}
+                          className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 transition-colors"
+                        >
+                          <div
+                            className="w-2 h-2 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: box.color }}
+                          />
+                          <span className="flex-1 text-left text-sm font-medium text-slate-800 truncate">
+                            {box.header}
+                          </span>
+                          <span className="text-xs text-slate-500 flex-shrink-0">
+                            {box.totalPlays}
+                          </span>
+                          {isExpanded ? (
+                            <ChevronDown size={14} className="text-slate-400" />
+                          ) : (
+                            <ChevronRight size={14} className="text-slate-400" />
+                          )}
+                        </button>
+
+                        {/* Box Plays */}
+                        {isExpanded && (
+                          <div className="bg-slate-50/50">
+                            {/* Quicklist plays */}
+                            {box.quicklistPlays.length > 0 && (
+                              <div>
+                                <div className="px-3 py-1 text-[10px] font-semibold text-slate-500 uppercase bg-slate-100">
+                                  Quick List ({box.quicklistPlays.length})
+                                </div>
+                                {box.quicklistPlays.map(play => renderPlayRow(play))}
+                              </div>
+                            )}
+                            {/* Assigned plays */}
+                            {box.assignedPlays.length > 0 && (
+                              <div>
+                                <div className="px-3 py-1 text-[10px] font-semibold text-slate-500 uppercase bg-slate-100">
+                                  Assigned ({box.assignedPlays.length})
+                                </div>
+                                {box.assignedPlays.map(play => renderPlayRow(play))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-8 text-center text-slate-400 text-sm">
+                  <p>No plays in game plan yet</p>
+                  <p className="text-xs mt-1">Add plays to call sheet boxes first</p>
+                </div>
+              )}
+            </>
           )}
 
           {activeTab === 'install' && (
