@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useSchool } from '../context/SchoolContext';
 import {
   Shield,
   Users,
@@ -55,6 +56,8 @@ const STATUS_OPTIONS = [
 
 export default function Admin() {
   const { user, isSiteAdmin } = useAuth();
+  const { settings } = useSchool();
+  const isLight = settings?.theme === 'light';
 
   const [activeTab, setActiveTab] = useState('requests');
   const [accessRequests, setAccessRequests] = useState([]);
@@ -311,14 +314,22 @@ export default function Admin() {
   };
 
   // Get status badge color classes
-  const getStatusBadgeClasses = (color) => {
-    const colors = {
+  const getStatusBadgeClasses = (color, lightMode = false) => {
+    const darkColors = {
       sky: 'bg-sky-500/20 text-sky-400',
       green: 'bg-green-500/20 text-green-400',
       red: 'bg-red-500/20 text-red-400',
       amber: 'bg-amber-500/20 text-amber-400',
       slate: 'bg-slate-500/20 text-slate-400'
     };
+    const lightColors = {
+      sky: 'bg-sky-100 text-sky-700',
+      green: 'bg-green-100 text-green-700',
+      red: 'bg-red-100 text-red-700',
+      amber: 'bg-amber-100 text-amber-700',
+      slate: 'bg-gray-100 text-gray-700'
+    };
+    const colors = lightMode ? lightColors : darkColors;
     return colors[color] || colors.slate;
   };
 
@@ -352,15 +363,17 @@ export default function Admin() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-1">Admin Panel</h1>
-          <p className="text-slate-400">
+          <h1 className={`text-3xl font-bold mb-1 ${isLight ? 'text-gray-900' : 'text-white'}`}>Admin Panel</h1>
+          <p className={isLight ? 'text-gray-500' : 'text-slate-400'}>
             {pendingRequests.length} pending request{pendingRequests.length !== 1 ? 's' : ''} • {schools.length} school{schools.length !== 1 ? 's' : ''}
           </p>
         </div>
         <button
           onClick={loadData}
           disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 disabled:opacity-50"
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg disabled:opacity-50 ${
+            isLight ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-slate-800 text-white hover:bg-slate-700'
+          }`}
         >
           <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
           Refresh
@@ -376,7 +389,9 @@ export default function Admin() {
             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium ${
               activeTab === tab.id
                 ? 'bg-sky-500 text-white'
-                : 'bg-slate-800 text-slate-400 hover:text-white'
+                : isLight
+                  ? 'bg-gray-100 text-gray-600 hover:text-gray-900'
+                  : 'bg-slate-800 text-slate-400 hover:text-white'
             }`}
           >
             <tab.icon size={18} />
@@ -394,14 +409,18 @@ export default function Admin() {
       {activeTab !== 'create' && (
         <div className="mb-6">
           <div className="relative max-w-md">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <Search size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isLight ? 'text-gray-400' : 'text-slate-500'}`} />
             <input
               id="admin-search"
               type="text"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               placeholder="Search..."
-              className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500"
+              className={`w-full pl-10 pr-4 py-2 border rounded-lg ${
+                isLight
+                  ? 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+                  : 'bg-slate-800 border-slate-700 text-white placeholder-slate-500'
+              }`}
             />
           </div>
         </div>
@@ -416,52 +435,57 @@ export default function Admin() {
         <>
           {/* Access Requests Tab */}
           {activeTab === 'requests' && (
-            <div className="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden">
+            <div className={`rounded-lg border overflow-hidden ${
+              isLight ? 'bg-white border-gray-200' : 'bg-slate-900 border-slate-800'
+            }`}>
               <table className="w-full">
                 <thead>
-                  <tr className="bg-slate-800">
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-400">Email</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-400">School</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-400">Role</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-400">Status</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-400">Date</th>
-                    <th className="px-4 py-3 text-right text-sm font-semibold text-slate-400">Actions</th>
+                  <tr className={isLight ? 'bg-gray-50' : 'bg-slate-800'}>
+                    <th className={`px-4 py-3 text-left text-sm font-semibold ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Email</th>
+                    <th className={`px-4 py-3 text-left text-sm font-semibold ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>School</th>
+                    <th className={`px-4 py-3 text-left text-sm font-semibold ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Role</th>
+                    <th className={`px-4 py-3 text-left text-sm font-semibold ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Status</th>
+                    <th className={`px-4 py-3 text-left text-sm font-semibold ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Date</th>
+                    <th className={`px-4 py-3 text-right text-sm font-semibold ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredRequests.length === 0 ? (
                     <tr>
                       <td colSpan="6" className="px-4 py-12 text-center">
-                        <Clock size={32} className="mx-auto mb-2 text-slate-600" />
-                        <p className="text-slate-500">No access requests</p>
+                        <Clock size={32} className={`mx-auto mb-2 ${isLight ? 'text-gray-400' : 'text-slate-600'}`} />
+                        <p className={isLight ? 'text-gray-500' : 'text-slate-500'}>No access requests</p>
                       </td>
                     </tr>
                   ) : (
                     filteredRequests.map((request, idx) => (
                       <tr
                         key={request.id}
-                        className={idx % 2 === 0 ? 'bg-slate-900' : 'bg-slate-900/50'}
+                        className={idx % 2 === 0
+                          ? isLight ? 'bg-white' : 'bg-slate-900'
+                          : isLight ? 'bg-gray-50' : 'bg-slate-900/50'
+                        }
                       >
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2">
-                            <Mail size={14} className="text-slate-500" />
-                            <span className="text-white">{request.email}</span>
+                            <Mail size={14} className={isLight ? 'text-gray-400' : 'text-slate-500'} />
+                            <span className={isLight ? 'text-gray-900' : 'text-white'}>{request.email}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-slate-300">{request.schoolName || '-'}</td>
-                        <td className="px-4 py-3 text-slate-300">{request.role || '-'}</td>
+                        <td className={`px-4 py-3 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>{request.schoolName || '-'}</td>
+                        <td className={`px-4 py-3 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>{request.role || '-'}</td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-1 text-xs rounded-full ${
                             request.status === 'pending'
-                              ? 'bg-amber-500/20 text-amber-400'
+                              ? isLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-500/20 text-amber-400'
                               : request.status === 'approved'
-                              ? 'bg-green-500/20 text-green-400'
-                              : 'bg-red-500/20 text-red-400'
+                              ? isLight ? 'bg-green-100 text-green-700' : 'bg-green-500/20 text-green-400'
+                              : isLight ? 'bg-red-100 text-red-700' : 'bg-red-500/20 text-red-400'
                           }`}>
                             {request.status}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-slate-400 text-sm">
+                        <td className={`px-4 py-3 text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
                           {formatDate(request.requestedAt)}
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -469,14 +493,18 @@ export default function Admin() {
                             <div className="flex items-center justify-end gap-2">
                               <button
                                 onClick={() => approveRequest(request)}
-                                className="flex items-center gap-1 px-3 py-1 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30"
+                                className={`flex items-center gap-1 px-3 py-1 rounded-lg ${
+                                  isLight ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                                }`}
                               >
                                 <CheckCircle size={14} />
                                 Approve
                               </button>
                               <button
                                 onClick={() => denyRequest(request)}
-                                className="flex items-center gap-1 px-3 py-1 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30"
+                                className={`flex items-center gap-1 px-3 py-1 rounded-lg ${
+                                  isLight ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                                }`}
                               >
                                 <XCircle size={14} />
                                 Deny
@@ -485,7 +513,7 @@ export default function Admin() {
                           ) : (
                             <button
                               onClick={() => deleteRequest(request.id)}
-                              className="p-2 text-slate-400 hover:text-red-400"
+                              className={`p-2 ${isLight ? 'text-gray-400 hover:text-red-600' : 'text-slate-400 hover:text-red-400'}`}
                             >
                               <Trash2 size={16} />
                             </button>
@@ -501,51 +529,60 @@ export default function Admin() {
 
           {/* Users Tab */}
           {activeTab === 'users' && (
-            <div className="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden">
+            <div className={`rounded-lg border overflow-hidden ${
+              isLight ? 'bg-white border-gray-200' : 'bg-slate-900 border-slate-800'
+            }`}>
               <table className="w-full">
                 <thead>
-                  <tr className="bg-slate-800">
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-400">User</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-400">Email</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-400">Role</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-400">Created</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-slate-400">Last Active</th>
+                  <tr className={isLight ? 'bg-gray-50' : 'bg-slate-800'}>
+                    <th className={`px-4 py-3 text-left text-sm font-semibold ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>User</th>
+                    <th className={`px-4 py-3 text-left text-sm font-semibold ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Email</th>
+                    <th className={`px-4 py-3 text-left text-sm font-semibold ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Role</th>
+                    <th className={`px-4 py-3 text-left text-sm font-semibold ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Created</th>
+                    <th className={`px-4 py-3 text-left text-sm font-semibold ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Last Active</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredUsers.length === 0 ? (
                     <tr>
                       <td colSpan="5" className="px-4 py-12 text-center">
-                        <Users size={32} className="mx-auto mb-2 text-slate-600" />
-                        <p className="text-slate-500">No users found</p>
+                        <Users size={32} className={`mx-auto mb-2 ${isLight ? 'text-gray-400' : 'text-slate-600'}`} />
+                        <p className={isLight ? 'text-gray-500' : 'text-slate-500'}>No users found</p>
                       </td>
                     </tr>
                   ) : (
                     filteredUsers.map((u, idx) => (
                       <tr
                         key={u.id}
-                        className={idx % 2 === 0 ? 'bg-slate-900' : 'bg-slate-900/50'}
+                        className={idx % 2 === 0
+                          ? isLight ? 'bg-white' : 'bg-slate-900'
+                          : isLight ? 'bg-gray-50' : 'bg-slate-900/50'
+                        }
                       >
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center text-sky-400 font-bold">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sky-400 font-bold ${
+                              isLight ? 'bg-gray-100' : 'bg-slate-700'
+                            }`}>
                               {u.displayName?.charAt(0) || u.email?.charAt(0) || '?'}
                             </div>
-                            <span className="font-medium text-white">{u.displayName || 'No name'}</span>
+                            <span className={`font-medium ${isLight ? 'text-gray-900' : 'text-white'}`}>{u.displayName || 'No name'}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-slate-300">{u.email}</td>
+                        <td className={`px-4 py-3 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>{u.email}</td>
                         <td className="px-4 py-3">
                           {u.isAdmin && (
-                            <span className="px-2 py-1 text-xs bg-red-500/20 text-red-400 rounded-full">
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              isLight ? 'bg-red-100 text-red-700' : 'bg-red-500/20 text-red-400'
+                            }`}>
                               Admin
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-slate-400 text-sm">
+                        <td className={`px-4 py-3 text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
                           {formatDate(u.createdAt)}
                         </td>
-                        <td className="px-4 py-3 text-slate-400 text-sm">
+                        <td className={`px-4 py-3 text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
                           {formatDate(u.lastActive)}
                         </td>
                       </tr>
@@ -560,9 +597,11 @@ export default function Admin() {
           {activeTab === 'schools' && (
             <div className="space-y-3">
               {sortedSchools.length === 0 ? (
-                <div className="bg-slate-900 rounded-lg border border-slate-800 p-12 text-center">
-                  <School size={32} className="mx-auto mb-2 text-slate-600" />
-                  <p className="text-slate-500 mb-4">No schools found</p>
+                <div className={`rounded-lg border p-12 text-center ${
+                  isLight ? 'bg-white border-gray-200' : 'bg-slate-900 border-slate-800'
+                }`}>
+                  <School size={32} className={`mx-auto mb-2 ${isLight ? 'text-gray-400' : 'text-slate-600'}`} />
+                  <p className={`mb-4 ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>No schools found</p>
                   <button
                     onClick={() => setActiveTab('create')}
                     className="inline-flex items-center gap-2 px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600"
@@ -578,13 +617,17 @@ export default function Admin() {
                   return (
                     <div
                       key={school.id}
-                      className="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden"
+                      className={`rounded-lg border overflow-hidden ${
+                        isLight ? 'bg-white border-gray-200' : 'bg-slate-900 border-slate-800'
+                      }`}
                     >
                       <div
-                        className="flex items-center gap-4 p-4 cursor-pointer hover:bg-slate-800/50"
+                        className={`flex items-center gap-4 p-4 cursor-pointer ${
+                          isLight ? 'hover:bg-gray-50' : 'hover:bg-slate-800/50'
+                        }`}
                         onClick={() => setExpandedSchool(expandedSchool === school.id ? null : school.id)}
                       >
-                        <button className="text-slate-500">
+                        <button className={isLight ? 'text-gray-400' : 'text-slate-500'}>
                           {expandedSchool === school.id ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
                         </button>
 
@@ -596,55 +639,57 @@ export default function Admin() {
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-white">{school.name}</h3>
-                          <p className="text-sm text-slate-400 truncate">
+                          <h3 className={`font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>{school.name}</h3>
+                          <p className={`text-sm truncate ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
                             {school.schoolAdminEmail || school.mascot || 'No admin set'}
                           </p>
                         </div>
 
                         {/* Subscription Status Badge */}
                         <div className="flex items-center gap-3">
-                          <span className={`px-3 py-1 text-xs rounded-full font-medium ${getStatusBadgeClasses(subStatus.statusColor)}`}>
+                          <span className={`px-3 py-1 text-xs rounded-full font-medium ${getStatusBadgeClasses(subStatus.statusColor, isLight)}`}>
                             {subStatus.statusLabel}
                           </span>
                         </div>
 
-                        <div className="text-right text-sm text-slate-400">
+                        <div className={`text-right text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
                           {school.roster?.length || 0} players
                         </div>
                       </div>
 
                       {expandedSchool === school.id && (
-                        <div className="border-t border-slate-800 p-4">
+                        <div className={`border-t p-4 ${isLight ? 'border-gray-200' : 'border-slate-800'}`}>
                           {/* School details grid */}
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
                             <div>
-                              <span className="text-slate-500 block">School Admin:</span>
-                              <span className="text-slate-300">{school.schoolAdminEmail || 'Not set'}</span>
+                              <span className={`block ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>School Admin:</span>
+                              <span className={isLight ? 'text-gray-700' : 'text-slate-300'}>{school.schoolAdminEmail || 'Not set'}</span>
                             </div>
                             <div>
-                              <span className="text-slate-500 block">Trial Ends:</span>
-                              <span className="text-slate-300">
+                              <span className={`block ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Trial Ends:</span>
+                              <span className={isLight ? 'text-gray-700' : 'text-slate-300'}>
                                 {school.subscription?.trialEndDate
                                   ? formatDate(school.subscription.trialEndDate)
                                   : 'Not set'}
                               </span>
                             </div>
                             <div>
-                              <span className="text-slate-500 block">Created:</span>
-                              <span className="text-slate-300">{formatDate(school.createdAt)}</span>
+                              <span className={`block ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Created:</span>
+                              <span className={isLight ? 'text-gray-700' : 'text-slate-300'}>{formatDate(school.createdAt)}</span>
                             </div>
                             <div>
-                              <span className="text-slate-500 block">Created By:</span>
-                              <span className="text-slate-300">{school.createdBy || 'Unknown'}</span>
+                              <span className={`block ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Created By:</span>
+                              <span className={isLight ? 'text-gray-700' : 'text-slate-300'}>{school.createdBy || 'Unknown'}</span>
                             </div>
                           </div>
 
                           {/* Notes if any */}
                           {school.subscription?.notes && (
-                            <div className="mb-4 p-3 bg-slate-800/50 rounded-lg text-sm">
-                              <span className="text-slate-500">Notes: </span>
-                              <span className="text-slate-300">{school.subscription.notes}</span>
+                            <div className={`mb-4 p-3 rounded-lg text-sm ${
+                              isLight ? 'bg-gray-100' : 'bg-slate-800/50'
+                            }`}>
+                              <span className={isLight ? 'text-gray-500' : 'text-slate-500'}>Notes: </span>
+                              <span className={isLight ? 'text-gray-700' : 'text-slate-300'}>{school.subscription.notes}</span>
                             </div>
                           )}
 
@@ -652,7 +697,9 @@ export default function Admin() {
                           <div className="flex flex-wrap gap-2">
                             <button
                               onClick={(e) => { e.stopPropagation(); setEditingSchool(school); }}
-                              className="flex items-center gap-1 px-3 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 text-sm"
+                              className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm ${
+                                isLight ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-slate-800 text-white hover:bg-slate-700'
+                              }`}
                             >
                               <Edit2 size={14} />
                               Edit
@@ -661,18 +708,24 @@ export default function Admin() {
                             {/* Extend trial dropdown */}
                             <div className="relative group">
                               <button
-                                className="flex items-center gap-1 px-3 py-2 bg-sky-500/20 text-sky-400 rounded-lg hover:bg-sky-500/30 text-sm"
+                                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm ${
+                                  isLight ? 'bg-sky-100 text-sky-700 hover:bg-sky-200' : 'bg-sky-500/20 text-sky-400 hover:bg-sky-500/30'
+                                }`}
                               >
                                 <CalendarPlus size={14} />
                                 Extend Trial
                                 <ChevronDown size={14} />
                               </button>
-                              <div className="absolute top-full left-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                              <div className={`absolute top-full left-0 mt-1 border rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 ${
+                                isLight ? 'bg-white border-gray-200' : 'bg-slate-800 border-slate-700'
+                              }`}>
                                 {[7, 14, 30, 60, 90].map(days => (
                                   <button
                                     key={days}
                                     onClick={(e) => { e.stopPropagation(); extendTrial(school, days); }}
-                                    className="block w-full px-4 py-2 text-left text-sm text-slate-300 hover:bg-slate-700 first:rounded-t-lg last:rounded-b-lg"
+                                    className={`block w-full px-4 py-2 text-left text-sm first:rounded-t-lg last:rounded-b-lg ${
+                                      isLight ? 'text-gray-700 hover:bg-gray-100' : 'text-slate-300 hover:bg-slate-700'
+                                    }`}
                                   >
                                     +{days} days
                                   </button>
@@ -683,7 +736,9 @@ export default function Admin() {
                             {subStatus.isSuspended ? (
                               <button
                                 onClick={(e) => { e.stopPropagation(); reactivateSchool(school); }}
-                                className="flex items-center gap-1 px-3 py-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 text-sm"
+                                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm ${
+                                  isLight ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                                }`}
                               >
                                 <Play size={14} />
                                 Reactivate
@@ -691,7 +746,9 @@ export default function Admin() {
                             ) : (
                               <button
                                 onClick={(e) => { e.stopPropagation(); suspendSchool(school); }}
-                                className="flex items-center gap-1 px-3 py-2 bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 text-sm"
+                                className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm ${
+                                  isLight ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
+                                }`}
                               >
                                 <Pause size={14} />
                                 Suspend
@@ -710,75 +767,89 @@ export default function Admin() {
           {/* Create School Tab */}
           {activeTab === 'create' && (
             <div className="max-w-xl mx-auto">
-              <div className="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden">
-                <div className="p-4 border-b border-slate-800">
-                  <h2 className="text-xl font-semibold text-white">Create New School</h2>
-                  <p className="text-slate-400 text-sm">Set up a new school with trial access</p>
+              <div className={`rounded-lg border overflow-hidden ${
+                isLight ? 'bg-white border-gray-200' : 'bg-slate-900 border-slate-800'
+              }`}>
+                <div className={`p-4 border-b ${isLight ? 'border-gray-200' : 'border-slate-800'}`}>
+                  <h2 className={`text-xl font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>Create New School</h2>
+                  <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>Set up a new school with trial access</p>
                 </div>
 
                 <form onSubmit={createSchool} className="p-4 space-y-4">
                   {createError && (
-                    <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-400 text-sm flex items-center gap-2">
+                    <div className={`p-3 border rounded-lg text-sm flex items-center gap-2 ${
+                      isLight ? 'bg-red-50 border-red-200 text-red-700' : 'bg-red-500/20 border-red-500/50 text-red-400'
+                    }`}>
                       <AlertTriangle size={16} />
                       {createError}
                     </div>
                   )}
 
                   {createSuccess && (
-                    <div className="p-3 bg-green-500/20 border border-green-500/50 rounded-lg text-green-400 text-sm flex items-center gap-2">
+                    <div className={`p-3 border rounded-lg text-sm flex items-center gap-2 ${
+                      isLight ? 'bg-green-50 border-green-200 text-green-700' : 'bg-green-500/20 border-green-500/50 text-green-400'
+                    }`}>
                       <CheckCircle size={16} />
                       School created successfully!
                     </div>
                   )}
 
                   <div>
-                    <label htmlFor="create-school-name" className="text-sm text-slate-400 block mb-1">School Name *</label>
+                    <label htmlFor="create-school-name" className={`text-sm block mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>School Name *</label>
                     <input
                       id="create-school-name"
                       type="text"
                       value={newSchool.name}
                       onChange={e => setNewSchool({ ...newSchool, name: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                      className={`w-full px-3 py-2 border rounded-lg ${
+                        isLight ? 'bg-white border-gray-200 text-gray-900' : 'bg-slate-800 border-slate-700 text-white'
+                      }`}
                       placeholder="Lincoln High School"
                       required
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="create-school-mascot" className="text-sm text-slate-400 block mb-1">Mascot</label>
+                    <label htmlFor="create-school-mascot" className={`text-sm block mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Mascot</label>
                     <input
                       id="create-school-mascot"
                       type="text"
                       value={newSchool.mascot}
                       onChange={e => setNewSchool({ ...newSchool, mascot: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                      className={`w-full px-3 py-2 border rounded-lg ${
+                        isLight ? 'bg-white border-gray-200 text-gray-900' : 'bg-slate-800 border-slate-700 text-white'
+                      }`}
                       placeholder="Vikings"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="create-school-admin-email" className="text-sm text-slate-400 block mb-1">School Admin Email * (must be a Google account)</label>
+                    <label htmlFor="create-school-admin-email" className={`text-sm block mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>School Admin Email * (must be a Google account)</label>
                     <input
                       id="create-school-admin-email"
                       type="email"
                       value={newSchool.adminEmail}
                       onChange={e => setNewSchool({ ...newSchool, adminEmail: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                      className={`w-full px-3 py-2 border rounded-lg ${
+                        isLight ? 'bg-white border-gray-200 text-gray-900' : 'bg-slate-800 border-slate-700 text-white'
+                      }`}
                       placeholder="coach.johnson@gmail.com"
                       required
                     />
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className={`text-xs mt-1 ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
                       This person will be the school admin and can add other coaches.
                     </p>
                   </div>
 
                   <div>
-                    <label htmlFor="create-school-trial-duration" className="text-sm text-slate-400 block mb-1">Trial Duration</label>
+                    <label htmlFor="create-school-trial-duration" className={`text-sm block mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Trial Duration</label>
                     <select
                       id="create-school-trial-duration"
                       value={newSchool.trialDuration}
                       onChange={e => setNewSchool({ ...newSchool, trialDuration: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white"
+                      className={`w-full px-3 py-2 border rounded-lg ${
+                        isLight ? 'bg-white border-gray-200 text-gray-900' : 'bg-slate-800 border-slate-700 text-white'
+                      }`}
                     >
                       {TRIAL_DURATIONS.map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -787,12 +858,14 @@ export default function Admin() {
                   </div>
 
                   <div>
-                    <label htmlFor="create-school-notes" className="text-sm text-slate-400 block mb-1">Notes (optional)</label>
+                    <label htmlFor="create-school-notes" className={`text-sm block mb-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Notes (optional)</label>
                     <textarea
                       id="create-school-notes"
                       value={newSchool.notes}
                       onChange={e => setNewSchool({ ...newSchool, notes: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white resize-none"
+                      className={`w-full px-3 py-2 border rounded-lg resize-none ${
+                        isLight ? 'bg-white border-gray-200 text-gray-900' : 'bg-slate-800 border-slate-700 text-white'
+                      }`}
                       rows={3}
                       placeholder="Friend from coaching clinic, testing for their program..."
                     />
@@ -802,7 +875,9 @@ export default function Admin() {
                     <button
                       type="button"
                       onClick={() => setActiveTab('schools')}
-                      className="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700"
+                      className={`px-4 py-2 rounded-lg ${
+                        isLight ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-slate-800 text-white hover:bg-slate-700'
+                      }`}
                     >
                       Cancel
                     </button>
