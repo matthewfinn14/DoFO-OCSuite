@@ -1713,7 +1713,7 @@ export default function PracticePlans() {
   const viewParam = searchParams.get('view'); // 'script' or null
   const navigate = useNavigate();
   const { weeks, updateWeek, setupConfig, updateSetupConfig, staff, settings, activeLevelId, playsArray, plays } = useSchool();
-  const { startBatchSelect, quickAddRequest, setHighlightFocuses, batchAddEvent, clearBatchAddEvent } = usePlayBank();
+  const { startBatchSelect, quickAddRequest, setHighlightFocuses, batchAddEvent, clearBatchAddEvent, targetingMode, targetingPlays, completeTargeting } = usePlayBank();
 
   // Theme detection
   const theme = settings?.theme || 'dark';
@@ -2381,6 +2381,47 @@ export default function PracticePlans() {
     updateSegment(segment.id, 'script', newScript);
     clearBatchAddEvent();
   }, [batchAddEvent, currentPlan, plays, updateSegment, clearBatchAddEvent, formatPlayCall]);
+
+  // Handle targeting mode click on a script row
+  const handleTargetingClick = useCallback((segmentId, startRowIndex) => {
+    if (!targetingMode || !targetingPlays || targetingPlays.length === 0) return;
+
+    const segment = currentPlan?.segments?.find(s => s.id === segmentId);
+    if (!segment || !segment.hasScript) return;
+
+    const currentScript = segment.script || [];
+    let newScript = [...currentScript];
+    let playIndex = 0;
+
+    // Start from the clicked row and fill sequentially
+    for (let rowIdx = startRowIndex; rowIdx < newScript.length && playIndex < targetingPlays.length; rowIdx++) {
+      const play = plays[targetingPlays[playIndex]];
+      if (play) {
+        newScript[rowIdx] = {
+          ...newScript[rowIdx],
+          playId: targetingPlays[playIndex],
+          playName: formatPlayCall(play)
+        };
+        playIndex++;
+      }
+    }
+
+    // If more plays than remaining rows, add new rows
+    while (playIndex < targetingPlays.length) {
+      const play = plays[targetingPlays[playIndex]];
+      if (play) {
+        newScript.push({
+          ...createScriptRow(newScript.length),
+          playId: targetingPlays[playIndex],
+          playName: formatPlayCall(play)
+        });
+      }
+      playIndex++;
+    }
+
+    updateSegment(segmentId, 'script', newScript);
+    completeTargeting();
+  }, [targetingMode, targetingPlays, currentPlan, plays, updateSegment, completeTargeting, formatPlayCall]);
 
   // Filter plays for play selector
   const filteredPlays = useMemo(() => {
@@ -3356,6 +3397,13 @@ export default function PracticePlans() {
 
                         {/* Script Table */}
                         <div className="flex-1 overflow-x-auto">
+                          {/* Targeting mode indicator */}
+                          {targetingMode && (
+                            <div className="bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-medium px-4 py-2 flex items-center gap-2">
+                              <span className="animate-pulse">●</span>
+                              Click any row to add {targetingPlays?.length || 0} plays starting from that position
+                            </div>
+                          )}
                           <table className="w-full text-sm">
                           <thead>
                             <tr className={`border-b text-xs uppercase ${isLight ? 'border-gray-200 text-gray-500' : 'border-slate-700 text-slate-400'}`}>
@@ -3374,7 +3422,11 @@ export default function PracticePlans() {
                             {(seg.script || script).map((row, idx) => {
                               const play = row.playId ? getPlay(row.playId) : null;
                               return (
-                                <tr key={row.id} className={`border-b ${isLight ? 'border-gray-100 hover:bg-gray-50' : 'border-slate-700/50 hover:bg-slate-700/30'}`}>
+                                <tr
+                                  key={row.id}
+                                  className={`border-b ${isLight ? 'border-gray-100 hover:bg-gray-50' : 'border-slate-700/50 hover:bg-slate-700/30'} ${targetingMode ? 'cursor-pointer hover:bg-violet-500/20' : ''}`}
+                                  onClick={targetingMode ? () => handleTargetingClick(seg.id, idx) : undefined}
+                                >
                                   <td className={`px-2 py-2 text-center ${isLight ? 'text-gray-400' : 'text-slate-500'}`}>{idx + 1}</td>
                                   <td className="px-2 py-2 text-center">
                                     <select
