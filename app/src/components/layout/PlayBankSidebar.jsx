@@ -69,8 +69,6 @@ export default function PlayBankSidebar({
   // Batch selection state
   const [selectedPlayIds, setSelectedPlayIds] = useState(new Set());
   const [internalBatchMode, setInternalBatchMode] = useState(false); // For internal batch-to-install
-  const [showDestinationSelector, setShowDestinationSelector] = useState(false);
-  const [pendingBatchPlays, setPendingBatchPlays] = useState([]); // Plays to be added after destination selected
 
   // Get play buckets and concept families from setupConfig (with settings fallback)
   const playBuckets = setupConfig?.playBuckets || settings?.playBuckets || [];
@@ -533,14 +531,18 @@ export default function PlayBankSidebar({
     setSelectedPlayIds(new Set());
   }, []);
 
-  // Handle batch add - show destination selector
+  // Handle batch add - directly enter targeting mode
   const handleBatchAddToInstall = useCallback(async () => {
     if (selectedPlayIds.size === 0) return;
-    setPendingBatchPlays(Array.from(selectedPlayIds));
-    setShowDestinationSelector(true);
-  }, [selectedPlayIds]);
+    const playIds = Array.from(selectedPlayIds);
+    if (startTargetingMode) {
+      startTargetingMode(playIds);
+      setSelectedPlayIds(new Set());
+      setInternalBatchMode(false);
+    }
+  }, [selectedPlayIds, startTargetingMode]);
 
-  // Actually add to install after destination selected
+  // Add plays to install list
   const addToInstall = useCallback(async (playIds) => {
     if (!currentWeek || playIds.length === 0) return;
 
@@ -559,29 +561,7 @@ export default function PlayBankSidebar({
 
     setSelectedPlayIds(new Set());
     setInternalBatchMode(false);
-    setShowDestinationSelector(false);
-    setPendingBatchPlays([]);
   }, [currentWeek, currentWeekId, updateWeek]);
-
-  // Handle destination selection
-  const handleDestinationSelect = useCallback((destination, metadata = {}) => {
-    if (destination === 'install') {
-      addToInstall(pendingBatchPlays);
-    } else {
-      // Emit event for other destinations to handle
-      window.dispatchEvent(new CustomEvent('playbank-batch-add', {
-        detail: {
-          playIds: pendingBatchPlays,
-          destination: destination,
-          ...metadata // Include box setId, segment info, etc.
-        }
-      }));
-      setSelectedPlayIds(new Set());
-      setInternalBatchMode(false);
-      setShowDestinationSelector(false);
-      setPendingBatchPlays([]);
-    }
-  }, [pendingBatchPlays, addToInstall]);
 
   // Check if in any batch mode (external or internal)
   const isInBatchMode = batchSelectMode || internalBatchMode;
@@ -982,11 +962,12 @@ export default function PlayBankSidebar({
                   </button>
                   <button
                     onClick={() => {
-                      // Add all visible plays
+                      // Add all visible plays - directly enter targeting mode
                       const allPlayIds = flatAllPlays.map(p => p.id);
-                      if (allPlayIds.length > 0) {
-                        setPendingBatchPlays(allPlayIds);
-                        setShowDestinationSelector(true);
+                      if (allPlayIds.length > 0 && startTargetingMode) {
+                        startTargetingMode(allPlayIds);
+                        setSelectedPlayIds(new Set());
+                        setInternalBatchMode(false);
                       }
                     }}
                     className="flex-1 px-3 py-2 bg-sky-50 text-sky-700 text-sm font-medium hover:bg-sky-100 transition-colors flex items-center justify-center gap-2"
@@ -1043,10 +1024,12 @@ export default function PlayBankSidebar({
                   </button>
                   <button
                     onClick={() => {
+                      // Add all install plays - directly enter targeting mode
                       const allPlayIds = flatInstallPlays.map(p => p.id);
-                      if (allPlayIds.length > 0) {
-                        setPendingBatchPlays(allPlayIds);
-                        setShowDestinationSelector(true);
+                      if (allPlayIds.length > 0 && startTargetingMode) {
+                        startTargetingMode(allPlayIds);
+                        setSelectedPlayIds(new Set());
+                        setInternalBatchMode(false);
                       }
                     }}
                     className="flex-1 px-3 py-2 bg-purple-50 text-purple-700 text-sm font-medium hover:bg-purple-100 transition-colors flex items-center justify-center gap-2"
@@ -1129,139 +1112,6 @@ export default function PlayBankSidebar({
           </div>
         )}
 
-        {/* Context-Aware Destination Selector Modal */}
-        {showDestinationSelector && (
-          <div
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-            onClick={() => {
-              setShowDestinationSelector(false);
-              setPendingBatchPlays([]);
-            }}
-          >
-            <div
-              className="bg-white rounded-lg shadow-xl w-full max-w-sm max-h-[80vh] flex flex-col"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="p-4 border-b border-slate-200">
-                <h3 className="font-semibold text-slate-900">Add {pendingBatchPlays.length} Plays To...</h3>
-                {currentPageContext !== 'other' && (
-                  <p className="text-xs text-slate-500 mt-1">
-                    {currentPageContext === 'gameplan' && 'Select a Call Sheet box'}
-                    {currentPageContext === 'practice-scripts' && 'Select a practice segment'}
-                    {currentPageContext === 'wristband' && 'Adding to current wristband'}
-                  </p>
-                )}
-              </div>
-              <div className="p-2 space-y-1 overflow-y-auto flex-1">
-                {/* Click to Place option - available on all contexts */}
-                <button
-                  onClick={() => {
-                    startTargetingMode(pendingBatchPlays);
-                    setShowDestinationSelector(false);
-                    setPendingBatchPlays([]);
-                    setSelectedPlayIds(new Set());
-                    setInternalBatchMode(false);
-                  }}
-                  className="w-full px-4 py-3 text-left rounded-lg bg-gradient-to-r from-violet-50 to-purple-50 border-2 border-violet-200 text-violet-700 hover:border-violet-400 transition-colors mb-2"
-                >
-                  <div className="flex items-center gap-2 font-medium">
-                    <MousePointer size={16} />
-                    Click to Place
-                  </div>
-                  <div className="text-xs text-violet-500 mt-0.5">Click on any wristband slot, practice segment, or game plan box</div>
-                </button>
-                <div className="border-t border-slate-200 my-2" />
-                {/* Context: Game Plan - Show Call Sheet Boxes */}
-                {currentPageContext === 'gameplan' && callSheetBoxes.length > 0 ? (
-                  <>
-                    {callSheetBoxes.map((box, idx) => (
-                      <button
-                        key={`${box.sectionIdx}-${box.boxIdx}`}
-                        onClick={() => {
-                          handleDestinationSelect('gameplan-box', { setId: box.setId, header: box.header });
-                        }}
-                        className="w-full px-4 py-3 text-left rounded-lg hover:bg-sky-50 text-slate-700 hover:text-sky-700 transition-colors"
-                      >
-                        <div className="font-medium">{box.header}</div>
-                        <div className="text-xs text-slate-500">{box.sectionTitle} • {box.type}</div>
-                      </button>
-                    ))}
-                  </>
-                ) : currentPageContext === 'practice-scripts' && practiceSegments.length > 0 ? (
-                  /* Context: Practice Scripts - Show Segments */
-                  <>
-                    {practiceSegments.map((segment, idx) => (
-                      <button
-                        key={`${segment.day}-${segment.segmentIdx}`}
-                        onClick={() => {
-                          handleDestinationSelect('practice-segment', { day: segment.day, segmentIdx: segment.segmentIdx, scriptId: segment.scriptId });
-                        }}
-                        className="w-full px-4 py-3 text-left rounded-lg hover:bg-orange-50 text-slate-700 hover:text-orange-700 transition-colors"
-                      >
-                        <div className="font-medium">{segment.name}</div>
-                        <div className="text-xs text-slate-500">{segment.day} • {segment.phase || 'O'}</div>
-                      </button>
-                    ))}
-                  </>
-                ) : currentPageContext === 'wristband' ? (
-                  /* Context: Wristband - Direct Add */
-                  <button
-                    onClick={() => handleDestinationSelect('wristband')}
-                    className="w-full px-4 py-3 text-left rounded-lg hover:bg-purple-50 text-slate-700 hover:text-purple-700 transition-colors"
-                  >
-                    <div className="font-medium">Current Wristband</div>
-                    <div className="text-xs text-slate-500">Fill empty slots until full</div>
-                  </button>
-                ) : (
-                  /* Default: Show All Destinations */
-                  <>
-                    <button
-                      onClick={() => handleDestinationSelect('install')}
-                      className="w-full px-4 py-3 text-left rounded-lg hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition-colors"
-                    >
-                      <div className="font-medium">Install Manager</div>
-                      <div className="text-xs text-slate-500">Add to this week's install list</div>
-                    </button>
-                    <button
-                      onClick={() => handleDestinationSelect('wristband')}
-                      className="w-full px-4 py-3 text-left rounded-lg hover:bg-purple-50 text-slate-700 hover:text-purple-700 transition-colors"
-                    >
-                      <div className="font-medium">Wristband Builder</div>
-                      <div className="text-xs text-slate-500">Fill empty slots until full</div>
-                    </button>
-                    <button
-                      onClick={() => handleDestinationSelect('practice-script')}
-                      className="w-full px-4 py-3 text-left rounded-lg hover:bg-orange-50 text-slate-700 hover:text-orange-700 transition-colors"
-                    >
-                      <div className="font-medium">Practice Scripts</div>
-                      <div className="text-xs text-slate-500">Add to current script segment</div>
-                    </button>
-                    <div className="border-t border-slate-200 my-2" />
-                    <div className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase">Game Plan/Call Sheet</div>
-                    <button
-                      onClick={() => handleDestinationSelect('gameplan-quicklist')}
-                      className="w-full px-4 py-3 text-left rounded-lg hover:bg-sky-50 text-slate-700 hover:text-sky-700 transition-colors"
-                    >
-                      <div className="font-medium">Call Sheet</div>
-                      <div className="text-xs text-slate-500">Add to quick lists for assignment</div>
-                    </button>
-                  </>
-                )}
-              </div>
-              <div className="p-3 border-t border-slate-200">
-                <button
-                  onClick={() => {
-                    setShowDestinationSelector(false);
-                    setPendingBatchPlays([]);
-                  }}
-                  className="w-full px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
