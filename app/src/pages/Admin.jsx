@@ -23,12 +23,23 @@ import {
   Pause,
   Play,
   AlertTriangle,
-  CalendarPlus
+  CalendarPlus,
+  Copy
 } from 'lucide-react';
 import { collection, getDocs, doc, updateDoc, deleteDoc, setDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { getSubscriptionStatus, SUBSCRIPTION_STATUS, calculateTrialEndDate } from '../hooks/useSubscriptionStatus';
 import { sendSchoolAdminInvite } from '../services/email';
+
+// Generate a unique join code (6 characters, uppercase alphanumeric)
+const generateJoinCode = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed confusing chars (0, O, 1, I)
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+};
 
 // Tab options
 const TABS = [
@@ -202,6 +213,7 @@ export default function Admin() {
           suspendedReason: null,
           notes: newSchool.notes || ''
         },
+        joinCode: generateJoinCode(),
         createdBy: user?.email,
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
@@ -722,6 +734,49 @@ export default function Admin() {
                             <div>
                               <span className={`block ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>Created By:</span>
                               <span className={isLight ? 'text-gray-700' : 'text-slate-300'}>{school.createdBy || 'Unknown'}</span>
+                            </div>
+                          </div>
+
+                          {/* Join Code */}
+                          <div className={`mb-4 p-3 rounded-lg flex items-center justify-between ${
+                            isLight ? 'bg-sky-50 border border-sky-200' : 'bg-sky-500/10 border border-sky-500/30'
+                          }`}>
+                            <div>
+                              <span className={`text-sm ${isLight ? 'text-sky-700' : 'text-sky-400'}`}>Join Code: </span>
+                              <span className={`font-mono font-bold text-lg ${isLight ? 'text-sky-900' : 'text-sky-300'}`}>
+                                {school.joinCode || 'Not set'}
+                              </span>
+                            </div>
+                            <div className="flex gap-2">
+                              {school.joinCode && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigator.clipboard.writeText(school.joinCode);
+                                    alert('Join code copied!');
+                                  }}
+                                  className={`flex items-center gap-1 px-3 py-1.5 rounded text-sm ${
+                                    isLight ? 'bg-sky-100 text-sky-700 hover:bg-sky-200' : 'bg-sky-500/20 text-sky-400 hover:bg-sky-500/30'
+                                  }`}
+                                >
+                                  <Copy size={14} />
+                                  Copy
+                                </button>
+                              )}
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (school.joinCode && !confirm('Generate a new join code? The old code will stop working.')) return;
+                                  const newCode = generateJoinCode();
+                                  await updateSchoolSubscription(school.id, { joinCode: newCode });
+                                }}
+                                className={`flex items-center gap-1 px-3 py-1.5 rounded text-sm ${
+                                  isLight ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                                }`}
+                              >
+                                <RefreshCw size={14} />
+                                {school.joinCode ? 'Regenerate' : 'Generate'}
+                              </button>
                             </div>
                           </div>
 
