@@ -25,7 +25,7 @@ import {
   AlertTriangle,
   CalendarPlus
 } from 'lucide-react';
-import { collection, getDocs, doc, updateDoc, deleteDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, deleteDoc, setDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { getSubscriptionStatus, SUBSCRIPTION_STATUS, calculateTrialEndDate } from '../hooks/useSubscriptionStatus';
 import { sendSchoolAdminInvite } from '../services/email';
@@ -315,6 +315,13 @@ export default function Admin() {
     if (!confirm(`Are you sure you want to DELETE "${school.name}"?\n\nThis will permanently remove all school data including plays, roster, and settings.\n\nThis cannot be undone.`)) return;
 
     try {
+      // Delete associated mail documents
+      const mailQuery = query(collection(db, 'mail'), where('metadata.schoolName', '==', school.name));
+      const mailSnap = await getDocs(mailQuery);
+      const deleteMailPromises = mailSnap.docs.map(d => deleteDoc(doc(db, 'mail', d.id)));
+      await Promise.all(deleteMailPromises);
+
+      // Delete the school
       await deleteDoc(doc(db, 'schools', school.id));
       loadData();
     } catch (err) {
