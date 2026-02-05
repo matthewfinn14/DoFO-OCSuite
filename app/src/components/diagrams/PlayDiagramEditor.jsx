@@ -82,16 +82,29 @@ const DEFAULT_POSITION_COLORS = {
 const SKILL_POSITION_FALLBACK_COLOR = '#3b82f6'; // Blue
 
 // Default WIZ OL Formation - C centered on canvas (475, 225 for 950x450 viewBox)
-const getDefaultWizOLFormation = () => {
+// Now accepts positionColors, positionNames, and positionWizAbbreviations for consistent styling
+const getDefaultWizOLFormation = (positionColors = {}, positionNames = {}, positionWizAbbreviations = {}) => {
   const centerX = 475;
   const centerY = 225;
   const initialSize = 140;
+
+  // Get color for OL position - check positionColors, then DEFAULT_POSITION_COLORS, then fallback
+  const getOLColor = (posKey) => {
+    const colorLookupName = positionNames[posKey] || posKey;
+    return positionColors[colorLookupName] || positionColors[posKey] || DEFAULT_POSITION_COLORS[posKey] || '#000000';
+  };
+
+  // Get label from WIZ abbreviations or defaults
+  const getOLLabel = (posKey, defaultLabel) => {
+    return positionWizAbbreviations[posKey] || defaultLabel;
+  };
+
   return [
-    { id: Date.now() + 1, type: 'player', points: [{ x: centerX, y: centerY }], color: '#000000', label: 'C', shape: 'text-only', variant: 'filled', fontSize: initialSize },
-    { id: Date.now() + 2, type: 'player', points: [{ x: centerX - 150, y: centerY + 12 }], color: '#000000', label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize },
-    { id: Date.now() + 3, type: 'player', points: [{ x: centerX + 150, y: centerY + 12 }], color: '#000000', label: 'G', shape: 'text-only', variant: 'filled', fontSize: initialSize },
-    { id: Date.now() + 4, type: 'player', points: [{ x: centerX - 300, y: centerY + 24 }], color: '#000000', label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize },
-    { id: Date.now() + 5, type: 'player', points: [{ x: centerX + 300, y: centerY + 24 }], color: '#000000', label: 'T', shape: 'text-only', variant: 'filled', fontSize: initialSize },
+    { id: Date.now() + 1, type: 'player', points: [{ x: centerX, y: centerY }], color: getOLColor('C'), label: getOLLabel('C', 'C'), shape: 'text-only', variant: 'filled', fontSize: initialSize, positionKey: 'C' },
+    { id: Date.now() + 2, type: 'player', points: [{ x: centerX - 150, y: centerY + 12 }], color: getOLColor('LG'), label: getOLLabel('LG', 'G'), shape: 'text-only', variant: 'filled', fontSize: initialSize, positionKey: 'LG' },
+    { id: Date.now() + 3, type: 'player', points: [{ x: centerX + 150, y: centerY + 12 }], color: getOLColor('RG'), label: getOLLabel('RG', 'G'), shape: 'text-only', variant: 'filled', fontSize: initialSize, positionKey: 'RG' },
+    { id: Date.now() + 4, type: 'player', points: [{ x: centerX - 300, y: centerY + 24 }], color: getOLColor('LT'), label: getOLLabel('LT', 'T'), shape: 'text-only', variant: 'filled', fontSize: initialSize, positionKey: 'LT' },
+    { id: Date.now() + 5, type: 'player', points: [{ x: centerX + 300, y: centerY + 24 }], color: getOLColor('RT'), label: getOLLabel('RT', 'T'), shape: 'text-only', variant: 'filled', fontSize: initialSize, positionKey: 'RT' },
   ];
 };
 
@@ -99,7 +112,7 @@ const getDefaultWizOLFormation = () => {
 // Matches the 6 core skill positions: QB, RB, X, Y, Z, H
 const DEFAULT_SKILL_POSITIONS = ['QB', 'RB', 'X', 'Y', 'Z', 'H'];
 
-// OL positions - these always use default gray color in WIZ diagrams
+// OL positions - colors come from positionColors (Setup > Name Positions)
 const OL_POSITIONS = ['LT', 'LG', 'C', 'RG', 'RT'];
 
 // Default position placements on the canvas (wiz-card viewBox 950x450 - 2.1:1 ratio)
@@ -265,6 +278,39 @@ export default function PlayDiagramEditor({
       return initialData.elements.map(el => {
         if (el.type !== 'player') return el;
 
+        // OL elements (text-only shape) should never be filtered out
+        // They might be stored with WIZ abbreviations (T, G, C) rather than position keys (LT, LG, etc.)
+        if (el.shape === 'text-only') {
+          const centerX = 475; // Center of WIZ canvas
+
+          // Determine positionKey - use x-position to distinguish left from right
+          let olPosKey = el.positionKey;
+          if (!olPosKey) {
+            const x = el.points?.[0]?.x || 0;
+            if (el.label === 'C') {
+              olPosKey = 'C';
+            } else if (el.label === 'G') {
+              olPosKey = x < centerX ? 'LG' : 'RG';
+            } else if (el.label === 'T') {
+              olPosKey = x < centerX ? 'LT' : 'RT';
+            } else {
+              olPosKey = el.label;
+            }
+          }
+
+          // Get color from positionColors
+          const colorLookupName = positionNames[olPosKey] || olPosKey;
+          const color = positionColors[colorLookupName] || positionColors[olPosKey] || DEFAULT_POSITION_COLORS[olPosKey] || el.color;
+          const defaultOLLabels = { LT: 'T', LG: 'G', C: 'C', RG: 'G', RT: 'T' };
+          const label = positionWizAbbreviations[olPosKey] || defaultOLLabels[olPosKey] || el.label;
+          return {
+            ...el,
+            label: label,
+            color: color,
+            positionKey: olPosKey
+          };
+        }
+
         // Find the current display name and position key for this element
         // The stored label might be: a KEY (like 'X'), or a display name (like 'XZ')
         let displayName = el.label;
@@ -290,7 +336,7 @@ export default function PlayDiagramEditor({
         }
 
         // Check if this position still exists in the valid positions list
-        // If not, mark it for removal
+        // If not, mark it for removal (only for skill positions - OL handled above)
         if (!validPositions.includes(posKey) && !validPositions.includes(el.label)) {
           // Position no longer exists - return null to filter out
           return null;
@@ -331,7 +377,7 @@ export default function PlayDiagramEditor({
       return getWizSkillFormation(positionColors, positionNames, positionWizAbbreviations, defaultSkillPos);
     }
     if (isWizOline) {
-      return getDefaultWizOLFormation();
+      return getDefaultWizOLFormation(positionColors, positionNames, positionWizAbbreviations);
     }
     return [];
   });
@@ -353,6 +399,55 @@ export default function PlayDiagramEditor({
       return filtered.length !== prev.length ? filtered : prev;
     });
   }, [offensePositions, isWizSkill]);
+
+  // Update OL element colors when positionColors changes (for both WIZ modes)
+  useEffect(() => {
+    // Only run if positionColors has actual values
+    if (!positionColors || Object.keys(positionColors).length === 0) return;
+
+    // Helper to get color for an OL position key
+    const getOLColor = (posKey) => {
+      const displayName = positionNames[posKey] || posKey;
+      return positionColors[displayName] || positionColors[posKey] || DEFAULT_POSITION_COLORS[posKey];
+    };
+
+    setElements(prev => {
+      let hasChanges = false;
+      const updated = prev.map((el, idx) => {
+        // Only update OL elements (text-only shape)
+        if (el.type !== 'player' || el.shape !== 'text-only') return el;
+
+        // Use positionKey if set, otherwise infer from position in array
+        // OL elements are typically: LT (idx 0), LG (idx 1), C (idx 2), RG (idx 3), RT (idx 4)
+        // But we can't rely on order, so use x-position to determine left/right
+        let olPosKey = el.positionKey;
+        if (!olPosKey) {
+          const x = el.points?.[0]?.x || 0;
+          const centerX = 475; // Center of WIZ canvas
+          if (el.label === 'C') {
+            olPosKey = 'C';
+          } else if (el.label === 'G') {
+            olPosKey = x < centerX ? 'LG' : 'RG';
+          } else if (el.label === 'T') {
+            olPosKey = x < centerX ? 'LT' : 'RT';
+          } else {
+            olPosKey = el.label;
+          }
+        }
+
+        const newColor = getOLColor(olPosKey);
+
+        // Only update if color changed
+        if (newColor && newColor !== el.color) {
+          hasChanges = true;
+          return { ...el, color: newColor, positionKey: olPosKey };
+        }
+        return el;
+      });
+
+      return hasChanges ? updated : prev;
+    });
+  }, [positionColors, positionNames]);
 
   const [selectedTool, setSelectedTool] = useState('select');
   const [color, setColor] = useState('#000000');
@@ -413,6 +508,51 @@ export default function PlayDiagramEditor({
       setHistory(newHistory);
       setHistoryIndex(newHistory.length - 1);
     }
+  };
+
+  // Helper to apply current position colors to OL elements
+  // Used when loading diagrams from library to ensure colors match user's current settings
+  const applyOLColors = (elementsArray) => {
+    const centerX = 475; // Center of WIZ canvas
+
+    // Helper to get color for an OL position key
+    const getOLColor = (posKey) => {
+      const displayName = positionNames[posKey] || posKey;
+      return positionColors[displayName] || positionColors[posKey] || DEFAULT_POSITION_COLORS[posKey];
+    };
+
+    return elementsArray.map(el => {
+      if (el.type !== 'player' || el.shape !== 'text-only') return el;
+
+      // Determine positionKey - use x-position to distinguish left from right
+      let olPosKey = el.positionKey;
+      if (!olPosKey) {
+        const x = el.points?.[0]?.x || 0;
+        if (el.label === 'C') {
+          olPosKey = 'C';
+        } else if (el.label === 'G') {
+          olPosKey = x < centerX ? 'LG' : 'RG';
+        } else if (el.label === 'T') {
+          olPosKey = x < centerX ? 'LT' : 'RT';
+        } else {
+          olPosKey = el.label;
+        }
+      }
+
+      // Get color from positionColors
+      const color = getOLColor(olPosKey) || el.color;
+
+      // Get label from WIZ abbreviations
+      const defaultOLLabels = { LT: 'T', LG: 'G', C: 'C', RG: 'G', RT: 'T' };
+      const label = positionWizAbbreviations[olPosKey] || defaultOLLabels[olPosKey] || el.label;
+
+      return {
+        ...el,
+        color: color,
+        label: label,
+        positionKey: olPosKey
+      };
+    });
   };
 
   const updateHistory = (newElements) => {
@@ -1187,7 +1327,7 @@ export default function PlayDiagramEditor({
     }
     const defaultFormation = isWizSkill
       ? getWizSkillFormation(positionColors, positionNames, positionWizAbbreviations, positionsToUse.length > 0 ? positionsToUse : DEFAULT_SKILL_POSITIONS)
-      : getDefaultWizOLFormation();
+      : getDefaultWizOLFormation(positionColors, positionNames, positionWizAbbreviations);
     setElements(defaultFormation);
     updateHistory(defaultFormation);
   };
@@ -2256,6 +2396,22 @@ export default function PlayDiagramEditor({
                       </option>
                     ))}
                   </select>
+                  {/* Apply color to all OL elements (WIZ OL mode) */}
+                  {isWizOline && (
+                    <button
+                      onClick={() => {
+                        updateElements(elements.map(el =>
+                          el.type === 'player' && el.shape === 'text-only'
+                            ? { ...el, color: color }
+                            : el
+                        ));
+                      }}
+                      className="px-2 py-1.5 text-xs font-semibold bg-slate-700 text-white border-2 border-slate-600 rounded hover:bg-slate-600 transition-colors"
+                      title="Apply color to all OL letters"
+                    >
+                      All OL
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -2456,9 +2612,9 @@ export default function PlayDiagramEditor({
                       <button
                         key={prot.id}
                         onClick={() => {
-                          // Load the diagram from library
+                          // Load the diagram from library, applying current position colors
                           if (prot.diagramData) {
-                            updateElements(prot.diagramData, true);
+                            updateElements(applyOLColors(prot.diagramData), true);
                           }
                           setCurrentOLCall(prot.name);
                           setShowOLLibraryModal(false);
@@ -2522,9 +2678,9 @@ export default function PlayDiagramEditor({
                       <button
                         key={scheme.id}
                         onClick={() => {
-                          // Load the diagram from library
+                          // Load the diagram from library, applying current position colors
                           if (scheme.diagramData) {
-                            updateElements(scheme.diagramData, true);
+                            updateElements(applyOLColors(scheme.diagramData), true);
                           }
                           setCurrentOLCall(scheme.name);
                           setShowOLLibraryModal(false);

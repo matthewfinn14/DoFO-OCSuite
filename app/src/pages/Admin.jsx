@@ -28,6 +28,7 @@ import {
 import { collection, getDocs, doc, updateDoc, deleteDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { getSubscriptionStatus, SUBSCRIPTION_STATUS, calculateTrialEndDate } from '../hooks/useSubscriptionStatus';
+import { sendSchoolAdminInvite } from '../services/email';
 
 // Tab options
 const TABS = [
@@ -73,7 +74,8 @@ export default function Admin() {
     mascot: '',
     adminEmail: '',
     trialDuration: 30,
-    notes: ''
+    notes: '',
+    sendInviteEmail: true
   });
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState(null);
@@ -218,13 +220,30 @@ export default function Admin() {
 
       await setDoc(doc(db, 'schools', schoolId), schoolData);
 
+      // Send invite email if checkbox is checked
+      if (newSchool.sendInviteEmail) {
+        try {
+          await sendSchoolAdminInvite({
+            toEmail: newSchool.adminEmail.toLowerCase(),
+            schoolName: newSchool.name,
+            inviterName: user?.displayName || user?.email?.split('@')[0] || 'DoFO Team',
+            trialDays: newSchool.trialDuration
+          });
+          console.log('Invite email sent to:', newSchool.adminEmail);
+        } catch (emailErr) {
+          console.error('Failed to send invite email:', emailErr);
+          // Don't fail the whole operation if email fails
+        }
+      }
+
       setCreateSuccess(true);
       setNewSchool({
         name: '',
         mascot: '',
         adminEmail: '',
         trialDuration: 30,
-        notes: ''
+        notes: '',
+        sendInviteEmail: true
       });
 
       // Refresh schools list
@@ -346,8 +365,10 @@ export default function Admin() {
     );
   }
 
-  const pendingRequests = accessRequests.filter(r => r.status === 'pending');
-  const filteredRequests = filterItems(accessRequests, ['email', 'schoolName', 'role']);
+  // Filter out invalid requests (no email) and get pending count
+  const validRequests = accessRequests.filter(r => r.email && r.email.trim());
+  const pendingRequests = validRequests.filter(r => r.status === 'pending');
+  const filteredRequests = filterItems(validRequests, ['email', 'schoolName', 'role']);
   const filteredUsers = filterItems(users, ['email', 'displayName']);
   const filteredSchools = filterItems(schools, ['name', 'mascot', 'schoolAdminEmail']);
 
@@ -566,7 +587,9 @@ export default function Admin() {
                             }`}>
                               {u.displayName?.charAt(0) || u.email?.charAt(0) || '?'}
                             </div>
-                            <span className={`font-medium ${isLight ? 'text-gray-900' : 'text-white'}`}>{u.displayName || 'No name'}</span>
+                            <span className={`font-medium ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                              {u.displayName || u.email?.split('@')[0] || 'Unknown'}
+                            </span>
                           </div>
                         </td>
                         <td className={`px-4 py-3 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>{u.email}</td>
@@ -869,6 +892,26 @@ export default function Admin() {
                       rows={3}
                       placeholder="Friend from coaching clinic, testing for their program..."
                     />
+                  </div>
+
+                  <div className={`flex items-start gap-3 p-4 rounded-lg border ${
+                    isLight ? 'bg-sky-50 border-sky-200' : 'bg-sky-500/10 border-sky-500/30'
+                  }`}>
+                    <input
+                      id="create-school-send-invite"
+                      type="checkbox"
+                      checked={newSchool.sendInviteEmail}
+                      onChange={e => setNewSchool({ ...newSchool, sendInviteEmail: e.target.checked })}
+                      className="mt-1 w-4 h-4 rounded border-gray-300 text-sky-500 focus:ring-sky-500"
+                    />
+                    <div>
+                      <label htmlFor="create-school-send-invite" className={`font-medium cursor-pointer ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                        Send invite email
+                      </label>
+                      <p className={`text-sm mt-0.5 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                        Send a branded welcome email to the admin with sign-up instructions
+                      </p>
+                    </div>
                   </div>
 
                   <div className="flex justify-end gap-3 pt-4">

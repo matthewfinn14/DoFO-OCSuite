@@ -363,10 +363,14 @@ export default function PlayEditor({
       const playType = play.playType || 'quick';
       setSelectedPlayType(playType);
       setSelectedBucketId(play.playCategory || '');
+      // Combine formation and name into a single play call for display/editing
+      const fullPlayCall = play.formation
+        ? `${play.formation} ${play.name || ''}`.trim()
+        : (play.name || '');
       setFormData({
         phase: play.phase || phase,
-        name: play.name || '',
-        formation: play.formation || '',
+        name: fullPlayCall,
+        formation: '', // Formation is now part of name
         formationTag: play.formationTag || '',
         playCategory: play.playCategory || '',
         bucketId: play.bucketId || '',
@@ -749,7 +753,7 @@ export default function PlayEditor({
             isLight={isLight}
           >
             <div className="space-y-4">
-              {/* Single text field for entire play call */}
+              {/* Single text field for entire play call (includes formation) */}
               <div>
                 <label htmlFor="play-editor-name" className={`block text-sm font-medium mb-1 ${isLight ? 'text-gray-700' : 'text-slate-400'}`}>
                   Play Call *
@@ -759,7 +763,7 @@ export default function PlayEditor({
                   type="text"
                   value={formData.name}
                   onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Enter play call (e.g., Trips Right Z Motion 94 Mesh)"
+                  placeholder="Enter full play call (e.g., Trips Right 94 Mesh)"
                   className={`w-full px-3 py-3 border rounded-md text-lg font-medium ${isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-slate-800 border-slate-700 text-white placeholder-slate-500'}`}
                   autoFocus
                 />
