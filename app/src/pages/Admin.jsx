@@ -311,6 +311,18 @@ export default function Admin() {
     });
   };
 
+  const deleteSchool = async (school) => {
+    if (!confirm(`Are you sure you want to DELETE "${school.name}"?\n\nThis will permanently remove all school data including plays, roster, and settings.\n\nThis cannot be undone.`)) return;
+
+    try {
+      await deleteDoc(doc(db, 'schools', school.id));
+      loadData();
+    } catch (err) {
+      console.error('Error deleting school:', err);
+      alert('Failed to delete school: ' + (err.message || err.code || 'Unknown error'));
+    }
+  };
+
   // Filter items based on search
   const filterItems = (items, fields) => {
     if (!searchTerm) return items;
@@ -777,6 +789,16 @@ export default function Admin() {
                                 Suspend
                               </button>
                             )}
+
+                            <button
+                              onClick={(e) => { e.stopPropagation(); deleteSchool(school); }}
+                              className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm ${
+                                isLight ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                              }`}
+                            >
+                              <Trash2 size={14} />
+                              Delete
+                            </button>
                           </div>
                         </div>
                       )}
