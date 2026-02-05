@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, doc, setDoc, addDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, addDoc, query, where, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { addSchoolMembership, updateUserProfile, isSiteAdmin } from '../../services/auth';
@@ -15,6 +15,10 @@ export default function SchoolOnboardingWizard() {
   const [adminMode, setAdminMode] = useState(null); // null, 'select', 'create'
   const [allSchools, setAllSchools] = useState([]);
   const [selectedSchoolId, setSelectedSchoolId] = useState('');
+
+  // Join with code
+  const [userMode, setUserMode] = useState(null); // null, 'create', 'join'
+  const [joinCode, setJoinCode] = useState('');
 
   // Form data - Pre-populate from access request if available
   const [schoolName, setSchoolName] = useState(accessRequest?.schoolName || '');
@@ -54,6 +58,67 @@ export default function SchoolOnboardingWizard() {
       loadSchools();
     }
   }, [isAdmin]);
+
+  // Handle joining with a code
+  const handleJoinWithCode = async () => {
+    const code = joinCode.trim().toUpperCase();
+    if (!code || code.length !== 6) {
+      setError('Please enter a valid 6-character join code');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      // Find school with this join code
+      const schoolsQuery = query(collection(db, 'schools'), where('joinCode', '==', code));
+      const snapshot = await getDocs(schoolsQuery);
+
+      if (snapshot.empty) {
+        setError('Invalid join code. Please check and try again.');
+        setLoading(false);
+        return;
+      }
+
+      const schoolDoc = snapshot.docs[0];
+      const schoolId = schoolDoc.id;
+      const schoolData = schoolDoc.data();
+
+      // Add user to school's member list
+      await updateDoc(doc(db, 'schools', schoolId), {
+        memberList: arrayUnion(user.email.toLowerCase()),
+        staff: arrayUnion({
+          email: user.email.toLowerCase(),
+          name: user.displayName || '',
+          role: 'Coach',
+          roles: ['Coach'],
+          permissionLevel: 'coach',
+          isSchoolAdmin: false,
+          joinedAt: new Date().toISOString(),
+          joinedViaCode: true
+        })
+      });
+
+      // Update user profile
+      await updateUserProfile(user.uid, {
+        email: user.email,
+        activeSchoolId: schoolId,
+        role: 'Coach',
+        updatedAt: new Date().toISOString()
+      });
+
+      // Create membership
+      await addSchoolMembership(user.uid, schoolId, 'Coach');
+
+      console.log('Joined school:', schoolData.name);
+      refreshAuthState();
+    } catch (err) {
+      console.error('Error joining school:', err);
+      setError('Failed to join school: ' + err.message);
+    }
+    setLoading(false);
+  };
 
   // Handle site admin selecting existing school
   const handleSelectSchool = async () => {
@@ -240,12 +305,74 @@ export default function SchoolOnboardingWizard() {
           </div>
         )}
 
+        {/* Regular User: Choose Mode */}
+        {!isAdmin && !userMode && (
+          <div className="flex flex-col gap-4">
+            <button
+              onClick={() => setUserMode('join')}
+              className="w-full p-4 bg-sky-500 text-white font-bold rounded-lg hover:bg-sky-600"
+            >
+              Join with Code
+            </button>
+            <p className="text-center text-slate-500 text-sm">Have a join code from your head coach?</p>
+            <div className="border-t border-slate-700 my-2"></div>
+            <button
+              onClick={() => setUserMode('create')}
+              className="w-full p-4 bg-slate-600 text-white font-bold rounded-lg hover:bg-slate-500"
+            >
+              Create New School
+            </button>
+            <p className="text-center text-slate-500 text-sm">Setting up a new program?</p>
+          </div>
+        )}
+
+        {/* Join with Code Form */}
+        {!isAdmin && userMode === 'join' && (
+          <div>
+            <button
+              onClick={() => { setUserMode(null); setJoinCode(''); setError(''); }}
+              className="text-slate-400 hover:text-slate-300 mb-4"
+            >
+              &larr; Back
+            </button>
+            <div className="mb-6">
+              <label htmlFor="join-code-input" className="block mb-2 text-slate-300">Enter Join Code</label>
+              <input
+                id="join-code-input"
+                value={joinCode}
+                onChange={e => setJoinCode(e.target.value.toUpperCase().slice(0, 6))}
+                className="w-full p-4 rounded-md bg-slate-900 border border-slate-600 text-white text-center text-2xl font-mono tracking-widest uppercase placeholder-slate-600"
+                placeholder="ABC123"
+                maxLength={6}
+              />
+              <p className="text-slate-500 text-sm mt-2 text-center">
+                Get this code from your school's admin or head coach
+              </p>
+            </div>
+            <button
+              onClick={handleJoinWithCode}
+              disabled={loading || joinCode.length !== 6}
+              className="w-full p-4 bg-sky-500 text-white font-bold rounded-lg hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Joining...' : 'Join School'}
+            </button>
+          </div>
+        )}
+
         {/* Create School Form */}
-        {(!isAdmin || adminMode === 'create') && (
+        {((!isAdmin && userMode === 'create') || (isAdmin && adminMode === 'create')) && (
           <div>
             {isAdmin && (
               <button
                 onClick={() => setAdminMode(null)}
+                className="text-slate-400 hover:text-slate-300 mb-4"
+              >
+                &larr; Back
+              </button>
+            )}
+            {!isAdmin && (
+              <button
+                onClick={() => { setUserMode(null); setError(''); }}
                 className="text-slate-400 hover:text-slate-300 mb-4"
               >
                 &larr; Back
