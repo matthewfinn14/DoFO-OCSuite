@@ -24,7 +24,9 @@ import {
   UserCheck,
   GraduationCap,
   RotateCcw,
-  Play
+  Play,
+  Copy,
+  Key
 } from 'lucide-react';
 
 // Staff role options
@@ -1710,7 +1712,13 @@ function ArchiveTab() {
 export default function Staff() {
   const { tab } = useParams();
   const navigate = useNavigate();
-  const { staff, roster } = useSchool();
+  const { staff, roster, school } = useSchool();
+  const { user } = useAuth();
+  const [codeCopied, setCodeCopied] = useState(false);
+
+  // Check if current user is a school admin
+  const currentUserStaff = staff.find(s => s.email?.toLowerCase() === user?.email?.toLowerCase());
+  const isSchoolAdmin = currentUserStaff?.isSchoolAdmin || currentUserStaff?.permissionLevel === 'admin';
 
   // Default to 'staff' tab if no tab specified
   const activeTab = tab || 'staff';
@@ -1745,6 +1753,41 @@ export default function Staff() {
           {staff.length} staff member{staff.length !== 1 ? 's' : ''} • {roster.filter(p => !p.archived).length} active players
         </p>
       </div>
+
+      {/* Join Code Section - Only visible to school admins */}
+      {isSchoolAdmin && school?.joinCode && (
+        <div className="mb-6 p-4 bg-gradient-to-r from-sky-500/10 to-sky-500/5 border border-sky-500/30 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-sky-500/20 rounded-lg">
+                <Key size={20} className="text-sky-400" />
+              </div>
+              <div>
+                <p className="text-sm text-slate-400">Invite coaches to join your team</p>
+                <p className="text-lg font-mono font-bold text-white tracking-widest">{school.joinCode}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(school.joinCode);
+                setCodeCopied(true);
+                setTimeout(() => setCodeCopied(false), 2000);
+              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                codeCopied
+                  ? 'bg-green-500/20 text-green-400'
+                  : 'bg-sky-500/20 text-sky-400 hover:bg-sky-500/30'
+              }`}
+            >
+              {codeCopied ? <Check size={16} /> : <Copy size={16} />}
+              {codeCopied ? 'Copied!' : 'Copy Code'}
+            </button>
+          </div>
+          <p className="text-xs text-slate-500 mt-2">
+            Share this code with assistant coaches. They can use it to join when signing up at digitaldofo.com
+          </p>
+        </div>
+      )}
 
       {/* Tab Navigation */}
       <div className="flex gap-1 mb-6 bg-slate-900 rounded-lg p-1 border border-slate-800">
