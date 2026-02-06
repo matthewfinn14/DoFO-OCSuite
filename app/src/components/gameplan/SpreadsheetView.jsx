@@ -139,9 +139,70 @@ export default function SpreadsheetView({
   // Zoom level for page view (50% to 150%)
   const [zoomLevel, setZoomLevel] = useState(100);
 
+  // Print mode state - toggled by beforeprint/afterprint events
+  const [isPrintMode, setIsPrintMode] = useState(false);
+
   // Calculate row height based on orientation
   const isLandscape = pageOrientation === 'landscape';
   const rowHeight = isLandscape ? 12 : 13;
+
+  /**
+   * HELPER C: Compute print dimensions
+   * Returns stable values for printable area and row heights
+   */
+  const computePrintDimensions = useCallback((rowCount) => {
+    // Letter paper dimensions in inches (landscape)
+    const pageWidthIn = isLandscape ? 11 : 8.5;
+    const pageHeightIn = isLandscape ? 8.5 : 11;
+
+    // Margins (0.25in on each side)
+    const marginIn = 0.25;
+
+    // Header height (Week 1 title bar) - approximately 0.4in
+    const headerHeightIn = 0.4;
+
+    // Available printable dimensions
+    const printableWidthIn = pageWidthIn - (marginIn * 2);
+    const printableHeightIn = pageHeightIn - (marginIn * 2) - headerHeightIn;
+
+    // Convert to pixels at 96 DPI (standard screen/print DPI)
+    const dpi = 96;
+    const printableWidthPx = Math.floor(printableWidthIn * dpi);
+    const printableHeightPx = Math.floor(printableHeightIn * dpi);
+
+    // Calculate stable row height - single value for ALL rows
+    // Subtract 1px per row for borders
+    const totalBorderHeight = rowCount;
+    const availableForRows = printableHeightPx - totalBorderHeight;
+    const rowHeightPx = Math.floor(availableForRows / rowCount);
+
+    return {
+      printableWidthPx,
+      printableHeightPx,
+      rowCount,
+      rowHeightPx,
+      totalGridHeight: (rowHeightPx * rowCount) + totalBorderHeight
+    };
+  }, [isLandscape]);
+
+  // Listen for print events to toggle print mode
+  useEffect(() => {
+    const handleBeforePrint = () => {
+      setIsPrintMode(true);
+    };
+
+    const handleAfterPrint = () => {
+      setIsPrintMode(false);
+    };
+
+    window.addEventListener('beforeprint', handleBeforePrint);
+    window.addEventListener('afterprint', handleAfterPrint);
+
+    return () => {
+      window.removeEventListener('beforeprint', handleBeforePrint);
+      window.removeEventListener('afterprint', handleAfterPrint);
+    };
+  }, []);
 
   // Get spreadsheet layout data
   const spreadsheetData = layouts?.SPREADSHEET || {
@@ -1725,20 +1786,46 @@ export default function SpreadsheetView({
             background: #1e293b;
           }
 
+          /*
+           * ============================================================
+           * PRINT STYLESHEET - Game Plan / Call Sheet
+           * ============================================================
+           *
+           * DESIGN GOALS:
+           * 1. Match on-screen edit view layout exactly
+           * 2. Uniform row heights across entire grid
+           * 3. Single page per sheet section (no orphan fragments)
+           * 4. Deterministic output in Chrome print preview
+           *
+           * IMPLEMENTATION NOTES:
+           * - Uses table-layout: fixed for predictable column widths
+           * - Explicit px heights on ALL rows (no auto/flex)
+           * - border-collapse: collapse for clean grid lines
+           * - print-color-adjust: exact for background colors
+           * - break-inside: avoid prevents mid-block splits
+           * ============================================================
+           */
+
           @media print {
+            /* A) PAGE SETUP - Define paper size and margins */
             @page {
               size: ${printPageSize};
               margin: 0.25in;
             }
 
-            /* CRITICAL: Reset containers for print - but NOT cell content */
-
-            /* Hide no-print elements */
-            .no-print {
+            /* B) GLOBAL PRINT RESETS */
+            /* Hide all interactive/UI elements */
+            .no-print,
+            .spreadsheet-row-number,
+            .page-info-subtitle {
               display: none !important;
+              width: 0 !important;
+              height: 0 !important;
+              overflow: hidden !important;
+              visibility: hidden !important;
             }
 
-            /* Make all containers block with white bg */
+            /* Reset all containers to static flow */
             .spreadsheet-view,
             .spreadsheet-view-screen,
             .spreadsheet-main-area,
@@ -1750,151 +1837,183 @@ export default function SpreadsheetView({
               width: 100% !important;
               height: auto !important;
               min-height: 0 !important;
+              max-height: none !important;
               overflow: visible !important;
               background: white !important;
-              background-color: white !important;
               padding: 0 !important;
               margin: 0 !important;
-              transform: none !important;
+              transform: none !important;  /* CRITICAL: No scaling transforms */
+              -webkit-transform: none !important;
             }
 
-            /* Force spreadsheet page to fit on one printed page */
+            /* C) PAGE CONTAINER - One printed page per .spreadsheet-page */
             .spreadsheet-page {
               display: block !important;
-              position: static !important;
+              position: relative !important;
               width: 100% !important;
               height: auto !important;
-              max-height: none !important;
-              aspect-ratio: auto !important;
               overflow: visible !important;
               background: white !important;
               border: none !important;
               border-radius: 0 !important;
               box-shadow: none !important;
               margin: 0 !important;
-              padding: 0 4px !important;
+              padding: 0 !important;
               page-break-inside: avoid !important;
               break-inside: avoid !important;
             }
 
+            /* Force page break between sheets */
             .spreadsheet-page + .spreadsheet-page {
-              page-break-before: always;
-              break-before: page;
+              page-break-before: always !important;
+              break-before: page !important;
             }
 
-            /* Preserve header colors */
-            .spreadsheet-header-cell {
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-              color-adjust: exact !important;
-            }
-
-            /* Content cells */
-            .spreadsheet-content-cell {
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-              color-adjust: exact !important;
-              background: white !important;
-            }
-
-            /* Page header */
+            /* D) SHEET TITLE HEADER - "Week 1 vs. Opponent" */
             .print-compact-header {
-              background: #f5f5f5 !important;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-              padding: 4px 8px !important;
-              height: auto !important;
-            }
-
-            /* HIDE row numbers and column headers in print */
-            .no-print,
-            .spreadsheet-row-number {
-              display: none !important;
-              width: 0 !important;
-              min-width: 0 !important;
-              padding: 0 !important;
-              margin: 0 !important;
-              border: none !important;
-            }
-
-            /* ===== SPREADSHEET GRID PRINT STYLES ===== */
-
-            /* Grid container - constrain to page, hide row numbers column */
-            .spreadsheet-grid {
-              display: grid !important;
-              font-size: 6pt !important;
-              padding: 0 !important;
-              border: 1px solid #94a3b8 !important;
-              height: 9in !important;
-              max-height: 9in !important;
-              flex: none !important;
-              page-break-inside: avoid !important;
-              page-break-before: avoid !important;
-              /* Hide row number column (first col = 0) and header row (first row = 0) */
-              grid-template-columns: 0 repeat(var(--grid-columns), 1fr) !important;
-              /* Auto-fit rows to fill the 9in height */
-              grid-template-rows: 0 repeat(var(--grid-rows), 1fr) !important;
-            }
-
-            /* All grid cells - fixed height, borders, overflow hidden */
-            .spreadsheet-grid > div:not(.no-print) {
-              height: 17px !important;
-              max-height: 17px !important;
-              min-height: 17px !important;
-              overflow: hidden !important;
-              border-bottom: 1px solid #e2e8f0 !important;
-              border-right: 1px solid #e2e8f0 !important;
-              box-sizing: border-box !important;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
-
-            /* Header cells */
-            .spreadsheet-header-cell {
-              padding: 0 4px !important;
-              font-size: 7pt !important;
-              height: 17px !important;
-            }
-
-            /* Content and empty cells */
-            .spreadsheet-content-cell,
-            .spreadsheet-empty-cell {
-              padding: 0 2px !important;
-              font-size: 6pt !important;
-              line-height: 17px !important;
-              height: 17px !important;
-            }
-
-            /* Text truncation */
-            .spreadsheet-content-cell *,
-            .spreadsheet-header-cell * {
-              overflow: hidden !important;
-              white-space: nowrap !important;
-              text-overflow: ellipsis !important;
-              max-width: 100% !important;
               display: block !important;
-            }
-
-            /* Preserve alternating row colors */
-            .spreadsheet-content-cell[style*="background"],
-            .spreadsheet-empty-cell[style*="background"] {
+              width: 100% !important;
+              padding: 4px 8px !important;
+              margin: 0 0 2px 0 !important;
+              background: #f8fafc !important;
+              border-bottom: 1px solid #334155 !important;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
-            }
-
-            /* Compact print header */
-            .print-compact-header {
-              padding: 4px 8px !important;
-              height: auto !important;
-              min-height: 0 !important;
             }
 
             .print-compact-header img {
               height: 20px !important;
+              width: auto !important;
             }
 
-            /* Page info subtitle hidden via no-print class */
+            /* E) GRID CONTAINER - The main spreadsheet grid */
+            .spreadsheet-grid {
+              display: grid !important;
+              width: 100% !important;
+              /* Fixed height based on row count - ensures uniform rows */
+              /* For 50 rows: 50 * 15px = 750px ≈ 7.8in */
+              height: calc(var(--grid-rows) * 15px) !important;
+              max-height: calc(var(--grid-rows) * 15px) !important;
+              padding: 0 !important;
+              margin: 0 !important;
+              border: 1px solid #64748b !important;
+              border-collapse: collapse !important;
+              box-sizing: border-box !important;
+
+              /* CRITICAL: Hide row number column and column header row */
+              /* First column = 0, remaining columns = equal width */
+              grid-template-columns: 0 repeat(var(--grid-columns), 1fr) !important;
+              /* First row = 0 (hidden), remaining rows = fixed 15px each */
+              grid-template-rows: 0 repeat(var(--grid-rows), 15px) !important;
+
+              /* Prevent page breaks within grid */
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+
+              /* Ensure no flex behavior interferes */
+              flex: none !important;
+            }
+
+            /* F) ALL GRID CELLS - Uniform height and borders */
+            .spreadsheet-grid > div {
+              height: 15px !important;
+              min-height: 15px !important;
+              max-height: 15px !important;
+              overflow: hidden !important;
+              box-sizing: border-box !important;
+              border-bottom: 1px solid #e2e8f0 !important;
+              border-right: 1px solid #e2e8f0 !important;
+              padding: 0 2px !important;
+              font-size: 6pt !important;
+              line-height: 14px !important;
+              vertical-align: middle !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+
+            /* G) HEADER CELLS - Section titles (1ST SERIES, CONVERT MEDIUM, etc.) */
+            .spreadsheet-header-cell {
+              height: 15px !important;
+              padding: 0 4px !important;
+              font-size: 7pt !important;
+              font-weight: bold !important;
+              text-transform: uppercase !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+
+            /* H) CONTENT CELLS - Play names */
+            .spreadsheet-content-cell {
+              height: 15px !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+
+            /* I) EMPTY CELLS - Maintain grid structure */
+            .spreadsheet-empty-cell {
+              height: 15px !important;
+              background: white !important;
+            }
+
+            /* J) TEXT HANDLING - Truncate with ellipsis, no wrap */
+            .spreadsheet-content-cell *,
+            .spreadsheet-header-cell *,
+            .spreadsheet-content-cell span,
+            .spreadsheet-header-cell span {
+              display: block !important;
+              overflow: hidden !important;
+              white-space: nowrap !important;
+              text-overflow: ellipsis !important;
+              max-width: 100% !important;
+              line-height: 14px !important;
+            }
+
+            /* K) ALTERNATING ROW COLORS - Preserve zebra striping */
+            .spreadsheet-content-cell[style*="background"],
+            .spreadsheet-empty-cell[style*="background"],
+            div[style*="background-color"] {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
+            }
+
+            /* L) MATRIX CELLS - Formation matrices */
+            .spreadsheet-matrix-header-row,
+            .spreadsheet-matrix-play-type-row {
+              height: 15px !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
           }
+
+          /*
+           * EXPLANATION OF KEY RULES:
+           *
+           * grid-template-rows: 0 repeat(N, 15px)
+           *   - First value (0) hides the column header row
+           *   - 15px is the FIXED height for every content row
+           *   - This prevents browser from auto-sizing rows
+           *
+           * grid-template-columns: 0 repeat(N, 1fr)
+           *   - First value (0) hides the row number gutter
+           *   - 1fr distributes remaining width equally
+           *
+           * -webkit-print-color-adjust: exact
+           *   - Forces Chrome to print background colors
+           *   - Required for header colors and zebra striping
+           *
+           * page-break-inside: avoid / break-inside: avoid
+           *   - Prevents splitting a sheet across pages
+           *   - Each .spreadsheet-page stays on its own printed page
+           *
+           * transform: none
+           *   - Removes any zoom scaling from edit view
+           *   - Prevents aspect ratio distortion in print
+           *
+           * height: 15px (fixed, not auto/flex/1fr)
+           *   - Guarantees uniform row heights
+           *   - Works for 20, 40, 50+ rows identically
+           */
         `}
       </style>
 
