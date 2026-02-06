@@ -268,7 +268,7 @@ export default function GamePlan() {
   const [isSheetEditing, setIsSheetEditing] = useState(false);
   const [pageFormat, setPageFormat] = useState('2-page'); // '2-page' or '4-page'
   const [pageOrientation, setPageOrientation] = useState('portrait'); // 'portrait' or 'landscape'
-  const [layoutMode, setLayoutMode] = useState('modular'); // 'modular' or 'spreadsheet'
+  const [layoutMode, setLayoutMode] = useState('spreadsheet'); // 'spreadsheet' or 'modular'
   const [editingBox, setEditingBox] = useState(null);
 
   // Auto-set landscape orientation for spreadsheet mode
@@ -1513,22 +1513,8 @@ export default function GamePlan() {
             {/* Layout Mode Toggle */}
             <div className={`flex items-center rounded-lg border ${isLight ? 'border-slate-200' : 'border-slate-700'}`}>
               <button
-                onClick={() => setLayoutMode('modular')}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-l-lg transition-colors ${
-                  layoutMode === 'modular'
-                    ? 'bg-blue-500 text-white'
-                    : isLight
-                      ? 'bg-slate-100 text-slate-600 hover:text-slate-900'
-                      : 'bg-slate-800 text-slate-400 hover:text-white'
-                }`}
-                title="Modular layout - drag boxes onto a grid"
-              >
-                <LayoutGrid size={16} />
-                <span className="text-sm">Modular</span>
-              </button>
-              <button
                 onClick={() => setLayoutMode('spreadsheet')}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-r-lg transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-l-lg transition-colors ${
                   layoutMode === 'spreadsheet'
                     ? 'bg-blue-500 text-white'
                     : isLight
@@ -1539,6 +1525,20 @@ export default function GamePlan() {
               >
                 <Table2 size={16} />
                 <span className="text-sm">Spreadsheet</span>
+              </button>
+              <button
+                onClick={() => setLayoutMode('modular')}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-r-lg transition-colors ${
+                  layoutMode === 'modular'
+                    ? 'bg-blue-500 text-white'
+                    : isLight
+                      ? 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                      : 'bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+                title="Modular layout - drag boxes onto a grid (Beta)"
+              >
+                <LayoutGrid size={16} />
+                <span className="text-sm">Modular <span className="text-xs opacity-70">(Beta)</span></span>
               </button>
             </div>
 
