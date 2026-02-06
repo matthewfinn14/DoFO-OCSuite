@@ -497,10 +497,11 @@ function GamePlanSettings({ settings, onChange, layout }) {
     <>
       <SettingsField label="View Type" layout={layout} id="print-settings-game-plan-view-type">
         <select
-          value={settings.viewType || 'sheet'}
+          value={settings.viewType || 'spreadsheet'}
           onChange={(e) => onChange('viewType', e.target.value)}
         >
-          <option value="sheet">Call Sheet</option>
+          <option value="spreadsheet">Spreadsheet</option>
+          <option value="sheet">Call Sheet (Legacy)</option>
           <option value="fzdnd">Field Zone (FZDnD)</option>
           <option value="matrix">Matrix View</option>
         </select>

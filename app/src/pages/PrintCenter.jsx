@@ -122,7 +122,7 @@ const PRINT_TEMPLATES = [
     category: 'gameday',
     component: GamePlanPrint,
     defaultSettings: {
-      viewType: 'sheet',
+      viewType: 'spreadsheet',
       orientation: 'landscape',
       includeLogo: true,
       includeOpponent: true,

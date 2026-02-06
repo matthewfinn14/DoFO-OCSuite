@@ -5,6 +5,7 @@ import { usePlayDetailsModal } from '../PlayDetailsModal';
 import { usePlayBank } from '../../context/PlayBankContext';
 import { getWristbandDisplay } from '../../utils/wristband';
 import { getAllRepsForWeek } from '../../utils/repTracking';
+import { getSpreadsheetBoxes } from '../../utils/gamePlanSections';
 import {
   ChevronLeft,
   ChevronRight,
@@ -232,6 +233,66 @@ export default function PlayBankSidebar({
     return 'none';
   }, [playRepTargets, currentWeekReps]);
 
+  // Get wristband card color for a play based on its slot and type
+  const getWristbandCardColor = useCallback((play) => {
+    if (!play?.wristbandSlot) return null;
+    const wristbandSettings = currentWeek?.wristbandSettings || {};
+
+    // Determine which card this play belongs to based on slot range and type
+    const slot = play.wristbandSlot;
+    const type = play.wristbandType;
+
+    // Card ranges: 100s = card100, 200s = card200, etc.
+    // WIZ cards: 100-199 wiz = cardWiz1, 200-299 wiz = cardWiz2
+    let cardId = null;
+    if (type === 'wiz') {
+      if (slot >= 100 && slot < 200) cardId = 'cardWiz1';
+      else if (slot >= 200 && slot < 300) cardId = 'cardWiz2';
+    } else {
+      if (slot >= 100 && slot < 200) cardId = 'card100';
+      else if (slot >= 200 && slot < 300) cardId = 'card200';
+      else if (slot >= 300 && slot < 400) cardId = 'card300';
+      else if (slot >= 400 && slot < 500) cardId = 'card400';
+    }
+
+    if (!cardId) return null;
+    return wristbandSettings[cardId]?.color || null;
+  }, [currentWeek?.wristbandSettings]);
+
+  // Determine if text should be light or dark based on background color
+  const getContrastTextColor = useCallback((bgColor) => {
+    if (!bgColor) return 'white';
+    // Convert color name to hex or parse hex
+    const colorMap = {
+      white: '#ffffff', black: '#000000', red: '#dc2626', orange: '#f97316',
+      yellow: '#facc15', green: '#22c55e', blue: '#3b82f6', purple: '#8b5cf6',
+      pink: '#ec4899', gray: '#6b7280', slate: '#64748b', emerald: '#10b981',
+      cyan: '#06b6d4', amber: '#f59e0b', lime: '#84cc16', rose: '#f43f5e'
+    };
+    const hex = colorMap[bgColor?.toLowerCase()] || bgColor;
+
+    // Parse hex to RGB
+    let r, g, b;
+    if (hex.startsWith('#')) {
+      const cleanHex = hex.slice(1);
+      if (cleanHex.length === 3) {
+        r = parseInt(cleanHex[0] + cleanHex[0], 16);
+        g = parseInt(cleanHex[1] + cleanHex[1], 16);
+        b = parseInt(cleanHex[2] + cleanHex[2], 16);
+      } else {
+        r = parseInt(cleanHex.slice(0, 2), 16);
+        g = parseInt(cleanHex.slice(2, 4), 16);
+        b = parseInt(cleanHex.slice(4, 6), 16);
+      }
+    } else {
+      return 'white'; // Default to white text if can't parse
+    }
+
+    // Calculate luminance
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.5 ? '#1e293b' : 'white';
+  }, []);
+
   // Determine current page context for batch add
   const currentPageContext = useMemo(() => {
     const path = location.pathname;
@@ -245,24 +306,9 @@ export default function PlayBankSidebar({
     return 'other';
   }, [location.pathname]);
 
-  // Get call sheet boxes for context-aware batch add
+  // Get spreadsheet boxes for context-aware batch add (replaces CALL_SHEET)
   const callSheetBoxes = useMemo(() => {
-    const layouts = currentWeek?.gamePlanLayouts;
-    if (!layouts?.CALL_SHEET?.sections) return [];
-    const boxes = [];
-    layouts.CALL_SHEET.sections.forEach((section, sIdx) => {
-      (section.boxes || []).forEach((box, bIdx) => {
-        boxes.push({
-          sectionIdx: sIdx,
-          boxIdx: bIdx,
-          sectionTitle: section.title,
-          header: box.header,
-          setId: box.setId,
-          type: box.type
-        });
-      });
-    });
-    return boxes;
+    return getSpreadsheetBoxes(currentWeek?.gamePlanLayouts);
   }, [currentWeek?.gamePlanLayouts]);
 
   // Get practice segments for context-aware batch add
@@ -285,47 +331,45 @@ export default function PlayBankSidebar({
     return segments;
   }, [currentWeek?.practicePlans]);
 
-  // Get game plan boxes with their plays for the Game Plan tab
+  // Get game plan boxes with their plays for the Game Plan tab (uses SPREADSHEET)
   const gamePlanBoxesWithPlays = useMemo(() => {
-    const layouts = currentWeek?.gamePlanLayouts;
+    const spreadsheetBoxes = getSpreadsheetBoxes(currentWeek?.gamePlanLayouts);
     const gamePlan = currentWeek?.offensiveGamePlan || { sets: [] };
     const sets = gamePlan.sets || [];
 
-    if (!layouts?.CALL_SHEET?.sections) return [];
+    if (spreadsheetBoxes.length === 0) return [];
 
     const boxes = [];
-    layouts.CALL_SHEET.sections.forEach((section) => {
-      (section.boxes || []).forEach((box) => {
-        if (!box.setId) return;
+    spreadsheetBoxes.forEach((box) => {
+      // Find the matching set for this box
+      const set = sets.find(s => s.id === box.setId);
+      const playIds = set?.playIds || [];
+      const assignedPlayIds = set?.assignedPlayIds || [];
 
-        // Find the matching set for this box
-        const set = sets.find(s => s.id === box.setId);
-        const playIds = set?.playIds || [];
-        const assignedPlayIds = set?.assignedPlayIds || [];
+      // Get play objects for quicklist and assigned
+      const quicklistPlays = playIds
+        .filter(id => id) // Filter out nulls
+        .map(id => playsArray.find(p => p.id === id))
+        .filter(p => p && !p.archived);
 
-        // Get play objects for quicklist and assigned
-        const quicklistPlays = playIds
-          .filter(id => id) // Filter out nulls
-          .map(id => playsArray.find(p => p.id === id))
-          .filter(p => p && !p.archived);
+      const assignedPlays = assignedPlayIds
+        .map(id => playsArray.find(p => p.id === id))
+        .filter(p => p && !p.archived);
 
-        const assignedPlays = assignedPlayIds
-          .map(id => playsArray.find(p => p.id === id))
-          .filter(p => p && !p.archived);
-
-        // Only add box if it has plays
-        if (quicklistPlays.length > 0 || assignedPlays.length > 0) {
-          boxes.push({
-            header: box.header,
-            setId: box.setId,
-            sectionTitle: section.title,
-            color: box.color || '#3b82f6',
-            quicklistPlays,
-            assignedPlays,
-            totalPlays: quicklistPlays.length + assignedPlays.length
-          });
-        }
-      });
+      // Only add box if it has plays
+      if (quicklistPlays.length > 0 || assignedPlays.length > 0) {
+        boxes.push({
+          header: box.name,
+          setId: box.setId,
+          headerId: box.headerId,
+          color: box.color || '#3b82f6',
+          categoryType: box.categoryType,
+          isMatrix: box.isMatrix,
+          quicklistPlays,
+          assignedPlays,
+          totalPlays: quicklistPlays.length + assignedPlays.length
+        });
+      }
     });
 
     return boxes;
@@ -675,6 +719,8 @@ export default function PlayBankSidebar({
 
     // Get wristband slot for badge display
     const wristbandSlot = getWristbandDisplay(play);
+    const wristbandCardColor = getWristbandCardColor(play);
+    const wristbandTextColor = wristbandCardColor ? getContrastTextColor(wristbandCardColor) : 'white';
 
     const isBatchSelected = selectedPlayIds.has(play.id);
     const isSingleSelected = singleSelectMode && contextSelectedPlayId === play.id;
@@ -740,7 +786,14 @@ export default function PlayBankSidebar({
           </div>
           {/* Wristband coordinate badge */}
           {wristbandSlot && (
-            <span className="flex-shrink-0 ml-1 px-1 py-0 text-[9px] font-bold bg-rose-600 text-white rounded" title="Wristband coordinate">
+            <span
+              className="flex-shrink-0 ml-1 px-1 py-0 text-[9px] font-bold rounded"
+              style={{
+                backgroundColor: wristbandCardColor || '#e11d48',
+                color: wristbandTextColor
+              }}
+              title="Wristband coordinate"
+            >
               {wristbandSlot}
             </span>
           )}
@@ -772,7 +825,7 @@ export default function PlayBankSidebar({
         </div>
       </div>
     );
-  }, [handleDragStart, openPlayDetails, isInBatchMode, selectedPlayIds, togglePlaySelection, singleSelectMode, contextSelectedPlayId, selectPlayForAssign, triggerQuickAdd, playMatchesHighlightFocuses, scriptUsageByPlay, getQuotaStatus]);
+  }, [handleDragStart, openPlayDetails, isInBatchMode, selectedPlayIds, togglePlaySelection, singleSelectMode, contextSelectedPlayId, selectPlayForAssign, triggerQuickAdd, playMatchesHighlightFocuses, scriptUsageByPlay, getQuotaStatus, getWristbandCardColor, getContrastTextColor]);
 
   return (
     <div
@@ -810,9 +863,9 @@ export default function PlayBankSidebar({
         className="flex flex-col h-full overflow-hidden"
         style={{ width: '480px', display: isOpen ? 'flex' : 'none' }}
       >
-        {/* Targeting Mode Banner */}
+        {/* Targeting Mode Banner - Sticky */}
         {targetingMode && targetingPlays.length > 0 && (
-          <div className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-4 py-3 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-4 py-3 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-2">
               <MousePointer size={18} className="animate-pulse" />
               <span className="font-medium">{targetingPlays.length} plays ready</span>
@@ -828,9 +881,9 @@ export default function PlayBankSidebar({
           </div>
         )}
 
-        {/* Plays/Headers Toggle at TOP when headersMode enabled */}
+        {/* Plays/Headers Toggle at TOP when headersMode enabled - Sticky */}
         {headersMode && (
-          <div className="flex border-b border-slate-600">
+          <div className="flex border-b border-slate-600 flex-shrink-0">
             <div
               onClick={() => setActiveTab('install')}
               className={`flex-1 text-center py-2.5 px-1 text-xs font-semibold cursor-pointer transition-colors ${activeTab === 'install'
@@ -853,8 +906,8 @@ export default function PlayBankSidebar({
           </div>
         )}
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-3 py-2.5 bg-slate-800 border-b border-slate-600">
+        {/* Header - Sticky */}
+        <div className="flex items-center justify-between px-3 py-2.5 bg-slate-800 border-b border-slate-600 flex-shrink-0">
           <div className="flex items-center gap-2">
             <Landmark size={20} className="text-slate-300" />
             <label htmlFor="playbank-phase-select" className="text-sm font-extrabold text-white tracking-wide">PLAY BANK</label>
@@ -878,9 +931,9 @@ export default function PlayBankSidebar({
           </button>
         </div>
 
-        {/* Batch Select Mode Banner */}
+        {/* Batch Select Mode Banner - Sticky */}
         {isInBatchMode && (
-          <div className={`px-3 py-2 ${internalBatchMode ? 'bg-emerald-500' : 'bg-sky-500'} text-white`}>
+          <div className={`px-3 py-2 ${internalBatchMode ? 'bg-emerald-500' : 'bg-sky-500'} text-white flex-shrink-0`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <CheckSquare size={16} />
@@ -904,9 +957,9 @@ export default function PlayBankSidebar({
           </div>
         )}
 
-        {/* Single Select Mode Banner (for wristband assignment) */}
+        {/* Single Select Mode Banner (for wristband assignment) - Sticky */}
         {singleSelectMode && !isInBatchMode && (
-          <div className="px-3 py-2 bg-emerald-500 text-white">
+          <div className="px-3 py-2 bg-emerald-500 text-white flex-shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <MousePointer size={16} />
@@ -930,9 +983,9 @@ export default function PlayBankSidebar({
           </div>
         )}
 
-        {/* Week Header */}
+        {/* Week Header - Sticky */}
         {currentWeek && (
-          <div className="flex items-center justify-center py-2.5 px-3 bg-slate-50 border-b border-slate-200">
+          <div className="flex items-center justify-center py-2.5 px-3 bg-slate-50 border-b border-slate-200 flex-shrink-0">
             <div className="text-sm font-bold text-slate-800 uppercase tracking-wide">
               {currentWeek.name || `Week ${currentWeek.weekNumber || ''}`}
               {currentWeek.opponent && <span className="text-slate-500 ml-2">vs. {currentWeek.opponent}</span>}
@@ -940,9 +993,9 @@ export default function PlayBankSidebar({
           </div>
         )}
 
-        {/* Tabs - show Install/Game Plan/Full Playbook when on Plays side (not when on Headers tab) */}
+        {/* Tabs - show Install/Game Plan/Full Playbook when on Plays side (not when on Headers tab) - Sticky */}
         {activeTab !== 'headers' && (
-          <div className="flex border-b border-slate-200">
+          <div className="flex border-b border-slate-200 flex-shrink-0">
             {[
               { key: 'install', label: 'Install' },
               { key: 'gameplan', label: 'Game Plan' },
@@ -962,8 +1015,8 @@ export default function PlayBankSidebar({
           </div>
         )}
 
-        {/* Combined Search + Quick Add */}
-        <div className="p-2 bg-slate-50 border-b border-slate-200">
+        {/* Combined Search + Quick Add - Sticky */}
+        <div className="p-2 bg-slate-50 border-b border-slate-200 flex-shrink-0">
           <label htmlFor="playbank-search" className="sr-only">Search or add play</label>
           <div className="flex gap-1.5">
             <div className="relative flex-1">
@@ -1016,8 +1069,8 @@ export default function PlayBankSidebar({
           )}
         </div>
 
-        {/* Filter Dropdowns */}
-        <div className="p-2 bg-slate-50 border-b border-slate-200">
+        {/* Filter Dropdowns - Sticky */}
+        <div className="p-2 bg-slate-50 border-b border-slate-200 flex-shrink-0">
           <div className="flex gap-2">
             <select
               id="playbank-filter-category"
@@ -1070,10 +1123,10 @@ export default function PlayBankSidebar({
         <div className="flex-1 overflow-y-auto bg-white">
           {/* Headers Tab Content */}
           {activeTab === 'headers' && headersMode && (
-            <div className="bg-slate-800 h-full">
-              {/* Position Controls */}
+            <div className="bg-slate-800 h-full flex flex-col">
+              {/* Position Controls - Sticky */}
               {assignHeaderConfig && setAssignHeaderConfig && (
-                <div className="px-4 py-3 border-b border-slate-700">
+                <div className="px-4 py-3 border-b border-slate-700 flex-shrink-0 sticky top-0 bg-slate-800 z-10">
                   <div className="flex items-center gap-3 text-xs">
                     <div className="flex items-center gap-1.5">
                       <label className="text-slate-400">R:</label>
@@ -1112,8 +1165,8 @@ export default function PlayBankSidebar({
                 </div>
               )}
 
-              {/* Header Templates */}
-              <div className="p-3 space-y-4 overflow-y-auto">
+              {/* Header Templates - Scrollable */}
+              <div className="p-3 space-y-4 overflow-y-auto flex-1">
                 {headerTemplates.map(template => {
                   const IconComponent = template.icon || LayoutTemplate;
                   return (
@@ -1132,8 +1185,9 @@ export default function PlayBankSidebar({
                                   item,
                                   categoryType: template.id,
                                   isScript: template.isScript,
-                                  colSpan: assignHeaderConfig?.colSpan || 2,
-                                  rowCount: 10
+                                  isMatrix: template.isMatrix,
+                                  colSpan: assignHeaderConfig?.colSpan || (template.isMatrix ? 4 : 2),
+                                  rowCount: template.isMatrix ? null : 10
                                 });
                               }
                             }}

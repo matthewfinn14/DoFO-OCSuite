@@ -4,6 +4,7 @@ import { useSchool } from '../context/SchoolContext';
 import { useAuth } from '../context/AuthContext';
 import { getWristbandDisplay } from '../utils/wristband';
 import { getAllHistoricalReps, getAllRepsForWeek } from '../utils/repTracking';
+import { getSpreadsheetBoxes } from '../utils/gamePlanSections';
 import PlayAssignmentWizard from '../components/install/PlayAssignmentWizard';
 import PlaySuggestionWizard from '../components/install/PlaySuggestionWizard';
 import ReviewSuggestionsModal from '../components/install/ReviewSuggestionsModal';
@@ -362,22 +363,9 @@ function QuickAssignPanel({
   // Get selected bucket(s) to show concept families
   const selectedBucketIds = [...new Set(selectedPlays.map(p => p.bucketId).filter(Boolean))];
 
-  // Get call sheet boxes from game plan layouts
+  // Get spreadsheet boxes from game plan layouts (replaces CALL_SHEET)
   const callSheetBoxes = useMemo(() => {
-    const boxes = [];
-    const sections = gamePlan?.gamePlanLayouts?.CALL_SHEET?.sections || [];
-    sections.forEach(section => {
-      (section.boxes || []).forEach(box => {
-        if (box.setId && box.header) {
-          boxes.push({
-            id: box.setId,
-            label: box.header,
-            color: box.color || '#3b82f6'
-          });
-        }
-      });
-    });
-    return boxes;
+    return getSpreadsheetBoxes(gamePlan?.gamePlanLayouts);
   }, [gamePlan]);
 
   // Check if plays are in a call sheet box
@@ -385,7 +373,8 @@ function QuickAssignPanel({
     if (selectedPlays.length === 0) return { isActive: false, isPartial: false };
     const sets = gamePlan?.offensiveGamePlan?.sets || [];
     const boxSet = sets.find(s => s.id === boxId);
-    const boxPlayIds = boxSet?.playIds || [];
+    // Check both playIds and assignedPlayIds (spreadsheet uses assignedPlayIds)
+    const boxPlayIds = boxSet?.assignedPlayIds || boxSet?.playIds || [];
     const matchCount = selectedPlays.filter(p => boxPlayIds.includes(p.id)).length;
     return {
       isActive: matchCount === selectedPlays.length,
@@ -584,22 +573,9 @@ export default function InstallManager() {
   );
   const conceptGroups = setupConfig?.conceptGroups || [];
 
-  // Get call sheet boxes from game plan layouts
+  // Get spreadsheet boxes from game plan layouts (replaces CALL_SHEET)
   const callSheetBoxes = useMemo(() => {
-    const boxes = [];
-    const sections = currentWeek?.gamePlanLayouts?.CALL_SHEET?.sections || [];
-    sections.forEach(section => {
-      (section.boxes || []).forEach(box => {
-        if (box.setId && box.header) {
-          boxes.push({
-            id: box.setId,
-            label: box.header,
-            color: box.color || '#3b82f6'
-          });
-        }
-      });
-    });
-    return boxes;
+    return getSpreadsheetBoxes(currentWeek?.gamePlanLayouts);
   }, [currentWeek?.gamePlanLayouts]);
 
   // Get which boxes each play is in
@@ -607,7 +583,9 @@ export default function InstallManager() {
     const boxIds = [];
     const sets = currentWeek?.offensiveGamePlan?.sets || [];
     sets.forEach(set => {
-      if ((set.playIds || []).includes(playId)) {
+      // Check both playIds and assignedPlayIds (spreadsheet uses assignedPlayIds)
+      const setPlayIds = set.assignedPlayIds || set.playIds || [];
+      if (setPlayIds.includes(playId)) {
         boxIds.push(set.id);
       }
     });
@@ -797,11 +775,12 @@ export default function InstallManager() {
       updates.practicePlans = newPracticePlans;
     }
 
-    // 3. Remove from call sheet / game plan sets
+    // 3. Remove from call sheet / game plan sets (handle both playIds and assignedPlayIds)
     if (currentWeek.offensiveGamePlan?.sets) {
       const newSets = currentWeek.offensiveGamePlan.sets.map(set => ({
         ...set,
-        playIds: (set.playIds || []).filter(id => id !== playId)
+        playIds: (set.playIds || []).filter(id => id !== playId),
+        assignedPlayIds: (set.assignedPlayIds || []).filter(id => id !== playId)
       }));
       updates.offensiveGamePlan = { ...currentWeek.offensiveGamePlan, sets: newSets };
     }
@@ -868,18 +847,22 @@ export default function InstallManager() {
     const sets = [...(gamePlanData.sets || [])];
     let boxSetIndex = sets.findIndex(s => s.id === boxId);
 
+    // Determine if this is a spreadsheet box (use assignedPlayIds) or legacy box (use playIds)
+    const isSpreadsheetBox = boxId.startsWith('spreadsheet_');
+    const playIdField = isSpreadsheetBox ? 'assignedPlayIds' : 'playIds';
+
     if (boxSetIndex === -1) {
       // Box doesn't exist in sets yet, create it
-      sets.push({ id: boxId, playIds: [playId] });
+      sets.push({ id: boxId, [playIdField]: [playId] });
     } else {
       const boxSet = { ...sets[boxSetIndex] };
-      const currentPlayIds = boxSet.playIds || [];
+      const currentPlayIds = boxSet[playIdField] || boxSet.playIds || boxSet.assignedPlayIds || [];
       if (currentPlayIds.includes(playId)) {
         // Remove play from box
-        boxSet.playIds = currentPlayIds.filter(id => id !== playId);
+        boxSet[playIdField] = currentPlayIds.filter(id => id !== playId);
       } else {
         // Add play to box
-        boxSet.playIds = [...currentPlayIds, playId];
+        boxSet[playIdField] = [...currentPlayIds, playId];
       }
       sets[boxSetIndex] = boxSet;
     }
@@ -919,19 +902,23 @@ export default function InstallManager() {
     const sets = [...(gamePlanData.sets || [])];
     let boxSetIndex = sets.findIndex(s => s.id === boxId);
 
+    // Determine if this is a spreadsheet box (use assignedPlayIds) or legacy box (use playIds)
+    const isSpreadsheetBox = boxId.startsWith('spreadsheet_');
+    const playIdField = isSpreadsheetBox ? 'assignedPlayIds' : 'playIds';
+
     if (boxSetIndex === -1) {
-      sets.push({ id: boxId, playIds: [] });
+      sets.push({ id: boxId, [playIdField]: [] });
       boxSetIndex = sets.length - 1;
     }
 
     const boxSet = { ...sets[boxSetIndex] };
-    const currentPlayIds = boxSet.playIds || [];
+    const currentPlayIds = boxSet[playIdField] || boxSet.playIds || boxSet.assignedPlayIds || [];
     const allInBox = selectedPlays.every(p => currentPlayIds.includes(p.id));
 
     if (allInBox) {
-      boxSet.playIds = currentPlayIds.filter(id => !selectedPlayIds.includes(id));
+      boxSet[playIdField] = currentPlayIds.filter(id => !selectedPlayIds.includes(id));
     } else {
-      boxSet.playIds = [...new Set([...currentPlayIds, ...selectedPlayIds])];
+      boxSet[playIdField] = [...new Set([...currentPlayIds, ...selectedPlayIds])];
     }
 
     sets[boxSetIndex] = boxSet;
@@ -1004,11 +991,12 @@ export default function InstallManager() {
       updates.practicePlans = newPracticePlans;
     }
 
-    // 3. Remove from call sheet / game plan sets
+    // 3. Remove from call sheet / game plan sets (handle both playIds and assignedPlayIds)
     if (currentWeek.offensiveGamePlan?.sets) {
       const newSets = currentWeek.offensiveGamePlan.sets.map(set => ({
         ...set,
-        playIds: (set.playIds || []).filter(id => !selectedPlayIds.includes(id))
+        playIds: (set.playIds || []).filter(id => !selectedPlayIds.includes(id)),
+        assignedPlayIds: (set.assignedPlayIds || []).filter(id => !selectedPlayIds.includes(id))
       }));
       updates.offensiveGamePlan = { ...currentWeek.offensiveGamePlan, sets: newSets };
     }
@@ -1112,26 +1100,18 @@ export default function InstallManager() {
     return reps;
   }, [currentWeek?.practicePlans]);
 
-  // Get call sheet boxes with their play assignments for wizard
+  // Get spreadsheet boxes with their play assignments for wizard
   const callSheetBoxesWithPlays = useMemo(() => {
-    const boxes = [];
-    const sections = currentWeek?.gamePlanLayouts?.CALL_SHEET?.sections || [];
+    const spreadsheetBoxes = getSpreadsheetBoxes(currentWeek?.gamePlanLayouts);
     const sets = currentWeek?.offensiveGamePlan?.sets || [];
 
-    sections.forEach(section => {
-      (section.boxes || []).forEach(box => {
-        if (box.setId && box.header) {
-          const boxSet = sets.find(s => s.id === box.setId);
-          boxes.push({
-            id: box.setId,
-            label: box.header,
-            color: box.color || '#3b82f6',
-            playIds: boxSet?.playIds || []
-          });
-        }
-      });
+    return spreadsheetBoxes.map(box => {
+      const boxSet = sets.find(s => s.id === box.setId);
+      return {
+        ...box,
+        playIds: boxSet?.playIds || boxSet?.assignedPlayIds || []
+      };
     });
-    return boxes;
   }, [currentWeek?.gamePlanLayouts, currentWeek?.offensiveGamePlan]);
 
   // Play suggestion handlers

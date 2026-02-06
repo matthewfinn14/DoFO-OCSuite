@@ -5,6 +5,7 @@ import { usePlayBank } from '../context/PlayBankContext';
 import { getWristbandDisplay } from '../utils/wristband';
 import { getPlayCall } from '../utils/playDisplay';
 import { getCurrentWeekReps, getAllRepsForWeek } from '../utils/repTracking';
+import { getSpreadsheetBoxes } from '../utils/gamePlanSections';
 import PracticePlanCoachView from '../components/print/templates/PracticePlanCoachView';
 import '../styles/print-center.css';
 import {
@@ -667,22 +668,15 @@ function FocusMultiSelect({
       }
     }
 
-    // Call Sheet Boxes - pull from week's gamePlanLayouts
-    const callSheetBoxes = [];
-    const sections = week?.gamePlanLayouts?.CALL_SHEET?.sections || [];
-    sections.forEach(section => {
-      (section.boxes || []).forEach(box => {
-        if (box.header) {
-          callSheetBoxes.push({
-            id: box.setId || `box_${box.header}`,
-            name: box.header,
-            category: 'Call Sheet'
-          });
-        }
-      });
-    });
-    if (callSheetBoxes.length > 0) {
-      groups.push({ category: 'Call Sheet', items: callSheetBoxes });
+    // Call Sheet Boxes - pull from week's SPREADSHEET layout (keep "Call Sheet" label for UX consistency)
+    const spreadsheetBoxes = getSpreadsheetBoxes(week?.gamePlanLayouts);
+    if (spreadsheetBoxes.length > 0) {
+      const callSheetItems = spreadsheetBoxes.map(box => ({
+        id: box.setId,
+        name: box.name,
+        category: 'Call Sheet'
+      }));
+      groups.push({ category: 'Call Sheet', items: callSheetItems });
     }
 
     // Practice category - special focus options
@@ -1792,6 +1786,7 @@ export default function PracticePlans() {
   const [activeScriptRowId, setActiveScriptRowId] = useState(null);
   const [playSearchTerm, setPlaySearchTerm] = useState('');
   const [playFilterPhase, setPlayFilterPhase] = useState('OFFENSE');
+  const [showScriptExtras, setShowScriptExtras] = useState(false); // Toggle Defense/Notes columns
 
   // Stamping Mode State
   const [stagedPlay, setStagedPlay] = useState(null);
@@ -2009,9 +2004,9 @@ export default function PracticePlans() {
       const sets = week.offensiveGamePlan?.sets || [];
       callSheetFocuses.forEach(focus => {
         const matchingSet = sets.find(s => s.id === focus.id);
-        if (matchingSet?.playIds) {
-          matchingSet.playIds.forEach(id => addPlayWithRepInfo(id));
-        }
+        // Check both playIds and assignedPlayIds (spreadsheet boxes use assignedPlayIds)
+        const setPlayIds = matchingSet?.assignedPlayIds || matchingSet?.playIds || [];
+        setPlayIds.forEach(id => addPlayWithRepInfo(id));
       });
     }
 
@@ -2039,46 +2034,37 @@ export default function PracticePlans() {
       }
     }
 
-    // If no focuses but has preferred bucket types, populate from install list
-    if (allFocuses.length === 0 && hasPreferredTypes) {
+    // ALWAYS populate from install list if there are preferred bucket types
+    // This ensures Run/RPO/Special plays show up even when Call Sheet focuses are set
+    if (hasPreferredTypes) {
       installList.forEach(playId => addPlayWithRepInfo(playId));
     }
 
-    // Sorting behavior depends on whether focuses are selected
-    if (allFocuses.length > 0) {
-      // When focuses are selected (game plan boxes), randomize for variety
-      // Use Fisher-Yates shuffle
-      for (let i = resultPlays.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [resultPlays[i], resultPlays[j]] = [resultPlays[j], resultPlays[i]];
+    // Sort by rep need - plays needing reps come first
+    // Priority: 1) Has quota and below it, 2) Has quota and at/above it, 3) No quota
+    resultPlays.sort((a, b) => {
+      // Priority plays first
+      if (a._isPriority && !b._isPriority) return -1;
+      if (!a._isPriority && b._isPriority) return 1;
+
+      // Then by rep need (higher need = more reps needed = closer to top)
+      const aHasQuota = (a._targetReps || 0) > 0;
+      const bHasQuota = (b._targetReps || 0) > 0;
+      const aBelowQuota = aHasQuota && a._currentReps < a._targetReps;
+      const bBelowQuota = bHasQuota && b._currentReps < b._targetReps;
+
+      // Plays below quota come first
+      if (aBelowQuota && !bBelowQuota) return -1;
+      if (!aBelowQuota && bBelowQuota) return 1;
+
+      // Among plays below quota, sort by need (highest need first)
+      if (aBelowQuota && bBelowQuota) {
+        return b._repNeed - a._repNeed;
       }
-    } else {
-      // When no focuses (just bucket type filtering), sort by rep need
-      // Priority: 1) Has quota and below it, 2) Has quota and at/above it, 3) No quota
-      resultPlays.sort((a, b) => {
-        // Priority plays first
-        if (a._isPriority && !b._isPriority) return -1;
-        if (!a._isPriority && b._isPriority) return 1;
 
-        // Then by rep need (higher need = more reps needed = closer to top)
-        const aHasQuota = (a._targetReps || 0) > 0;
-        const bHasQuota = (b._targetReps || 0) > 0;
-        const aBelowQuota = aHasQuota && a._currentReps < a._targetReps;
-        const bBelowQuota = bHasQuota && b._currentReps < b._targetReps;
-
-        // Plays below quota come first
-        if (aBelowQuota && !bBelowQuota) return -1;
-        if (!aBelowQuota && bBelowQuota) return 1;
-
-        // Among plays below quota, sort by need (highest need first)
-        if (aBelowQuota && bBelowQuota) {
-          return b._repNeed - a._repNeed;
-        }
-
-        // Among plays at/above quota or no quota, sort by current reps (lowest first)
-        return a._currentReps - b._currentReps;
-      });
-    }
+      // Among plays at/above quota or no quota, sort by current reps (lowest first)
+      return a._currentReps - b._currentReps;
+    });
 
     return resultPlays;
   }, [week, weeks, plays, playsArray, getPreferredBucketTypesForSegment, playBuckets]);
@@ -3513,6 +3499,13 @@ export default function PracticePlans() {
                             <Plus size={14} />
                             Add Row
                           </button>
+                          <button
+                            onClick={() => setShowScriptExtras(!showScriptExtras)}
+                            className={`flex items-center gap-1 px-2 py-1 text-sm rounded ${showScriptExtras ? (isLight ? 'bg-slate-200 text-slate-700' : 'bg-slate-600 text-slate-200') : (isLight ? 'text-slate-500 hover:text-slate-700' : 'text-slate-400 hover:text-slate-300')}`}
+                            title={showScriptExtras ? 'Hide Defense/Notes columns' : 'Show Defense/Notes columns'}
+                          >
+                            {showScriptExtras ? 'Less' : 'More'}
+                          </button>
                         </div>
                       </div>
 
@@ -3649,8 +3642,8 @@ export default function PracticePlans() {
                               <th className="px-2 py-2 text-center w-12">Dn</th>
                               <th className="px-2 py-2 text-center w-12">Dist</th>
                               <th className="px-2 py-2 text-left min-w-[140px]">Play Call</th>
-                              <th className="px-2 py-2 text-left w-28">Defense</th>
-                              <th className="px-2 py-2 text-left w-32">Notes</th>
+                              {showScriptExtras && <th className="px-2 py-2 text-left w-28">Defense</th>}
+                              {showScriptExtras && <th className="px-2 py-2 text-left w-32">Notes</th>}
                               <th className="px-2 py-2 text-center w-16">Act</th>
                             </tr>
                           </thead>
@@ -3793,28 +3786,32 @@ export default function PracticePlans() {
                                       }}
                                     />
                                   </td>
-                                  <td className="px-2 py-2">
-                                    <input
-                                      id={`script-${seg.id}-${row.id}-defense`}
-                                      type="text"
-                                      value={row.defense || ''}
-                                      onChange={(e) => updateScriptRow(seg.id, row.id, 'defense', e.target.value)}
-                                      placeholder="Defense"
-                                      className={`w-full px-2 py-1 border rounded text-xs ${isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-slate-700 border-slate-600 text-white placeholder-slate-500'}`}
-                                      aria-label="Defense"
-                                    />
-                                  </td>
-                                  <td className="px-2 py-2">
-                                    <input
-                                      id={`script-${seg.id}-${row.id}-notes`}
-                                      type="text"
-                                      value={row.notes || ''}
-                                      onChange={(e) => updateScriptRow(seg.id, row.id, 'notes', e.target.value)}
-                                      placeholder="Add Note..."
-                                      className={`w-full px-2 py-1 border rounded text-xs ${isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-slate-700 border-slate-600 text-white placeholder-slate-500'}`}
-                                      aria-label="Notes"
-                                    />
-                                  </td>
+                                  {showScriptExtras && (
+                                    <td className="px-2 py-2">
+                                      <input
+                                        id={`script-${seg.id}-${row.id}-defense`}
+                                        type="text"
+                                        value={row.defense || ''}
+                                        onChange={(e) => updateScriptRow(seg.id, row.id, 'defense', e.target.value)}
+                                        placeholder="Defense"
+                                        className={`w-full px-2 py-1 border rounded text-xs ${isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-slate-700 border-slate-600 text-white placeholder-slate-500'}`}
+                                        aria-label="Defense"
+                                      />
+                                    </td>
+                                  )}
+                                  {showScriptExtras && (
+                                    <td className="px-2 py-2">
+                                      <input
+                                        id={`script-${seg.id}-${row.id}-notes`}
+                                        type="text"
+                                        value={row.notes || ''}
+                                        onChange={(e) => updateScriptRow(seg.id, row.id, 'notes', e.target.value)}
+                                        placeholder="Add Note..."
+                                        className={`w-full px-2 py-1 border rounded text-xs ${isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-slate-700 border-slate-600 text-white placeholder-slate-500'}`}
+                                        aria-label="Notes"
+                                      />
+                                    </td>
+                                  )}
                                   <td className="px-2 py-2 text-center">
                                     <div className="flex items-center justify-center gap-1">
                                       <button

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { Plus, GripVertical, Trash2, Settings, ChevronDown, ChevronUp, LayoutTemplate, MapPin, Target, Zap, List, Package } from 'lucide-react';
+import { Plus, GripVertical, Trash2, Settings, ChevronDown, ChevronUp, LayoutTemplate, MapPin, Target, Zap, List, Package, Grid3X3 } from 'lucide-react';
 import { getPlayCall, abbreviatePlayCall } from '../../utils/playDisplay';
 import { usePlayBank } from '../../context/PlayBankContext';
 
@@ -212,7 +212,13 @@ export default function SpreadsheetView({
       // Otherwise, find the next header below in overlapping columns
       let rowEnd;
 
-      if (header.rowCount) {
+      // For matrix headers, calculate rowCount based on play types
+      // Matrix needs: 1 row for hash group headers + 1 row per play type
+      if (header.isMatrix) {
+        const playTypesCount = (header.playTypes || []).length || 4;
+        // rowEnd = header row + 1 (hash headers) + play types count
+        rowEnd = Math.min(rowStart + 1 + playTypesCount, rows);
+      } else if (header.rowCount) {
         // rowCount = number of play rows (content rows), header is row 0
         // So total rows = rowStart (header) + rowCount (content)
         rowEnd = Math.min(rowStart + header.rowCount, rows);
@@ -240,7 +246,8 @@ export default function SpreadsheetView({
         colEnd,
         rowStart: rowStart + 1, // Content starts below header
         rowEnd,
-        contentRows: rowEnd - rowStart // Number of rows for content
+        contentRows: rowEnd - rowStart, // Number of rows for content
+        isMatrix: header.isMatrix || false
       };
     });
 
@@ -295,6 +302,32 @@ export default function SpreadsheetView({
       return plays.find(p => p.id === playId) || null;
     });
   }, [gamePlan?.sets, plays]);
+
+  // Get plays for a matrix cell (returns array of plays - multiple allowed per cell)
+  const getPlaysForMatrixCell = useCallback((headerId, playTypeId, hashCol) => {
+    const setId = `spreadsheet_${headerId}_${playTypeId}_${hashCol}`;
+    const set = gamePlan?.sets?.find(s => s.id === setId);
+    if (!set) return [];
+    return (set.playIds || []).map(playId => plays.find(p => p.id === playId)).filter(Boolean);
+  }, [gamePlan?.sets, plays]);
+
+  // Count total plays in a matrix header
+  const countMatrixPlays = useCallback((header) => {
+    if (!header.isMatrix) return 0;
+    let count = 0;
+    const playTypes = header.playTypes || [];
+    const hashGroups = header.hashGroups || [];
+
+    playTypes.forEach(pt => {
+      hashGroups.forEach(hg => {
+        // cols are full IDs like 'BASE_L', 'BASE_R' - use directly
+        (hg.cols || [`${hg.id}_L`, `${hg.id}_R`]).forEach(hashCol => {
+          count += getPlaysForMatrixCell(header.id, pt.id, hashCol).length;
+        });
+      });
+    });
+    return count;
+  }, [getPlaysForMatrixCell]);
 
   // Handle adding a new page
   const handleAddPage = useCallback(() => {
@@ -592,7 +625,7 @@ export default function SpreadsheetView({
     const page = spreadsheetData.pages[pageIdx];
     if (!page) return;
 
-    const { isScript = false, rowCount, numbering = 'none', boxColumns = 1 } = options;
+    const { isScript = false, isMatrix = false, rowCount, numbering = 'none', boxColumns = 1, playTypes, hashGroups } = options;
     const colSpan = assignHeaderConfig.colSpan;
 
     // Validate position
@@ -606,19 +639,39 @@ export default function SpreadsheetView({
       return; // Can't drop here
     }
 
+    // Default play types for matrix headers
+    const defaultPlayTypes = [
+      { id: 'strong_run', label: 'STRONG RUN' },
+      { id: 'weak_run', label: 'WEAK RUN' },
+      { id: 'quick_game', label: 'QUICK GAME' },
+      { id: 'dropback', label: 'DROPBACK' }
+    ];
+
+    // Default hash groups for matrix headers (cols use full IDs like 'BASE_L', 'BASE_R')
+    const defaultHashGroups = [
+      { id: 'BASE', label: 'BASE', cols: ['BASE_L', 'BASE_R'] },
+      { id: 'DRESS', label: 'BASE W/ DRESS', cols: ['DRESS_L', 'DRESS_R'] },
+      { id: 'CONV', label: 'CONVERT', cols: ['CONV_L', 'CONV_R'] },
+      { id: 'EXPL', label: 'EXPLOSIVE', cols: ['EXPL_L', 'EXPL_R'] }
+    ];
+
     const newHeader = {
       id: `h_${categoryType}_${item.id}_${Date.now()}`,
       name: item.name,
       colStart: validColStart,
       colSpan: validColSpan,
       rowStart: validRowStart,
-      rowCount: rowCount || null, // Store the user-defined row count (null = extend to next header or page bottom)
-      numbering: numbering || 'none', // Numbering style: none, numeric, alpha, roman, pointed
-      boxColumns: boxColumns || 1, // Number of content columns inside the box (for longer play names)
+      rowCount: isMatrix ? null : (rowCount || null), // Matrix calculates its own row count
+      numbering: isMatrix ? 'none' : (numbering || 'none'), // Matrix doesn't use numbering
+      boxColumns: isMatrix ? 1 : (boxColumns || 1), // Matrix doesn't use boxColumns
       color: item.color || '#3b82f6',
       situationId: item.id,
       categoryType,
-      isScript
+      isScript,
+      isMatrix,
+      // Matrix-specific config
+      playTypes: isMatrix ? (playTypes || defaultPlayTypes) : undefined,
+      hashGroups: isMatrix ? (hashGroups || defaultHashGroups) : undefined
     };
 
     const newLayouts = { ...layouts };
@@ -706,6 +759,23 @@ export default function SpreadsheetView({
         { id: 'script_4', name: '4TH SERIES', color: '#8b5cf6' }
       ]
     });
+
+    // Formation Matrices - creates matrix-style sections with play types as rows and hash groups as columns
+    if (setupConfig?.formations?.length > 0) {
+      templates.push({
+        id: 'formation',
+        name: 'Formations',
+        description: 'Formation-based play matrices',
+        icon: Grid3X3,
+        color: '#06b6d4',
+        isMatrix: true,
+        items: setupConfig.formations.map(f => ({
+          id: f.id || f.name.toLowerCase().replace(/\s+/g, '_'),
+          name: f.name,
+          color: '#06b6d4'
+        }))
+      });
+    }
 
     return templates;
   }, [setupConfig]);
@@ -944,7 +1014,10 @@ export default function SpreadsheetView({
               if (occupancy?.type === 'header' && occupancy.isFirst) {
                 const header = occupancy.header;
                 const overflow = headerOverflow[header.id];
-                const playCount = (headerPlays[header.id] || []).filter(p => p).length;
+                // For matrix headers, count plays across all cells; for regular headers, count from array
+                const playCount = header.isMatrix
+                  ? countMatrixPlays(header)
+                  : (headerPlays[header.id] || []).filter(p => p).length;
 
                 return (
                   <div
@@ -988,6 +1061,7 @@ export default function SpreadsheetView({
                     }}
                   >
                     <span style={{ textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {header.isMatrix && <Grid3X3 size={14} />}
                       {header.name}
                       {playCount > 0 && (
                         <span style={{
@@ -1040,8 +1114,6 @@ export default function SpreadsheetView({
                 const header = occupancy.header;
                 const headerBounds = occupancy.bounds;
                 const contentRowIdx = rowNum - headerBounds.rowStart;
-                const sectionPlays = headerPlays[header.id] || [];
-                const play = sectionPlays[contentRowIdx];
 
                 // Check if this is the first column of a multi-column section
                 const isFirstCol = colNum === headerBounds.colStart;
@@ -1049,6 +1121,219 @@ export default function SpreadsheetView({
 
                 // For multi-column sections, only render on first column
                 if (!isFirstCol) return null;
+
+                const headerColor = header.color || '#3b82f6';
+                const isLastContentRow = rowNum === headerBounds.rowEnd;
+
+                // ===== MATRIX HEADER CONTENT =====
+                if (header.isMatrix) {
+                  const playTypes = header.playTypes || [];
+                  const hashGroups = header.hashGroups || [];
+                  // cols are full IDs like 'BASE_L', 'BASE_R' - use directly as hashCol
+                  const allHashCols = hashGroups.flatMap(hg => (hg.cols || [`${hg.id}_L`, `${hg.id}_R`]).map(colId => ({
+                    groupId: hg.id,
+                    label: hg.label,
+                    col: colId.endsWith('_L') ? 'L' : 'R', // Extract L/R suffix for display
+                    hashCol: colId // Use full col ID directly
+                  })));
+
+                  // First content row = hash group column headers
+                  if (contentRowIdx === 0) {
+                    return (
+                      <div
+                        key={cellKey}
+                        className="spreadsheet-matrix-header-row"
+                        style={{
+                          gridColumn: `${headerBounds.colStart + 1} / span ${sectionColSpan}`,
+                          gridRow: rowNum + 1,
+                          display: 'grid',
+                          gridTemplateColumns: `60px repeat(${allHashCols.length}, 1fr)`,
+                          background: '#334155',
+                          borderLeft: `3px solid ${headerColor}`,
+                          borderRight: `3px solid ${headerColor}`,
+                          borderBottom: '1px solid #475569'
+                        }}
+                        onClick={() => {
+                          if (!isEditing && onHeaderClick) {
+                            onHeaderClick({ pageIdx, header });
+                          }
+                        }}
+                        onDoubleClick={() => {
+                          if (isEditing && onHeaderClick) {
+                            onHeaderClick({ pageIdx, header });
+                          }
+                        }}
+                      >
+                        <div style={{
+                          padding: '2px 4px',
+                          fontSize: '0.55rem',
+                          fontWeight: '600',
+                          color: 'white',
+                          textAlign: 'center',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          TYPE
+                        </div>
+                        {allHashCols.map((hc, hcIdx) => (
+                          <div
+                            key={hc.hashCol}
+                            style={{
+                              padding: '2px 4px',
+                              fontSize: '0.5rem',
+                              fontWeight: '600',
+                              color: 'white',
+                              textAlign: 'center',
+                              borderLeft: hcIdx > 0 && hc.col === 'L' ? '2px solid #1e293b' : '1px solid #475569',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            {hc.label} {hc.col}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  }
+
+                  // Subsequent rows = play type rows
+                  const playTypeIdx = contentRowIdx - 1;
+                  if (playTypeIdx >= 0 && playTypeIdx < playTypes.length) {
+                    const pt = playTypes[playTypeIdx];
+                    const isLastPlayType = playTypeIdx === playTypes.length - 1;
+
+                    return (
+                      <div
+                        key={cellKey}
+                        className="spreadsheet-matrix-play-type-row"
+                        style={{
+                          gridColumn: `${headerBounds.colStart + 1} / span ${sectionColSpan}`,
+                          gridRow: rowNum + 1,
+                          display: 'grid',
+                          gridTemplateColumns: `60px repeat(${allHashCols.length}, 1fr)`,
+                          borderLeft: `3px solid ${headerColor}`,
+                          borderRight: `3px solid ${headerColor}`,
+                          borderBottom: isLastPlayType || isLastContentRow ? `3px solid ${headerColor}` : '1px solid #e2e8f0',
+                          background: playTypeIdx % 2 === 0 ? '#ffffff' : '#f8fafc'
+                        }}
+                        onClick={() => {
+                          if (!isEditing && onHeaderClick) {
+                            onHeaderClick({ pageIdx, header });
+                          }
+                        }}
+                        onDoubleClick={() => {
+                          if (isEditing && onHeaderClick) {
+                            onHeaderClick({ pageIdx, header });
+                          }
+                        }}
+                      >
+                        {/* Play Type Label */}
+                        <div style={{
+                          padding: '2px 4px',
+                          fontSize: '0.55rem',
+                          fontWeight: '600',
+                          color: '#1e40af',
+                          background: '#dbeafe',
+                          display: 'flex',
+                          alignItems: 'center',
+                          borderRight: '1px solid #cbd5e1'
+                        }}>
+                          {pt.label}
+                        </div>
+                        {/* Matrix Cells */}
+                        {allHashCols.map((hc, hcIdx) => {
+                          const cellPlays = getPlaysForMatrixCell(header.id, pt.id, hc.hashCol);
+                          const isFirstInGroup = hc.col === 'L';
+
+                          return (
+                            <div
+                              key={hc.hashCol}
+                              style={{
+                                padding: '2px',
+                                minHeight: '20px',
+                                borderLeft: isFirstInGroup && hcIdx > 0 ? '2px solid #cbd5e1' : '1px solid #e2e8f0',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '1px',
+                                overflow: 'hidden'
+                              }}
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                                e.currentTarget.style.background = '#dbeafe';
+                              }}
+                              onDragLeave={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                e.currentTarget.style.background = 'transparent';
+
+                                let playId = null;
+                                const playData = e.dataTransfer.getData('application/react-dnd');
+                                if (playData) {
+                                  try {
+                                    const parsed = JSON.parse(playData);
+                                    if (parsed.playId) playId = parsed.playId;
+                                  } catch (err) {
+                                    console.error('Error parsing drop data:', err);
+                                  }
+                                }
+                                if (!playId) {
+                                  playId = e.dataTransfer.getData('text/plain');
+                                }
+
+                                if (playId && onAddPlayToSection) {
+                                  // Use special format for matrix cells: headerId, playTypeId, hashCol
+                                  onAddPlayToSection(header.id, pt.id, playId, hc.hashCol);
+                                }
+                              }}
+                            >
+                              {cellPlays.map((p, i) => (
+                                <div key={i} style={{
+                                  fontSize: '0.5rem',
+                                  fontWeight: '500',
+                                  color: '#1e293b',
+                                  background: p.priority ? '#fef08a' : '#f1f5f9',
+                                  padding: '1px 2px',
+                                  borderRadius: '2px',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }}>
+                                  {getPlayDisplayName ? getPlayDisplayName(p) : p.name}
+                                </div>
+                              ))}
+                              {cellPlays.length === 0 && (
+                                <span style={{ color: '#cbd5e1', fontSize: '0.45rem' }}>+</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  }
+
+                  // Extra rows beyond play types - empty with border
+                  return (
+                    <div
+                      key={cellKey}
+                      style={{
+                        gridColumn: `${headerBounds.colStart + 1} / span ${sectionColSpan}`,
+                        gridRow: rowNum + 1,
+                        borderLeft: `3px solid ${headerColor}`,
+                        borderRight: `3px solid ${headerColor}`,
+                        borderBottom: isLastContentRow ? `3px solid ${headerColor}` : '1px solid #e2e8f0',
+                        background: '#f8fafc'
+                      }}
+                    />
+                  );
+                }
+
+                // ===== REGULAR (NON-MATRIX) CONTENT =====
+                const sectionPlays = headerPlays[header.id] || [];
+                const play = sectionPlays[contentRowIdx];
 
                 // Get the numbering style for this header (uses row index, not play count)
                 const numberingStyle = header.numbering || 'none';
@@ -1063,7 +1348,6 @@ export default function SpreadsheetView({
                                   dragOverCell?.isNewHeader;
 
                 // Create a light tint of the header color for the section background
-                const headerColor = header.color || '#3b82f6';
                 const sectionBgBase = contentRowIdx % 2 === 0 ? `${headerColor}08` : `${headerColor}12`;
                 // Different visual for play drops vs new header drops
                 // For multi-column sections, don't highlight the whole row for priority - use border instead
@@ -1081,7 +1365,6 @@ export default function SpreadsheetView({
                 }
 
                 // Section boundary indicators
-                const isLastContentRow = rowNum === headerBounds.rowEnd;
                 const isLastColumn = headerBounds.colEnd >= columns;
 
                 // Calculate column divider positions for multi-column sections
@@ -1145,7 +1428,7 @@ export default function SpreadsheetView({
                           headerBounds.colStart, // Align with section's column start
                           draggedNewHeader.item,
                           draggedNewHeader.categoryType,
-                          { isScript: draggedNewHeader.isScript, rowCount: draggedNewHeader.rowCount, numbering: draggedNewHeader.numbering, boxColumns: draggedNewHeader.boxColumns }
+                          { isScript: draggedNewHeader.isScript, isMatrix: draggedNewHeader.isMatrix, rowCount: draggedNewHeader.rowCount, numbering: draggedNewHeader.numbering, boxColumns: draggedNewHeader.boxColumns, playTypes: draggedNewHeader.playTypes, hashGroups: draggedNewHeader.hashGroups }
                         );
                         setDraggedNewHeader(null);
                       }
@@ -1179,7 +1462,7 @@ export default function SpreadsheetView({
                           headerBounds.colStart, // Align with section's column start
                           draggedNewHeader.item,
                           draggedNewHeader.categoryType,
-                          { isScript: draggedNewHeader.isScript, rowCount: draggedNewHeader.rowCount, numbering: draggedNewHeader.numbering, boxColumns: draggedNewHeader.boxColumns }
+                          { isScript: draggedNewHeader.isScript, isMatrix: draggedNewHeader.isMatrix, rowCount: draggedNewHeader.rowCount, numbering: draggedNewHeader.numbering, boxColumns: draggedNewHeader.boxColumns, playTypes: draggedNewHeader.playTypes, hashGroups: draggedNewHeader.hashGroups }
                         );
                         setDraggedNewHeader(null);
                         return;
@@ -1286,7 +1569,7 @@ export default function SpreadsheetView({
                         colNum,
                         draggedNewHeader.item,
                         draggedNewHeader.categoryType,
-                        { isScript: draggedNewHeader.isScript, rowCount: draggedNewHeader.rowCount, numbering: draggedNewHeader.numbering, boxColumns: draggedNewHeader.boxColumns }
+                        { isScript: draggedNewHeader.isScript, isMatrix: draggedNewHeader.isMatrix, rowCount: draggedNewHeader.rowCount, numbering: draggedNewHeader.numbering, boxColumns: draggedNewHeader.boxColumns, playTypes: draggedNewHeader.playTypes, hashGroups: draggedNewHeader.hashGroups }
                       );
                       setDraggedNewHeader(null);
                     }
@@ -1331,7 +1614,7 @@ export default function SpreadsheetView({
                         colNum,
                         draggedNewHeader.item,
                         draggedNewHeader.categoryType,
-                        { isScript: draggedNewHeader.isScript, rowCount: draggedNewHeader.rowCount, numbering: draggedNewHeader.numbering, boxColumns: draggedNewHeader.boxColumns }
+                        { isScript: draggedNewHeader.isScript, isMatrix: draggedNewHeader.isMatrix, rowCount: draggedNewHeader.rowCount, numbering: draggedNewHeader.numbering, boxColumns: draggedNewHeader.boxColumns, playTypes: draggedNewHeader.playTypes, hashGroups: draggedNewHeader.hashGroups }
                       );
                       setDraggedNewHeader(null);
                     }
@@ -1785,11 +2068,13 @@ export default function SpreadsheetView({
           onClick={() => setPendingHeaderConfig(null)}
         >
           <div
-            className="bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm mx-4 border border-slate-700"
+            className={`bg-slate-800 rounded-xl shadow-2xl w-full mx-4 border border-slate-700 ${pendingHeaderConfig.isMatrix ? 'max-w-lg' : 'max-w-sm'}`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-6 py-4 border-b border-slate-700">
-              <h3 className="text-lg font-bold text-white">Configure Header</h3>
+              <h3 className="text-lg font-bold text-white">
+                {pendingHeaderConfig.isMatrix ? 'Configure Matrix' : 'Configure Header'}
+              </h3>
               <p className="text-sm text-slate-400 mt-1">{pendingHeaderConfig.item.name}</p>
             </div>
 
@@ -1827,125 +2112,226 @@ export default function SpreadsheetView({
                 </div>
               </div>
 
-              {/* Row Count */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Rows Needed
-                </label>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setPendingHeaderConfig(prev => ({
-                      ...prev,
-                      rowCount: Math.max(1, prev.rowCount - 5)
-                    }))}
-                    disabled={pendingHeaderConfig.rowCount <= 1}
-                    className="w-10 h-10 rounded-lg bg-slate-700 text-white font-bold hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    −5
-                  </button>
-                  <button
-                    onClick={() => setPendingHeaderConfig(prev => ({
-                      ...prev,
-                      rowCount: Math.max(1, prev.rowCount - 1)
-                    }))}
-                    disabled={pendingHeaderConfig.rowCount <= 1}
-                    className="w-8 h-10 rounded-lg bg-slate-700 text-white font-bold hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    −
-                  </button>
-                  <span className="text-2xl font-bold text-white w-12 text-center">
-                    {pendingHeaderConfig.rowCount}
-                  </span>
-                  <button
-                    onClick={() => setPendingHeaderConfig(prev => ({
-                      ...prev,
-                      rowCount: Math.min(50, prev.rowCount + 1)
-                    }))}
-                    disabled={pendingHeaderConfig.rowCount >= 50}
-                    className="w-8 h-10 rounded-lg bg-slate-700 text-white font-bold hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    +
-                  </button>
-                  <button
-                    onClick={() => setPendingHeaderConfig(prev => ({
-                      ...prev,
-                      rowCount: Math.min(50, prev.rowCount + 5)
-                    }))}
-                    disabled={pendingHeaderConfig.rowCount >= 50}
-                    className="w-10 h-10 rounded-lg bg-slate-700 text-white font-bold hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    +5
-                  </button>
-                  <span className="text-sm text-slate-400 ml-2">rows</span>
-                </div>
-              </div>
+              {/* Matrix-specific options */}
+              {pendingHeaderConfig.isMatrix ? (
+                <>
+                  {/* Play Types Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Play Types (Rows)
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { id: 'strong_run', label: 'STRONG RUN' },
+                        { id: 'weak_run', label: 'WEAK RUN' },
+                        { id: 'quick_game', label: 'QUICK GAME' },
+                        { id: 'dropback', label: 'DROPBACK' },
+                        { id: 'gadget', label: 'GADGET' },
+                        { id: 'rpo', label: 'RPO' }
+                      ].map(pt => {
+                        const selected = (pendingHeaderConfig.playTypes || [
+                          { id: 'strong_run', label: 'STRONG RUN' },
+                          { id: 'weak_run', label: 'WEAK RUN' },
+                          { id: 'quick_game', label: 'QUICK GAME' },
+                          { id: 'dropback', label: 'DROPBACK' }
+                        ]).some(p => p.id === pt.id);
+                        return (
+                          <button
+                            key={pt.id}
+                            onClick={() => setPendingHeaderConfig(prev => {
+                              const current = prev.playTypes || [
+                                { id: 'strong_run', label: 'STRONG RUN' },
+                                { id: 'weak_run', label: 'WEAK RUN' },
+                                { id: 'quick_game', label: 'QUICK GAME' },
+                                { id: 'dropback', label: 'DROPBACK' }
+                              ];
+                              if (current.some(p => p.id === pt.id)) {
+                                return { ...prev, playTypes: current.filter(p => p.id !== pt.id) };
+                              } else {
+                                return { ...prev, playTypes: [...current, pt] };
+                              }
+                            })}
+                            className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                              selected
+                                ? 'bg-cyan-600 text-white'
+                                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                            }`}
+                          >
+                            {pt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-              {/* Box Columns (internal content columns) */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Box Columns <span className="text-slate-500 font-normal">(for longer play names)</span>
-                </label>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setPendingHeaderConfig(prev => ({
-                      ...prev,
-                      boxColumns: Math.max(1, (prev.boxColumns || 1) - 1)
-                    }))}
-                    disabled={(pendingHeaderConfig.boxColumns || 1) <= 1}
-                    className="w-10 h-10 rounded-lg bg-slate-700 text-white font-bold hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    −
-                  </button>
-                  <span className="text-2xl font-bold text-white w-12 text-center">
-                    {pendingHeaderConfig.boxColumns || 1}
-                  </span>
-                  <button
-                    onClick={() => setPendingHeaderConfig(prev => ({
-                      ...prev,
-                      boxColumns: Math.min(4, (prev.boxColumns || 1) + 1)
-                    }))}
-                    disabled={(pendingHeaderConfig.boxColumns || 1) >= 4}
-                    className="w-10 h-10 rounded-lg bg-slate-700 text-white font-bold hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    +
-                  </button>
-                  <span className="text-sm text-slate-400 ml-2">content columns</span>
-                </div>
-                <p className="text-xs text-slate-500 mt-1">
-                  Use more columns if play names are long. Span controls sheet width.
-                </p>
-              </div>
+                  {/* Hash Groups Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Hash Groups (Columns)
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { id: 'BASE', label: 'BASE', cols: ['BASE_L', 'BASE_R'] },
+                        { id: 'CONV', label: 'CONVERT', cols: ['CONV_L', 'CONV_R'] },
+                        { id: 'EXPL', label: 'EXPLOSIVE', cols: ['EXPL_L', 'EXPL_R'] }
+                      ].map(hg => {
+                        const selected = (pendingHeaderConfig.hashGroups || [
+                          { id: 'BASE', label: 'BASE', cols: ['BASE_L', 'BASE_R'] },
+                          { id: 'CONV', label: 'CONVERT', cols: ['CONV_L', 'CONV_R'] }
+                        ]).some(h => h.id === hg.id);
+                        return (
+                          <button
+                            key={hg.id}
+                            onClick={() => setPendingHeaderConfig(prev => {
+                              const current = prev.hashGroups || [
+                                { id: 'BASE', label: 'BASE', cols: ['BASE_L', 'BASE_R'] },
+                                { id: 'CONV', label: 'CONVERT', cols: ['CONV_L', 'CONV_R'] }
+                              ];
+                              if (current.some(h => h.id === hg.id)) {
+                                return { ...prev, hashGroups: current.filter(h => h.id !== hg.id) };
+                              } else {
+                                return { ...prev, hashGroups: [...current, hg] };
+                              }
+                            })}
+                            className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                              selected
+                                ? 'bg-cyan-600 text-white'
+                                : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                            }`}
+                          >
+                            {hg.label} L/R
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-xs text-slate-500 mt-2">
+                      Each hash group creates L and R columns in the matrix.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Row Count - for non-matrix headers */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Rows Needed
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setPendingHeaderConfig(prev => ({
+                          ...prev,
+                          rowCount: Math.max(1, prev.rowCount - 5)
+                        }))}
+                        disabled={pendingHeaderConfig.rowCount <= 1}
+                        className="w-10 h-10 rounded-lg bg-slate-700 text-white font-bold hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        −5
+                      </button>
+                      <button
+                        onClick={() => setPendingHeaderConfig(prev => ({
+                          ...prev,
+                          rowCount: Math.max(1, prev.rowCount - 1)
+                        }))}
+                        disabled={pendingHeaderConfig.rowCount <= 1}
+                        className="w-8 h-10 rounded-lg bg-slate-700 text-white font-bold hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        −
+                      </button>
+                      <span className="text-2xl font-bold text-white w-12 text-center">
+                        {pendingHeaderConfig.rowCount}
+                      </span>
+                      <button
+                        onClick={() => setPendingHeaderConfig(prev => ({
+                          ...prev,
+                          rowCount: Math.min(50, prev.rowCount + 1)
+                        }))}
+                        disabled={pendingHeaderConfig.rowCount >= 50}
+                        className="w-8 h-10 rounded-lg bg-slate-700 text-white font-bold hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        +
+                      </button>
+                      <button
+                        onClick={() => setPendingHeaderConfig(prev => ({
+                          ...prev,
+                          rowCount: Math.min(50, prev.rowCount + 5)
+                        }))}
+                        disabled={pendingHeaderConfig.rowCount >= 50}
+                        className="w-10 h-10 rounded-lg bg-slate-700 text-white font-bold hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        +5
+                      </button>
+                      <span className="text-sm text-slate-400 ml-2">rows</span>
+                    </div>
+                  </div>
 
-              {/* Numbering Style */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Cell Numbering
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { value: 'none', label: 'None' },
-                    { value: 'numeric', label: '1, 2, 3' },
-                    { value: 'alpha', label: 'A, B, C' },
-                    { value: 'roman', label: 'I, II, III' },
-                    { value: 'pointed', label: '•' }
-                  ].map(opt => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setPendingHeaderConfig(prev => ({
-                        ...prev,
-                        numbering: opt.value
-                      }))}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                        (pendingHeaderConfig.numbering || 'none') === opt.value
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+                  {/* Box Columns (internal content columns) */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Box Columns <span className="text-slate-500 font-normal">(for longer play names)</span>
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setPendingHeaderConfig(prev => ({
+                          ...prev,
+                          boxColumns: Math.max(1, (prev.boxColumns || 1) - 1)
+                        }))}
+                        disabled={(pendingHeaderConfig.boxColumns || 1) <= 1}
+                        className="w-10 h-10 rounded-lg bg-slate-700 text-white font-bold hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        −
+                      </button>
+                      <span className="text-2xl font-bold text-white w-12 text-center">
+                        {pendingHeaderConfig.boxColumns || 1}
+                      </span>
+                      <button
+                        onClick={() => setPendingHeaderConfig(prev => ({
+                          ...prev,
+                          boxColumns: Math.min(4, (prev.boxColumns || 1) + 1)
+                        }))}
+                        disabled={(pendingHeaderConfig.boxColumns || 1) >= 4}
+                        className="w-10 h-10 rounded-lg bg-slate-700 text-white font-bold hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        +
+                      </button>
+                      <span className="text-sm text-slate-400 ml-2">content columns</span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Use more columns if play names are long. Span controls sheet width.
+                    </p>
+                  </div>
+
+                  {/* Numbering Style */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                      Cell Numbering
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { value: 'none', label: 'None' },
+                        { value: 'numeric', label: '1, 2, 3' },
+                        { value: 'alpha', label: 'A, B, C' },
+                        { value: 'roman', label: 'I, II, III' },
+                        { value: 'pointed', label: '•' }
+                      ].map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={() => setPendingHeaderConfig(prev => ({
+                            ...prev,
+                            numbering: opt.value
+                          }))}
+                          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                            (pendingHeaderConfig.numbering || 'none') === opt.value
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
@@ -1966,9 +2352,20 @@ export default function SpreadsheetView({
                     item: pendingHeaderConfig.item,
                     categoryType: pendingHeaderConfig.categoryType,
                     isScript: pendingHeaderConfig.isScript,
+                    isMatrix: pendingHeaderConfig.isMatrix,
                     rowCount: pendingHeaderConfig.rowCount,
                     numbering: pendingHeaderConfig.numbering || 'none',
-                    boxColumns: pendingHeaderConfig.boxColumns || 1
+                    boxColumns: pendingHeaderConfig.boxColumns || 1,
+                    playTypes: pendingHeaderConfig.playTypes || [
+                      { id: 'strong_run', label: 'STRONG RUN' },
+                      { id: 'weak_run', label: 'WEAK RUN' },
+                      { id: 'quick_game', label: 'QUICK GAME' },
+                      { id: 'dropback', label: 'DROPBACK' }
+                    ],
+                    hashGroups: pendingHeaderConfig.hashGroups || [
+                      { id: 'BASE', label: 'BASE', cols: ['BASE_L', 'BASE_R'] },
+                      { id: 'CONV', label: 'CONVERT', cols: ['CONV_L', 'CONV_R'] }
+                    ]
                   });
                   setPendingHeaderConfig(null);
                 }}

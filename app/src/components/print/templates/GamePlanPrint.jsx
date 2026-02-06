@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
 import { useSchool } from '../../../context/SchoolContext';
+import { getSpreadsheetBoxes } from '../../../utils/gamePlanSections';
 
 /**
- * Game Plan print template - supports Sheet, FZDnD, and Matrix views
+ * Game Plan print template - supports Sheet, FZDnD, Matrix, and Spreadsheet views
  * Page formats:
  * - 2-page: 1 sheet front/back (portrait)
  * - 4-page: 2 sheets that create 17x11 spread when assembled (portrait booklet)
@@ -17,6 +18,16 @@ export default function GamePlanPrint({
   fontSize = 'medium'
 }) {
   const { weeks, playsArray, settings } = useSchool();
+
+  // Get spreadsheet layout data for SPREADSHEET viewType
+  const spreadsheetData = useMemo(() => {
+    const week = weeks.find(w => w.id === weekId);
+    if (!week) return { headers: [], sets: [] };
+
+    const headers = getSpreadsheetBoxes(week.gamePlanLayouts);
+    const sets = week.offensiveGamePlan?.sets || [];
+    return { headers, sets };
+  }, [weeks, weekId]);
 
   // Get current week
   const currentWeek = useMemo(() => {
@@ -146,7 +157,9 @@ export default function GamePlanPrint({
         <div key={pageIndex} className="gameplan-page">
           <PageHeader pageNum={pageIndex + 1} />
           <div className={`gameplan-page-content ${fontSizeClass}`}>
-            {viewType === 'fzdnd' ? (
+            {viewType === 'spreadsheet' ? (
+              <SpreadsheetView spreadsheetData={spreadsheetData} playMap={playMap} sections={sections} pageIndex={pageIndex} totalPages={totalPages} />
+            ) : viewType === 'fzdnd' ? (
               <FZDnDView gamePlan={gamePlan} playMap={playMap} sections={sections} pageIndex={pageIndex} totalPages={totalPages} />
             ) : viewType === 'matrix' ? (
               <MatrixView gamePlan={gamePlan} playMap={playMap} sections={sections} pageIndex={pageIndex} totalPages={totalPages} />
@@ -432,6 +445,89 @@ function MatrixView({ gamePlan, playMap, sections, pageIndex = 0, totalPages = 1
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+// Spreadsheet View - Renders the SPREADSHEET layout headers with their plays
+function SpreadsheetView({ spreadsheetData, playMap, sections, pageIndex = 0, totalPages = 1 }) {
+  const { headers, sets } = spreadsheetData;
+
+  // Filter headers if sections specified
+  const filteredHeaders = sections
+    ? headers.filter(h => sections.includes(h.setId) || sections.includes(h.name) || sections.includes(h.headerId))
+    : headers;
+
+  if (filteredHeaders.length === 0 && pageIndex === 0) {
+    return <div className="text-gray-500 text-center py-8">No spreadsheet data available</div>;
+  }
+
+  // Split headers across pages
+  const headersPerPage = Math.ceil(filteredHeaders.length / totalPages);
+  const startIdx = pageIndex * headersPerPage;
+  const endIdx = Math.min(startIdx + headersPerPage, filteredHeaders.length);
+  const pageHeaders = filteredHeaders.slice(startIdx, endIdx);
+
+  if (pageHeaders.length === 0) {
+    return <div className="text-gray-400 text-center py-4 text-sm">Page {pageIndex + 1} - No additional sections</div>;
+  }
+
+  // Group headers by row for grid layout (use colStart to determine grid position)
+  const maxCols = 8;
+
+  return (
+    <div className="space-y-3">
+      <div className="spreadsheet-grid grid gap-2" style={{ gridTemplateColumns: `repeat(${maxCols}, 1fr)` }}>
+        {pageHeaders.map((header, idx) => {
+          // Find plays for this header
+          const set = sets.find(s => s.id === header.setId);
+          const playIds = set?.playIds || set?.assignedPlayIds || [];
+
+          return (
+            <div
+              key={header.setId || idx}
+              className="spreadsheet-box border border-gray-300 rounded overflow-hidden"
+              style={{
+                gridColumn: `span ${Math.min(header.colSpan || 2, maxCols)}`
+              }}
+            >
+              {/* Header */}
+              <div
+                className="spreadsheet-box-header px-2 py-1.5 text-xs font-bold"
+                style={{
+                  backgroundColor: header.color || '#3b82f6',
+                  color: 'white'
+                }}
+              >
+                {header.name}
+                {header.categoryType && (
+                  <span className="font-normal text-white/70 ml-1">({header.categoryType})</span>
+                )}
+              </div>
+
+              {/* Plays */}
+              <div className="spreadsheet-box-content p-2 min-h-[60px]">
+                {playIds.length > 0 ? (
+                  playIds.map((playId, playIdx) => {
+                    const play = playMap[playId];
+                    if (!play) return null;
+                    const playCall = play.formation
+                      ? `${play.formation} ${play.name}`
+                      : play.name;
+                    return (
+                      <div key={playIdx} className="py-0.5 text-xs">
+                        {playCall}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-gray-400 text-xs italic">No plays</div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

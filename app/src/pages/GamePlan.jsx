@@ -758,6 +758,41 @@ export default function GamePlan() {
     const boxCols = header.boxColumns || 1; // Internal content columns (for longer play names)
     const rows = header.rowCount || 20;
 
+    // For matrix headers, use matrix type instead of grid
+    if (header.isMatrix) {
+      setEditingBox({
+        box: {
+          header: header.name,
+          setId: `spreadsheet_${header.id}`,
+          type: 'matrix',
+          color: header.color,
+          colSpan: spreadsheetCols,
+          isSpreadsheetHeader: true,
+          isMatrix: true,
+          headerId: header.id,
+          pageIdx,
+          formationLabel: header.name,
+          // Matrix-specific config
+          playTypes: header.playTypes || [
+            { id: 'strong_run', label: 'STRONG RUN' },
+            { id: 'weak_run', label: 'WEAK RUN' },
+            { id: 'quick_game', label: 'QUICK GAME' },
+            { id: 'dropback', label: 'DROPBACK' }
+          ],
+          hashGroups: header.hashGroups || [
+            { id: 'BASE', label: 'BASE', cols: ['BASE_L', 'BASE_R'] },
+            { id: 'DRESS', label: 'BASE W/ DRESS', cols: ['DRESS_L', 'DRESS_R'] },
+            { id: 'CONV', label: 'CONVERT', cols: ['CONV_L', 'CONV_R'] },
+            { id: 'EXPL', label: 'EXPLOSIVE', cols: ['EXPL_L', 'EXPL_R'] }
+          ]
+        },
+        sectionIdx: pageIdx,
+        boxIdx: 0
+      });
+      return;
+    }
+
+    // Regular (non-matrix) spreadsheet header
     // Generate column headings based on boxColumns (internal layout)
     const gridHeadings = boxCols === 1
       ? ['PLAY']
@@ -788,8 +823,34 @@ export default function GamePlan() {
     });
   }, []);
 
-  const handleSpreadsheetAddPlay = useCallback((headerId, rowIdx, playId) => {
+  const handleSpreadsheetAddPlay = useCallback((headerId, rowIdxOrPlayTypeId, playId, hashCol) => {
     if (isLocked) return;
+
+    // Check if this is a matrix cell add (hashCol is provided)
+    if (hashCol) {
+      // Matrix cell: setId pattern is spreadsheet_${headerId}_${playTypeId}_${hashCol}
+      const playTypeId = rowIdxOrPlayTypeId;
+      const setId = `spreadsheet_${headerId}_${playTypeId}_${hashCol}`;
+      let newSets = [...(gamePlan.sets || [])];
+      let setIndex = newSets.findIndex(s => s.id === setId);
+
+      if (setIndex === -1) {
+        // Create new set for this matrix cell
+        newSets.push({ id: setId, playIds: [playId] });
+      } else {
+        // Add to existing set (matrix cells allow multiple plays)
+        const existingSet = { ...newSets[setIndex] };
+        if (!existingSet.playIds.includes(playId)) {
+          existingSet.playIds = [...(existingSet.playIds || []), playId];
+          newSets[setIndex] = existingSet;
+        }
+      }
+      handleUpdateGamePlan({ ...gamePlan, sets: newSets });
+      return;
+    }
+
+    // Regular spreadsheet add (by row index)
+    const rowIdx = rowIdxOrPlayTypeId;
     const setId = `spreadsheet_${headerId}`;
     let newSets = [...(gamePlan.sets || [])];
     let setIndex = newSets.findIndex(s => s.id === setId);
@@ -814,8 +875,28 @@ export default function GamePlan() {
     handleUpdateGamePlan({ ...gamePlan, sets: newSets });
   }, [gamePlan, handleUpdateGamePlan, isLocked]);
 
-  const handleSpreadsheetRemovePlay = useCallback((headerId, rowIdx) => {
+  const handleSpreadsheetRemovePlay = useCallback((headerId, rowIdxOrPlayTypeId, hashCol, playId) => {
     if (isLocked) return;
+
+    // Check if this is a matrix cell remove (hashCol is provided)
+    if (hashCol) {
+      // Matrix cell: setId pattern is spreadsheet_${headerId}_${playTypeId}_${hashCol}
+      const playTypeId = rowIdxOrPlayTypeId;
+      const setId = `spreadsheet_${headerId}_${playTypeId}_${hashCol}`;
+      let newSets = [...(gamePlan.sets || [])];
+      let setIndex = newSets.findIndex(s => s.id === setId);
+
+      if (setIndex !== -1) {
+        const existingSet = { ...newSets[setIndex] };
+        existingSet.playIds = (existingSet.playIds || []).filter(id => id !== playId);
+        newSets[setIndex] = existingSet;
+        handleUpdateGamePlan({ ...gamePlan, sets: newSets });
+      }
+      return;
+    }
+
+    // Regular spreadsheet remove (by row index)
+    const rowIdx = rowIdxOrPlayTypeId;
     const setId = `spreadsheet_${headerId}`;
     let newSets = [...(gamePlan.sets || [])];
     let setIndex = newSets.findIndex(s => s.id === setId);
@@ -1813,7 +1894,10 @@ export default function GamePlan() {
                     boxColumns: cleanUpdates.gridColumns !== undefined ? cleanUpdates.gridColumns : h.boxColumns,
                     // Save rowCount from gridRows (modal uses gridRows internally)
                     rowCount: cleanUpdates.gridRows !== undefined ? cleanUpdates.gridRows : h.rowCount,
-                    numbering: cleanUpdates.numbering !== undefined ? cleanUpdates.numbering : h.numbering
+                    numbering: cleanUpdates.numbering !== undefined ? cleanUpdates.numbering : h.numbering,
+                    // Matrix-specific: save playTypes and hashGroups for adding/removing rows/columns
+                    playTypes: cleanUpdates.playTypes !== undefined ? cleanUpdates.playTypes : h.playTypes,
+                    hashGroups: cleanUpdates.hashGroups !== undefined ? cleanUpdates.hashGroups : h.hashGroups
                   } : h
                 )
               };
