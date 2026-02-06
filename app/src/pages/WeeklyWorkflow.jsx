@@ -162,10 +162,14 @@ const QUICK_TIPS = [
 
 export default function WeeklyWorkflow() {
   const { weekId } = useParams();
-  const { currentWeekId } = useSchool();
+  const { currentWeekId, settings, school } = useSchool();
 
   // Use URL weekId or fall back to current week
   const activeWeekId = weekId || currentWeekId;
+
+  // Get theme
+  const theme = settings?.theme || school?.settings?.theme || 'dark';
+  const isLight = theme === 'light';
 
   const getToolPath = (tool) => {
     if (tool.absolute) return tool.path;
@@ -177,46 +181,54 @@ export default function WeeklyWorkflow() {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 bg-sky-500/20 rounded-lg">
-            <Calendar size={24} className="text-sky-400" />
+          <div className={`p-2 rounded-lg ${isLight ? 'bg-sky-100' : 'bg-sky-500/20'}`}>
+            <Calendar size={24} className={isLight ? 'text-sky-600' : 'text-sky-400'} />
           </div>
-          <h1 className="text-2xl font-bold text-white">Weekly Workflow Guide</h1>
+          <h1 className={`text-2xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>Weekly Workflow Guide</h1>
         </div>
-        <p className="text-slate-400 ml-12">
+        <p className={`ml-12 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
           A suggested flow for getting the most out of DoFO throughout your game week
         </p>
       </div>
 
       {/* Intro Card */}
-      <div className="bg-gradient-to-r from-sky-500/20 to-purple-500/20 rounded-xl p-6 mb-8 border border-sky-500/30">
-        <h2 className="text-lg font-semibold text-white mb-3">How It All Fits Together</h2>
-        <p className="text-slate-300 text-sm leading-relaxed mb-4">
+      <div className={`rounded-xl p-6 mb-8 border ${
+        isLight
+          ? 'bg-sky-50 border-sky-200'
+          : 'bg-slate-800 border-slate-700'
+      }`}>
+        <h2 className={`text-lg font-semibold mb-3 ${isLight ? 'text-gray-900' : 'text-white'}`}>How It All Fits Together</h2>
+        <p className={`text-sm leading-relaxed mb-4 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
           We understand that for most teams, game plans evolve as the week goes on. That's why we've built
           tools that work together but don't force you into a rigid process.
         </p>
-        <p className="text-slate-300 text-sm leading-relaxed mb-4">
-          The <strong className="text-sky-400">Install Manager</strong> gives you a place to house plays
+        <p className={`text-sm leading-relaxed mb-4 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+          The <strong className={isLight ? 'text-sky-600' : 'text-sky-400'}>Install Manager</strong> gives you a place to house plays
           that are new or a priority for this week. As the week progresses, you may want to transition
-          focus to the <strong className="text-sky-400">Game Plan/Call Sheet</strong> - organizing plays
+          focus to the <strong className={isLight ? 'text-sky-600' : 'text-sky-400'}>Game Plan/Call Sheet</strong> - organizing plays
           by situation so you're ready to roll on Friday.
         </p>
-        <p className="text-slate-300 text-sm leading-relaxed">
+        <p className={`text-sm leading-relaxed ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
           It's also totally fine to skip the Install Manager and work directly in the Call Sheet -
-          especially if you're not adding many new plays each week. <strong className="text-white">Use what works for your staff.</strong>
+          especially if you're not adding many new plays each week. <strong className={isLight ? 'text-gray-900' : 'text-white'}>Use what works for your staff.</strong>
         </p>
       </div>
 
       {/* Day-by-Day Timeline */}
       <div className="mb-10">
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Calendar size={20} className="text-sky-400" />
+        <h2 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
+          <Calendar size={20} className={isLight ? 'text-sky-600' : 'text-sky-400'} />
           Suggested Daily Flow
         </h2>
         <div className="space-y-3">
           {WEEKLY_TIMELINE.map((day, index) => (
             <div
               key={day.day}
-              className="bg-slate-800/50 rounded-lg overflow-hidden border border-slate-700/50 hover:border-slate-600/50 transition-colors"
+              className={`rounded-lg overflow-hidden border transition-colors ${
+                isLight
+                  ? 'bg-white border-gray-200 hover:border-gray-300 shadow-sm'
+                  : 'bg-slate-800/80 border-slate-700 hover:border-slate-600'
+              }`}
             >
               <div className="flex items-stretch">
                 {/* Day badge */}
@@ -228,8 +240,8 @@ export default function WeeklyWorkflow() {
                 <div className="flex-1 p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
-                      <h3 className="text-white font-medium mb-1">{day.focus}</h3>
-                      <p className="text-slate-400 text-sm">{day.description}</p>
+                      <h3 className={`font-medium mb-1 ${isLight ? 'text-gray-900' : 'text-white'}`}>{day.focus}</h3>
+                      <p className={`text-sm ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>{day.description}</p>
                     </div>
 
                     {/* Tool links */}
@@ -238,7 +250,11 @@ export default function WeeklyWorkflow() {
                         <Link
                           key={tool.name}
                           to={getToolPath(tool)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700/50 hover:bg-slate-700 rounded-lg text-xs text-slate-300 hover:text-white transition-colors"
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                            isLight
+                              ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-gray-900'
+                              : 'bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white'
+                          }`}
                         >
                           <tool.icon size={12} />
                           <span>{tool.name}</span>
@@ -255,33 +271,37 @@ export default function WeeklyWorkflow() {
 
       {/* Workflow Options */}
       <div className="mb-10">
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <ArrowRight size={20} className="text-sky-400" />
+        <h2 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
+          <ArrowRight size={20} className={isLight ? 'text-sky-600' : 'text-sky-400'} />
           Choose Your Workflow
         </h2>
         <div className="grid md:grid-cols-3 gap-4">
           {WORKFLOW_OPTIONS.map((option) => (
             <div
               key={option.title}
-              className={`bg-slate-800/50 rounded-lg p-5 border ${
+              className={`rounded-lg p-5 border ${
                 option.recommended
-                  ? 'border-sky-500/50 ring-1 ring-sky-500/20'
-                  : 'border-slate-700/50'
+                  ? isLight
+                    ? 'bg-sky-50 border-sky-300 ring-1 ring-sky-200'
+                    : 'bg-slate-800 border-sky-500/50 ring-1 ring-sky-500/20'
+                  : isLight
+                    ? 'bg-white border-gray-200 shadow-sm'
+                    : 'bg-slate-800/80 border-slate-700'
               }`}
             >
               <div className="flex items-start justify-between mb-2">
-                <h3 className="text-white font-medium">{option.title}</h3>
+                <h3 className={`font-medium ${isLight ? 'text-gray-900' : 'text-white'}`}>{option.title}</h3>
                 {option.recommended && (
                   <span className="text-[10px] font-bold bg-sky-500 text-white px-2 py-0.5 rounded-full">
                     RECOMMENDED
                   </span>
                 )}
               </div>
-              <p className="text-slate-400 text-xs mb-4">{option.description}</p>
+              <p className={`text-xs mb-4 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>{option.description}</p>
               <ul className="space-y-2">
                 {option.steps.map((step, i) => (
-                  <li key={i} className="flex items-start gap-2 text-xs text-slate-300">
-                    <span className="text-sky-400 mt-0.5 flex-shrink-0">{i + 1}.</span>
+                  <li key={i} className={`flex items-start gap-2 text-xs ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
+                    <span className={`mt-0.5 flex-shrink-0 ${isLight ? 'text-sky-600' : 'text-sky-400'}`}>{i + 1}.</span>
                     <span>{step}</span>
                   </li>
                 ))}
@@ -293,23 +313,27 @@ export default function WeeklyWorkflow() {
 
       {/* Quick Tips */}
       <div className="mb-8">
-        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Lightbulb size={20} className="text-amber-400" />
+        <h2 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
+          <Lightbulb size={20} className="text-amber-500" />
           Quick Tips
         </h2>
-        <div className="bg-slate-800/50 rounded-lg p-5 border border-slate-700/50">
+        <div className={`rounded-lg p-5 border ${
+          isLight
+            ? 'bg-amber-50 border-amber-200'
+            : 'bg-slate-800/80 border-slate-700'
+        }`}>
           <ul className="space-y-4">
             {QUICK_TIPS.map((item, index) => (
               <li key={index} className="flex items-start gap-3">
-                <div className="p-1.5 bg-amber-500/20 rounded-lg flex-shrink-0 mt-0.5">
-                  <item.icon size={14} className="text-amber-400" />
+                <div className={`p-1.5 rounded-lg flex-shrink-0 mt-0.5 ${isLight ? 'bg-amber-100' : 'bg-amber-500/20'}`}>
+                  <item.icon size={14} className="text-amber-500" />
                 </div>
-                <div className="text-sm text-slate-300">
+                <div className={`text-sm ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
                   {item.tip}
                   {item.link && (
                     <Link
                       to={item.link}
-                      className="ml-2 text-sky-400 hover:text-sky-300 underline"
+                      className={`ml-2 underline ${isLight ? 'text-sky-600 hover:text-sky-700' : 'text-sky-400 hover:text-sky-300'}`}
                     >
                       {item.linkText}
                     </Link>
@@ -322,8 +346,8 @@ export default function WeeklyWorkflow() {
       </div>
 
       {/* CTA */}
-      <div className="text-center py-6 border-t border-slate-700/50">
-        <p className="text-slate-400 text-sm mb-4">
+      <div className={`text-center py-6 border-t ${isLight ? 'border-gray-200' : 'border-slate-700/50'}`}>
+        <p className={`text-sm mb-4 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
           Ready to get started? Pick up where you left off or start fresh.
         </p>
         <div className="flex justify-center gap-3">
@@ -338,7 +362,11 @@ export default function WeeklyWorkflow() {
               </Link>
               <Link
                 to={`/week/${activeWeekId}/game-plan`}
-                className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors"
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isLight
+                    ? 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+                    : 'bg-slate-700 hover:bg-slate-600 text-white'
+                }`}
               >
                 <Clipboard size={16} />
                 Game Plan
