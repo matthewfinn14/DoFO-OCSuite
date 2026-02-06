@@ -139,68 +139,9 @@ export default function SpreadsheetView({
   // Zoom level for page view (50% to 150%)
   const [zoomLevel, setZoomLevel] = useState(100);
 
-  // Print mode state - toggled by beforeprint/afterprint events
-  const [isPrintMode, setIsPrintMode] = useState(false);
-
   // Calculate row height based on orientation
   const isLandscape = pageOrientation === 'landscape';
   const rowHeight = isLandscape ? 12 : 13;
-
-  // ============================================================
-  // PRINT CONFIGURATION CONSTANTS
-  // ============================================================
-  const PRINT_ROW_HEIGHT = 24; // Fixed row height in pixels (configurable)
-  const PRINT_HEADER_HEIGHT = 36; // Sheet title header height
-  const PRINT_PAGE_PADDING = 16; // Top + bottom padding combined
-  const PRINT_DPI = 96; // Standard screen DPI
-
-  /**
-   * Compute print pagination dimensions
-   * Returns rowsPerPage for explicit page breaks
-   */
-  const computePrintPagination = useCallback((totalRows) => {
-    // Letter paper dimensions
-    const pageWidthIn = isLandscape ? 11 : 8.5;
-    const pageHeightIn = isLandscape ? 8.5 : 11;
-    const marginIn = 0.25;
-
-    // Available height in pixels
-    const pageHeightPx = (pageHeightIn - marginIn * 2) * PRINT_DPI;
-    const availableHeightPx = pageHeightPx - PRINT_HEADER_HEIGHT - PRINT_PAGE_PADDING;
-
-    // Calculate rows that fit per page
-    const rowsPerPage = Math.floor(availableHeightPx / PRINT_ROW_HEIGHT);
-
-    // Calculate number of pages needed
-    const pageCount = Math.ceil(totalRows / rowsPerPage);
-
-    return {
-      rowsPerPage,
-      pageCount,
-      rowHeight: PRINT_ROW_HEIGHT,
-      pageHeightPx,
-      availableHeightPx
-    };
-  }, [isLandscape]);
-
-  // Listen for print events to toggle print mode
-  useEffect(() => {
-    const handleBeforePrint = () => {
-      setIsPrintMode(true);
-    };
-
-    const handleAfterPrint = () => {
-      setIsPrintMode(false);
-    };
-
-    window.addEventListener('beforeprint', handleBeforePrint);
-    window.addEventListener('afterprint', handleAfterPrint);
-
-    return () => {
-      window.removeEventListener('beforeprint', handleBeforePrint);
-      window.removeEventListener('afterprint', handleAfterPrint);
-    };
-  }, []);
 
   // Get spreadsheet layout data
   const spreadsheetData = layouts?.SPREADSHEET || {
@@ -1769,487 +1710,168 @@ export default function SpreadsheetView({
     );
   };
 
-  // Calculate print page dimensions based on format and orientation
-  // 4-page booklet uses 17x11 (tabloid/ledger), 2-page uses letter
+  // Calculate print page size based on format and orientation
   const printPageSize = pageFormat === '4-page'
-    ? '17in 11in'  // Tabloid/Ledger landscape (two portrait pages side-by-side)
+    ? '17in 11in'
     : (isLandscape ? 'landscape' : 'portrait');
 
   // ============================================================
-  // DEDICATED PRINT DOM - Static tables with explicit pagination
-  // ============================================================
-
-  /**
-   * A) computeUsedBounds - Find last used row and column
-   * A "used cell" is defined as:
-   * - Has non-empty text (play assigned), OR
-   * - Is covered by a header (intentional colored block), OR
-   * - Has non-default background color
-   */
-  const computeUsedBounds = (page, headerBounds, getPlaysForHeader) => {
-    const { columns, rows, headers } = page;
-    let maxUsedRow = 0;
-    let maxUsedCol = 0;
-
-    // Scan all headers to find their extent
-    (headers || []).forEach(header => {
-      const hb = headerBounds[header.id];
-      if (!hb) return;
-
-      // Header itself uses its row and columns
-      if (header.rowStart > maxUsedRow) maxUsedRow = header.rowStart;
-      const headerColEnd = header.colStart + header.colSpan - 1;
-      if (headerColEnd > maxUsedCol) maxUsedCol = headerColEnd;
-
-      // Check content rows - find last row with actual plays
-      const plays = getPlaysForHeader(header.id);
-      const boxColumns = header.boxColumns || 1;
-
-      if (plays.length > 0) {
-        // Calculate which row the last play occupies
-        const lastPlayIdx = plays.length - 1;
-        const lastPlayRow = Math.floor(lastPlayIdx / boxColumns);
-        const actualLastContentRow = header.rowStart + 1 + lastPlayRow;
-
-        if (actualLastContentRow > maxUsedRow) {
-          maxUsedRow = actualLastContentRow;
-        }
-        if (headerColEnd > maxUsedCol) {
-          maxUsedCol = headerColEnd;
-        }
-      } else {
-        // No plays, but header exists - include header row only
-        // (empty sections still show their header)
-        if (header.rowStart > maxUsedRow) maxUsedRow = header.rowStart;
-      }
-    });
-
-    // Ensure at least 1 row and 1 column if there are any headers
-    if ((headers || []).length > 0) {
-      maxUsedRow = Math.max(maxUsedRow, 1);
-      maxUsedCol = Math.max(maxUsedCol, 1);
-    }
-
-    // Log for debugging
-    console.log('[PRINT DEBUG] computeUsedBounds:', {
-      maxUsedRow,
-      maxUsedCol,
-      totalGridRows: rows,
-      totalGridCols: columns,
-      headerCount: (headers || []).length
-    });
-
-    return { maxUsedRow, maxUsedCol };
-  };
-
-  /**
-   * B) paginatePrintMatrix - Calculate pagination for reduced matrix
-   * Only paginates the used portion, no synthetic padding
-   */
-  const paginatePrintMatrix = (usedRowCount, usedColCount) => {
-    // Available height for content (landscape letter: 8.5" - margins - header)
-    const pageHeightIn = isLandscape ? 8.5 : 11;
-    const marginIn = 0.25;
-    const headerHeightPx = PRINT_HEADER_HEIGHT;
-    const footerHeightPx = 0; // No footer
-
-    const availableHeightPx = ((pageHeightIn - marginIn * 2) * PRINT_DPI) - headerHeightPx - footerHeightPx;
-
-    // Calculate rows per page (NO padding, NO minimum)
-    const rowsPerPage = Math.floor(availableHeightPx / PRINT_ROW_HEIGHT);
-
-    // Calculate actual pages needed (could be 1 if content fits)
-    const totalPages = usedRowCount <= rowsPerPage ? 1 : Math.ceil(usedRowCount / rowsPerPage);
-
-    // Log for debugging
-    console.log('[PRINT DEBUG] paginatePrintMatrix:', {
-      usedRowCount,
-      usedColCount,
-      rowsPerPage,
-      totalPages,
-      availableHeightPx,
-      rowHeight: PRINT_ROW_HEIGHT
-    });
-
-    return {
-      rowsPerPage,
-      totalPages,
-      usedRowCount,
-      usedColCount
-    };
-  };
-
-  const renderPrintDOM = () => {
-    return spreadsheetData.pages.map((page, pageIdx) => {
-      const { columns, rows, headers } = page;
-
-      // Build section bounds (same logic as edit view)
-      const bounds = calculateSectionBounds(page);
-
-      // Get plays for a header
-      const getHeaderPlays = (headerId) => {
-        const set = gamePlan?.sets?.find(s => s.id === `spreadsheet_${headerId}`);
-        if (!set) return [];
-        return (set.assignedPlayIds || []).map(id => plays.find(p => p.id === id)).filter(Boolean);
-      };
-
-      // A) Compute used bounds - find last meaningful row/col
-      const { maxUsedRow, maxUsedCol } = computeUsedBounds(page, bounds, getHeaderPlays);
-
-      // If no content, render minimal placeholder
-      if (maxUsedRow === 0 || maxUsedCol === 0) {
-        return (
-          <div key={`print-sheet-${pageIdx}`} className="print-sheet">
-            <div className="print-page">
-              <div className="print-sheet-header" style={{
-                padding: '8px',
-                borderBottom: '2px solid #1e293b',
-                background: '#f8fafc'
-              }}>
-                {teamLogo && <img src={teamLogo} alt="Team" style={{ height: '24px', marginRight: '8px' }} />}
-                <span style={{ fontWeight: 'bold' }}>{weekTitle} {opponentTitle}</span>
-              </div>
-              <div style={{ padding: '20px', color: '#64748b', fontStyle: 'italic' }}>
-                No content to print
-              </div>
-            </div>
-          </div>
-        );
-      }
-
-      // B) Paginate the reduced matrix
-      const pagination = paginatePrintMatrix(maxUsedRow, maxUsedCol);
-      const { rowsPerPage, totalPages } = pagination;
-
-      // Calculate column width based on USED columns only
-      const colWidth = `${100 / maxUsedCol}%`;
-
-      // Build cell data matrix for USED bounds only: [row][col]
-      const cellMatrix = [];
-      for (let r = 1; r <= maxUsedRow; r++) {
-        cellMatrix[r] = [];
-        for (let c = 1; c <= maxUsedCol; c++) {
-          cellMatrix[r][c] = { type: 'empty', header: null };
-        }
-      }
-
-      // Fill cell matrix with header/content data (only within used bounds)
-      (headers || []).forEach(header => {
-        const hb = bounds[header.id];
-        if (!hb) return;
-
-        // Skip headers that start beyond our used bounds
-        if (header.rowStart > maxUsedRow) return;
-        if (header.colStart > maxUsedCol) return;
-
-        // Clamp header extent to used bounds
-        const effectiveColEnd = Math.min(hb.colEnd, maxUsedCol);
-        const effectiveRowEnd = Math.min(hb.rowEnd, maxUsedRow);
-        const effectiveColSpan = Math.min(header.colSpan, maxUsedCol - header.colStart + 1);
-
-        // Header row
-        if (header.rowStart <= maxUsedRow) {
-          for (let c = header.colStart; c <= effectiveColEnd; c++) {
-            if (cellMatrix[header.rowStart]) {
-              cellMatrix[header.rowStart][c] = {
-                type: c === header.colStart ? 'header' : 'header-span',
-                header: { ...header, colSpan: effectiveColSpan },
-                colSpan: c === header.colStart ? effectiveColSpan : 0
-              };
-            }
-          }
-        }
-
-        // Content rows
-        for (let r = header.rowStart + 1; r <= effectiveRowEnd; r++) {
-          for (let c = header.colStart; c <= effectiveColEnd; c++) {
-            if (cellMatrix[r]) {
-              cellMatrix[r][c] = {
-                type: c === header.colStart ? 'content' : 'content-span',
-                header: { ...header, colSpan: effectiveColSpan },
-                contentRowIdx: r - header.rowStart - 1,
-                colSpan: c === header.colStart ? effectiveColSpan : 0
-              };
-            }
-          }
-        }
-      });
-
-      // Render a single print page (subset of rows)
-      const renderPrintPage = (startRow, endRow, printPageNum, isLastPage) => {
-        return (
-          <div
-            key={`print-page-${pageIdx}-${printPageNum}`}
-            className="print-page"
-            style={{
-              width: '100%',
-              pageBreakAfter: isLastPage ? 'auto' : 'always',
-              breakAfter: isLastPage ? 'auto' : 'page'
-            }}
-          >
-            {/* Sheet Header - "Week 1 vs. Opponent" */}
-            <div
-              className="print-sheet-header"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '4px 8px',
-                borderBottom: '2px solid #1e293b',
-                background: '#f8fafc',
-                height: `${PRINT_HEADER_HEIGHT}px`,
-                boxSizing: 'border-box'
-              }}
-            >
-              {teamLogo && (
-                <img src={teamLogo} alt="Team" style={{ height: '24px', width: 'auto' }} />
-              )}
-              <div style={{ fontWeight: 'bold', fontSize: '12pt', color: '#0f172a' }}>
-                {weekTitle} {opponentTitle}
-              </div>
-              {totalPages > 1 && (
-                <span style={{ marginLeft: 'auto', fontSize: '9pt', color: '#64748b' }}>
-                  Page {printPageNum} of {totalPages}
-                </span>
-              )}
-            </div>
-
-            {/* Static Table Grid - uses ONLY maxUsedCol columns */}
-            <table
-              className="print-grid-table"
-              style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                tableLayout: 'fixed',
-                border: '1px solid #64748b'
-              }}
-            >
-              <colgroup>
-                {Array.from({ length: maxUsedCol }, (_, i) => (
-                  <col key={i} style={{ width: colWidth }} />
-                ))}
-              </colgroup>
-              <tbody>
-                {Array.from({ length: endRow - startRow + 1 }, (_, rowOffset) => {
-                  const rowNum = startRow + rowOffset;
-                  const rowCells = cellMatrix[rowNum] || [];
-
-                  return (
-                    <tr key={rowNum} style={{ height: `${PRINT_ROW_HEIGHT}px` }}>
-                      {Array.from({ length: maxUsedCol }, (_, colIdx) => {
-                        const colNum = colIdx + 1;
-                        const cell = rowCells[colNum] || { type: 'empty' };
-
-                        // Skip spanned cells
-                        if (cell.type === 'header-span' || cell.type === 'content-span') {
-                          return null;
-                        }
-
-                        const colSpan = cell.colSpan || 1;
-                        const headerColor = cell.header?.color || '#3b82f6';
-
-                        // Header cell
-                        if (cell.type === 'header') {
-                          const headerPlays = getHeaderPlays(cell.header.id);
-                          const playCount = headerPlays.length;
-
-                          return (
-                            <td
-                              key={colNum}
-                              colSpan={colSpan}
-                              style={{
-                                height: `${PRINT_ROW_HEIGHT}px`,
-                                background: headerColor,
-                                color: '#fff',
-                                fontWeight: 'bold',
-                                fontSize: '8pt',
-                                textTransform: 'uppercase',
-                                padding: '0 4px',
-                                border: `2px solid ${headerColor}`,
-                                borderBottom: 'none',
-                                overflow: 'hidden',
-                                whiteSpace: 'nowrap',
-                                verticalAlign: 'middle',
-                                WebkitPrintColorAdjust: 'exact',
-                                printColorAdjust: 'exact'
-                              }}
-                            >
-                              {cell.header.name}
-                              {playCount > 0 && (
-                                <span style={{
-                                  marginLeft: '6px',
-                                  fontSize: '7pt',
-                                  background: 'rgba(255,255,255,0.25)',
-                                  padding: '1px 4px',
-                                  borderRadius: '3px'
-                                }}>
-                                  {playCount}
-                                </span>
-                              )}
-                            </td>
-                          );
-                        }
-
-                        // Content cell
-                        if (cell.type === 'content') {
-                          const headerPlays = getHeaderPlays(cell.header.id);
-                          const boxColumns = cell.header.boxColumns || 1;
-                          const playIdx = cell.contentRowIdx * boxColumns;
-                          const play = headerPlays[playIdx];
-                          const hb = bounds[cell.header.id];
-                          const isLastRow = rowNum === hb?.rowEnd;
-
-                          // Alternating row background
-                          const rowBg = cell.contentRowIdx % 2 === 0 ? '#ffffff' : '#f8fafc';
-
-                          return (
-                            <td
-                              key={colNum}
-                              colSpan={colSpan}
-                              style={{
-                                height: `${PRINT_ROW_HEIGHT}px`,
-                                background: rowBg,
-                                fontSize: '7pt',
-                                padding: '0 4px',
-                                borderLeft: `2px solid ${headerColor}`,
-                                borderRight: `2px solid ${headerColor}`,
-                                borderBottom: isLastRow ? `2px solid ${headerColor}` : '1px solid #e2e8f0',
-                                overflow: 'hidden',
-                                whiteSpace: 'nowrap',
-                                textOverflow: 'ellipsis',
-                                verticalAlign: 'middle',
-                                WebkitPrintColorAdjust: 'exact',
-                                printColorAdjust: 'exact'
-                              }}
-                            >
-                              {play && (
-                                <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                  {cell.header.numbering === 'numeric' && `${cell.contentRowIdx + 1}. `}
-                                  {getPlayDisplayName ? getPlayDisplayName(play) : play.name}
-                                </span>
-                              )}
-                            </td>
-                          );
-                        }
-
-                        // Empty cell
-                        return (
-                          <td
-                            key={colNum}
-                            style={{
-                              height: `${PRINT_ROW_HEIGHT}px`,
-                              background: '#ffffff',
-                              borderBottom: '1px solid #e2e8f0',
-                              borderRight: colNum < maxUsedCol ? '1px solid #e2e8f0' : 'none',
-                              padding: 0,
-                              verticalAlign: 'middle'
-                            }}
-                          />
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        );
-      };
-
-      // C) Generate paginated pages - using ONLY maxUsedRow rows
-      const printPages = [];
-
-      // Log final pagination
-      console.log('[PRINT DEBUG] Final pagination:', {
-        maxUsedRow,
-        maxUsedCol,
-        rowsPerPage,
-        totalPages,
-        willFitOnOnePage: maxUsedRow <= rowsPerPage
-      });
-
-      for (let p = 0; p < totalPages; p++) {
-        const startRow = p * rowsPerPage + 1;
-        const endRow = Math.min((p + 1) * rowsPerPage, maxUsedRow);
-        const isLastPage = p === totalPages - 1;
-
-        printPages.push(renderPrintPage(startRow, endRow, p + 1, isLastPage));
-      }
-
-      return (
-        <div key={`print-sheet-${pageIdx}`} className="print-sheet">
-          {printPages}
-        </div>
-      );
-    });
-  };
-
-  // ============================================================
-  // RENDER: Always render both DOMs, CSS controls visibility
-  // - Edit DOM: visible on screen, hidden on print
-  // - Print DOM: hidden on screen, visible on print
-  // This ensures print DOM is ready when print dialog opens
+  // RENDER
   // ============================================================
 
   return (
-    <>
-      {/* PRINT DOM - Hidden on screen, visible when printing */}
-      <div className="print-only-container">
-        <style>{`
-          /* Print-only container: hidden on screen, visible in print */
-          @media screen {
-            .print-only-container {
-              display: none !important;
-              visibility: hidden !important;
-              height: 0 !important;
-              overflow: hidden !important;
-            }
+    <div className="h-full flex flex-col spreadsheet-view">
+      {/* Print styles - applied when printing */}
+      <style>
+        {`
+          /* Screen styles */
+          .spreadsheet-view {
+            background: #1e293b;
           }
+
+          /* Print styles */
           @media print {
             @page {
               size: ${printPageSize};
               margin: 0.25in;
             }
-            .print-only-container {
-              display: block !important;
-              visibility: visible !important;
-              width: 100% !important;
+
+            /* Hide UI elements and navigation */
+            .no-print,
+            .spreadsheet-row-number,
+            .page-info-subtitle,
+            button,
+            [class*="modal"],
+            [class*="sidebar"] {
+              display: none !important;
+              visibility: hidden !important;
+            }
+
+            /* Reset all containers for print */
+            html, body {
+              height: auto !important;
+              overflow: visible !important;
               background: white !important;
             }
-            .print-page {
-              width: 100%;
-              background: white;
-            }
-            .print-sheet-header {
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            .print-grid-table {
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            .print-grid-table td {
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-          }
-        `}</style>
-        {renderPrintDOM()}
-      </div>
 
-      {/* EDIT DOM - Visible on screen, hidden when printing */}
-    <div className="h-full flex flex-col spreadsheet-view spreadsheet-view-screen">
-      {/* Dynamic styles - Edit view only (print uses dedicated DOM) */}
-      <style>
-        {`
-          .spreadsheet-view-screen {
-            background: #1e293b;
-          }
+            .spreadsheet-view {
+              background: white !important;
+              height: auto !important;
+              overflow: visible !important;
+              display: block !important;
+            }
 
-          /* Hide edit DOM during print - dedicated print DOM is used instead */
-          @media print {
-            .spreadsheet-view-screen {
-              display: none !important;
+            .spreadsheet-main-area,
+            .spreadsheet-scroll-area,
+            .spreadsheet-pages-wrapper,
+            .spreadsheet-zoom-wrapper {
+              display: block !important;
+              overflow: visible !important;
+              height: auto !important;
+              transform: none !important;
+              padding: 0 !important;
+              margin: 0 !important;
+              background: white !important;
+              width: 100% !important;
+            }
+
+            /* Page container for print - fills the print page */
+            .spreadsheet-page {
+              width: 100% !important;
+              /* Use fixed heights based on page orientation */
+              height: ${isLandscape ? '7.5in' : '10in'} !important;
+              max-height: ${isLandscape ? '7.5in' : '10in'} !important;
+              aspect-ratio: auto !important;
+              border: none !important;
+              border-radius: 0 !important;
+              box-shadow: none !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              page-break-after: always;
+              break-after: page;
+              display: flex !important;
+              flex-direction: column !important;
+              overflow: hidden !important;
+            }
+
+            .spreadsheet-page:last-child {
+              page-break-after: auto;
+              break-after: auto;
+            }
+
+            /* Week header styling - keep visible */
+            .print-compact-header {
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+              padding: 4px 8px !important;
+              height: 36px !important;
+              min-height: 36px !important;
+              flex-shrink: 0 !important;
+              display: flex !important;
+              align-items: center !important;
+              border-bottom: 2px solid #1e293b !important;
+              background: #f8fafc !important;
+            }
+
+            /* Grid container - fills remaining space */
+            .spreadsheet-grid {
+              border: 1px solid #94a3b8 !important;
+              padding: 0 !important;
+              /* Collapse first column (row numbers) to 0, keep content columns equal */
+              grid-template-columns: 0 repeat(var(--grid-columns), 1fr) !important;
+              /* Collapse first row (column headers) to 0, make all content rows equal height */
+              grid-template-rows: 0 repeat(var(--grid-rows), 1fr) !important;
+              gap: 0 !important;
+              /* Fill remaining page height */
+              flex: 1 !important;
+              min-height: 0 !important;
+              overflow: hidden !important;
+            }
+
+            /* All grid cells - uniform height and color preservation */
+            .spreadsheet-grid > div {
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+              overflow: hidden !important;
+              min-height: 0 !important;
+            }
+
+            /* Section header cells */
+            .spreadsheet-header-cell {
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+              font-size: 8pt !important;
+              padding: 1px 4px !important;
+            }
+
+            /* Content cells within sections */
+            .spreadsheet-content-cell {
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+              font-size: 7pt !important;
+              padding: 0 2px !important;
+            }
+
+            /* Matrix header and rows */
+            .spreadsheet-matrix-header-row,
+            .spreadsheet-matrix-play-type-row {
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+              font-size: 7pt !important;
+            }
+
+            /* Empty cells - light border */
+            .spreadsheet-empty-cell {
+              border: 1px solid #e2e8f0 !important;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+
+            /* Play name text - shrink to fit */
+            .spreadsheet-content-cell span,
+            .spreadsheet-content-cell .FitText {
+              font-size: 6pt !important;
+              line-height: 1.1 !important;
             }
           }
         `}
@@ -2855,6 +2477,5 @@ export default function SpreadsheetView({
       )}
 
     </div>
-    </>
   );
 }
