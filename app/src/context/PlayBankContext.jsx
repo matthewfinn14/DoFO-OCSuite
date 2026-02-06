@@ -24,6 +24,14 @@ export function PlayBankProvider({ children }) {
   const [targetingMode, setTargetingMode] = useState(false);
   const [targetingPlays, setTargetingPlays] = useState([]);
 
+  // Headers mode - for spreadsheet layout header assignment
+  const [headersMode, setHeadersMode] = useState(false);
+  const [headerTemplates, setHeaderTemplates] = useState([]);
+  const [pendingHeaderConfig, setPendingHeaderConfig] = useState(null);
+  const [assignHeaderConfig, setAssignHeaderConfig] = useState({ rowStart: 1, colStart: 1, colSpan: 2 });
+  const [draggedNewHeader, setDraggedNewHeader] = useState(null);
+  const [playBankOpen, setPlayBankOpen] = useState(false);
+
   // Listen for batch add events from PlayBankSidebar
   useEffect(() => {
     const handleBatchAdd = (e) => {
@@ -118,6 +126,20 @@ export function PlayBankProvider({ children }) {
     return plays;
   }, [targetingPlays]);
 
+  // Enable headers mode with templates
+  const enableHeadersMode = useCallback((templates) => {
+    setHeaderTemplates(templates);
+    setHeadersMode(true);
+    setPlayBankOpen(true);
+  }, []);
+
+  // Disable headers mode
+  const disableHeadersMode = useCallback(() => {
+    setHeadersMode(false);
+    setPendingHeaderConfig(null);
+    setDraggedNewHeader(null);
+  }, []);
+
   return (
     <PlayBankContext.Provider
       value={{
@@ -150,7 +172,21 @@ export function PlayBankProvider({ children }) {
         targetingPlays,
         startTargetingMode,
         cancelTargetingMode,
-        completeTargeting
+        completeTargeting,
+
+        // Headers mode - for spreadsheet layout
+        headersMode,
+        headerTemplates,
+        enableHeadersMode,
+        disableHeadersMode,
+        pendingHeaderConfig,
+        setPendingHeaderConfig,
+        assignHeaderConfig,
+        setAssignHeaderConfig,
+        draggedNewHeader,
+        setDraggedNewHeader,
+        playBankOpen,
+        setPlayBankOpen
       }}
     >
       {children}

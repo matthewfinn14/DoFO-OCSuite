@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { Plus, GripVertical, Trash2, Settings, ChevronDown, ChevronUp, LayoutTemplate, MapPin, Target, Zap, List, Package } from 'lucide-react';
 import { getPlayCall, abbreviatePlayCall } from '../../utils/playDisplay';
+import { usePlayBank } from '../../context/PlayBankContext';
 
 /**
  * FitText component - displays text that auto-shrinks to fit container
@@ -102,6 +103,17 @@ export default function SpreadsheetView({
   const weekTitle = currentWeek?.name || `Week ${currentWeek?.weekNumber || ''}`;
   const opponentTitle = currentWeek?.opponent ? `vs. ${currentWeek.opponent}` : '';
 
+  // Get headers mode state from context
+  const {
+    enableHeadersMode,
+    pendingHeaderConfig,
+    setPendingHeaderConfig,
+    assignHeaderConfig,
+    setAssignHeaderConfig,
+    draggedNewHeader,
+    setDraggedNewHeader
+  } = usePlayBank();
+
   // Get wristband abbreviations for auto-shortening play names
   const abbreviations = setupConfig?.wristbandAbbreviations || {};
 
@@ -126,8 +138,6 @@ export default function SpreadsheetView({
 
   // Track which header is being dragged (existing header repositioning)
   const [draggedHeader, setDraggedHeader] = useState(null);
-  // Track new header being dragged from sidebar
-  const [draggedNewHeader, setDraggedNewHeader] = useState(null);
   const [dragOverCell, setDragOverCell] = useState(null);
 
   // Modal states
@@ -136,16 +146,6 @@ export default function SpreadsheetView({
   const [editingHeader, setEditingHeader] = useState(null);
   const [showPageSettingsModal, setShowPageSettingsModal] = useState(false);
   const [editingPageIdx, setEditingPageIdx] = useState(null);
-  const [showAssignHeadersModal, setShowAssignHeadersModal] = useState(false);
-  const [assignHeaderConfig, setAssignHeaderConfig] = useState({
-    rowStart: 1,
-    colStart: 1,
-    colSpan: 2
-  });
-
-  // Pending header configuration (shown when clicking a header button)
-  const [pendingHeaderConfig, setPendingHeaderConfig] = useState(null);
-  // { item, categoryType, isScript, colSpan: 2, rowCount: 10 }
 
   // Local state for page settings inputs (allows clearing while typing)
   const [pageSettingsInput, setPageSettingsInput] = useState({ columns: '', rows: '' });
@@ -190,20 +190,30 @@ export default function SpreadsheetView({
       const colEnd = colStart + header.colSpan - 1;
       const rowStart = header.rowStart;
 
-      // Find the next header below in overlapping columns
-      let rowEnd = rows; // Default to page bottom
+      // If header has a defined rowCount, use that as the limit
+      // Otherwise, find the next header below in overlapping columns
+      let rowEnd;
 
-      for (const other of sortedHeaders) {
-        if (other.id === header.id) continue;
-        if (other.rowStart <= rowStart) continue;
+      if (header.rowCount) {
+        // rowCount = number of play rows (content rows), header is row 0
+        // So total rows = rowStart (header) + rowCount (content)
+        rowEnd = Math.min(rowStart + header.rowCount, rows);
+      } else {
+        // Default behavior: extend to next header or page bottom
+        rowEnd = rows;
 
-        // Check if columns overlap
-        const otherColStart = other.colStart;
-        const otherColEnd = otherColStart + other.colSpan - 1;
-        const hasOverlap = colStart <= otherColEnd && colEnd >= otherColStart;
+        for (const other of sortedHeaders) {
+          if (other.id === header.id) continue;
+          if (other.rowStart <= rowStart) continue;
 
-        if (hasOverlap && other.rowStart < rowEnd) {
-          rowEnd = other.rowStart - 1;
+          // Check if columns overlap
+          const otherColStart = other.colStart;
+          const otherColEnd = otherColStart + other.colSpan - 1;
+          const hasOverlap = colStart <= otherColEnd && colEnd >= otherColStart;
+
+          if (hasOverlap && other.rowStart < rowEnd) {
+            rowEnd = other.rowStart - 1;
+          }
         }
       }
 
@@ -217,6 +227,44 @@ export default function SpreadsheetView({
     });
 
     return bounds;
+  }, []);
+
+  // Helper function to format cell number based on numbering style
+  const formatCellNumber = useCallback((index, style) => {
+    if (!style || style === 'none') return null;
+
+    const num = index + 1; // 1-based index
+
+    switch (style) {
+      case 'numeric':
+        return `${num}.`;
+      case 'alpha':
+        // A, B, C... Z, AA, AB...
+        let alpha = '';
+        let n = num;
+        while (n > 0) {
+          n--;
+          alpha = String.fromCharCode(65 + (n % 26)) + alpha;
+          n = Math.floor(n / 26);
+        }
+        return `${alpha}.`;
+      case 'roman':
+        // Convert to Roman numerals
+        const romanNumerals = [
+          ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'],
+          ['', 'X', 'XX', 'XXX', 'XL', 'L', 'LX', 'LXX', 'LXXX', 'XC'],
+          ['', 'C', 'CC', 'CCC', 'CD', 'D', 'DC', 'DCC', 'DCCC', 'CM']
+        ];
+        if (num > 399) return `${num}.`; // Fall back to numeric for large numbers
+        const hundreds = Math.floor(num / 100);
+        const tens = Math.floor((num % 100) / 10);
+        const ones = num % 10;
+        return `${romanNumerals[2][hundreds]}${romanNumerals[1][tens]}${romanNumerals[0][ones]}.`;
+      case 'pointed':
+        return '•';
+      default:
+        return null;
+    }
   }, []);
 
   // Get plays for a section/header (returns array with plays at their row indices)
@@ -526,7 +574,7 @@ export default function SpreadsheetView({
     const page = spreadsheetData.pages[pageIdx];
     if (!page) return;
 
-    const { isScript = false } = options;
+    const { isScript = false, rowCount, numbering = 'none' } = options;
     const colSpan = assignHeaderConfig.colSpan;
 
     // Validate position
@@ -546,6 +594,8 @@ export default function SpreadsheetView({
       colStart: validColStart,
       colSpan: validColSpan,
       rowStart: validRowStart,
+      rowCount: rowCount || null, // Store the user-defined row count (null = extend to next header or page bottom)
+      numbering: numbering || 'none', // Numbering style: none, numeric, alpha, roman, pointed
       color: item.color || '#3b82f6',
       situationId: item.id,
       categoryType,
@@ -899,7 +949,14 @@ export default function SpreadsheetView({
                     }}
                     onDragEnd={() => setDraggedHeader(null)}
                     onClick={() => {
+                      // Single click opens modal when NOT in editing mode
                       if (!isEditing && onHeaderClick) {
+                        onHeaderClick({ pageIdx, header });
+                      }
+                    }}
+                    onDoubleClick={() => {
+                      // Double-click opens modal when in editing mode
+                      if (isEditing && onHeaderClick) {
                         onHeaderClick({ pageIdx, header });
                       }
                     }}
@@ -967,11 +1024,9 @@ export default function SpreadsheetView({
                 // For multi-column sections, only render on first column
                 if (!isFirstCol) return null;
 
-                // Calculate the display number (sequential count of plays up to this row)
-                let displayNum = 0;
-                for (let i = 0; i <= contentRowIdx; i++) {
-                  if (sectionPlays[i]) displayNum++;
-                }
+                // Get the numbering style for this header (uses row index, not play count)
+                const numberingStyle = header.numbering || 'none';
+                const cellNumber = formatCellNumber(contentRowIdx, numberingStyle);
 
                 const isTargeting = isTargetingMode;
                 const isDragOverPlay = dragOverCell?.pageIdx === pageIdx &&
@@ -1047,9 +1102,15 @@ export default function SpreadsheetView({
                           headerBounds.colStart, // Align with section's column start
                           draggedNewHeader.item,
                           draggedNewHeader.categoryType,
-                          { isScript: draggedNewHeader.isScript }
+                          { isScript: draggedNewHeader.isScript, rowCount: draggedNewHeader.rowCount, numbering: draggedNewHeader.numbering }
                         );
                         setDraggedNewHeader(null);
+                      }
+                    }}
+                    onDoubleClick={() => {
+                      // Double-click opens box modal in editing mode
+                      if (isEditing && onHeaderClick) {
+                        onHeaderClick({ pageIdx, header });
                       }
                     }}
                     onMouseEnter={() => {
@@ -1075,7 +1136,7 @@ export default function SpreadsheetView({
                           headerBounds.colStart, // Align with section's column start
                           draggedNewHeader.item,
                           draggedNewHeader.categoryType,
-                          { isScript: draggedNewHeader.isScript }
+                          { isScript: draggedNewHeader.isScript, rowCount: draggedNewHeader.rowCount, numbering: draggedNewHeader.numbering }
                         );
                         setDraggedNewHeader(null);
                         return;
@@ -1095,18 +1156,19 @@ export default function SpreadsheetView({
                       }
                     }}
                   >
+                    {/* Show cell number if numbering is enabled */}
+                    {cellNumber && (
+                      <span className="spreadsheet-play-number" style={{ color: '#94a3b8', fontWeight: 'bold', minWidth: '18px', flexShrink: 0 }}>
+                        {cellNumber}
+                      </span>
+                    )}
                     {play && (
-                      <>
-                        <span className="spreadsheet-play-number" style={{ color: '#94a3b8', fontWeight: 'bold', minWidth: '14px' }}>
-                          {displayNum}.
-                        </span>
-                        <FitText
-                          text={getPlayDisplayName(play)}
-                          abbreviations={abbreviations}
-                          baseFontSize={0.6}
-                          minFontSize={0.35}
-                        />
-                      </>
+                      <FitText
+                        text={getPlayDisplayName(play)}
+                        abbreviations={abbreviations}
+                        baseFontSize={0.6}
+                        minFontSize={0.35}
+                      />
                     )}
                   </div>
                 );
@@ -1181,7 +1243,7 @@ export default function SpreadsheetView({
                         colNum,
                         draggedNewHeader.item,
                         draggedNewHeader.categoryType,
-                        { isScript: draggedNewHeader.isScript }
+                        { isScript: draggedNewHeader.isScript, rowCount: draggedNewHeader.rowCount, numbering: draggedNewHeader.numbering }
                       );
                       setDraggedNewHeader(null);
                     }
@@ -1226,7 +1288,7 @@ export default function SpreadsheetView({
                         colNum,
                         draggedNewHeader.item,
                         draggedNewHeader.categoryType,
-                        { isScript: draggedNewHeader.isScript }
+                        { isScript: draggedNewHeader.isScript, rowCount: draggedNewHeader.rowCount, numbering: draggedNewHeader.numbering }
                       );
                       setDraggedNewHeader(null);
                     }
@@ -1332,7 +1394,7 @@ export default function SpreadsheetView({
 
           {/* Assign Headers Button */}
           <button
-            onClick={() => setShowAssignHeadersModal(true)}
+            onClick={() => enableHeadersMode(getHeaderTemplates())}
             className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-lg transition-colors"
           >
             <LayoutTemplate size={16} />
@@ -1360,134 +1422,8 @@ export default function SpreadsheetView({
         </div>
       </div>
 
-      {/* Main Content Area - Sidebar + Spreadsheet */}
+      {/* Main Content Area - Spreadsheet */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Header Panel */}
-        {showAssignHeadersModal && (
-          <div
-            className="w-80 flex-shrink-0 bg-slate-800 border-r border-slate-700 flex flex-col overflow-hidden"
-          >
-            <div className="px-4 py-3 border-b border-slate-700 flex items-center justify-between flex-shrink-0">
-              <h3 className="text-sm font-bold text-white">Add Header</h3>
-              <button
-                onClick={() => setShowAssignHeadersModal(false)}
-                className="p-1 text-slate-400 hover:text-white rounded"
-              >
-                <Plus size={16} className="rotate-45" />
-              </button>
-            </div>
-
-            {/* Position Controls */}
-            <div className="px-4 py-3 border-b border-slate-700 flex-shrink-0 bg-slate-900/50">
-              <div className="flex items-center gap-3 text-sm">
-                <div className="flex items-center gap-1">
-                  <label className="text-slate-500">R:</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max={spreadsheetData.pages[0]?.rows || 40}
-                    value={assignHeaderConfig.rowStart}
-                    onChange={(e) => setAssignHeaderConfig({
-                      ...assignHeaderConfig,
-                      rowStart: parseInt(e.target.value) || 1
-                    })}
-                    className="w-12 px-1.5 py-1 bg-slate-800 border border-slate-600 rounded text-white text-xs focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div className="flex items-center gap-1">
-                  <label className="text-slate-500">C:</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max={spreadsheetData.pages[0]?.columns || 8}
-                    value={assignHeaderConfig.colStart}
-                    onChange={(e) => setAssignHeaderConfig({
-                      ...assignHeaderConfig,
-                      colStart: parseInt(e.target.value) || 1
-                    })}
-                    className="w-12 px-1.5 py-1 bg-slate-800 border border-slate-600 rounded text-white text-xs focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-                <div className="flex items-center gap-1">
-                  <label className="text-slate-500">Span:</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max={spreadsheetData.pages[0]?.columns || 8}
-                    value={assignHeaderConfig.colSpan}
-                    onChange={(e) => setAssignHeaderConfig({
-                      ...assignHeaderConfig,
-                      colSpan: parseInt(e.target.value) || 1
-                    })}
-                    className="w-12 px-1.5 py-1 bg-slate-800 border border-slate-600 rounded text-white text-xs focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Header Options - Scrollable */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-4">
-              {getHeaderTemplates().map(template => {
-                const IconComponent = template.icon;
-                return (
-                  <div key={template.id} className="space-y-2">
-                    <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
-                      <IconComponent size={12} style={{ color: template.color }} />
-                      <span>{template.name}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {template.items.map(item => (
-                        <button
-                          key={item.id}
-                          onClick={() => {
-                            // Show config modal to set columns and rows before placing
-                            setPendingHeaderConfig({
-                              item,
-                              categoryType: template.id,
-                              isScript: template.isScript,
-                              colSpan: 2,
-                              rowCount: 10
-                            });
-                          }}
-                          className="px-2 py-1 rounded text-xs font-medium transition-all hover:scale-105 hover:shadow-md cursor-pointer"
-                          style={{
-                            backgroundColor: item.color || template.color,
-                            color: 'white'
-                          }}
-                        >
-                          {item.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {getHeaderTemplates().length === 0 && (
-                <div className="text-center py-6 text-slate-400">
-                  <LayoutTemplate size={32} className="mx-auto mb-2 opacity-50" />
-                  <p className="text-xs">No categories defined.</p>
-                  <p className="text-xs mt-1">Set up in Offense Setup.</p>
-                </div>
-              )}
-            </div>
-
-            {/* Custom Header Link */}
-            <div className="px-4 py-3 border-t border-slate-700 flex-shrink-0">
-              <button
-                onClick={() => {
-                  setShowAssignHeadersModal(false);
-                  setAddHeaderPageIdx(0);
-                  setShowAddHeaderModal(true);
-                }}
-                className="text-xs text-blue-400 hover:text-blue-300"
-              >
-                + Add custom header
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* Scrollable Spreadsheet Content */}
         <div
           className="flex-1 overflow-auto"
@@ -1797,6 +1733,37 @@ export default function SpreadsheetView({
                   <span className="text-sm text-slate-400 ml-2">rows</span>
                 </div>
               </div>
+
+              {/* Numbering Style */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Cell Numbering
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: 'none', label: 'None' },
+                    { value: 'numeric', label: '1, 2, 3' },
+                    { value: 'alpha', label: 'A, B, C' },
+                    { value: 'roman', label: 'I, II, III' },
+                    { value: 'pointed', label: '•' }
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setPendingHeaderConfig(prev => ({
+                        ...prev,
+                        numbering: opt.value
+                      }))}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                        (pendingHeaderConfig.numbering || 'none') === opt.value
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
@@ -1817,7 +1784,8 @@ export default function SpreadsheetView({
                     item: pendingHeaderConfig.item,
                     categoryType: pendingHeaderConfig.categoryType,
                     isScript: pendingHeaderConfig.isScript,
-                    rowCount: pendingHeaderConfig.rowCount
+                    rowCount: pendingHeaderConfig.rowCount,
+                    numbering: pendingHeaderConfig.numbering || 'none'
                   });
                   setPendingHeaderConfig(null);
                 }}

@@ -18,13 +18,23 @@ function MainLayoutContent() {
     currentWeek,
     updateWeek
   } = useSchool();
-  const [playBankOpen, setPlayBankOpen] = useState(false);
   const navigate = useNavigate();
   const {
     batchSelectMode,
     batchSelectLabel,
     handleBatchSelect,
-    cancelBatchSelect
+    cancelBatchSelect,
+    // Headers mode from context
+    headersMode,
+    headerTemplates,
+    pendingHeaderConfig,
+    setPendingHeaderConfig,
+    assignHeaderConfig,
+    setAssignHeaderConfig,
+    draggedNewHeader,
+    setDraggedNewHeader,
+    playBankOpen,
+    setPlayBankOpen
   } = usePlayBank();
 
   // Auto-open play bank when batch select mode is activated
@@ -32,7 +42,7 @@ function MainLayoutContent() {
     if (batchSelectMode && !playBankOpen) {
       setPlayBankOpen(true);
     }
-  }, [batchSelectMode, playBankOpen]);
+  }, [batchSelectMode, playBankOpen, setPlayBankOpen]);
 
   // Get current theme from settings
   const theme = settings?.theme || 'dark';
@@ -119,6 +129,15 @@ function MainLayoutContent() {
           onBatchSelect={handleBatchSelect}
           onCancelBatchSelect={cancelBatchSelect}
           batchSelectLabel={batchSelectLabel}
+          // Headers mode props
+          headersMode={headersMode}
+          headerTemplates={headerTemplates}
+          pendingHeaderConfig={pendingHeaderConfig}
+          setPendingHeaderConfig={setPendingHeaderConfig}
+          assignHeaderConfig={assignHeaderConfig}
+          setAssignHeaderConfig={setAssignHeaderConfig}
+          draggedNewHeader={draggedNewHeader}
+          setDraggedNewHeader={setDraggedNewHeader}
         />
       </div>
     </PlayDetailsModalProvider>

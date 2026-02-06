@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSchool } from '../../context/SchoolContext';
 import { usePlayDetailsModal } from '../PlayDetailsModal';
@@ -11,15 +11,19 @@ import {
   ChevronDown,
   Search,
   Landmark,
-  Settings,
-  BookOpen,
   Plus,
   PlusCircle,
   Star,
   CheckSquare,
   Square,
   X,
-  MousePointer
+  MousePointer,
+  LayoutTemplate,
+  MapPin,
+  Target,
+  Zap,
+  List,
+  Package
 } from 'lucide-react';
 
 export default function PlayBankSidebar({
@@ -28,7 +32,17 @@ export default function PlayBankSidebar({
   batchSelectMode = false,
   onBatchSelect = null,
   onCancelBatchSelect = null,
-  batchSelectLabel = 'Add Selected'
+  batchSelectLabel = 'Add Selected',
+  // Headers mode props (for spreadsheet view)
+  headersMode = false,
+  headerTemplates = [],
+  onHeaderClick = null,
+  pendingHeaderConfig = null,
+  setPendingHeaderConfig = null,
+  assignHeaderConfig = null,
+  setAssignHeaderConfig = null,
+  draggedNewHeader = null,
+  setDraggedNewHeader = null
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -60,9 +74,16 @@ export default function PlayBankSidebar({
     cancelTargetingMode
   } = usePlayBank();
 
-  // Local state
-  const [activeTab, setActiveTab] = useState('install'); // install, gameplan, usage
+  // Local state - default to headers tab when in headers mode
+  const [activeTab, setActiveTab] = useState(headersMode ? 'headers' : 'install'); // install, gameplan, usage, headers
   const [playBankPhase, setPlayBankPhase] = useState('OFFENSE');
+
+  // Switch to headers tab when headersMode is enabled
+  useEffect(() => {
+    if (headersMode) {
+      setActiveTab('headers');
+    }
+  }, [headersMode]);
   const [searchTerm, setSearchTerm] = useState('');
   const [quickAddValue, setQuickAddValue] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
@@ -789,22 +810,6 @@ export default function PlayBankSidebar({
         className="flex flex-col h-full overflow-hidden"
         style={{ width: '480px', display: isOpen ? 'flex' : 'none' }}
       >
-        {/* Quick Navigation Links */}
-        <div className="flex gap-2 p-2 bg-slate-900 border-b border-slate-700">
-          <button
-            onClick={() => navigate('/setup')}
-            className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 bg-blue-500/20 border border-blue-500/30 rounded text-blue-300 text-xs font-semibold hover:bg-blue-500/30 transition-colors"
-          >
-            <Settings size={14} /> Setup
-          </button>
-          <button
-            onClick={() => navigate('/playbook')}
-            className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 bg-emerald-500/20 border border-emerald-500/30 rounded text-emerald-300 text-xs font-semibold hover:bg-emerald-500/30 transition-colors"
-          >
-            <BookOpen size={14} /> Master Playbook
-          </button>
-        </div>
-
         {/* Targeting Mode Banner */}
         {targetingMode && targetingPlays.length > 0 && (
           <div className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-4 py-3 flex items-center justify-between">
@@ -912,22 +917,47 @@ export default function PlayBankSidebar({
 
         {/* Tabs */}
         <div className="flex border-b border-slate-200">
-          {[
-            { key: 'install', label: 'Install' },
-            { key: 'gameplan', label: 'Game Plan' },
-            { key: 'usage', label: 'Full Playbook' }
-          ].map(tab => (
-            <div
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 text-center py-2 px-1 text-xs font-semibold cursor-pointer transition-colors ${activeTab === tab.key
-                ? 'text-slate-900 border-b-2 border-slate-900 bg-white'
-                : 'text-slate-500 border-b-2 border-transparent bg-slate-50 hover:bg-slate-100'
-                }`}
-            >
-              {tab.label}
-            </div>
-          ))}
+          {/* Headers/Plays Toggle when headersMode enabled */}
+          {headersMode ? (
+            <>
+              <div
+                onClick={() => setActiveTab('headers')}
+                className={`flex-1 text-center py-2 px-1 text-xs font-semibold cursor-pointer transition-colors ${activeTab === 'headers'
+                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
+                  : 'text-slate-500 border-b-2 border-transparent bg-slate-50 hover:bg-slate-100'
+                  }`}
+              >
+                <LayoutTemplate size={14} className="inline mr-1" />
+                Headers
+              </div>
+              <div
+                onClick={() => setActiveTab('install')}
+                className={`flex-1 text-center py-2 px-1 text-xs font-semibold cursor-pointer transition-colors ${activeTab === 'install'
+                  ? 'text-slate-900 border-b-2 border-slate-900 bg-white'
+                  : 'text-slate-500 border-b-2 border-transparent bg-slate-50 hover:bg-slate-100'
+                  }`}
+              >
+                Plays
+              </div>
+            </>
+          ) : (
+            [
+              { key: 'install', label: 'Install' },
+              { key: 'gameplan', label: 'Game Plan' },
+              { key: 'usage', label: 'Full Playbook' }
+            ].map(tab => (
+              <div
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex-1 text-center py-2 px-1 text-xs font-semibold cursor-pointer transition-colors ${activeTab === tab.key
+                  ? 'text-slate-900 border-b-2 border-slate-900 bg-white'
+                  : 'text-slate-500 border-b-2 border-transparent bg-slate-50 hover:bg-slate-100'
+                  }`}
+              >
+                {tab.label}
+              </div>
+            ))
+          )}
         </div>
 
         {/* Combined Search + Quick Add */}
@@ -1036,6 +1066,119 @@ export default function PlayBankSidebar({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto bg-white">
+          {/* Headers Tab Content */}
+          {activeTab === 'headers' && headersMode && (
+            <div className="bg-slate-800 h-full">
+              {/* Position Controls */}
+              {assignHeaderConfig && setAssignHeaderConfig && (
+                <div className="px-4 py-3 border-b border-slate-700">
+                  <div className="flex items-center gap-3 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-slate-400">R:</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="50"
+                        value={assignHeaderConfig.rowStart || 1}
+                        onChange={(e) => setAssignHeaderConfig(prev => ({ ...prev, rowStart: parseInt(e.target.value) || 1 }))}
+                        className="w-12 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-center"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-slate-400">C:</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="12"
+                        value={assignHeaderConfig.colStart || 1}
+                        onChange={(e) => setAssignHeaderConfig(prev => ({ ...prev, colStart: parseInt(e.target.value) || 1 }))}
+                        className="w-12 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-center"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <label className="text-slate-400">Span:</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="8"
+                        value={assignHeaderConfig.colSpan || 2}
+                        onChange={(e) => setAssignHeaderConfig(prev => ({ ...prev, colSpan: parseInt(e.target.value) || 2 }))}
+                        className="w-12 px-2 py-1 bg-slate-700 border border-slate-600 rounded text-white text-center"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Header Templates */}
+              <div className="p-3 space-y-4 overflow-y-auto">
+                {headerTemplates.map(template => {
+                  const IconComponent = template.icon || LayoutTemplate;
+                  return (
+                    <div key={template.id} className="space-y-2">
+                      <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
+                        <IconComponent size={12} style={{ color: template.color }} />
+                        <span>{template.name}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {template.items.map(item => (
+                          <button
+                            key={item.id}
+                            onClick={() => {
+                              if (setPendingHeaderConfig) {
+                                setPendingHeaderConfig({
+                                  item,
+                                  categoryType: template.id,
+                                  isScript: template.isScript,
+                                  colSpan: assignHeaderConfig?.colSpan || 2,
+                                  rowCount: 10
+                                });
+                              }
+                            }}
+                            className="px-2 py-1 rounded text-xs font-medium transition-all hover:scale-105 hover:shadow-md cursor-pointer"
+                            style={{
+                              backgroundColor: item.color || template.color,
+                              color: 'white'
+                            }}
+                          >
+                            {item.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {headerTemplates.length === 0 && (
+                  <div className="text-center py-6 text-slate-400">
+                    <LayoutTemplate size={32} className="mx-auto mb-2 opacity-50" />
+                    <p className="text-xs">No categories defined.</p>
+                    <p className="text-xs mt-1">Set up in Offense Setup.</p>
+                  </div>
+                )}
+
+                {/* Add custom header link */}
+                <button
+                  onClick={() => {
+                    if (setPendingHeaderConfig) {
+                      setPendingHeaderConfig({
+                        item: { id: `custom_${Date.now()}`, name: 'Custom', color: '#64748b' },
+                        categoryType: 'custom',
+                        isScript: false,
+                        colSpan: assignHeaderConfig?.colSpan || 2,
+                        rowCount: 10,
+                        isCustom: true
+                      });
+                    }
+                  }}
+                  className="w-full text-left text-xs text-blue-400 hover:text-blue-300 py-2"
+                >
+                  + Add custom header
+                </button>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'usage' && (
             <>
               {/* Batch Add Buttons */}
