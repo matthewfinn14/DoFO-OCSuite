@@ -1414,8 +1414,8 @@ export default function SpreadsheetView({
                                   dragOverCell?.isNewHeader;
 
                 // Create a light tint of the header color for the section background
-                // Using higher opacity values (15=~8%, 28=~16%) so they show in print
-                const sectionBgBase = contentRowIdx % 2 === 0 ? `${headerColor}15` : `${headerColor}28`;
+                // Using visible opacity values (30=~19%, 50=~31%) so they show in print
+                const sectionBgBase = contentRowIdx % 2 === 0 ? `${headerColor}30` : `${headerColor}50`;
 
                 // Section boundary indicators
                 const isLastColumn = headerBounds.colEnd >= columns;
