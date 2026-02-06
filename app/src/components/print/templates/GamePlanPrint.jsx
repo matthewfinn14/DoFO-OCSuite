@@ -69,26 +69,26 @@ export default function GamePlanPrint({
   const is4Page = pageFormat === '4-page';
   const totalPages = is4Page ? 4 : 2;
 
-  // Header component - compact with logo, week name, opponent, and date
-  const PageHeader = () => (
+  // Header component - compact with logo, week name, opponent, and date (NO page info)
+  const PageHeader = ({ pageIndex }) => (
     <div style={{
       display: 'flex',
       alignItems: 'center',
       gap: '8px',
-      padding: '0.15in 0.25in',
+      padding: '0.1in 0.2in',
       borderBottom: '1px solid #333'
     }}>
       {includeLogo && settings?.teamLogo && (
         <img
           src={settings.teamLogo}
           alt="Logo"
-          style={{ height: '28px', width: 'auto' }}
+          style={{ height: '24px', width: 'auto' }}
         />
       )}
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: '12pt', fontWeight: 'bold', color: '#000' }}>
+        <div style={{ fontSize: '11pt', fontWeight: 'bold', color: '#000' }}>
           {currentWeek?.name || 'Week'} vs. {currentWeek?.opponent || '_________________'}
-          {gameDate && <span style={{ fontWeight: 'normal', marginLeft: '12px', fontSize: '10pt', color: '#333' }}>{gameDate}</span>}
+          {gameDate && <span style={{ fontWeight: 'normal', marginLeft: '12px', fontSize: '9pt', color: '#333' }}>{gameDate}</span>}
         </div>
       </div>
     </div>
@@ -100,16 +100,20 @@ export default function GamePlanPrint({
         @media print {
           @page {
             size: letter portrait;
-            margin: 0.25in;
+            margin: 0.2in;
           }
-          /* Force uniform grid row heights in print */
-          .spreadsheet-print-grid {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+          /* Preserve colors in print */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
           }
-          .spreadsheet-print-grid > div {
-            overflow: hidden !important;
-            max-height: inherit;
+          /* Force table row heights */
+          .spreadsheet-print-table tr {
+            page-break-inside: avoid;
+          }
+          .spreadsheet-print-table td {
+            overflow: hidden;
           }
         }
         .gameplan-print {
@@ -133,36 +137,25 @@ export default function GamePlanPrint({
         }
         .gameplan-page-content {
           flex: 1;
-          padding: 0.15in;
+          padding: 0.1in;
           display: flex;
           flex-direction: column;
           overflow: hidden;
         }
-        .gameplan-page-content > div {
+        .gameplan-page-content > div,
+        .gameplan-page-content > table {
           flex: 1;
-          display: flex;
-          flex-direction: column;
         }
-        .gameplan-page-content .space-y-3 {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 0.5rem;
-        }
-        .gameplan-page-content .call-sheet-section {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-        }
-        .gameplan-page-content .call-sheet-section > div:last-child {
-          flex: 1;
+        .spreadsheet-print-table {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
       `}</style>
 
       {/* Render pages based on format */}
       {Array.from({ length: totalPages }, (_, pageIndex) => (
         <div key={pageIndex} className="gameplan-page">
-          <PageHeader />
+          <PageHeader pageIndex={pageIndex} />
           <div className={`gameplan-page-content ${fontSizeClass}`}>
             {viewType === 'spreadsheet' ? (
               <SpreadsheetView spreadsheetData={spreadsheetData} playMap={playMap} sections={sections} pageIndex={pageIndex} totalPages={totalPages} weekData={currentWeek} />
@@ -468,10 +461,12 @@ function SpreadsheetView({ spreadsheetData, playMap, sections, pageIndex = 0, to
 
   const { columns, rows, headers: pageHeaders } = pageData;
 
-  // Cell height - uniform for ALL rows (fit ~650px printable area)
-  const cellHeight = Math.floor(650 / rows);
+  // Cell height - uniform for ALL rows (fit available print area ~9.5in minus header)
+  // At 96 DPI, 9.5in = 912px, but we need to account for the page header
+  const availableHeight = 880; // pixels available for grid
+  const cellHeight = Math.floor(availableHeight / rows);
 
-  // Calculate bounds for each header - matches editor logic
+  // Calculate bounds for each header - matches editor logic exactly
   const calculateBounds = () => {
     const bounds = {};
     const sortedHeaders = [...(pageHeaders || [])].sort((a, b) => {
@@ -503,47 +498,55 @@ function SpreadsheetView({ spreadsheetData, playMap, sections, pageIndex = 0, to
         }
       }
 
-      bounds[header.id] = { colStart, colEnd, rowStart, rowEnd, isMatrix: header.isMatrix || false };
+      bounds[header.id] = { colStart, colEnd, rowStart, rowEnd };
     });
     return bounds;
   };
 
   const bounds = calculateBounds();
 
-  // Build cell occupancy - track what header occupies each cell
+  // Build cell occupancy map - exactly like editor
   const cellOccupancy = {};
   (pageHeaders || []).forEach(header => {
     const hb = bounds[header.id];
     if (!hb) return;
 
-    for (let r = header.rowStart; r <= hb.rowEnd; r++) {
-      for (let c = header.colStart; c <= header.colStart + header.colSpan - 1; c++) {
-        const isHeaderRow = r === header.rowStart;
-        const isFirstCol = c === header.colStart;
+    // Mark header row
+    for (let c = header.colStart; c <= hb.colEnd; c++) {
+      cellOccupancy[`${header.rowStart}-${c}`] = {
+        type: 'header',
+        header,
+        isFirst: c === header.colStart
+      };
+    }
+
+    // Mark content rows
+    for (let r = header.rowStart + 1; r <= hb.rowEnd; r++) {
+      for (let c = header.colStart; c <= hb.colEnd; c++) {
         cellOccupancy[`${r}-${c}`] = {
+          type: 'content',
           header,
-          isHeaderRow,
-          isFirstCol,
+          isFirst: c === header.colStart,
           contentRowIdx: r - header.rowStart - 1
         };
       }
     }
   });
 
-  // Get plays for header as a flat array
+  // Get plays for a header
   const getPlays = (headerId) => {
     const set = sets.find(s => s.id === `spreadsheet_${headerId}`);
     if (!set) return [];
     return (set.assignedPlayIds || set.playIds || []).map(id => id ? playMap[id] : null);
   };
 
-  // Build all plays arrays for headers
+  // Pre-compute plays for all headers
   const headerPlays = {};
   (pageHeaders || []).forEach(header => {
     headerPlays[header.id] = getPlays(header.id);
   });
 
-  // Format cell number based on numbering style
+  // Format cell number
   const formatCellNumber = (rowIdx, style) => {
     if (!style || style === 'none') return '';
     const num = rowIdx + 1;
@@ -552,284 +555,287 @@ function SpreadsheetView({ spreadsheetData, playMap, sections, pageIndex = 0, to
     return '';
   };
 
-  // Elements to render
-  const elements = [];
-
-  // First, render ALL grid cells as empty cells with borders
-  for (let rowIdx = 0; rowIdx < rows; rowIdx++) {
-    const rowNum = rowIdx + 1;
-    for (let colIdx = 0; colIdx < columns; colIdx++) {
-      const colNum = colIdx + 1;
-      const key = `empty-${rowNum}-${colNum}`;
-      elements.push(
-        <div key={key} style={{
-          gridColumn: colNum,
-          gridRow: rowNum,
-          borderRight: colNum < columns ? '1px solid #e2e8f0' : 'none',
-          borderBottom: rowNum < rows ? '1px solid #e2e8f0' : 'none',
-          boxSizing: 'border-box',
-          background: '#fff'
-        }} />
-      );
-    }
-  }
-
-  // Then, render headers and content rows ON TOP (they will overlay the empty cells)
-  (pageHeaders || []).forEach(header => {
-    const hb = bounds[header.id];
-    if (!hb) return;
-
-    const headerColor = header.color || '#3b82f6';
-    const sectionColSpan = header.colSpan;
-    const plays = headerPlays[header.id] || [];
-    const playCount = plays.filter(p => p).length;
-    const boxColumns = header.boxColumns || 1;
-
-    // Skip matrix headers for now (render differently)
-    if (header.isMatrix) {
-      // Render matrix - same structure as editor
-      const playTypes = header.playTypes || [];
-      const hashGroups = header.hashGroups || [];
-      const allHashCols = hashGroups.flatMap(g => g.hashes || [g.id]);
-
-      // Header row with column labels
-      elements.push(
-        <div
-          key={`matrix-header-${header.id}`}
-          style={{
-            gridColumn: `${header.colStart + 1} / span ${sectionColSpan}`,
-            gridRow: header.rowStart,
-            display: 'grid',
-            gridTemplateColumns: `60px repeat(${allHashCols.length}, 1fr)`,
-            background: headerColor,
-            border: `3px solid ${headerColor}`,
-            borderBottom: '1px solid rgba(255,255,255,0.3)',
-            zIndex: 1
-          }}
-        >
-          <div style={{
-            padding: '2px 4px',
-            fontWeight: 'bold',
-            fontSize: '8pt',
-            color: '#fff',
-            textTransform: 'uppercase',
-            display: 'flex',
-            alignItems: 'center'
-          }}>
-            {header.name || 'FORMATION'}
-          </div>
-          {allHashCols.map((hash, idx) => (
-            <div key={idx} style={{
-              padding: '2px 4px',
-              fontWeight: 'bold',
-              fontSize: '7pt',
-              color: '#fff',
-              textAlign: 'center',
-              borderLeft: '1px solid rgba(255,255,255,0.3)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              {typeof hash === 'string' ? hash : hash.label || hash.id}
-            </div>
-          ))}
-        </div>
-      );
-
-      // Play type rows
-      playTypes.forEach((pt, playTypeIdx) => {
-        const rowNum = header.rowStart + playTypeIdx + 1;
-        const isLastPlayType = playTypeIdx === playTypes.length - 1;
-        const isLastContentRow = rowNum === hb.rowEnd;
-
-        elements.push(
-          <div
-            key={`matrix-row-${header.id}-${playTypeIdx}`}
-            style={{
-              gridColumn: `${header.colStart + 1} / span ${sectionColSpan}`,
-              gridRow: rowNum,
-              display: 'grid',
-              gridTemplateColumns: `60px repeat(${allHashCols.length}, 1fr)`,
-              borderLeft: `3px solid ${headerColor}`,
-              borderRight: `3px solid ${headerColor}`,
-              borderBottom: isLastPlayType || isLastContentRow ? `3px solid ${headerColor}` : '1px solid #e2e8f0',
-              background: playTypeIdx % 2 === 0 ? '#ffffff' : '#f8fafc',
-              zIndex: 1
-            }}
-          >
-            <div style={{
-              padding: '1px 4px',
-              fontWeight: 'bold',
-              fontSize: '7pt',
-              color: '#334155',
-              display: 'flex',
-              alignItems: 'center',
-              borderRight: '1px solid #e2e8f0'
-            }}>
-              {pt.label || pt.id || pt}
-            </div>
-            {allHashCols.map((hash, hashIdx) => {
-              const hashId = typeof hash === 'string' ? hash : hash.id;
-              const ptId = pt.id || pt;
-              const setId = `spreadsheet_${header.id}_${ptId}_${hashId}`;
-              const cellSet = sets.find(s => s.id === setId);
-              const cellPlays = (cellSet?.playIds || []).map(id => playMap[id]).filter(Boolean);
-
-              return (
-                <div key={hashIdx} style={{
-                  padding: '1px 4px',
-                  fontSize: '7pt',
-                  borderLeft: hashIdx > 0 ? '1px solid #e2e8f0' : 'none',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  overflow: 'hidden'
-                }}>
-                  {cellPlays.map((play, pIdx) => (
-                    <div key={pIdx} style={{
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
-                    }}>
-                      {play.name}
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        );
-      });
-
-      return;
-    }
-
-    // Regular header cell
-    elements.push(
-      <div
-        key={`header-${header.id}`}
-        style={{
-          gridColumn: `${header.colStart + 1} / span ${sectionColSpan}`,
-          gridRow: header.rowStart,
-          background: headerColor,
-          color: '#fff',
-          fontWeight: 'bold',
-          fontSize: '9pt',
-          textTransform: 'uppercase',
-          padding: '0 6px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          borderTop: `3px solid ${headerColor}`,
-          borderLeft: `3px solid ${headerColor}`,
-          borderRight: `3px solid ${headerColor}`,
-          boxSizing: 'border-box',
-          overflow: 'hidden',
-          zIndex: 1
-        }}
-      >
-        {header.name}
-        {playCount > 0 && (
-          <span style={{ fontSize: '7pt', background: 'rgba(255,255,255,0.25)', padding: '1px 4px', borderRadius: '3px' }}>
-            {playCount}
-          </span>
-        )}
-      </div>
-    );
-
-    // Content rows - each row spans the full section width (like editor)
-    const contentRows = hb.rowEnd - header.rowStart;
-    for (let contentRowIdx = 0; contentRowIdx < contentRows; contentRowIdx++) {
-      const rowNum = header.rowStart + contentRowIdx + 1;
-      const isLastContentRow = rowNum === hb.rowEnd;
-
-      // Calculate plays for this row
-      const rowStartIdx = contentRowIdx * boxColumns;
-      const rowPlays = [];
-      for (let c = 0; c < boxColumns; c++) {
-        rowPlays.push(plays[rowStartIdx + c] || null);
-      }
-
-      const numberingStyle = header.numbering || 'none';
-      const cellNumber = formatCellNumber(contentRowIdx, numberingStyle);
-
-      elements.push(
-        <div
-          key={`content-${header.id}-${contentRowIdx}`}
-          style={{
-            gridColumn: `${header.colStart + 1} / span ${sectionColSpan}`,
-            gridRow: rowNum,
-            backgroundColor: contentRowIdx % 2 === 0 ? '#ffffff' : '#fafafa',
-            borderBottom: isLastContentRow ? `3px solid ${headerColor}` : '1px solid #e2e8f0',
-            borderRight: `3px solid ${headerColor}`,
-            borderLeft: `3px solid ${headerColor}`,
-            padding: '0',
-            fontSize: '8pt',
-            display: 'grid',
-            gridTemplateColumns: cellNumber ? `auto repeat(${boxColumns}, 1fr)` : `repeat(${boxColumns}, 1fr)`,
-            alignItems: 'stretch',
-            overflow: 'hidden',
-            boxSizing: 'border-box',
-            zIndex: 1
-          }}
-        >
-          {cellNumber && (
-            <span style={{
-              color: '#94a3b8',
-              fontWeight: 'bold',
-              minWidth: '18px',
-              flexShrink: 0,
-              display: 'flex',
-              alignItems: 'center',
-              paddingLeft: '4px'
-            }}>
-              {cellNumber}
-            </span>
-          )}
-          {rowPlays.map((play, colIdx) => (
-            <div
-              key={colIdx}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                padding: '0 4px',
-                borderLeft: colIdx > 0 ? '1px solid #cbd5e1' : 'none',
-                overflow: 'hidden',
-                minWidth: 0
-              }}
-            >
-              {play && (
-                <span style={{
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis'
-                }}>
-                  {play.formation ? `${play.formation} ${play.name}` : play.name}
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-      );
-    }
-  });
-
-  // Render the grid with explicit uniform row heights
+  // Render using a table for guaranteed uniform row heights in print
   return (
-    <div
-      className="spreadsheet-print-grid"
+    <table
+      className="spreadsheet-print-table"
       style={{
-        display: 'grid',
-        gridTemplateColumns: `repeat(${columns}, 1fr)`,
-        gridTemplateRows: `repeat(${rows}, ${cellHeight}px)`,
-        border: '1px solid #94a3b8',
-        background: '#fff',
         width: '100%',
-        height: `${rows * cellHeight}px`,
-        overflow: 'hidden'
+        borderCollapse: 'collapse',
+        border: '1px solid #94a3b8',
+        tableLayout: 'fixed',
+        background: '#fff'
       }}
     >
-      {elements}
-    </div>
+      <tbody>
+        {Array.from({ length: rows }, (_, rowIdx) => {
+          const rowNum = rowIdx + 1;
+
+          return (
+            <tr key={rowNum} style={{ height: `${cellHeight}px` }}>
+              {Array.from({ length: columns }, (_, colIdx) => {
+                const colNum = colIdx + 1;
+                const cellKey = `${rowNum}-${colNum}`;
+                const occ = cellOccupancy[cellKey];
+
+                // Empty cell
+                if (!occ) {
+                  return (
+                    <td
+                      key={colNum}
+                      style={{
+                        height: `${cellHeight}px`,
+                        borderRight: colNum < columns ? '1px solid #e2e8f0' : 'none',
+                        borderBottom: rowNum < rows ? '1px solid #e2e8f0' : 'none',
+                        padding: 0,
+                        background: '#fff'
+                      }}
+                    />
+                  );
+                }
+
+                const { type, header, isFirst, contentRowIdx } = occ;
+                const hb = bounds[header.id];
+                const headerColor = header.color || '#3b82f6';
+
+                // Skip non-first cells (they're covered by colSpan)
+                if (!isFirst) {
+                  return null;
+                }
+
+                // Header cell
+                if (type === 'header') {
+                  const plays = headerPlays[header.id] || [];
+                  const playCount = plays.filter(p => p).length;
+
+                  // Matrix header
+                  if (header.isMatrix) {
+                    const hashGroups = header.hashGroups || [];
+                    const allHashCols = hashGroups.flatMap(g => g.hashes || [g.id]);
+
+                    return (
+                      <td
+                        key={colNum}
+                        colSpan={header.colSpan}
+                        style={{
+                          height: `${cellHeight}px`,
+                          background: headerColor,
+                          border: `3px solid ${headerColor}`,
+                          borderBottom: '1px solid rgba(255,255,255,0.3)',
+                          padding: 0,
+                          verticalAlign: 'middle'
+                        }}
+                      >
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: `60px repeat(${allHashCols.length}, 1fr)`,
+                          height: '100%',
+                          alignItems: 'center'
+                        }}>
+                          <div style={{
+                            padding: '0 4px',
+                            fontWeight: 'bold',
+                            fontSize: '8pt',
+                            color: '#fff',
+                            textTransform: 'uppercase'
+                          }}>
+                            {header.name || 'FORMATION'}
+                          </div>
+                          {allHashCols.map((hash, idx) => (
+                            <div key={idx} style={{
+                              padding: '0 2px',
+                              fontWeight: 'bold',
+                              fontSize: '7pt',
+                              color: '#fff',
+                              textAlign: 'center',
+                              borderLeft: '1px solid rgba(255,255,255,0.3)'
+                            }}>
+                              {typeof hash === 'string' ? hash : hash.label || hash.id}
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    );
+                  }
+
+                  // Regular header
+                  return (
+                    <td
+                      key={colNum}
+                      colSpan={header.colSpan}
+                      style={{
+                        height: `${cellHeight}px`,
+                        background: headerColor,
+                        color: '#fff',
+                        fontWeight: 'bold',
+                        fontSize: '9pt',
+                        textTransform: 'uppercase',
+                        padding: '0 6px',
+                        borderTop: `3px solid ${headerColor}`,
+                        borderLeft: `3px solid ${headerColor}`,
+                        borderRight: `3px solid ${headerColor}`,
+                        borderBottom: 'none',
+                        verticalAlign: 'middle'
+                      }}
+                    >
+                      <span>{header.name}</span>
+                      {playCount > 0 && (
+                        <span style={{
+                          fontSize: '7pt',
+                          background: 'rgba(255,255,255,0.25)',
+                          padding: '1px 4px',
+                          borderRadius: '3px',
+                          marginLeft: '6px'
+                        }}>
+                          {playCount}
+                        </span>
+                      )}
+                    </td>
+                  );
+                }
+
+                // Content cell
+                if (type === 'content') {
+                  const plays = headerPlays[header.id] || [];
+                  const boxColumns = header.boxColumns || 1;
+                  const isLastContentRow = rowNum === hb.rowEnd;
+
+                  // Matrix content row
+                  if (header.isMatrix) {
+                    const playTypes = header.playTypes || [];
+                    const pt = playTypes[contentRowIdx];
+                    if (!pt) return null;
+
+                    const hashGroups = header.hashGroups || [];
+                    const allHashCols = hashGroups.flatMap(g => g.hashes || [g.id]);
+                    const isLastPlayType = contentRowIdx === playTypes.length - 1;
+
+                    return (
+                      <td
+                        key={colNum}
+                        colSpan={header.colSpan}
+                        style={{
+                          height: `${cellHeight}px`,
+                          borderLeft: `3px solid ${headerColor}`,
+                          borderRight: `3px solid ${headerColor}`,
+                          borderBottom: isLastPlayType || isLastContentRow ? `3px solid ${headerColor}` : '1px solid #e2e8f0',
+                          background: contentRowIdx % 2 === 0 ? '#ffffff' : '#f8fafc',
+                          padding: 0,
+                          verticalAlign: 'middle'
+                        }}
+                      >
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: `60px repeat(${allHashCols.length}, 1fr)`,
+                          height: '100%',
+                          alignItems: 'center'
+                        }}>
+                          <div style={{
+                            padding: '0 4px',
+                            fontWeight: 'bold',
+                            fontSize: '7pt',
+                            color: '#334155',
+                            borderRight: '1px solid #e2e8f0'
+                          }}>
+                            {pt.label || pt.id || pt}
+                          </div>
+                          {allHashCols.map((hash, hashIdx) => {
+                            const hashId = typeof hash === 'string' ? hash : hash.id;
+                            const ptId = pt.id || pt;
+                            const setId = `spreadsheet_${header.id}_${ptId}_${hashId}`;
+                            const cellSet = sets.find(s => s.id === setId);
+                            const cellPlays = (cellSet?.playIds || []).map(id => playMap[id]).filter(Boolean);
+
+                            return (
+                              <div key={hashIdx} style={{
+                                padding: '0 2px',
+                                fontSize: '7pt',
+                                borderLeft: hashIdx > 0 ? '1px solid #e2e8f0' : 'none',
+                                overflow: 'hidden'
+                              }}>
+                                {cellPlays.map((play, pIdx) => (
+                                  <div key={pIdx} style={{
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis'
+                                  }}>
+                                    {play.name}
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </td>
+                    );
+                  }
+
+                  // Regular content row
+                  const rowStartIdx = contentRowIdx * boxColumns;
+                  const rowPlays = [];
+                  for (let c = 0; c < boxColumns; c++) {
+                    rowPlays.push(plays[rowStartIdx + c] || null);
+                  }
+
+                  const numberingStyle = header.numbering || 'none';
+                  const cellNumber = formatCellNumber(contentRowIdx, numberingStyle);
+
+                  return (
+                    <td
+                      key={colNum}
+                      colSpan={header.colSpan}
+                      style={{
+                        height: `${cellHeight}px`,
+                        backgroundColor: contentRowIdx % 2 === 0 ? '#ffffff' : '#f8fafc',
+                        borderBottom: isLastContentRow ? `3px solid ${headerColor}` : '1px solid #e2e8f0',
+                        borderRight: `3px solid ${headerColor}`,
+                        borderLeft: `3px solid ${headerColor}`,
+                        padding: 0,
+                        fontSize: '8pt',
+                        verticalAlign: 'middle'
+                      }}
+                    >
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: cellNumber ? `18px repeat(${boxColumns}, 1fr)` : `repeat(${boxColumns}, 1fr)`,
+                        height: '100%',
+                        alignItems: 'center'
+                      }}>
+                        {cellNumber && (
+                          <span style={{
+                            color: '#94a3b8',
+                            fontWeight: 'bold',
+                            paddingLeft: '4px',
+                            fontSize: '7pt'
+                          }}>
+                            {cellNumber}
+                          </span>
+                        )}
+                        {rowPlays.map((play, colIdx) => (
+                          <div
+                            key={colIdx}
+                            style={{
+                              padding: '0 4px',
+                              borderLeft: colIdx > 0 ? '1px solid #cbd5e1' : 'none',
+                              overflow: 'hidden',
+                              whiteSpace: 'nowrap',
+                              textOverflow: 'ellipsis'
+                            }}
+                          >
+                            {play && (play.formation ? `${play.formation} ${play.name}` : play.name)}
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                  );
+                }
+
+                return null;
+              })}
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 }
