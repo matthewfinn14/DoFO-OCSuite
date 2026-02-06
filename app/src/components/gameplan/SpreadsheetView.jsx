@@ -903,7 +903,7 @@ export default function SpreadsheetView({
               <div style={{ fontWeight: 'bold', fontSize: '1rem', color: '#0f172a' }}>
                 {weekTitle} {opponentTitle}
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+              <div className="page-info-subtitle no-print" style={{ fontSize: '0.75rem', color: '#64748b' }}>
                 Page {page.pageNum} • {columns} cols × {rows} rows {pageFormat === '4-page' && <span style={{ color: '#94a3b8' }}>• 17×11 booklet</span>}
               </div>
             </div>
@@ -1824,40 +1824,45 @@ export default function SpreadsheetView({
               border: none !important;
             }
 
-            /* Adjust grid for print - collapse first column/row */
+            /* Adjust grid for print - collapse first column/row, FIXED row heights */
             .spreadsheet-grid {
               font-size: 6pt !important;
               padding: 0 !important;
-              border: none !important;
+              border: 1px solid #94a3b8 !important;
               /* Collapse row number column (first col) and header row (first row) */
               grid-template-columns: 0 repeat(var(--grid-columns), 1fr) !important;
-              grid-template-rows: 0 repeat(var(--grid-rows), minmax(8pt, auto)) !important;
+              /* FIXED row heights - calculate based on available space (~880px / rows) */
+              grid-template-rows: 0 repeat(var(--grid-rows), calc(880px / var(--grid-rows))) !important;
             }
 
             .spreadsheet-header-cell {
-              padding: 2px 4px !important;
+              padding: 0 4px !important;
               font-size: 7pt !important;
               min-height: 0 !important;
-              height: auto !important;
+              overflow: hidden !important;
             }
 
             .spreadsheet-content-cell,
             .spreadsheet-empty-cell {
-              padding: 1px 2px !important;
+              padding: 0 2px !important;
               font-size: 6pt !important;
               min-height: 0 !important;
-              height: 12px !important;
-              line-height: 1 !important;
+              overflow: hidden !important;
+              line-height: 1.1 !important;
             }
 
-            /* Compact page info text */
-            .print-compact-header div {
-              font-size: 8pt !important;
+            /* Compact print header */
+            .print-compact-header {
+              padding: 4px 8px !important;
+              height: auto !important;
+              min-height: 0 !important;
             }
 
             .print-compact-header img {
               height: 20px !important;
             }
+
+            /* Page info subtitle is hidden via no-print class */
           }
         `}
       </style>
