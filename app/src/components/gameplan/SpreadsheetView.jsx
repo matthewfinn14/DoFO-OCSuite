@@ -2194,11 +2194,13 @@ export default function SpreadsheetView({
                     <div className="flex flex-wrap gap-2">
                       {[
                         { id: 'BASE', label: 'BASE', cols: ['BASE_L', 'BASE_R'] },
+                        { id: 'DRESS', label: 'BASE W/ DRESS', cols: ['DRESS_L', 'DRESS_R'] },
                         { id: 'CONV', label: 'CONVERT', cols: ['CONV_L', 'CONV_R'] },
                         { id: 'EXPL', label: 'EXPLOSIVE', cols: ['EXPL_L', 'EXPL_R'] }
                       ].map(hg => {
                         const selected = (pendingHeaderConfig.hashGroups || [
                           { id: 'BASE', label: 'BASE', cols: ['BASE_L', 'BASE_R'] },
+                          { id: 'DRESS', label: 'BASE W/ DRESS', cols: ['DRESS_L', 'DRESS_R'] },
                           { id: 'CONV', label: 'CONVERT', cols: ['CONV_L', 'CONV_R'] }
                         ]).some(h => h.id === hg.id);
                         return (
@@ -2207,6 +2209,7 @@ export default function SpreadsheetView({
                             onClick={() => setPendingHeaderConfig(prev => {
                               const current = prev.hashGroups || [
                                 { id: 'BASE', label: 'BASE', cols: ['BASE_L', 'BASE_R'] },
+                                { id: 'DRESS', label: 'BASE W/ DRESS', cols: ['DRESS_L', 'DRESS_R'] },
                                 { id: 'CONV', label: 'CONVERT', cols: ['CONV_L', 'CONV_R'] }
                               ];
                               if (current.some(h => h.id === hg.id)) {
@@ -2386,6 +2389,7 @@ export default function SpreadsheetView({
                     ],
                     hashGroups: pendingHeaderConfig.hashGroups || [
                       { id: 'BASE', label: 'BASE', cols: ['BASE_L', 'BASE_R'] },
+                      { id: 'DRESS', label: 'BASE W/ DRESS', cols: ['DRESS_L', 'DRESS_R'] },
                       { id: 'CONV', label: 'CONVERT', cols: ['CONV_L', 'CONV_R'] }
                     ]
                   });
