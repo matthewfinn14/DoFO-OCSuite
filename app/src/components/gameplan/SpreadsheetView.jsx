@@ -1778,56 +1778,113 @@ export default function SpreadsheetView({
   // ============================================================
   // DEDICATED PRINT DOM - Static tables with explicit pagination
   // ============================================================
+
+  /**
+   * A) computeUsedBounds - Find last used row and column
+   * A "used cell" is defined as:
+   * - Has non-empty text (play assigned), OR
+   * - Is covered by a header (intentional colored block), OR
+   * - Has non-default background color
+   */
+  const computeUsedBounds = (page, headerBounds, getPlaysForHeader) => {
+    const { columns, rows, headers } = page;
+    let maxUsedRow = 0;
+    let maxUsedCol = 0;
+
+    // Scan all headers to find their extent
+    (headers || []).forEach(header => {
+      const hb = headerBounds[header.id];
+      if (!hb) return;
+
+      // Header itself uses its row and columns
+      if (header.rowStart > maxUsedRow) maxUsedRow = header.rowStart;
+      const headerColEnd = header.colStart + header.colSpan - 1;
+      if (headerColEnd > maxUsedCol) maxUsedCol = headerColEnd;
+
+      // Check content rows - find last row with actual plays
+      const plays = getPlaysForHeader(header.id);
+      const boxColumns = header.boxColumns || 1;
+
+      if (plays.length > 0) {
+        // Calculate which row the last play occupies
+        const lastPlayIdx = plays.length - 1;
+        const lastPlayRow = Math.floor(lastPlayIdx / boxColumns);
+        const actualLastContentRow = header.rowStart + 1 + lastPlayRow;
+
+        if (actualLastContentRow > maxUsedRow) {
+          maxUsedRow = actualLastContentRow;
+        }
+        if (headerColEnd > maxUsedCol) {
+          maxUsedCol = headerColEnd;
+        }
+      } else {
+        // No plays, but header exists - include header row only
+        // (empty sections still show their header)
+        if (header.rowStart > maxUsedRow) maxUsedRow = header.rowStart;
+      }
+    });
+
+    // Ensure at least 1 row and 1 column if there are any headers
+    if ((headers || []).length > 0) {
+      maxUsedRow = Math.max(maxUsedRow, 1);
+      maxUsedCol = Math.max(maxUsedCol, 1);
+    }
+
+    // Log for debugging
+    console.log('[PRINT DEBUG] computeUsedBounds:', {
+      maxUsedRow,
+      maxUsedCol,
+      totalGridRows: rows,
+      totalGridCols: columns,
+      headerCount: (headers || []).length
+    });
+
+    return { maxUsedRow, maxUsedCol };
+  };
+
+  /**
+   * B) paginatePrintMatrix - Calculate pagination for reduced matrix
+   * Only paginates the used portion, no synthetic padding
+   */
+  const paginatePrintMatrix = (usedRowCount, usedColCount) => {
+    // Available height for content (landscape letter: 8.5" - margins - header)
+    const pageHeightIn = isLandscape ? 8.5 : 11;
+    const marginIn = 0.25;
+    const headerHeightPx = PRINT_HEADER_HEIGHT;
+    const footerHeightPx = 0; // No footer
+
+    const availableHeightPx = ((pageHeightIn - marginIn * 2) * PRINT_DPI) - headerHeightPx - footerHeightPx;
+
+    // Calculate rows per page (NO padding, NO minimum)
+    const rowsPerPage = Math.floor(availableHeightPx / PRINT_ROW_HEIGHT);
+
+    // Calculate actual pages needed (could be 1 if content fits)
+    const totalPages = usedRowCount <= rowsPerPage ? 1 : Math.ceil(usedRowCount / rowsPerPage);
+
+    // Log for debugging
+    console.log('[PRINT DEBUG] paginatePrintMatrix:', {
+      usedRowCount,
+      usedColCount,
+      rowsPerPage,
+      totalPages,
+      availableHeightPx,
+      rowHeight: PRINT_ROW_HEIGHT
+    });
+
+    return {
+      rowsPerPage,
+      totalPages,
+      usedRowCount,
+      usedColCount
+    };
+  };
+
   const renderPrintDOM = () => {
     return spreadsheetData.pages.map((page, pageIdx) => {
       const { columns, rows, headers } = page;
-      const pagination = computePrintPagination(rows);
-
-      // Calculate column width (equal distribution)
-      const colWidth = `${100 / columns}%`;
 
       // Build section bounds (same logic as edit view)
       const bounds = calculateSectionBounds(page);
-
-      // Build cell data matrix: [row][col] = { header, contentRowIdx, type }
-      const cellMatrix = [];
-      for (let r = 1; r <= rows; r++) {
-        cellMatrix[r] = [];
-        for (let c = 1; c <= columns; c++) {
-          cellMatrix[r][c] = { type: 'empty', header: null };
-        }
-      }
-
-      // Fill cell matrix with header/content data
-      (headers || []).forEach(header => {
-        const hb = bounds[header.id];
-        if (!hb) return;
-
-        // Header row
-        for (let c = header.colStart; c <= hb.colEnd; c++) {
-          if (cellMatrix[header.rowStart]) {
-            cellMatrix[header.rowStart][c] = {
-              type: c === header.colStart ? 'header' : 'header-span',
-              header,
-              colSpan: c === header.colStart ? header.colSpan : 0
-            };
-          }
-        }
-
-        // Content rows
-        for (let r = header.rowStart + 1; r <= hb.rowEnd; r++) {
-          for (let c = header.colStart; c <= hb.colEnd; c++) {
-            if (cellMatrix[r]) {
-              cellMatrix[r][c] = {
-                type: c === header.colStart ? 'content' : 'content-span',
-                header,
-                contentRowIdx: r - header.rowStart - 1,
-                colSpan: c === header.colStart ? header.colSpan : 0
-              };
-            }
-          }
-        }
-      });
 
       // Get plays for a header
       const getHeaderPlays = (headerId) => {
@@ -1835,6 +1892,88 @@ export default function SpreadsheetView({
         if (!set) return [];
         return (set.assignedPlayIds || []).map(id => plays.find(p => p.id === id)).filter(Boolean);
       };
+
+      // A) Compute used bounds - find last meaningful row/col
+      const { maxUsedRow, maxUsedCol } = computeUsedBounds(page, bounds, getHeaderPlays);
+
+      // If no content, render minimal placeholder
+      if (maxUsedRow === 0 || maxUsedCol === 0) {
+        return (
+          <div key={`print-sheet-${pageIdx}`} className="print-sheet">
+            <div className="print-page">
+              <div className="print-sheet-header" style={{
+                padding: '8px',
+                borderBottom: '2px solid #1e293b',
+                background: '#f8fafc'
+              }}>
+                {teamLogo && <img src={teamLogo} alt="Team" style={{ height: '24px', marginRight: '8px' }} />}
+                <span style={{ fontWeight: 'bold' }}>{weekTitle} {opponentTitle}</span>
+              </div>
+              <div style={{ padding: '20px', color: '#64748b', fontStyle: 'italic' }}>
+                No content to print
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // B) Paginate the reduced matrix
+      const pagination = paginatePrintMatrix(maxUsedRow, maxUsedCol);
+      const { rowsPerPage, totalPages } = pagination;
+
+      // Calculate column width based on USED columns only
+      const colWidth = `${100 / maxUsedCol}%`;
+
+      // Build cell data matrix for USED bounds only: [row][col]
+      const cellMatrix = [];
+      for (let r = 1; r <= maxUsedRow; r++) {
+        cellMatrix[r] = [];
+        for (let c = 1; c <= maxUsedCol; c++) {
+          cellMatrix[r][c] = { type: 'empty', header: null };
+        }
+      }
+
+      // Fill cell matrix with header/content data (only within used bounds)
+      (headers || []).forEach(header => {
+        const hb = bounds[header.id];
+        if (!hb) return;
+
+        // Skip headers that start beyond our used bounds
+        if (header.rowStart > maxUsedRow) return;
+        if (header.colStart > maxUsedCol) return;
+
+        // Clamp header extent to used bounds
+        const effectiveColEnd = Math.min(hb.colEnd, maxUsedCol);
+        const effectiveRowEnd = Math.min(hb.rowEnd, maxUsedRow);
+        const effectiveColSpan = Math.min(header.colSpan, maxUsedCol - header.colStart + 1);
+
+        // Header row
+        if (header.rowStart <= maxUsedRow) {
+          for (let c = header.colStart; c <= effectiveColEnd; c++) {
+            if (cellMatrix[header.rowStart]) {
+              cellMatrix[header.rowStart][c] = {
+                type: c === header.colStart ? 'header' : 'header-span',
+                header: { ...header, colSpan: effectiveColSpan },
+                colSpan: c === header.colStart ? effectiveColSpan : 0
+              };
+            }
+          }
+        }
+
+        // Content rows
+        for (let r = header.rowStart + 1; r <= effectiveRowEnd; r++) {
+          for (let c = header.colStart; c <= effectiveColEnd; c++) {
+            if (cellMatrix[r]) {
+              cellMatrix[r][c] = {
+                type: c === header.colStart ? 'content' : 'content-span',
+                header: { ...header, colSpan: effectiveColSpan },
+                contentRowIdx: r - header.rowStart - 1,
+                colSpan: c === header.colStart ? effectiveColSpan : 0
+              };
+            }
+          }
+        }
+      });
 
       // Render a single print page (subset of rows)
       const renderPrintPage = (startRow, endRow, printPageNum, isLastPage) => {
@@ -1868,14 +2007,14 @@ export default function SpreadsheetView({
               <div style={{ fontWeight: 'bold', fontSize: '12pt', color: '#0f172a' }}>
                 {weekTitle} {opponentTitle}
               </div>
-              {pagination.pageCount > 1 && (
+              {totalPages > 1 && (
                 <span style={{ marginLeft: 'auto', fontSize: '9pt', color: '#64748b' }}>
-                  Page {printPageNum} of {pagination.pageCount}
+                  Page {printPageNum} of {totalPages}
                 </span>
               )}
             </div>
 
-            {/* Static Table Grid */}
+            {/* Static Table Grid - uses ONLY maxUsedCol columns */}
             <table
               className="print-grid-table"
               style={{
@@ -1886,7 +2025,7 @@ export default function SpreadsheetView({
               }}
             >
               <colgroup>
-                {Array.from({ length: columns }, (_, i) => (
+                {Array.from({ length: maxUsedCol }, (_, i) => (
                   <col key={i} style={{ width: colWidth }} />
                 ))}
               </colgroup>
@@ -1897,7 +2036,7 @@ export default function SpreadsheetView({
 
                   return (
                     <tr key={rowNum} style={{ height: `${PRINT_ROW_HEIGHT}px` }}>
-                      {Array.from({ length: columns }, (_, colIdx) => {
+                      {Array.from({ length: maxUsedCol }, (_, colIdx) => {
                         const colNum = colIdx + 1;
                         const cell = rowCells[colNum] || { type: 'empty' };
 
@@ -2001,7 +2140,7 @@ export default function SpreadsheetView({
                               height: `${PRINT_ROW_HEIGHT}px`,
                               background: '#ffffff',
                               borderBottom: '1px solid #e2e8f0',
-                              borderRight: colNum < columns ? '1px solid #e2e8f0' : 'none',
+                              borderRight: colNum < maxUsedCol ? '1px solid #e2e8f0' : 'none',
                               padding: 0,
                               verticalAlign: 'middle'
                             }}
@@ -2017,15 +2156,22 @@ export default function SpreadsheetView({
         );
       };
 
-      // Generate paginated pages
+      // C) Generate paginated pages - using ONLY maxUsedRow rows
       const printPages = [];
-      const totalRows = rows;
-      const { rowsPerPage, pageCount } = pagination;
 
-      for (let p = 0; p < pageCount; p++) {
+      // Log final pagination
+      console.log('[PRINT DEBUG] Final pagination:', {
+        maxUsedRow,
+        maxUsedCol,
+        rowsPerPage,
+        totalPages,
+        willFitOnOnePage: maxUsedRow <= rowsPerPage
+      });
+
+      for (let p = 0; p < totalPages; p++) {
         const startRow = p * rowsPerPage + 1;
-        const endRow = Math.min((p + 1) * rowsPerPage, totalRows);
-        const isLastPage = p === pageCount - 1;
+        const endRow = Math.min((p + 1) * rowsPerPage, maxUsedRow);
+        const isLastPage = p === totalPages - 1;
 
         printPages.push(renderPrintPage(startRow, endRow, p + 1, isLastPage));
       }
