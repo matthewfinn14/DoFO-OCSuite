@@ -354,6 +354,7 @@ export default function DepthChartPrint({
         selectedLevel={selectedLevel}
         playerMap={playerMap}
         formationPairs={formationPairs}
+        dynamicOffensePositions={basePositions}
       />
     );
   }
@@ -513,22 +514,47 @@ function getOrdinal(n) {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
+// Canvas dimensions from DepthCharts.jsx editor
+const EDITOR_CANVAS_WIDTH = 1056;
+const EDITOR_CANVAS_HEIGHT = 408;
+
 // Formation view - renders formation pairs on landscape pages
-function FormationView({ depthLevels, currentWeek, settings, depthCharts, selectedLevel, playerMap, formationPairs = ['offense-defense'] }) {
-  // Get depth data for a specific position
-  const getPositionDepth = (chartType, pos) => {
-    const chartData = depthCharts?.[selectedLevel]?.[chartType] || {};
-    const positionData = chartData[pos] || {};
+function FormationView({ depthLevels, currentWeek, settings, depthCharts, selectedLevel, playerMap, formationPairs = ['offense-defense'], dynamicOffensePositions = [] }) {
+  // Get saved layout positions from week data
+  const savedLayouts = currentWeek?.depthChartLayouts || {};
+
+  // Get depth row counts from week data
+  const savedRowCounts = currentWeek?.depthRowCounts || {};
+
+  // Build set of valid offense position IDs from dynamic positions
+  const validOffensePositionIds = new Set(
+    dynamicOffensePositions.map(p => p.id)
+  );
+
+  // Get depth data for a specific position - uses week-specific depth charts
+  const getPositionDepth = (chartType, pos, numRows) => {
+    // First try week-specific depth chart, then fall back to global
+    const weekChartData = currentWeek?.depthCharts?.[chartType] || {};
+    const chartData = weekChartData[pos] || depthCharts?.[selectedLevel]?.[chartType]?.[pos] || [];
     const players = [];
 
-    for (let depth = 1; depth <= depthLevels; depth++) {
-      const playerId = positionData[`depth${depth}`];
+    // Use saved row count or fall back to depthLevels
+    const rowCount = numRows || depthLevels;
+
+    for (let depth = 0; depth < rowCount; depth++) {
+      const playerId = chartData[depth];
       const player = playerId ? playerMap[playerId] : null;
       players.push(player);
     }
 
     return players;
   };
+
+  // Convert editor pixel coordinates to print percentages
+  const convertToPercent = (x, y) => ({
+    x: (x / EDITOR_CANVAS_WIDTH) * 100,
+    y: (y / EDITOR_CANVAS_HEIGHT) * 100
+  });
 
   // Render a single position box as a spreadsheet-style table
   const PositionBox = ({ pos, players, style }) => (
@@ -553,29 +579,91 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
     </div>
   );
 
-  // Render all positions for a formation
-  const renderFormation = (formationLayout, chartType) => {
+  // Render all positions for a formation using saved layout if available
+  const renderFormation = (defaultFormationLayout, chartType) => {
     const boxes = [];
+    const savedLayout = savedLayouts[chartType] || {};
+    const chartRowCounts = savedRowCounts[chartType] || {};
 
-    Object.entries(formationLayout).forEach(([pos, positions]) => {
-      const players = getPositionDepth(chartType, pos);
+    // For offense, only render positions that exist in the current setup config
+    const isOffense = chartType === 'offense';
+    const shouldRenderPosition = (posId) => {
+      if (!isOffense) return true; // Non-offense charts render all positions
+      if (validOffensePositionIds.size === 0) return true; // No config, show all
+      return validOffensePositionIds.has(posId);
+    };
 
-      positions.forEach((coord, idx) => {
+    // If we have a saved layout, use it instead of defaults
+    if (Object.keys(savedLayout).length > 0) {
+      Object.entries(savedLayout).forEach(([posId, coords]) => {
+        // Skip positions not in current setup config (for offense)
+        if (!shouldRenderPosition(posId)) return;
+
+        const numRows = chartRowCounts[posId] || depthLevels;
+        const players = getPositionDepth(chartType, posId, numRows);
+        const percent = convertToPercent(coords.x, coords.y);
+
         boxes.push(
           <PositionBox
-            key={`${pos}-${idx}`}
-            pos={positions.length > 1 ? `${pos}` : pos}
+            key={posId}
+            pos={posId}
             players={players}
             style={{
               position: 'absolute',
-              left: `${coord.x}%`,
-              top: `${coord.y}%`,
+              left: `${percent.x}%`,
+              top: `${percent.y}%`,
               transform: 'translate(-50%, 0)'
             }}
           />
         );
       });
-    });
+    } else if (isOffense && dynamicOffensePositions.length > 0) {
+      // For offense without saved layout, use dynamic positions with default coords
+      dynamicOffensePositions.forEach((pos) => {
+        const posId = pos.id;
+        const defaultCoord = OFFENSE_FORMATION[posId]?.[0] || { x: 50, y: 50 };
+        const numRows = chartRowCounts[posId] || depthLevels;
+        const players = getPositionDepth(chartType, posId, numRows);
+
+        boxes.push(
+          <PositionBox
+            key={posId}
+            pos={posId}
+            players={players}
+            style={{
+              position: 'absolute',
+              left: `${defaultCoord.x}%`,
+              top: `${defaultCoord.y}%`,
+              transform: 'translate(-50%, 0)'
+            }}
+          />
+        );
+      });
+    } else {
+      // Fall back to default formation layout (for defense, special teams, etc.)
+      Object.entries(defaultFormationLayout).forEach(([pos, positions]) => {
+        if (!shouldRenderPosition(pos)) return;
+
+        const numRows = chartRowCounts[pos] || depthLevels;
+        const players = getPositionDepth(chartType, pos, numRows);
+
+        positions.forEach((coord, idx) => {
+          boxes.push(
+            <PositionBox
+              key={`${pos}-${idx}`}
+              pos={positions.length > 1 ? `${pos}` : pos}
+              players={players}
+              style={{
+                position: 'absolute',
+                left: `${coord.x}%`,
+                top: `${coord.y}%`,
+                transform: 'translate(-50%, 0)'
+              }}
+            />
+          );
+        });
+      });
+    }
 
     return boxes;
   };

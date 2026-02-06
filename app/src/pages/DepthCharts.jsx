@@ -562,6 +562,11 @@ function FormationView({
               )}
             </>
           )}
+          {/* Print area legend */}
+          <div className={`flex items-center gap-1.5 ml-4 text-xs ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
+            <div className="w-4 border-t border-dashed" style={{ borderColor: isLight ? '#fdba74' : 'rgba(251,146,60,0.5)' }} />
+            <span>Print safe area</span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-sm ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Zoom:</span>
@@ -589,14 +594,16 @@ function FormationView({
 
       {/* Formation Canvas - 11" x 4.25" at 96 DPI = 1056 x 408 pixels */}
       <div
-        className={`relative rounded-lg border overflow-auto ${
-          isLight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900 border-slate-700'
+        className={`relative rounded-lg overflow-auto ${
+          isLight ? 'bg-slate-200' : 'bg-slate-950'
         }`}
-        style={{ height: `${CANVAS_HEIGHT + 20}px` }}
+        style={{ height: `${(CANVAS_HEIGHT + 40) * zoom}px`, padding: '20px' }}
       >
         <div
           ref={containerRef}
-          className="relative mx-auto"
+          className={`relative mx-auto ${
+            isLight ? 'bg-white' : 'bg-slate-900'
+          }`}
           onMouseDown={(e) => {
             // Start selection box when clicking on empty space (not on a position card)
             if (!isLocked && (e.target === e.currentTarget || e.target.closest('[data-los]'))) {
@@ -612,11 +619,30 @@ function FormationView({
             height: `${CANVAS_HEIGHT * zoom}px`,
             transform: `scale(${zoom})`,
             transformOrigin: 'top left',
+            border: isLight ? '2px solid #94a3b8' : '2px solid #475569',
+            boxShadow: isLight ? '0 4px 6px -1px rgba(0,0,0,0.1)' : '0 4px 6px -1px rgba(0,0,0,0.5)',
             background: isLight
               ? 'repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(0,0,0,0.05) 19px, rgba(0,0,0,0.05) 20px), repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(0,0,0,0.05) 19px, rgba(0,0,0,0.05) 20px)'
               : 'repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(255,255,255,0.03) 19px, rgba(255,255,255,0.03) 20px), repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(255,255,255,0.03) 19px, rgba(255,255,255,0.03) 20px)'
           }}
         >
+          {/* Print margin indicators - 0.5" margins = 48px at 96 DPI */}
+          <div
+            className={`absolute pointer-events-none ${isLight ? 'border-orange-300' : 'border-orange-500/30'}`}
+            style={{
+              left: '48px',
+              top: '24px',
+              right: '48px',
+              bottom: '24px',
+              border: '1px dashed',
+              borderColor: isLight ? '#fdba74' : 'rgba(251,146,60,0.3)'
+            }}
+          />
+          {/* Corner markers for print area */}
+          <div className={`absolute w-3 h-3 border-l-2 border-t-2 ${isLight ? 'border-orange-400' : 'border-orange-500/50'}`} style={{ left: '44px', top: '20px' }} />
+          <div className={`absolute w-3 h-3 border-r-2 border-t-2 ${isLight ? 'border-orange-400' : 'border-orange-500/50'}`} style={{ right: '44px', top: '20px' }} />
+          <div className={`absolute w-3 h-3 border-l-2 border-b-2 ${isLight ? 'border-orange-400' : 'border-orange-500/50'}`} style={{ left: '44px', bottom: '20px' }} />
+          <div className={`absolute w-3 h-3 border-r-2 border-b-2 ${isLight ? 'border-orange-400' : 'border-orange-500/50'}`} style={{ right: '44px', bottom: '20px' }} />
           {/* Selection Box */}
           {selectionBox && (
             <div
@@ -1318,9 +1344,10 @@ export default function DepthCharts() {
         <DepthChartPrint
           weekId={currentWeekId}
           chartTypes={[activeChart]}
-          viewMode="full"
+          viewMode={viewMode === 'formation' ? 'formation' : 'full'}
           depthLevels={3}
           showBackups={true}
+          formationPairs={activeChart === 'offense' ? ['offense-defense'] : [`${activeChart}`]}
         />
       </div>
 
