@@ -626,11 +626,20 @@ export default function SpreadsheetView({
     const { columns, rows, headers } = page;
     const bounds = calculateSectionBounds(page);
 
-    // Calculate paper dimensions - letter size is 11" x 8.5"
-    // Landscape: width > height (11:8.5 = 1.294)
-    // Portrait: height > width (8.5:11 = 0.773)
-    const paperAspectRatio = isLandscape ? (11 / 8.5) : (8.5 / 11);
-    const pageWidth = isLandscape ? 1100 : 850; // Base width in pixels (scaled)
+    // Calculate paper dimensions based on format
+    // 2-page: Letter size (11" x 8.5" landscape, 8.5" x 11" portrait)
+    // 4-page booklet: 17" x 11" (two portrait pages side-by-side, prints front/back)
+    let paperAspectRatio, pageWidth;
+
+    if (pageFormat === '4-page') {
+      // 17x11 tabloid/ledger - two 8.5x11 portrait pages side by side
+      paperAspectRatio = 17 / 11; // ~1.545
+      pageWidth = 1400; // Wider to accommodate two portrait pages
+    } else {
+      // Standard letter size
+      paperAspectRatio = isLandscape ? (11 / 8.5) : (8.5 / 11);
+      pageWidth = isLandscape ? 1100 : 850;
+    }
     const pageHeight = pageWidth / paperAspectRatio;
 
     // Track which cells are occupied by headers or their content areas
@@ -727,7 +736,7 @@ export default function SpreadsheetView({
                 {weekTitle} {opponentTitle}
               </div>
               <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                Page {page.pageNum} • {columns} cols × {rows} rows
+                Page {page.pageNum} • {columns} cols × {rows} rows {pageFormat === '4-page' && <span style={{ color: '#94a3b8' }}>• 17×11 booklet</span>}
               </div>
             </div>
           </div>
@@ -1157,8 +1166,11 @@ export default function SpreadsheetView({
     );
   };
 
-  // Calculate print page dimensions based on orientation
-  const printPageSize = isLandscape ? 'landscape' : 'portrait';
+  // Calculate print page dimensions based on format and orientation
+  // 4-page booklet uses 17x11 (tabloid/ledger), 2-page uses letter
+  const printPageSize = pageFormat === '4-page'
+    ? '17in 11in'  // Tabloid/Ledger landscape (two portrait pages side-by-side)
+    : (isLandscape ? 'landscape' : 'portrait');
 
   return (
     <div className="h-full flex flex-col spreadsheet-view" style={{ background: '#1e293b' }}>
