@@ -1731,10 +1731,7 @@ export default function SpreadsheetView({
               margin: 0.25in;
             }
 
-            /* CRITICAL: Reset everything for print */
-            * {
-              overflow: visible !important;
-            }
+            /* CRITICAL: Reset containers for print - but NOT cell content */
 
             /* Hide no-print elements */
             .no-print {
@@ -1849,6 +1846,33 @@ export default function SpreadsheetView({
               min-height: 0 !important;
               overflow: hidden !important;
               line-height: 1.1 !important;
+              border-bottom: 1px solid #e2e8f0 !important;
+              border-right: 1px solid #e2e8f0 !important;
+            }
+
+            /* Ensure all grid children have visible borders */
+            .spreadsheet-grid > div {
+              border-bottom: 1px solid #e2e8f0 !important;
+            }
+
+            /* Text fitting - scale down and truncate to fit */
+            .spreadsheet-content-cell,
+            .spreadsheet-content-cell span,
+            .spreadsheet-content-cell div,
+            .spreadsheet-content-cell > div > div {
+              overflow: hidden !important;
+              white-space: nowrap !important;
+              text-overflow: ellipsis !important;
+              max-width: 100% !important;
+            }
+
+            /* Force grid to maintain structure */
+            .spreadsheet-grid {
+              overflow: visible !important;
+            }
+
+            .spreadsheet-grid > div:not(.no-print) {
+              overflow: hidden !important;
             }
 
             /* Compact print header */
