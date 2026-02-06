@@ -1420,6 +1420,9 @@ export default function SpreadsheetView({
                 // Section boundary indicators
                 const isLastColumn = headerBounds.colEnd >= columns;
 
+                // Use box-shadow for print (browsers print box-shadow but often skip background-color)
+                const cellBgColor = isDragOverNewHeader ? '#bbf7d0' : sectionBgBase;
+
                 return (
                   <div
                     key={cellKey}
@@ -1427,7 +1430,8 @@ export default function SpreadsheetView({
                     style={{
                       gridColumn: sectionColSpan > 1 ? `${headerBounds.colStart + 1} / span ${sectionColSpan}` : colNum + 1,
                       gridRow: rowNum + 1,
-                      backgroundColor: isDragOverNewHeader ? '#bbf7d0' : sectionBgBase,
+                      backgroundColor: cellBgColor,
+                      boxShadow: `inset 0 0 0 1000px ${cellBgColor}`,
                       borderTop: isDragOverNewHeader ? '3px solid #22c55e' : (contentRowIdx === 0 ? 'none' : undefined),
                       borderBottom: isLastContentRow ? `3px solid ${headerColor}` : '1px solid #e2e8f0',
                       borderRight: isLastColumn ? `3px solid ${headerColor}` : `3px solid ${headerColor}`,
