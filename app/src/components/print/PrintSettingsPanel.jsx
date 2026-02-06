@@ -38,8 +38,6 @@ export default function PrintSettingsPanel({
         return <CoachWristbandSettings {...props} weekData={weekData} selectedLevelId={selectedLevelId} />;
       case 'depth_chart':
         return <DepthChartSettings {...props} />;
-      case 'practice_plan':
-        return <PracticePlanSettings {...props} staff={staff} />;
       case 'practice_plan_coach':
         return <PracticePlanCoachSettings {...props} staff={staff} weekData={weekData} />;
       case 'game_plan':
@@ -329,105 +327,7 @@ function DepthChartSettings({ settings, onChange, layout }) {
   );
 }
 
-// Practice plan settings
-function PracticePlanSettings({ settings, onChange, staff, layout }) {
-  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-
-  return (
-    <>
-      <SettingsCheckbox
-        id="print-settings-practice-plan-coach-view"
-        checked={settings.coachView === true}
-        onChange={(e) => onChange('coachView', e.target.checked)}
-        label="Coach-specific view"
-        layout={layout}
-      />
-
-      {settings.coachView && staff?.length > 0 && (
-        <SettingsField label="Filter by Coach" layout={layout} id="print-settings-practice-plan-coach-filter">
-          <select
-            value={settings.coachId || ''}
-            onChange={(e) => onChange('coachId', e.target.value || null)}
-          >
-            <option value="">All Coaches</option>
-            {staff.map(coach => (
-              <option key={coach.id || coach.email} value={coach.id || coach.email}>
-                {coach.name || coach.email}
-              </option>
-            ))}
-          </select>
-        </SettingsField>
-      )}
-
-      {layout === 'horizontal' ? (
-        <MultiSelectDropdown
-          id="print-settings-practice-plan-days"
-          label="Days"
-          options={days.map(d => ({ id: d, label: d }))}
-          selectedIds={settings.days || days.slice(0, 5)}
-          onChange={(updated) => onChange('days', updated)}
-        />
-      ) : (
-        <div className="mb-4">
-          <label id="print-settings-practice-plan-days-label" className="block text-sm font-medium text-gray-700 mb-2">Days to Print</label>
-          <div className="space-y-2" role="group" aria-labelledby="print-settings-practice-plan-days-label">
-            {days.map(day => (
-              <SettingsCheckbox
-                key={day}
-                id={`print-settings-practice-plan-day-${day.toLowerCase()}`}
-                checked={(settings.days || days.slice(0, 5)).includes(day)}
-                onChange={(e) => {
-                  const current = settings.days || days.slice(0, 5);
-                  const updated = e.target.checked
-                    ? [...current, day]
-                    : current.filter(d => d !== day);
-                  onChange('days', updated);
-                }}
-                label={day}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      <SettingsCheckbox
-        id="print-settings-practice-plan-include-scripts"
-        checked={settings.includeScripts === true}
-        onChange={(e) => onChange('includeScripts', e.target.checked)}
-        label="Include scripts"
-        layout={layout}
-      />
-
-      <SettingsField label="Orientation" layout={layout} id="print-settings-practice-plan-orientation">
-        <select
-          value={settings.orientation || 'portrait'}
-          onChange={(e) => onChange('orientation', e.target.value)}
-        >
-          <option value="portrait">Portrait</option>
-          <option value="landscape">Landscape</option>
-        </select>
-      </SettingsField>
-
-      <SettingsCheckbox
-        id="print-settings-practice-plan-show-notes"
-        checked={settings.showNotes !== false}
-        onChange={(e) => onChange('showNotes', e.target.checked)}
-        label="Show notes"
-        layout={layout}
-      />
-
-      <SettingsCheckbox
-        id="print-settings-practice-plan-show-contact-level"
-        checked={settings.showContactLevel === true}
-        onChange={(e) => onChange('showContactLevel', e.target.checked)}
-        label="Show contact level"
-        layout={layout}
-      />
-    </>
-  );
-}
-
-// Practice plan coach view settings
+// Practice plan & scripts settings
 function PracticePlanCoachSettings({ settings, onChange, staff, weekData, layout }) {
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -491,43 +391,10 @@ function PracticePlanCoachSettings({ settings, onChange, staff, weekData, layout
   );
 }
 
-// Game plan settings
+// Game plan settings - simplified since layout is configured in Game Plan editor
 function GamePlanSettings({ settings, onChange, layout }) {
   return (
     <>
-      <SettingsField label="View Type" layout={layout} id="print-settings-game-plan-view-type">
-        <select
-          value={settings.viewType || 'spreadsheet'}
-          onChange={(e) => onChange('viewType', e.target.value)}
-        >
-          <option value="spreadsheet">Spreadsheet</option>
-          <option value="sheet">Call Sheet (Legacy)</option>
-          <option value="fzdnd">Field Zone (FZDnD)</option>
-          <option value="matrix">Matrix View</option>
-        </select>
-      </SettingsField>
-
-      <SettingsField label="Page Format" layout={layout} id="print-settings-game-plan-page-format">
-        <select
-          value={settings.pageFormat || '2-page'}
-          onChange={(e) => onChange('pageFormat', e.target.value)}
-        >
-          <option value="2-page">2-Page (1 sheet front/back)</option>
-          <option value="4-page">4-Page Booklet (17x11 spread)</option>
-        </select>
-      </SettingsField>
-
-      <SettingsField label="Font Size" layout={layout} id="print-settings-game-plan-font-size">
-        <select
-          value={settings.fontSize || 'medium'}
-          onChange={(e) => onChange('fontSize', e.target.value)}
-        >
-          <option value="small">Small</option>
-          <option value="medium">Medium</option>
-          <option value="large">Large</option>
-        </select>
-      </SettingsField>
-
       <SettingsCheckbox
         id="print-settings-game-plan-include-logo"
         checked={settings.includeLogo !== false}

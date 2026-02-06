@@ -783,7 +783,7 @@
 }
 
 /* ============================================
-   FZDND BOX STYLES (for SheetView)
+   FZDND BOX STYLES (for SpreadsheetView)
    ============================================ */
 
 .fzdnd-box-container {
@@ -803,7 +803,7 @@
 }
 
 /* ============================================
-   MATRIX BOX STYLES (for SheetView)
+   MATRIX BOX STYLES (for SpreadsheetView)
    ============================================ */
 
 .matrix-box-container {
@@ -1291,7 +1291,7 @@
     color-adjust: exact !important;
   }
 
-  /* Page orientation controlled dynamically via inline <style> tag in SheetView */
+  /* Page orientation controlled dynamically via inline <style> tag in SpreadsheetView */
 
   /* Matrix print styles */
   .matrix-table {

@@ -26,7 +26,6 @@ import PrintPageStyle from '../components/print/PrintPageStyle';
 import WristbandPrint from '../components/print/templates/WristbandPrint';
 import CoachWristbandPrint from '../components/print/templates/CoachWristbandPrint';
 import DepthChartPrint from '../components/print/templates/DepthChartPrint';
-import PracticePlanPrint from '../components/print/templates/PracticePlanPrint';
 import PracticePlanCoachView from '../components/print/templates/PracticePlanCoachView';
 import GamePlanPrint from '../components/print/templates/GamePlanPrint';
 import PreGamePrint from '../components/print/templates/PreGamePrint';
@@ -83,27 +82,10 @@ const PRINT_TEMPLATES = [
     orientation: 'portrait'
   },
   {
-    id: 'practice_plan',
-    name: 'Practice Plan',
-    description: 'Daily practice schedules with scripts',
-    icon: Calendar,
-    category: 'practice',
-    component: PracticePlanPrint,
-    defaultSettings: {
-      coachView: false,
-      days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-      includeScripts: true,
-      orientation: 'landscape',
-      showNotes: true,
-      showContactLevel: true
-    },
-    orientation: 'landscape'
-  },
-  {
     id: 'practice_plan_coach',
-    name: 'Practice Plan (Coach View)',
-    description: '2-page coach-specific practice plan with Big 3 focus and scripts',
-    icon: ClipboardList,
+    name: 'Practice Plan & Scripts',
+    description: 'Daily practice schedule with scripts and coach filtering',
+    icon: Calendar,
     category: 'practice',
     component: PracticePlanCoachView,
     defaultSettings: {
@@ -216,6 +198,7 @@ export default function PrintCenter() {
     const viewModeParam = searchParams.get('viewMode');
     const dayParam = searchParams.get('day');
     const coachParam = searchParams.get('coach');
+    const orientationParam = searchParams.get('orientation');
 
     if (templateParam) {
       const template = PRINT_TEMPLATES.find(t => t.id === templateParam);
@@ -226,7 +209,8 @@ export default function PrintCenter() {
           ...(formatParam ? { format: formatParam } : {}),
           ...(viewModeParam ? { viewMode: viewModeParam } : {}),
           ...(dayParam ? { day: dayParam } : {}),
-          ...(coachParam ? { coachId: coachParam } : {})
+          ...(coachParam ? { coachId: coachParam } : {}),
+          ...(orientationParam ? { orientation: orientationParam } : {})
         });
       }
     }

@@ -64,18 +64,70 @@ export default function PrintPreview({
     onScaleChange?.(nearestScale);
   };
 
-  // Paper dimensions in pixels (at 96 DPI)
-  const paperStyle = {
-    width: orientation === 'landscape' ? '11in' : '8.5in',
-    minHeight: orientation === 'landscape' ? '8.5in' : '11in',
-    transform: `scale(${scale})`,
-    transformOrigin: 'top center',
-  };
+  // Paper dimensions based on orientation
+  const paperWidth = orientation === 'landscape' ? '11in' : '8.5in';
+  const paperHeight = orientation === 'landscape' ? '8.5in' : '11in';
 
   return (
-    <div className={`flex flex-col h-full ${className}`}>
+    <div className={`flex flex-col h-full print:block print:h-auto ${className}`}>
+      {/* Page break styles for preview - shows visual separation between pages */}
+      {/* Note: wristband-page excluded - WristbandPrint has its own comprehensive styles */}
+      <style>{`
+        .print-preview-container .print-page,
+        .print-preview-container .gameplan-page,
+        .print-preview-container .practice-page,
+        .print-preview-container [class*="-page"]:not(.gameplan-page-content):not(.wristband-page) {
+          width: ${paperWidth};
+          min-height: ${paperHeight};
+          max-height: ${paperHeight};
+          background: white;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          border: 1px solid #d1d5db;
+          margin-bottom: 24px;
+          overflow: hidden;
+          box-sizing: border-box;
+        }
+        .print-preview-container .print-page:last-child,
+        .print-preview-container .gameplan-page:last-child,
+        .print-preview-container .practice-page:last-child,
+        .print-preview-container [class*="-page"]:last-child:not(.gameplan-page-content):not(.wristband-page) {
+          margin-bottom: 0;
+        }
+        @media print {
+          /* Reset transform so zoom doesn't affect print */
+          .print-preview-container {
+            transform: none !important;
+            display: block !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          .print-preview-container .print-page,
+          .print-preview-container .gameplan-page,
+          .print-preview-container .practice-page,
+          .print-preview-container [class*="-page"]:not(.gameplan-page-content):not(.wristband-page) {
+            box-shadow: none !important;
+            border: none !important;
+            margin-bottom: 0 !important;
+            width: auto !important;
+            min-height: auto !important;
+            max-height: none !important;
+          }
+          /* Hide zoom controls bar when printing */
+          .print-preview-zoom-controls {
+            display: none !important;
+          }
+          /* Wristband print containers handle their own layout */
+          .print-preview-container .wristband-print-player,
+          .print-preview-container .wristband-print-coach {
+            display: block !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+        }
+      `}</style>
+
       {/* Zoom Controls */}
-      <div className="flex items-center justify-between px-4 py-2 bg-white border border-gray-200 rounded-lg mb-4 print:hidden">
+      <div className="print-preview-zoom-controls flex items-center justify-between px-4 py-2 bg-white border border-gray-200 rounded-lg mb-4 print:hidden">
         <div className="flex items-center gap-2">
           <button
             onClick={handleZoomOut}
@@ -112,15 +164,16 @@ export default function PrintPreview({
       {/* Preview Container */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto bg-gray-200 rounded-lg p-6 print:p-0 print:bg-white print:overflow-visible"
+        className="flex-1 overflow-auto bg-gray-200 rounded-lg p-6 print:p-0 print:bg-white print:overflow-visible print:rounded-none print:block"
       >
-        <div className="flex justify-center">
-          <div
-            style={paperStyle}
-            className="bg-white shadow-xl border border-gray-300 print:shadow-none print:border-0 print:!transform-none print:!w-full print:!h-auto print:!m-0 print:!rounded-none"
-          >
-            {children}
-          </div>
+        <div
+          className="print-preview-container flex flex-col items-center"
+          style={{
+            transform: `scale(${scale})`,
+            transformOrigin: 'top center',
+          }}
+        >
+          {children}
         </div>
       </div>
     </div>

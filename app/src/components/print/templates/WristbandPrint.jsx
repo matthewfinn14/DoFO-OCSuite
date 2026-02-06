@@ -226,6 +226,17 @@ export default function WristbandPrint({
           .wristband-print-coach {
             page-break-after: avoid !important;
             break-after: avoid !important;
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            overflow: visible !important;
+          }
+
+          /* Single page should never trigger a page break */
+          .wristband-print-player:only-child,
+          .wristband-print-coach:only-child {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
           }
 
           /* Force hide print:hidden elements and ensure they take no space */
@@ -333,6 +344,8 @@ export default function WristbandPrint({
           break-after: avoid !important;
           margin-bottom: 0 !important;
           padding-bottom: 0 !important;
+          height: auto !important;
+          min-height: 0 !important;
         }
 
         .wristband-print-player .wristband-page {
@@ -346,6 +359,13 @@ export default function WristbandPrint({
           padding: 0;
           margin: 0;
           overflow: hidden;
+        }
+
+        @media print {
+          .wristband-print-player .wristband-page {
+            max-height: none !important;
+            overflow: visible !important;
+          }
         }
 
         .wristband-print-coach .wristband-page {

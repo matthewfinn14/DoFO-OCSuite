@@ -4,7 +4,6 @@ import { useSchool } from '../context/SchoolContext';
 import { usePlayBank } from '../context/PlayBankContext';
 import { getWristbandDisplay } from '../utils/wristband';
 import { getPlayCall } from '../utils/playDisplay';
-import SheetView from '../components/gameplan/SheetView';
 import SpreadsheetView from '../components/gameplan/SpreadsheetView';
 import BoxEditorModal from '../components/gameplan/BoxEditorModal';
 import {
@@ -16,164 +15,16 @@ import {
   Book,
   Settings,
   X,
-  Plus,
   Target,
-  MapPin,
-  Map,
-  Zap,
   ExternalLink,
   CheckSquare,
-  Package,
-  Undo2,
-  Users,
-  LayoutGrid,
-  Table2
+  Undo2
 } from 'lucide-react';
 import '../styles/gameplan.css';
 
 // Default game plan layouts configuration
 const DEFAULT_LAYOUTS = {
-  CALL_SHEET: {
-    sections: [
-      {
-        title: 'OPENERS / SCRIPTS',
-        expandToFill: false,
-        boxes: [
-          {
-            header: 'Openers',
-            setId: 'openers',
-            type: 'grid',
-            colSpan: 5,
-            color: '#3b82f6',
-            gridColumns: 4,
-            gridRows: 5,
-            gridHeadings: ['LEFT HASH', 'COL 2', 'COL 3', 'NOTES'],
-            cornerLabel: '#'
-          },
-          {
-            header: '1st Drive Script',
-            setId: 'first_drive',
-            type: 'script',
-            colSpan: 2,
-            color: '#8b5cf6',
-            rows: Array(10).fill(null).map((_, i) => ({ label: i + 1, content: null, contentRight: null }))
-          }
-        ]
-      },
-      {
-        title: 'RUN GAME',
-        expandToFill: true,
-        boxes: [
-          {
-            header: 'Inside Zone',
-            setId: 'inside_zone',
-            type: 'grid',
-            colSpan: 3,
-            color: '#ef4444',
-            gridColumns: 3,
-            gridRows: 4,
-            gridHeadings: ['LEFT', 'MIDDLE', 'RIGHT'],
-            cornerLabel: '#'
-          },
-          {
-            header: 'Outside Zone',
-            setId: 'outside_zone',
-            type: 'grid',
-            colSpan: 3,
-            color: '#f97316',
-            gridColumns: 3,
-            gridRows: 4,
-            gridHeadings: ['LEFT', 'MIDDLE', 'RIGHT'],
-            cornerLabel: '#'
-          }
-        ]
-      },
-      {
-        title: 'QUICK GAME',
-        expandToFill: true,
-        boxes: [
-          {
-            header: 'Quick Game',
-            setId: 'quick_game',
-            type: 'grid',
-            colSpan: 5,
-            color: '#22c55e',
-            gridColumns: 4,
-            gridRows: 5,
-            gridHeadings: ['LEFT HASH', 'COL 2', 'COL 3', 'NOTES'],
-            cornerLabel: '#'
-          }
-        ]
-      },
-      {
-        title: 'DROPBACK',
-        expandToFill: true,
-        boxes: [
-          {
-            header: 'Dropback',
-            setId: 'dropback',
-            type: 'grid',
-            colSpan: 5,
-            color: '#0ea5e9',
-            gridColumns: 4,
-            gridRows: 5,
-            gridHeadings: ['LEFT HASH', 'COL 2', 'COL 3', 'NOTES'],
-            cornerLabel: '#'
-          }
-        ]
-      },
-      {
-        title: 'RED ZONE / GOAL LINE',
-        expandToFill: true,
-        boxes: [
-          {
-            header: 'Red Zone',
-            setId: 'red_zone',
-            type: 'grid',
-            colSpan: 3,
-            color: '#dc2626',
-            gridColumns: 3,
-            gridRows: 5,
-            gridHeadings: ['LEFT', 'MIDDLE', 'RIGHT'],
-            cornerLabel: '#'
-          },
-          {
-            header: 'Goal Line',
-            setId: 'goal_line',
-            type: 'grid',
-            colSpan: 3,
-            color: '#7c2d12',
-            gridColumns: 3,
-            gridRows: 4,
-            gridHeadings: ['LEFT', 'MIDDLE', 'RIGHT'],
-            cornerLabel: '#'
-          }
-        ]
-      },
-      {
-        title: 'SPECIALS',
-        expandToFill: true,
-        boxes: [
-          {
-            header: '2-Min Offense',
-            setId: 'two_min',
-            type: 'script',
-            colSpan: 2,
-            color: '#6366f1',
-            rows: Array(8).fill(null).map((_, i) => ({ label: i + 1, content: null, contentRight: null }))
-          },
-          {
-            header: 'Gadgets',
-            setId: 'gadgets',
-            type: 'script',
-            colSpan: 2,
-            color: '#ec4899',
-            rows: Array(6).fill(null).map((_, i) => ({ label: i + 1, content: null, contentRight: null }))
-          }
-        ]
-      }
-    ]
-  },
+  // Legacy MATRIX config - used by print templates
   MATRIX: {
     id: 'MATRIX',
     name: "Strike 'Em Out",
@@ -265,24 +116,8 @@ export default function GamePlan() {
   const [isLocked, setIsLocked] = useState(false);
   const [isSheetEditing, setIsSheetEditing] = useState(false);
   const [pageFormat, setPageFormat] = useState('2-page'); // '2-page' or '4-page'
-  const [pageOrientation, setPageOrientation] = useState('portrait'); // 'portrait' or 'landscape'
-  const [layoutMode, setLayoutMode] = useState('spreadsheet'); // 'spreadsheet' or 'modular'
+  const [pageOrientation, setPageOrientation] = useState('landscape'); // 'portrait' or 'landscape'
   const [editingBox, setEditingBox] = useState(null);
-
-  // Auto-set landscape orientation for spreadsheet mode
-  useEffect(() => {
-    if (layoutMode === 'spreadsheet') {
-      setPageOrientation('landscape');
-    }
-  }, [layoutMode]);
-
-  // Drag state for Sheet view
-  const [draggedCell, setDraggedCell] = useState(null);
-  const [playDragOverBox, setPlayDragOverBox] = useState(null);
-
-  // Add Box modal state
-  const [showAddBoxModal, setShowAddBoxModal] = useState(false);
-  const [addBoxSectionIdx, setAddBoxSectionIdx] = useState(null);
 
   // Placement choice modal state (for Add All targeting)
   const [showPlacementChoice, setShowPlacementChoice] = useState(false);
@@ -373,11 +208,11 @@ export default function GamePlan() {
         const newGamePlan = { ...gamePlan };
         const newSets = [...(newGamePlan.sets || [])];
 
-        // Get all box setIds from the current sheet layout
+        // Get all header setIds from the spreadsheet layout
         const allSetIds = [];
-        (gamePlanLayouts.CALL_SHEET?.sections || []).forEach(section => {
-          (section.boxes || []).forEach(box => {
-            if (box.setId) allSetIds.push(box.setId);
+        (gamePlanLayouts.SPREADSHEET?.pages || []).forEach(page => {
+          (page.headers || []).forEach(header => {
+            if (header.id) allSetIds.push(`spreadsheet_${header.id}`);
           });
         });
 
@@ -403,9 +238,6 @@ export default function GamePlan() {
       clearBatchAddEvent();
     }
   }, [batchAddEvent, editingBox, gamePlan, gamePlanLayouts, handleUpdateGamePlan, clearBatchAddEvent]);
-
-  // Add Section modal state
-  const [showAddSectionModal, setShowAddSectionModal] = useState(false);
 
   // Update layouts in current week (with history tracking)
   const handleUpdateLayouts = useCallback((newLayouts, skipHistory = false) => {
@@ -440,21 +272,6 @@ export default function GamePlan() {
       .map(id => playsArray.find(p => p.id === id))
       .filter(Boolean);
   }, [gamePlan.sets, playsArray]);
-
-  // Get grid plays with assigned slots
-  const getGridPlays = useCallback((setId, totalSlots, assignedPlayIds = []) => {
-    const plays = [];
-    for (let i = 0; i < totalSlots; i++) {
-      const playId = assignedPlayIds?.[i];
-      if (playId) {
-        const play = playsArray.find(p => p.id === playId);
-        plays.push(play ? { ...play, type: 'PLAY' } : { type: 'GAP' });
-      } else {
-        plays.push({ type: 'GAP' });
-      }
-    }
-    return plays;
-  }, [playsArray]);
 
   // Add play to a set
   const handleAddPlayToSet = useCallback((setId, playId) => {
@@ -538,142 +355,55 @@ export default function GamePlan() {
     }
   }, [gamePlan, handleUpdateGamePlan, isLocked]);
 
-  // Assign play to a specific cell (grid or script)
+  // Assign play to a specific cell in spreadsheet header
   const handleAssignPlayToCell = useCallback((setId, cellIdx, column, playId) => {
     if (isLocked) return;
 
-    // For grid boxes, cellIdx is the linear index
-    // For script boxes, cellIdx is the row index and column is 'left' or 'right'
+    // Spreadsheet headers store plays in gamePlan.sets
+    let newSets = [...(gamePlan.sets || [])];
+    let setIndex = newSets.findIndex(s => s.id === setId);
 
-    // Handle spreadsheet headers - they store plays in gamePlan.sets
-    if (setId.startsWith('spreadsheet_')) {
-      let newSets = [...(gamePlan.sets || [])];
-      let setIndex = newSets.findIndex(s => s.id === setId);
-
-      if (setIndex === -1) {
-        const newSet = { id: setId, playIds: [], assignedPlayIds: [] };
-        while (newSet.assignedPlayIds.length <= cellIdx) {
-          newSet.assignedPlayIds.push(null);
-        }
-        newSet.assignedPlayIds[cellIdx] = playId;
-        newSets.push(newSet);
-      } else {
-        const existingSet = { ...newSets[setIndex] };
-        const assignedPlayIds = [...(existingSet.assignedPlayIds || [])];
-        while (assignedPlayIds.length <= cellIdx) {
-          assignedPlayIds.push(null);
-        }
-        assignedPlayIds[cellIdx] = playId;
-        existingSet.assignedPlayIds = assignedPlayIds;
-        newSets[setIndex] = existingSet;
+    if (setIndex === -1) {
+      const newSet = { id: setId, playIds: [], assignedPlayIds: [] };
+      while (newSet.assignedPlayIds.length <= cellIdx) {
+        newSet.assignedPlayIds.push(null);
       }
-      handleUpdateGamePlan({ ...gamePlan, sets: newSets });
-      return;
+      newSet.assignedPlayIds[cellIdx] = playId;
+      newSets.push(newSet);
+    } else {
+      const existingSet = { ...newSets[setIndex] };
+      const assignedPlayIds = [...(existingSet.assignedPlayIds || [])];
+      while (assignedPlayIds.length <= cellIdx) {
+        assignedPlayIds.push(null);
+      }
+      assignedPlayIds[cellIdx] = playId;
+      existingSet.assignedPlayIds = assignedPlayIds;
+      newSets[setIndex] = existingSet;
     }
+    handleUpdateGamePlan({ ...gamePlan, sets: newSets });
+  }, [gamePlan, handleUpdateGamePlan, isLocked]);
 
-    // Update the layout box directly
-    const newLayouts = { ...gamePlanLayouts };
-    let boxFound = false;
-
-    newLayouts.CALL_SHEET.sections = newLayouts.CALL_SHEET.sections.map(section => ({
-      ...section,
-      boxes: section.boxes.map(box => {
-        if (box.setId === setId) {
-          boxFound = true;
-          if (box.type === 'script') {
-            // Script box - update rows
-            const newRows = [...(box.rows || [])];
-            while (newRows.length <= cellIdx) {
-              newRows.push({ label: newRows.length + 1, content: null, contentRight: null });
-            }
-            if (column === 'left' || column === null) {
-              newRows[cellIdx] = { ...newRows[cellIdx], content: playId };
-            } else {
-              newRows[cellIdx] = { ...newRows[cellIdx], contentRight: playId };
-            }
-            return { ...box, rows: newRows };
-          } else {
-            // Grid box - update assignedPlayIds
-            const cols = box.gridColumns || 4;
-            const rowsCount = box.gridRows || 5;
-            const totalSlots = cols * rowsCount;
-            const newAssignedPlayIds = [...(box.assignedPlayIds || [])];
-            while (newAssignedPlayIds.length < totalSlots) {
-              newAssignedPlayIds.push('GAP');
-            }
-            newAssignedPlayIds[cellIdx] = playId;
-            return { ...box, assignedPlayIds: newAssignedPlayIds };
-          }
-        }
-        return box;
-      })
-    }));
-
-    if (boxFound) {
-      handleUpdateLayouts(newLayouts);
-    }
-  }, [gamePlanLayouts, gamePlan, handleUpdateLayouts, handleUpdateGamePlan, isLocked]);
-
-  // Remove play from a specific cell
+  // Remove play from a specific cell in spreadsheet header
   const handleRemovePlayFromCell = useCallback((setId, cellIdx, column) => {
     if (isLocked) return;
 
-    // Handle spreadsheet headers - they store plays in gamePlan.sets
-    if (setId.startsWith('spreadsheet_')) {
-      let newSets = [...(gamePlan.sets || [])];
-      let setIndex = newSets.findIndex(s => s.id === setId);
+    // Spreadsheet headers store plays in gamePlan.sets
+    let newSets = [...(gamePlan.sets || [])];
+    let setIndex = newSets.findIndex(s => s.id === setId);
 
-      if (setIndex !== -1) {
-        const existingSet = { ...newSets[setIndex] };
-        const assignedPlayIds = [...(existingSet.assignedPlayIds || [])];
-        if (assignedPlayIds[cellIdx]) {
-          assignedPlayIds[cellIdx] = null;
-          existingSet.assignedPlayIds = assignedPlayIds;
-          newSets[setIndex] = existingSet;
-          handleUpdateGamePlan({ ...gamePlan, sets: newSets });
-        }
+    if (setIndex !== -1) {
+      const existingSet = { ...newSets[setIndex] };
+      const assignedPlayIds = [...(existingSet.assignedPlayIds || [])];
+      if (assignedPlayIds[cellIdx]) {
+        assignedPlayIds[cellIdx] = null;
+        existingSet.assignedPlayIds = assignedPlayIds;
+        newSets[setIndex] = existingSet;
+        handleUpdateGamePlan({ ...gamePlan, sets: newSets });
       }
-      return;
     }
+  }, [gamePlan, handleUpdateGamePlan, isLocked]);
 
-    const newLayouts = { ...gamePlanLayouts };
-    let boxFound = false;
-
-    newLayouts.CALL_SHEET.sections = newLayouts.CALL_SHEET.sections.map(section => ({
-      ...section,
-      boxes: section.boxes.map(box => {
-        if (box.setId === setId) {
-          boxFound = true;
-          if (box.type === 'script') {
-            // Script box - clear from rows
-            const newRows = [...(box.rows || [])];
-            if (newRows[cellIdx]) {
-              if (column === 'left' || column === null) {
-                newRows[cellIdx] = { ...newRows[cellIdx], content: null };
-              } else {
-                newRows[cellIdx] = { ...newRows[cellIdx], contentRight: null };
-              }
-            }
-            return { ...box, rows: newRows };
-          } else {
-            // Grid box - clear from assignedPlayIds
-            const newAssignedPlayIds = [...(box.assignedPlayIds || [])];
-            if (newAssignedPlayIds[cellIdx]) {
-              newAssignedPlayIds[cellIdx] = 'GAP';
-            }
-            return { ...box, assignedPlayIds: newAssignedPlayIds };
-          }
-        }
-        return box;
-      })
-    }));
-
-    if (boxFound) {
-      handleUpdateLayouts(newLayouts);
-    }
-  }, [gamePlanLayouts, gamePlan, handleUpdateLayouts, handleUpdateGamePlan, isLocked]);
-
-  // Handle FZDnD Box drop (for FZDnD boxes in SheetView)
+  // Handle FZDnD Box drop (for FZDnD boxes in SpreadsheetView)
   // Set ID pattern: {boxSetId}_{downDistanceId}
   const handleFZDnDBoxDrop = useCallback((boxSetId, rowIdx, ddId, playId) => {
     if (isLocked) return;
@@ -714,7 +444,7 @@ export default function GamePlan() {
     }
   }, [gamePlan, handleUpdateGamePlan, isLocked]);
 
-  // Handle Matrix Box add (for Matrix boxes in SheetView)
+  // Handle Matrix Box add (for Matrix boxes in SpreadsheetView)
   // Set ID pattern: {boxSetId}_{playTypeId}_{colId}
   const handleMatrixBoxAdd = useCallback((boxSetId, playTypeId, colId, playId) => {
     if (isLocked) return;
@@ -1004,339 +734,6 @@ export default function GamePlan() {
     return situations;
   }, [setupConfig]);
 
-  // Sheet editing functions
-  const handleAddSheetSection = useCallback((config = null) => {
-    const newSection = {
-      title: config?.name || 'New Section',
-      expandToFill: false,
-      sectionType: config?.type || null, // 'fieldZone', 'downDistance', 'specialSituation', 'byPlayer', 'byPlayType', or null for custom
-      boxes: []
-    };
-    const newLayouts = { ...gamePlanLayouts };
-    const sheet = { ...newLayouts.CALL_SHEET };
-    sheet.sections = [...(sheet.sections || []), newSection];
-    newLayouts.CALL_SHEET = sheet;
-    handleUpdateLayouts(newLayouts);
-    setShowAddSectionModal(false);
-  }, [gamePlanLayouts, handleUpdateLayouts]);
-
-  const handleUpdateSheetSection = useCallback((index, updatedSection) => {
-    const newLayouts = { ...gamePlanLayouts };
-    const sheet = { ...newLayouts.CALL_SHEET };
-    const newSections = [...sheet.sections];
-    newSections[index] = updatedSection;
-    sheet.sections = newSections;
-    newLayouts.CALL_SHEET = sheet;
-    handleUpdateLayouts(newLayouts);
-  }, [gamePlanLayouts, handleUpdateLayouts]);
-
-  const handleDeleteSheetSection = useCallback((index) => {
-    if (!confirm('Delete this section and all its boxes?')) return;
-    const newLayouts = { ...gamePlanLayouts };
-    const sheet = { ...newLayouts.CALL_SHEET };
-    const newSections = [...sheet.sections];
-    newSections.splice(index, 1);
-    sheet.sections = newSections;
-    newLayouts.CALL_SHEET = sheet;
-    handleUpdateLayouts(newLayouts);
-  }, [gamePlanLayouts, handleUpdateLayouts]);
-
-  // Show the Add Box modal
-  const handleAddSheetBox = useCallback((sectionIdx) => {
-    setAddBoxSectionIdx(sectionIdx);
-    setShowAddBoxModal(true);
-  }, []);
-
-  // Actually create and add the box with selected type
-  const handleCreateBox = useCallback((boxType, options = {}) => {
-    if (addBoxSectionIdx === null) return;
-
-    let newBox;
-    const timestamp = Date.now();
-
-    switch (boxType) {
-      case 'grid':
-        newBox = {
-          header: options.name || 'New Grid',
-          setId: `box_${timestamp}`,
-          type: 'grid',
-          colSpan: 4,
-          color: options.color || '#3b82f6',
-          gridColumns: 4,
-          gridRows: 5,
-          gridHeadings: ['LEFT HASH', 'COL 2', 'COL 3', 'NOTES'],
-          cornerLabel: '#'
-        };
-        break;
-
-      case 'script':
-        newBox = {
-          header: options.name || 'New Script',
-          setId: `box_${timestamp}`,
-          type: 'script',
-          colSpan: 2,
-          color: options.color || '#8b5cf6',
-          scriptColumns: 2,
-          rows: Array(10).fill(null).map((_, i) => ({ label: i + 1, content: null, contentRight: null }))
-        };
-        break;
-
-      case 'fzdnd':
-        const zone = setupConfig?.fieldZones?.find(z => z.id === options.zoneId);
-        newBox = {
-          header: zone?.name || options.name || 'Zone',
-          setId: `fz_${options.zoneId || 'zone'}_${timestamp}`,
-          type: 'fzdnd',
-          colSpan: 5,
-          color: zone?.color || options.color || '#dc2626',
-          zoneId: options.zoneId,
-          rowCount: 5,
-          columnSource: options.columnSource || 'downDistance' // 'downDistance', 'playPurpose', or 'custom'
-        };
-        break;
-
-      case 'matrix':
-        // Apply template defaults if available
-        const template = gamePlan?.matrixTemplate || {};
-        newBox = {
-          header: options.name ? `${options.name} Matrix` : 'New Matrix',
-          setId: `matrix_${(options.name || 'box').toLowerCase().replace(/\s+/g, '_')}_${timestamp}`,
-          type: 'matrix',
-          colSpan: 7,
-          color: options.color || '#06b6d4',
-          formationId: (options.name || 'formation').toLowerCase().replace(/\s+/g, '_'),
-          formationLabel: options.name || 'Formation',
-          // Apply template settings if available
-          firstColWidth: template.firstColWidth || 60,
-          firstColBg: template.firstColBg || '#dbeafe',
-          firstColTextColor: template.firstColTextColor || '#1e40af',
-          firstColFontSize: template.firstColFontSize || '0.5rem',
-          rowColor1: template.rowColor1 || '#ffffff',
-          rowColor2: template.rowColor2 || '#f8fafc',
-          playTypes: template.playTypes || [
-            { id: 'strong_run', label: 'STRONG RUN' },
-            { id: 'weak_run', label: 'WEAK RUN' },
-            { id: 'quick_game', label: 'QUICK GAME' },
-            { id: 'drop_back', label: 'DROPBACK' },
-            { id: 'gadget', label: 'GADGET' }
-          ],
-          hashGroups: template.hashGroups || [
-            { id: 'FB', label: 'BASE/INITIAL', cols: ['FB_L', 'FB_R'] },
-            { id: 'CB', label: 'BASE W/ DRESSING', cols: ['CB_L', 'CB_R'] },
-            { id: 'CU', label: 'CONVERT', cols: ['CU_L', 'CU_R'] },
-            { id: 'SO', label: 'EXPLOSIVE', cols: ['SO_L', 'SO_R'] }
-          ]
-        };
-        break;
-
-      default:
-        newBox = {
-          header: 'New Box',
-          setId: `box_${timestamp}`,
-          type: 'grid',
-          colSpan: 3,
-          color: '#3b82f6',
-          gridColumns: 3,
-          gridRows: 4,
-          gridHeadings: ['COL 1', 'COL 2', 'COL 3'],
-          cornerLabel: '#'
-        };
-    }
-
-    const newLayouts = { ...gamePlanLayouts };
-    const section = { ...newLayouts.CALL_SHEET.sections[addBoxSectionIdx] };
-    section.boxes = [...(section.boxes || []), newBox];
-    newLayouts.CALL_SHEET.sections[addBoxSectionIdx] = section;
-    handleUpdateLayouts(newLayouts);
-
-    setShowAddBoxModal(false);
-    setAddBoxSectionIdx(null);
-  }, [addBoxSectionIdx, gamePlanLayouts, handleUpdateLayouts, setupConfig]);
-
-  const handleDeleteSheetBox = useCallback((sectionIdx, boxIdx) => {
-    const newLayouts = { ...gamePlanLayouts };
-    const section = { ...newLayouts.CALL_SHEET.sections[sectionIdx] };
-    const newBoxes = [...section.boxes];
-    newBoxes.splice(boxIdx, 1);
-    section.boxes = newBoxes;
-    newLayouts.CALL_SHEET.sections[sectionIdx] = section;
-    handleUpdateLayouts(newLayouts);
-  }, [gamePlanLayouts, handleUpdateLayouts]);
-
-  const handleUpdateSheetBox = useCallback((sectionIdx, boxIdx, updates) => {
-    const newLayouts = { ...gamePlanLayouts };
-    const section = { ...newLayouts.CALL_SHEET.sections[sectionIdx] };
-    const newBoxes = [...section.boxes];
-    newBoxes[boxIdx] = { ...newBoxes[boxIdx], ...updates };
-    section.boxes = newBoxes;
-    newLayouts.CALL_SHEET.sections[sectionIdx] = section;
-    handleUpdateLayouts(newLayouts);
-  }, [gamePlanLayouts, handleUpdateLayouts]);
-
-  // Toggle box lock state
-  const handleToggleBoxLock = useCallback((sectionIdx, boxIdx) => {
-    const newLayouts = { ...gamePlanLayouts };
-    const section = { ...newLayouts.CALL_SHEET.sections[sectionIdx] };
-    const newBoxes = [...section.boxes];
-    const box = { ...newBoxes[boxIdx] };
-
-    if (box.locked) {
-      // Unlock: clear locked state and gridPosition to allow auto-flow
-      box.locked = false;
-      delete box.gridPosition;
-    } else {
-      // Lock: mark as locked (gridPosition will be set if box was dropped at specific position)
-      box.locked = true;
-    }
-
-    newBoxes[boxIdx] = box;
-    section.boxes = newBoxes;
-    newLayouts.CALL_SHEET.sections[sectionIdx] = section;
-    handleUpdateLayouts(newLayouts);
-  }, [gamePlanLayouts, handleUpdateLayouts]);
-
-  // Handle drop on empty cell - place box at specific position and lock it
-  const handleDropOnEmptyCell = useCallback((targetSectionIdx, targetRow, targetCol) => {
-    if (!draggedCell) return;
-
-    const { sectionIdx: srcSectionIdx, boxIdx: srcBoxIdx } = draggedCell;
-
-    const newLayouts = { ...gamePlanLayouts };
-    const sheet = { ...newLayouts.CALL_SHEET };
-    sheet.sections = [...sheet.sections];
-
-    // Get the source section and box
-    const srcSection = { ...sheet.sections[srcSectionIdx] };
-    const srcBoxes = [...srcSection.boxes];
-    const movedBox = { ...srcBoxes[srcBoxIdx] };
-
-    // Calculate box dimensions
-    const targetSection = sheet.sections[targetSectionIdx];
-    const sectionCols = targetSection.gridColumns || 8;
-    const colSpan = Math.min(Number(movedBox.colSpan) || 2, sectionCols);
-
-    // Calculate rowSpan based on box type (must match SheetView's getBoxRowSpan)
-    const getBoxRowSpan = (box) => {
-      if (box.type === 'grid') return (box.gridRows || 5) + 2;
-      if (box.type === 'script') return (box.rows?.length || 10) + 2;
-      if (box.type === 'fzdnd') return (box.gridRows || box.rowCount || 5) + 2;
-      if (box.type === 'matrix') return 3 + 1;
-      return 5 + 2;
-    };
-    const rowSpan = getBoxRowSpan(movedBox);
-
-    // Check if drop position would overlap with any OTHER locked boxes
-    const wouldOverlapLockedBox = targetSection.boxes.some((box, bIdx) => {
-      // Skip the box being moved (if same section)
-      if (srcSectionIdx === targetSectionIdx && bIdx === srcBoxIdx) return false;
-      // Only check locked boxes with explicit positions
-      if (!box.locked || !box.gridPosition) return false;
-
-      const lockedRow = box.gridPosition.row;
-      const lockedCol = box.gridPosition.col;
-      const lockedColSpan = Math.min(Number(box.colSpan) || 2, sectionCols);
-      const lockedRowSpan = getBoxRowSpan(box);
-
-      // Check for overlap
-      const horizontalOverlap = targetCol < lockedCol + lockedColSpan && targetCol + colSpan > lockedCol;
-      const verticalOverlap = targetRow < lockedRow + lockedRowSpan && targetRow + rowSpan > lockedRow;
-
-      return horizontalOverlap && verticalOverlap;
-    });
-
-    if (wouldOverlapLockedBox) {
-      // Don't allow drop that would overlap a locked box
-      setDraggedCell(null);
-      return;
-    }
-
-    // Set the explicit grid position and lock the box
-    movedBox.gridPosition = { row: targetRow, col: targetCol };
-    movedBox.locked = true;
-
-    if (srcSectionIdx === targetSectionIdx) {
-      // Same section - just update the box
-      srcBoxes[srcBoxIdx] = movedBox;
-      srcSection.boxes = srcBoxes;
-      sheet.sections[srcSectionIdx] = srcSection;
-    } else {
-      // Different section - remove from source, add to target
-      srcBoxes.splice(srcBoxIdx, 1);
-      srcSection.boxes = srcBoxes;
-      sheet.sections[srcSectionIdx] = srcSection;
-
-      const updatedTargetSection = { ...sheet.sections[targetSectionIdx] };
-      updatedTargetSection.boxes = [...updatedTargetSection.boxes, movedBox];
-      sheet.sections[targetSectionIdx] = updatedTargetSection;
-    }
-
-    newLayouts.CALL_SHEET = sheet;
-    handleUpdateLayouts(newLayouts);
-    setDraggedCell(null);
-  }, [draggedCell, gamePlanLayouts, handleUpdateLayouts]);
-
-  // Handle box drop (reordering or play drop)
-  const handleSheetBoxDrop = useCallback(async (e, targetSectionIdx, targetBoxIdx) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    // Check for Play Drop from Sidebar
-    const playData = e.dataTransfer.getData('application/react-dnd');
-    if (playData) {
-      try {
-        const { playId } = JSON.parse(playData);
-        if (playId) {
-          const section = gamePlanLayouts.CALL_SHEET.sections[targetSectionIdx];
-          const box = section?.boxes?.[targetBoxIdx];
-          if (box && box.setId) {
-            await handleAddPlayToSet(box.setId, playId);
-          }
-        }
-      } catch (err) {
-        console.error('Error parsing drop data:', err);
-      }
-      setPlayDragOverBox(null);
-      return;
-    }
-
-
-
-    // Handle box reordering
-    if (!isSheetEditing || !draggedCell) {
-      setPlayDragOverBox(null);
-      return;
-    }
-
-    const { sectionIdx: srcSectionIdx, boxIdx: srcBoxIdx } = draggedCell;
-
-    if (srcSectionIdx === targetSectionIdx && srcBoxIdx === targetBoxIdx) {
-      setDraggedCell(null);
-      return;
-    }
-
-    const newLayouts = { ...gamePlanLayouts };
-    const sheet = { ...newLayouts.CALL_SHEET };
-    sheet.sections = [...sheet.sections];
-
-    // Get the box being moved
-    const srcSection = { ...sheet.sections[srcSectionIdx] };
-    const srcBoxes = [...srcSection.boxes];
-    const [movedBox] = srcBoxes.splice(srcBoxIdx, 1);
-    srcSection.boxes = srcBoxes;
-    sheet.sections[srcSectionIdx] = srcSection;
-
-    // Insert into target position
-    const targetSection = { ...sheet.sections[targetSectionIdx] };
-    const targetBoxes = [...targetSection.boxes];
-    targetBoxes.splice(targetBoxIdx, 0, movedBox);
-    targetSection.boxes = targetBoxes;
-    sheet.sections[targetSectionIdx] = targetSection;
-
-    newLayouts.CALL_SHEET = sheet;
-    handleUpdateLayouts(newLayouts);
-    setDraggedCell(null);
-  }, [draggedCell, gamePlanLayouts, handleAddPlayToSet, handleUpdateLayouts, isSheetEditing]);
-
   // Get wristband label for a play (with type suffix: W for WIZ, M for mini)
   const getWristbandLabel = useCallback((play) => {
     return getWristbandDisplay(play) || null;
@@ -1618,36 +1015,6 @@ export default function GamePlan() {
     }
   }, [currentWeek, gamePlan, gamePlanLayouts, handleUpdateGamePlan]);
 
-  // Handle Box Click (Intercept for Batch Add)
-  const handleBoxClick = useCallback(async (box, sectionIdx, boxIdx) => {
-    // Handle context-level targeting mode (from PlayBank "Click to Place")
-    if (targetingMode && targetingPlays.length > 0) {
-      const playIdsToAdd = completeTargeting();
-      // Show placement choice modal
-      setPendingPlacementBox(box);
-      setPendingPlacementPlays(playIdsToAdd);
-      setShowPlacementChoice(true);
-      return;
-    }
-
-    // Handle local targeting mode (from Batch Add button)
-    if (isTargetingBox && pendingBatchPlays.length > 0) {
-      // Show placement choice modal
-      setPendingPlacementBox(box);
-      setPendingPlacementPlays([...pendingBatchPlays]);
-      setShowPlacementChoice(true);
-
-      // Reset batch state
-      setIsTargetingBox(false);
-      setPendingBatchPlays([]);
-      cancelBatchSelect();
-      return;
-    }
-
-    // Normal edit behavior
-    setEditingBox({ box, sectionIdx, boxIdx });
-  }, [isTargetingBox, pendingBatchPlays, cancelBatchSelect, targetingMode, targetingPlays, completeTargeting]);
-
   // Get play display name (includes wristband slot if assigned)
   const getPlayDisplayName = useCallback((play) => {
     if (!play) return '';
@@ -1720,38 +1087,6 @@ export default function GamePlan() {
               <CheckSquare size={16} />
               <span className="text-sm">{isTargetingBox ? 'Select Target Box...' : 'Batch Add'}</span>
             </button>
-
-            {/* Layout Mode Toggle */}
-            <div className={`flex items-center rounded-lg border ${isLight ? 'border-slate-200' : 'border-slate-700'}`}>
-              <button
-                onClick={() => setLayoutMode('spreadsheet')}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-l-lg transition-colors ${
-                  layoutMode === 'spreadsheet'
-                    ? 'bg-blue-500 text-white'
-                    : isLight
-                      ? 'bg-slate-100 text-slate-600 hover:text-slate-900'
-                      : 'bg-slate-800 text-slate-400 hover:text-white'
-                }`}
-                title="Spreadsheet layout - define a grid with section headers"
-              >
-                <Table2 size={16} />
-                <span className="text-sm">Spreadsheet</span>
-              </button>
-              <button
-                onClick={() => setLayoutMode('modular')}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-r-lg transition-colors ${
-                  layoutMode === 'modular'
-                    ? 'bg-blue-500 text-white'
-                    : isLight
-                      ? 'bg-slate-100 text-slate-600 hover:text-slate-900'
-                      : 'bg-slate-800 text-slate-400 hover:text-white'
-                }`}
-                title="Modular layout - drag boxes onto a grid (Beta)"
-              >
-                <LayoutGrid size={16} />
-                <span className="text-sm">Modular <span className="text-xs opacity-70">(Beta)</span></span>
-              </button>
-            </div>
 
             {/* Edit Layout Button */}
             <button
@@ -1838,68 +1173,26 @@ export default function GamePlan() {
 
       {/* Content */}
       <div className="flex-1 overflow-hidden bg-slate-950">
-        {layoutMode === 'modular' ? (
-          <SheetView
-            layouts={gamePlanLayouts}
-            gamePlan={gamePlan}
-            plays={playsArray}
-            currentWeek={currentWeek}
-            teamLogo={teamLogo}
-            isLocked={isLocked}
-            isEditing={isSheetEditing}
-            pageFormat={pageFormat}
-            pageOrientation={pageOrientation}
-            onToggleEditing={() => setIsSheetEditing(!isSheetEditing)}
-            onUpdateLayouts={handleUpdateLayouts}
-            onAddSection={() => setShowAddSectionModal(true)}
-            onUpdateSection={handleUpdateSheetSection}
-            onDeleteSection={handleDeleteSheetSection}
-            onAddBox={handleAddSheetBox}
-            onDeleteBox={handleDeleteSheetBox}
-            onUpdateBox={handleUpdateSheetBox}
-            onBoxDrop={handleSheetBoxDrop}
-            onDropOnEmptyCell={handleDropOnEmptyCell}
-            onToggleBoxLock={handleToggleBoxLock}
-            onBoxClick={handleBoxClick}
-            isTargetingMode={targetingMode || isTargetingBox}
-            targetingPlayCount={targetingMode ? targetingPlays.length : pendingBatchPlays.length}
-            onAddPlayToSet={handleAddPlayToSet}
-            onRemovePlayFromSet={handleRemovePlayFromSet}
-            getPlaysForSet={getPlaysForSet}
-            getGridPlays={getGridPlays}
-            getPlayDisplayName={getPlayDisplayName}
-            draggedCell={draggedCell}
-            setDraggedCell={setDraggedCell}
-            playDragOverBox={playDragOverBox}
-            setPlayDragOverBox={setPlayDragOverBox}
-            onEditBox={setEditingBox}
-            setupConfig={setupConfig}
-            onFZDnDBoxDrop={handleFZDnDBoxDrop}
-            onMatrixBoxAdd={handleMatrixBoxAdd}
-            onMatrixBoxRemove={handleMatrixBoxRemove}
-          />
-        ) : (
-          <SpreadsheetView
-            layouts={gamePlanLayouts}
-            gamePlan={gamePlan}
-            plays={playsArray}
-            currentWeek={currentWeek}
-            teamLogo={teamLogo}
-            isLocked={isLocked}
-            isEditing={isSheetEditing}
-            pageFormat={pageFormat}
-            pageOrientation={pageOrientation}
-            onUpdateLayouts={handleUpdateLayouts}
-            onHeaderClick={handleSpreadsheetHeaderClick}
-            onAddPlayToSection={handleSpreadsheetAddPlay}
-            onRemovePlayFromSection={handleSpreadsheetRemovePlay}
-            getPlayDisplayName={getPlayDisplayName}
-            setupConfig={setupConfig}
-            isTargetingMode={targetingMode || isTargetingBox}
-            targetingPlayCount={targetingMode ? targetingPlays.length : pendingBatchPlays.length}
-            onTargetingClick={handleSpreadsheetTargetingClick}
-          />
-        )}
+        <SpreadsheetView
+          layouts={gamePlanLayouts}
+          gamePlan={gamePlan}
+          plays={playsArray}
+          currentWeek={currentWeek}
+          teamLogo={teamLogo}
+          isLocked={isLocked}
+          isEditing={isSheetEditing}
+          pageFormat={pageFormat}
+          pageOrientation={pageOrientation}
+          onUpdateLayouts={handleUpdateLayouts}
+          onHeaderClick={handleSpreadsheetHeaderClick}
+          onAddPlayToSection={handleSpreadsheetAddPlay}
+          onRemovePlayFromSection={handleSpreadsheetRemovePlay}
+          getPlayDisplayName={getPlayDisplayName}
+          setupConfig={setupConfig}
+          isTargetingMode={targetingMode || isTargetingBox}
+          targetingPlayCount={targetingMode ? targetingPlays.length : pendingBatchPlays.length}
+          onTargetingClick={handleSpreadsheetTargetingClick}
+        />
       </div>
 
       {/* Placement Choice Modal */}
@@ -2025,12 +1318,10 @@ export default function GamePlan() {
               spreadsheet.pages = pages;
               newLayouts.SPREADSHEET = spreadsheet;
               handleUpdateLayouts(newLayouts);
-            } else {
-              handleUpdateSheetBox(editingBox.sectionIdx, editingBox.boxIdx, cleanUpdates);
             }
             setEditingBox(null);
           }}
-          onDelete={(sectionIdx, boxIdx) => {
+          onDelete={() => {
             // Handle spreadsheet header deletion
             if (editingBox.box.isSpreadsheetHeader) {
               const headerId = editingBox.box.headerId;
@@ -2047,9 +1338,6 @@ export default function GamePlan() {
               spreadsheet.pages = pages;
               newLayouts.SPREADSHEET = spreadsheet;
               handleUpdateLayouts(newLayouts);
-            } else {
-              // Standard call sheet box deletion
-              handleDeleteSheetBox(sectionIdx, boxIdx);
             }
           }}
           onAddPlayToQuickList={handleAddPlayToQuickList}
@@ -2066,607 +1354,6 @@ export default function GamePlan() {
           onMatrixCellRemove={handleMatrixBoxRemove}
         />
       )}
-
-      {/* Add Section Modal */}
-      {showAddSectionModal && (
-        <div
-          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowAddSectionModal(false)}
-        >
-          <div
-            className="bg-slate-900 rounded-xl w-full max-w-md overflow-hidden flex flex-col"
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-slate-700">
-              <h3 className="text-lg font-semibold text-white">Add New Section</h3>
-              <button
-                onClick={() => setShowAddSectionModal(false)}
-                className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="p-4 space-y-3">
-              {/* Field Zones Section */}
-              <button
-                onClick={() => handleAddSheetSection({ type: 'fieldZone', name: 'FIELD ZONES' })}
-                className="w-full flex items-center gap-4 p-4 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 text-left"
-              >
-                <div className="w-12 h-12 rounded-lg bg-red-500/20 flex items-center justify-center">
-                  <MapPin size={24} className="text-red-400" />
-                </div>
-                <div>
-                  <div className="font-semibold text-white">Field Zones</div>
-                  <div className="text-sm text-slate-400">Red Zone, Gold Zone, Backed Up, etc.</div>
-                </div>
-              </button>
-
-              {/* Formations Section */}
-              <button
-                onClick={() => handleAddSheetSection({ type: 'formations', name: 'FORMATIONS' })}
-                className="w-full flex items-center gap-4 p-4 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 text-left"
-              >
-                <div className="w-12 h-12 rounded-lg bg-cyan-500/20 flex items-center justify-center">
-                  <Grid size={24} className="text-cyan-400" />
-                </div>
-                <div>
-                  <div className="font-semibold text-white">Formations</div>
-                  <div className="text-sm text-slate-400">Matrix boxes organized by formation</div>
-                </div>
-              </button>
-
-              {/* Down & Distance Section */}
-              <button
-                onClick={() => handleAddSheetSection({ type: 'downDistance', name: 'DOWN & DISTANCE' })}
-                className="w-full flex items-center gap-4 p-4 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 text-left"
-              >
-                <div className="w-12 h-12 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                  <Target size={24} className="text-amber-400" />
-                </div>
-                <div>
-                  <div className="font-semibold text-white">Down & Distance</div>
-                  <div className="text-sm text-slate-400">1st Down, 2nd & Long, 3rd & Short, etc.</div>
-                </div>
-              </button>
-
-              {/* Special Situations Section */}
-              <button
-                onClick={() => handleAddSheetSection({ type: 'specialSituation', name: 'SPECIAL SITUATIONS' })}
-                className="w-full flex items-center gap-4 p-4 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 text-left"
-              >
-                <div className="w-12 h-12 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                  <Zap size={24} className="text-purple-400" />
-                </div>
-                <div>
-                  <div className="font-semibold text-white">Special Situations</div>
-                  <div className="text-sm text-slate-400">2-Min, 4-Min, Goal Line, etc.</div>
-                </div>
-              </button>
-
-              {/* By Play Type Section */}
-              <button
-                onClick={() => handleAddSheetSection({ type: 'byPlayType', name: 'BY PLAY TYPE' })}
-                className="w-full flex items-center gap-4 p-4 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 text-left"
-              >
-                <div className="w-12 h-12 rounded-lg bg-sky-500/20 flex items-center justify-center">
-                  <Package size={24} className="text-sky-400" />
-                </div>
-                <div>
-                  <div className="font-semibold text-white">By Play Type</div>
-                  <div className="text-sm text-slate-400">Run Game, Quick Game, Dropback, etc.</div>
-                </div>
-              </button>
-
-              {/* By Player Section */}
-              <button
-                onClick={() => handleAddSheetSection({ type: 'byPlayer', name: 'BY PLAYER' })}
-                className="w-full flex items-center gap-4 p-4 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 text-left"
-              >
-                <div className="w-12 h-12 rounded-lg bg-green-500/20 flex items-center justify-center">
-                  <Users size={24} className="text-green-400" />
-                </div>
-                <div>
-                  <div className="font-semibold text-white">By Player</div>
-                  <div className="text-sm text-slate-400">Plays organized by featured player</div>
-                </div>
-              </button>
-
-              {/* Custom Section */}
-              <button
-                onClick={() => handleAddSheetSection(null)}
-                className="w-full flex items-center gap-4 p-4 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 text-left"
-              >
-                <div className="w-12 h-12 rounded-lg bg-slate-700 flex items-center justify-center">
-                  <Plus size={24} className="text-slate-400" />
-                </div>
-                <div>
-                  <div className="font-semibold text-white">Custom Section</div>
-                  <div className="text-sm text-slate-400">Create a blank section with custom name</div>
-                </div>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Box Modal */}
-      {showAddBoxModal && (() => {
-        // Get the section type to show context-aware options
-        const section = gamePlanLayouts.CALL_SHEET?.sections?.[addBoxSectionIdx];
-        const sectionType = section?.sectionType;
-
-        // Render different content based on section type
-        const renderFieldZoneOptions = () => (
-          <div className="space-y-3">
-            <p className="text-sm text-slate-400 mb-4">Select a field zone and column type:</p>
-            {(setupConfig?.fieldZones || []).length > 0 ? (
-              <div className="space-y-3">
-                {(setupConfig?.fieldZones || []).map(zone => (
-                  <div key={zone.id} className="border border-slate-700 rounded-lg overflow-hidden">
-                    <div
-                      className="flex items-center gap-3 p-3 bg-slate-800"
-                      style={{ borderLeft: `4px solid ${zone.color || '#ef4444'}` }}
-                    >
-                      <MapPin size={18} style={{ color: zone.color || '#ef4444' }} />
-                      <span className="font-semibold text-white">{zone.name}</span>
-                    </div>
-                    <div className="flex">
-                      <button
-                        onClick={() => handleCreateBox('fzdnd', { zoneId: zone.id, name: zone.name, color: zone.color, columnSource: 'downDistance' })}
-                        className="flex-1 p-3 text-left hover:bg-slate-700 transition-colors border-r border-slate-700"
-                      >
-                        <div className="text-sm font-medium text-slate-200">By Down & Distance</div>
-                        <div className="text-xs text-slate-500">{(setupConfig?.downDistanceCategories || []).length} columns</div>
-                      </button>
-                      <button
-                        onClick={() => handleCreateBox('fzdnd', { zoneId: zone.id, name: zone.name, color: zone.color, columnSource: 'playPurpose' })}
-                        className="flex-1 p-3 text-left hover:bg-slate-700 transition-colors"
-                      >
-                        <div className="text-sm font-medium text-slate-200">By Play Purpose</div>
-                        <div className="text-xs text-slate-500">{(setupConfig?.playPurposes || []).length} columns</div>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="p-6 bg-slate-800/50 rounded-lg text-center">
-                <MapPin size={32} className="text-slate-600 mx-auto mb-2" />
-                <p className="text-slate-400">No field zones defined yet.</p>
-                <p className="text-xs text-slate-500 mt-1">Add zones in Setup → Define Situations</p>
-              </div>
-            )}
-            <div className="border-t border-slate-700 pt-3 mt-4">
-              <button
-                onClick={() => handleCreateBox('grid', { name: 'Custom Zone Grid' })}
-                className="w-full flex items-center gap-4 p-3 bg-slate-800/50 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 text-left"
-              >
-                <Grid size={18} className="text-slate-400" />
-                <span className="text-sm text-slate-300">Add custom grid box instead</span>
-              </button>
-            </div>
-          </div>
-        );
-
-        const renderDownDistanceOptions = () => (
-          <div className="space-y-3">
-            <p className="text-sm text-slate-400 mb-4">Select a down & distance category:</p>
-            {(setupConfig?.downDistanceCategories || []).length > 0 ? (
-              <div className="space-y-2">
-                {(setupConfig?.downDistanceCategories || [])
-                  .sort((a, b) => (a.order || 0) - (b.order || 0))
-                  .map(cat => (
-                    <button
-                      key={cat.id}
-                      onClick={() => handleCreateBox('grid', { name: cat.name, color: cat.color || '#f59e0b' })}
-                      className="w-full flex items-center gap-4 p-4 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 text-left"
-                    >
-                      <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center"
-                        style={{ backgroundColor: `${cat.color || '#f59e0b'}30` }}
-                      >
-                        <Target size={20} style={{ color: cat.color || '#f59e0b' }} />
-                      </div>
-                      <div>
-                        <div className="font-semibold text-white">{cat.name}</div>
-                        <div className="text-sm text-slate-400">Grid box for this situation</div>
-                      </div>
-                    </button>
-                  ))}
-              </div>
-            ) : (
-              <div className="p-6 bg-slate-800/50 rounded-lg text-center">
-                <Target size={32} className="text-slate-600 mx-auto mb-2" />
-                <p className="text-slate-400">No down & distance categories defined.</p>
-                <p className="text-xs text-slate-500 mt-1">Add categories in Setup → Define Situations</p>
-              </div>
-            )}
-            <div className="border-t border-slate-700 pt-3 mt-4">
-              <button
-                onClick={() => handleCreateBox('grid', { name: 'Custom Grid' })}
-                className="w-full flex items-center gap-4 p-3 bg-slate-800/50 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 text-left"
-              >
-                <Grid size={18} className="text-slate-400" />
-                <span className="text-sm text-slate-300">Add custom grid box instead</span>
-              </button>
-            </div>
-          </div>
-        );
-
-        const renderSpecialSituationOptions = () => (
-          <div className="space-y-3">
-            <p className="text-sm text-slate-400 mb-4">Select a special situation:</p>
-            {(setupConfig?.specialSituations || []).length > 0 ? (
-              <div className="space-y-2">
-                {(setupConfig?.specialSituations || []).map(sit => (
-                  <button
-                    key={sit.id}
-                    onClick={() => handleCreateBox('script', { name: sit.name, color: sit.color || '#8b5cf6' })}
-                    className="w-full flex items-center gap-4 p-4 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 text-left"
-                  >
-                    <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: `${sit.color || '#8b5cf6'}30` }}
-                    >
-                      <Zap size={20} style={{ color: sit.color || '#8b5cf6' }} />
-                    </div>
-                    <div>
-                      <div className="font-semibold text-white">{sit.name}</div>
-                      <div className="text-sm text-slate-400">Script box for this situation</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="p-6 bg-slate-800/50 rounded-lg text-center">
-                <Zap size={32} className="text-slate-600 mx-auto mb-2" />
-                <p className="text-slate-400">No special situations defined.</p>
-                <p className="text-xs text-slate-500 mt-1">Add situations in Setup → Define Situations</p>
-              </div>
-            )}
-            <div className="border-t border-slate-700 pt-3 mt-4 flex gap-2">
-              <button
-                onClick={() => handleCreateBox('script', { name: 'Custom Script' })}
-                className="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-800/50 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700"
-              >
-                <List size={18} className="text-slate-400" />
-                <span className="text-sm text-slate-300">Custom Script</span>
-              </button>
-              <button
-                onClick={() => handleCreateBox('grid', { name: 'Custom Grid' })}
-                className="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-800/50 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700"
-              >
-                <Grid size={18} className="text-slate-400" />
-                <span className="text-sm text-slate-300">Custom Grid</span>
-              </button>
-            </div>
-          </div>
-        );
-
-        const renderByPlayTypeOptions = () => (
-          <div className="space-y-3">
-            <p className="text-sm text-slate-400 mb-4">Select a play purpose/type:</p>
-            {(setupConfig?.playPurposes || []).length > 0 ? (
-              <div className="space-y-2">
-                {(setupConfig?.playPurposes || []).map(purpose => (
-                  <button
-                    key={purpose.id}
-                    onClick={() => handleCreateBox('grid', { name: purpose.name, color: purpose.color || '#3b82f6' })}
-                    className="w-full flex items-center gap-4 p-4 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 text-left"
-                  >
-                    <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: `${purpose.color || '#3b82f6'}30` }}
-                    >
-                      <Package size={20} style={{ color: purpose.color || '#3b82f6' }} />
-                    </div>
-                    <div>
-                      <div className="font-semibold text-white">{purpose.name}</div>
-                      {purpose.description && (
-                        <div className="text-sm text-slate-400">{purpose.description}</div>
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="p-6 bg-slate-800/50 rounded-lg text-center">
-                <Package size={32} className="text-slate-600 mx-auto mb-2" />
-                <p className="text-slate-400">No play purposes defined.</p>
-                <p className="text-xs text-slate-500 mt-1">Add purposes in Setup → Define Situations</p>
-              </div>
-            )}
-            <div className="border-t border-slate-700 pt-3 mt-4">
-              <button
-                onClick={() => handleCreateBox('grid', { name: 'Custom Play Type Grid' })}
-                className="w-full flex items-center gap-4 p-3 bg-slate-800/50 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 text-left"
-              >
-                <Grid size={18} className="text-slate-400" />
-                <span className="text-sm text-slate-300">Add custom grid box instead</span>
-              </button>
-            </div>
-          </div>
-        );
-
-        const renderByPlayerOptions = () => (
-          <div className="space-y-3">
-            <p className="text-sm text-slate-400 mb-4">Create a box for a specific player:</p>
-            <div className="border border-slate-700 rounded-lg overflow-hidden">
-              <div className="p-3 bg-slate-800/50">
-                <div className="text-xs text-slate-500 mb-2">Enter player name or position:</div>
-                <form onSubmit={(e) => {
-                  e.preventDefault();
-                  const formData = new FormData(e.target);
-                  const name = formData.get('playerName');
-                  if (name) {
-                    handleCreateBox('grid', { name: `${name} Plays`, color: '#22c55e' });
-                  }
-                }}>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      name="playerName"
-                      placeholder="e.g., QB1, #7, RB Package"
-                      className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:border-sky-500"
-                    />
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-medium"
-                    >
-                      Create
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-            <div className="border-t border-slate-700 pt-3 mt-4 flex gap-2">
-              <button
-                onClick={() => handleCreateBox('script', { name: 'Player Script', color: '#22c55e' })}
-                className="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-800/50 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700"
-              >
-                <List size={18} className="text-slate-400" />
-                <span className="text-sm text-slate-300">Player Script</span>
-              </button>
-              <button
-                onClick={() => handleCreateBox('grid', { name: 'Player Grid', color: '#22c55e' })}
-                className="flex-1 flex items-center justify-center gap-2 p-3 bg-slate-800/50 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700"
-              >
-                <Grid size={18} className="text-slate-400" />
-                <span className="text-sm text-slate-300">Player Grid</span>
-              </button>
-            </div>
-          </div>
-        );
-
-        const renderFormationsOptions = () => (
-          <div className="space-y-3">
-            <p className="text-sm text-slate-400 mb-4">Create a matrix box for a formation:</p>
-            <div className="border border-slate-700 rounded-lg overflow-hidden">
-              <div className="flex items-center gap-4 p-4 bg-slate-800">
-                <div className="w-12 h-12 rounded-lg bg-cyan-500/20 flex items-center justify-center">
-                  <Grid size={24} className="text-cyan-400" />
-                </div>
-                <div>
-                  <div className="font-semibold text-white">Formation Matrix</div>
-                  <div className="text-sm text-slate-400">Play types × hash groups for a formation</div>
-                </div>
-              </div>
-              <div className="p-3 bg-slate-800/50 border-t border-slate-700">
-                <div className="text-xs text-slate-500 mb-2">Enter formation name:</div>
-                <form onSubmit={(e) => {
-                  e.preventDefault();
-                  const formData = new FormData(e.target);
-                  const name = formData.get('formationName');
-                  if (name) {
-                    handleCreateBox('matrix', { name, color: '#06b6d4' });
-                  }
-                }}>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      name="formationName"
-                      placeholder="e.g., 887, Trips, Empty, Gun"
-                      className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:border-sky-500"
-                      autoFocus
-                    />
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors text-sm font-medium"
-                    >
-                      Create
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-            <div className="border-t border-slate-700 pt-3 mt-4">
-              <button
-                onClick={() => handleCreateBox('grid', { name: 'Formation Grid', color: '#06b6d4' })}
-                className="w-full flex items-center gap-4 p-3 bg-slate-800/50 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 text-left"
-              >
-                <Grid size={18} className="text-slate-400" />
-                <span className="text-sm text-slate-300">Add simple grid box instead</span>
-              </button>
-            </div>
-          </div>
-        );
-
-        const renderDefaultOptions = () => (
-          <div className="space-y-3">
-            {/* Grid Option */}
-            <button
-              onClick={() => handleCreateBox('grid', { name: 'New Grid' })}
-              className="w-full flex items-center gap-4 p-4 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 text-left"
-            >
-              <div className="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                <Grid size={24} className="text-blue-400" />
-              </div>
-              <div>
-                <div className="font-semibold text-white">Grid Box</div>
-                <div className="text-sm text-slate-400">Rows × columns with individual cell assignments</div>
-              </div>
-            </button>
-
-            {/* Script Option */}
-            <button
-              onClick={() => handleCreateBox('script', { name: 'New Script' })}
-              className="w-full flex items-center gap-4 p-4 bg-slate-800 rounded-lg hover:bg-slate-700 transition-colors border border-slate-700 text-left"
-            >
-              <div className="w-12 h-12 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                <List size={24} className="text-purple-400" />
-              </div>
-              <div>
-                <div className="font-semibold text-white">Script Box</div>
-                <div className="text-sm text-slate-400">Sequential plays with left/right hash columns</div>
-              </div>
-            </button>
-
-            {/* FZDnD Zone Option */}
-            <div className="border border-slate-700 rounded-lg overflow-hidden">
-              <div className="flex items-center gap-4 p-4 bg-slate-800">
-                <div className="w-12 h-12 rounded-lg bg-red-500/20 flex items-center justify-center">
-                  <Map size={24} className="text-red-400" />
-                </div>
-                <div>
-                  <div className="font-semibold text-white">FZDnD Zone Box</div>
-                  <div className="text-sm text-slate-400">Field zone grid with configurable columns</div>
-                </div>
-              </div>
-              {(setupConfig?.fieldZones || []).length > 0 ? (
-                <div className="p-2 bg-slate-800/50 border-t border-slate-700">
-                  <div className="text-xs text-slate-500 mb-2 px-2">Select a zone and column type:</div>
-                  <div className="space-y-2 px-1">
-                    {(setupConfig?.fieldZones || []).map(zone => (
-                      <div key={zone.id} className="border border-slate-600 rounded overflow-hidden">
-                        <div
-                          className="flex items-center gap-2 px-2 py-1 bg-slate-700/50"
-                          style={{ borderLeft: `3px solid ${zone.color || '#ef4444'}` }}
-                        >
-                          <span className="text-xs font-medium text-white">{zone.name}</span>
-                        </div>
-                        <div className="flex text-xs">
-                          <button
-                            onClick={() => handleCreateBox('fzdnd', { zoneId: zone.id, name: zone.name, color: zone.color, columnSource: 'downDistance' })}
-                            className="flex-1 px-2 py-1.5 hover:bg-slate-600 transition-colors border-r border-slate-600 text-slate-300"
-                          >
-                            D&D
-                          </button>
-                          <button
-                            onClick={() => handleCreateBox('fzdnd', { zoneId: zone.id, name: zone.name, color: zone.color, columnSource: 'playPurpose' })}
-                            className="flex-1 px-2 py-1.5 hover:bg-slate-600 transition-colors text-slate-300"
-                          >
-                            Purpose
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="p-3 bg-slate-800/50 border-t border-slate-700 text-center">
-                  <p className="text-xs text-slate-500">No field zones defined.</p>
-                  <p className="text-xs text-slate-600">Add zones in Setup → Define Situations</p>
-                </div>
-              )}
-            </div>
-
-            {/* Matrix Option */}
-            <div className="border border-slate-700 rounded-lg overflow-hidden">
-              <div className="flex items-center gap-4 p-4 bg-slate-800">
-                <div className="w-12 h-12 rounded-lg bg-sky-500/20 flex items-center justify-center">
-                  <Grid size={24} className="text-sky-400" />
-                </div>
-                <div>
-                  <div className="font-semibold text-white">Matrix Box</div>
-                  <div className="text-sm text-slate-400">Formation grid with play types × hash groups</div>
-                </div>
-              </div>
-              <div className="p-3 bg-slate-800/50 border-t border-slate-700">
-                <div className="text-xs text-slate-500 mb-2">Enter formation name:</div>
-                <form onSubmit={(e) => {
-                  e.preventDefault();
-                  const formData = new FormData(e.target);
-                  const name = formData.get('matrixName');
-                  if (name) {
-                    handleCreateBox('matrix', { name });
-                  }
-                }}>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      name="matrixName"
-                      placeholder="e.g., 887, Trips, Empty"
-                      className="flex-1 px-3 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:border-sky-500"
-                    />
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors text-sm font-medium"
-                    >
-                      Create
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </div>
-        );
-
-        // Get the appropriate title based on section type
-        const getModalTitle = () => {
-          switch (sectionType) {
-            case 'fieldZone': return 'Add Field Zone Box';
-            case 'downDistance': return 'Add Down & Distance Box';
-            case 'specialSituation': return 'Add Special Situation Box';
-            case 'byPlayType': return 'Add Play Type Box';
-            case 'byPlayer': return 'Add Player Box';
-            case 'formations': return 'Add Formation Box';
-            default: return 'Add New Box';
-          }
-        };
-
-        return (
-          <div
-            className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
-            onClick={() => {
-              setShowAddBoxModal(false);
-              setAddBoxSectionIdx(null);
-            }}
-          >
-            <div
-              className="bg-slate-900 rounded-xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col"
-              onClick={e => e.stopPropagation()}
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between p-4 border-b border-slate-700">
-                <h3 className="text-lg font-semibold text-white">{getModalTitle()}</h3>
-                <button
-                  onClick={() => {
-                    setShowAddBoxModal(false);
-                    setAddBoxSectionIdx(null);
-                  }}
-                  className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              {/* Content - render based on section type */}
-              <div className="flex-1 overflow-y-auto p-4">
-                {sectionType === 'fieldZone' && renderFieldZoneOptions()}
-                {sectionType === 'downDistance' && renderDownDistanceOptions()}
-                {sectionType === 'specialSituation' && renderSpecialSituationOptions()}
-                {sectionType === 'byPlayType' && renderByPlayTypeOptions()}
-                {sectionType === 'byPlayer' && renderByPlayerOptions()}
-                {sectionType === 'formations' && renderFormationsOptions()}
-                {!sectionType && renderDefaultOptions()}
-              </div>
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 }
