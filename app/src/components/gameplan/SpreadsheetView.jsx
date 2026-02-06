@@ -1763,16 +1763,16 @@ export default function SpreadsheetView({
               display: block !important;
               position: static !important;
               width: 100% !important;
-              height: 9.5in !important;
-              max-height: 9.5in !important;
+              height: auto !important;
+              max-height: none !important;
               aspect-ratio: auto !important;
-              overflow: hidden !important;
+              overflow: visible !important;
               background: white !important;
               border: none !important;
               border-radius: 0 !important;
               box-shadow: none !important;
               margin: 0 !important;
-              padding: 4px !important;
+              padding: 0 4px !important;
               page-break-inside: avoid !important;
               break-inside: avoid !important;
             }
@@ -1821,15 +1821,19 @@ export default function SpreadsheetView({
 
             /* Grid container - constrain to page, hide row numbers column */
             .spreadsheet-grid {
+              display: grid !important;
               font-size: 6pt !important;
               padding: 0 !important;
               border: 1px solid #94a3b8 !important;
+              height: 9in !important;
               max-height: 9in !important;
+              flex: none !important;
               page-break-inside: avoid !important;
+              page-break-before: avoid !important;
               /* Hide row number column (first col = 0) and header row (first row = 0) */
               grid-template-columns: 0 repeat(var(--grid-columns), 1fr) !important;
-              /* Fixed 17px per row (fits ~50 rows in 850px) */
-              grid-template-rows: 0 repeat(var(--grid-rows), 17px) !important;
+              /* Auto-fit rows to fill the 9in height */
+              grid-template-rows: 0 repeat(var(--grid-rows), 1fr) !important;
             }
 
             /* All grid cells - fixed height, borders, overflow hidden */
