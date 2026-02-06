@@ -1194,10 +1194,10 @@ export default function SpreadsheetView({
                           }
                         }}
                       >
-                        {/* Formation/Header Name Cell */}
+                        {/* Formation Column Label */}
                         <div style={{
                           padding: '2px 6px',
-                          fontSize: '0.65rem',
+                          fontSize: '0.6rem',
                           fontWeight: '700',
                           color: 'white',
                           display: 'flex',
@@ -1207,9 +1207,8 @@ export default function SpreadsheetView({
                           textTransform: 'uppercase',
                           borderRight: '1px solid rgba(255,255,255,0.3)'
                         }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Grid3X3 size={12} />
-                            {header.name}
+                          <span>FORMATION</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
                             {matrixPlayCount > 0 && (
                               <span style={{
                                 fontSize: '0.5rem',
@@ -1220,18 +1219,18 @@ export default function SpreadsheetView({
                                 {matrixPlayCount}
                               </span>
                             )}
-                          </span>
-                          {isEditing && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteHeader(pageIdx, header.id);
-                              }}
-                              className="p-0.5 hover:bg-white/20 rounded"
-                            >
-                              <Trash2 size={10} />
-                            </button>
-                          )}
+                            {isEditing && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteHeader(pageIdx, header.id);
+                                }}
+                                className="p-0.5 hover:bg-white/20 rounded"
+                              >
+                                <Trash2 size={10} />
+                              </button>
+                            )}
+                          </div>
                         </div>
                         {/* Hash Group Column Headers */}
                         {allHashCols.map((hc, hcIdx) => (
@@ -1239,14 +1238,17 @@ export default function SpreadsheetView({
                             key={hc.hashCol}
                             style={{
                               padding: '2px 4px',
-                              fontSize: '0.5rem',
+                              fontSize: '0.55rem',
                               fontWeight: '600',
                               color: 'white',
                               textAlign: 'center',
                               borderLeft: hcIdx > 0 && hc.col === 'L' ? '2px solid rgba(255,255,255,0.4)' : '1px solid rgba(255,255,255,0.2)',
                               display: 'flex',
                               alignItems: 'center',
-                              justifyContent: 'center'
+                              justifyContent: 'center',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
                             }}
                           >
                             {hc.label} {hc.col}
