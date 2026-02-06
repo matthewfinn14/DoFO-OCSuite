@@ -7,7 +7,8 @@ export const SUBSCRIPTION_STATUS = {
   TRIAL: 'trial',
   ACTIVE: 'active',
   EXPIRED: 'expired',
-  SUSPENDED: 'suspended'
+  SUSPENDED: 'suspended',
+  PENDING_DELETION: 'pending_deletion'
 };
 
 /**
@@ -64,6 +65,7 @@ export function useSubscriptionStatus(school) {
       trialEndDate < now;
 
     // Compute boolean flags
+    const isPendingDeletion = status === SUBSCRIPTION_STATUS.PENDING_DELETION;
     const isSuspended = status === SUBSCRIPTION_STATUS.SUSPENDED;
     const isExpired = status === SUBSCRIPTION_STATUS.EXPIRED || trialExpired;
     const isTrial = status === SUBSCRIPTION_STATUS.TRIAL && !trialExpired;
@@ -71,13 +73,24 @@ export function useSubscriptionStatus(school) {
       (status === SUBSCRIPTION_STATUS.TRIAL && !trialExpired);
 
     // Can user access the app?
-    const canAccess = isActive && !isSuspended;
+    const canAccess = isActive && !isSuspended && !isPendingDeletion;
+
+    // Calculate days until deletion if pending
+    let daysUntilDeletion = null;
+    if (isPendingDeletion && subscription.scheduledDeletionDate) {
+      const deletionDate = new Date(subscription.scheduledDeletionDate);
+      const msRemaining = deletionDate.getTime() - now.getTime();
+      daysUntilDeletion = Math.ceil(msRemaining / (1000 * 60 * 60 * 24));
+    }
 
     // Status display info
     let statusLabel = 'Unknown';
     let statusColor = 'slate';
 
-    if (isSuspended) {
+    if (isPendingDeletion) {
+      statusLabel = daysUntilDeletion !== null ? `Deleting in ${daysUntilDeletion} days` : 'Pending Deletion';
+      statusColor = 'red';
+    } else if (isSuspended) {
       statusLabel = 'Suspended';
       statusColor = 'amber';
     } else if (isExpired) {
@@ -97,7 +110,9 @@ export function useSubscriptionStatus(school) {
       isExpired,
       isSuspended,
       isTrial,
+      isPendingDeletion,
       daysRemaining,
+      daysUntilDeletion,
       trialEndDate,
       canAccess,
       statusLabel,
@@ -153,18 +168,30 @@ export function getSubscriptionStatus(school) {
     trialEndDate &&
     trialEndDate < now;
 
+  const isPendingDeletion = status === SUBSCRIPTION_STATUS.PENDING_DELETION;
   const isSuspended = status === SUBSCRIPTION_STATUS.SUSPENDED;
   const isExpired = status === SUBSCRIPTION_STATUS.EXPIRED || trialExpired;
   const isTrial = status === SUBSCRIPTION_STATUS.TRIAL && !trialExpired;
   const isActive = status === SUBSCRIPTION_STATUS.ACTIVE ||
     (status === SUBSCRIPTION_STATUS.TRIAL && !trialExpired);
 
-  const canAccess = isActive && !isSuspended;
+  const canAccess = isActive && !isSuspended && !isPendingDeletion;
+
+  // Calculate days until deletion if pending
+  let daysUntilDeletion = null;
+  if (isPendingDeletion && subscription.scheduledDeletionDate) {
+    const deletionDate = new Date(subscription.scheduledDeletionDate);
+    const msRemaining = deletionDate.getTime() - now.getTime();
+    daysUntilDeletion = Math.ceil(msRemaining / (1000 * 60 * 60 * 24));
+  }
 
   let statusLabel = 'Unknown';
   let statusColor = 'slate';
 
-  if (isSuspended) {
+  if (isPendingDeletion) {
+    statusLabel = daysUntilDeletion !== null ? `Deleting in ${daysUntilDeletion} days` : 'Pending Deletion';
+    statusColor = 'red';
+  } else if (isSuspended) {
     statusLabel = 'Suspended';
     statusColor = 'amber';
   } else if (isExpired) {
@@ -184,7 +211,9 @@ export function getSubscriptionStatus(school) {
     isExpired,
     isSuspended,
     isTrial,
+    isPendingDeletion,
     daysRemaining,
+    daysUntilDeletion,
     trialEndDate,
     canAccess,
     statusLabel,

@@ -12,3 +12,6 @@ export { WizardSlide } from './WizardSlide';
 export { WizardAudioGuide } from './WizardAudioGuide';
 export { useWizardProgress } from './hooks/useWizardProgress';
 export * from './SystemSetupSteps';
+
+// New Season Wizard
+export { default as NewSeasonWizard } from './NewSeasonWizard';

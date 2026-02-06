@@ -117,7 +117,7 @@ export default function SheetView({
   onMatrixBoxAdd,
   onMatrixBoxRemove,
   pageFormat = '2-page',
-  pageOrientation = 'portrait',
+  pageOrientation = 'landscape',
   isTargetingMode = false,
   targetingPlayCount = 0
 }) {
@@ -141,7 +141,8 @@ export default function SheetView({
   const rowHeight = isLandscape ? 12 : 13;
 
   // Render grid box content
-  const renderGridBox = (box, isPrintMode = false) => {
+  // rowOffset: starting row number for sequential numbering across boxes
+  const renderGridBox = (box, isPrintMode = false, rowOffset = 0) => {
     const cols = box.gridColumns || 4;
     const rowsCount = box.gridRows || 5;
     const totalSlots = cols * rowsCount;
@@ -184,6 +185,9 @@ export default function SheetView({
     if (isPrintMode && isGridEmpty) {
       return null;
     }
+
+    // Track which row we're on for sequential numbering (only count non-empty rows)
+    let displayedRowCount = 0;
 
     return (
       <div style={{
@@ -229,10 +233,51 @@ export default function SheetView({
         {/* Data Rows */}
         {rows.map((rowSlots, rIdx) => {
           const isEmpty = isGridRowEmpty(rowSlots);
-          if (isEmpty && isPrintMode) return null;
+
+          // Skip empty rows entirely (hidden in print via CSS class)
+          if (isEmpty) {
+            return (
+              <div key={rIdx} className="empty-row no-print" style={{ display: 'contents' }}>
+                <div style={{
+                  padding: '2px',
+                  fontSize: '0.6rem',
+                  color: '#cbd5e1',
+                  textAlign: 'right',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  minWidth: '15px',
+                  height: `${rowHeight}px`,
+                  borderBottom: '1px dotted #e2e8f0',
+                  background: rIdx % 2 === 0 ? (box.rowColor1 || '#ffffff') : (box.rowColor2 || '#f8fafc')
+                }}>
+                  {rIdx + 1}
+                </div>
+                {rowSlots.map((slot, cIdx) => (
+                  <div key={cIdx} style={{
+                    overflow: 'hidden',
+                    background: rIdx % 2 === 0 ? (box.rowColor1 || '#ffffff') : (box.rowColor2 || '#f8fafc'),
+                    padding: '2px',
+                    height: `${rowHeight}px`,
+                    color: '#334155',
+                    display: 'flex',
+                    alignItems: 'center',
+                    borderRight: cIdx < cols - 1 ? '1px solid #e2e8f0' : 'none',
+                    borderBottom: '1px dotted #e2e8f0',
+                  }}>
+                  </div>
+                ))}
+              </div>
+            );
+          }
+
+          // Non-empty row - use sequential numbering
+          displayedRowCount++;
+          const rowNumber = rowOffset + displayedRowCount;
 
           // Alternating row colors (customizable wristband style)
-          const rowBg = rIdx % 2 === 0 ? (box.rowColor1 || '#ffffff') : (box.rowColor2 || '#f8fafc');
+          const rowBg = (rowNumber - 1) % 2 === 0 ? (box.rowColor1 || '#ffffff') : (box.rowColor2 || '#f8fafc');
 
           return (
             <div key={rIdx} style={{ display: 'contents' }}>
@@ -250,7 +295,7 @@ export default function SheetView({
                 borderBottom: '1px dotted #e2e8f0',
                 background: rowBg
               }}>
-                {(box.gridRowLabels && box.gridRowLabels[rIdx]) || (rIdx + 1)}
+                {(box.gridRowLabels && box.gridRowLabels[rIdx]) || rowNumber}
               </div>
               {rowSlots.map((slot, cIdx) => {
                 const play = slot.type === 'PLAY' ? slot : null;
@@ -285,16 +330,20 @@ export default function SheetView({
   };
 
   // Render script box content
-  const renderScriptBox = (box, isPrintMode = false) => {
+  // rowOffset: starting row number for sequential numbering across boxes
+  const renderScriptBox = (box, isPrintMode = false, rowOffset = 0) => {
     const boxRows = box.rows || [];
     const scriptColumns = box.scriptColumns || 2; // 1 = single column, 2 = left/right hash
 
-    // Filter to non-empty rows for print mode
-    const rowsToRender = isPrintMode ? boxRows.filter(row => {
+    // Check if a row has content
+    const rowHasContent = (row) => {
       const playLeft = plays.find(p => p.id === row.content);
       const playRight = plays.find(p => p.id === row.contentRight);
       return playLeft || (scriptColumns === 2 && playRight);
-    }) : boxRows;
+    };
+
+    // Filter to non-empty rows for print mode
+    const rowsToRender = isPrintMode ? boxRows.filter(rowHasContent) : boxRows;
 
     if (isPrintMode && rowsToRender.length === 0) {
       return null;
@@ -340,8 +389,46 @@ export default function SheetView({
           {/* Data Rows */}
           {rowsToRender.map((row, rIdx) => {
             const play = plays.find(p => p.id === row.content);
+            const isEmpty = !play;
+            const rowNumber = rowOffset + rIdx + 1;
             // Alternating row colors (customizable wristband style)
-            const rowBg = rIdx % 2 === 0 ? (box.rowColor1 || '#ffffff') : (box.rowColor2 || '#f8fafc');
+            const rowBg = (rowNumber - 1) % 2 === 0 ? (box.rowColor1 || '#ffffff') : (box.rowColor2 || '#f8fafc');
+
+            // For screen display, show empty rows but mark them for print hiding
+            if (isEmpty && !isPrintMode) {
+              return (
+                <div key={rIdx} className="empty-row no-print" style={{ display: 'contents' }}>
+                  <div style={{
+                    padding: '2px',
+                    fontSize: '0.6rem',
+                    color: '#cbd5e1',
+                    textAlign: 'right',
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    minWidth: '15px',
+                    height: `${rowHeight}px`,
+                    borderBottom: '1px dotted #e2e8f0',
+                    background: rowBg
+                  }}>
+                    {row.label || rowNumber}
+                  </div>
+                  <div style={{
+                    overflow: 'hidden',
+                    background: rowBg,
+                    padding: '2px',
+                    height: `${rowHeight}px`,
+                    color: '#334155',
+                    display: 'flex',
+                    alignItems: 'center',
+                    borderBottom: '1px dotted #e2e8f0',
+                  }}>
+                    <span style={{ color: '#cbd5e1', fontStyle: 'italic', fontSize: '0.6rem' }}>-</span>
+                  </div>
+                </div>
+              );
+            }
 
             return (
               <div key={rIdx} style={{ display: 'contents' }}>
@@ -359,7 +446,7 @@ export default function SheetView({
                   borderBottom: '1px dotted #e2e8f0',
                   background: rowBg
                 }}>
-                  {row.label || rIdx + 1}
+                  {row.label || rowNumber}
                 </div>
                 <div style={{
                   overflow: 'hidden',
@@ -444,8 +531,53 @@ export default function SheetView({
         {rowsToRender.map((row, rIdx) => {
           const playLeft = plays.find(p => p.id === row.content);
           const playRight = plays.find(p => p.id === row.contentRight);
+          const isEmpty = !playLeft && !playRight;
+          const rowNumber = rowOffset + rIdx + 1;
           // Alternating row colors (customizable wristband style)
-          const rowBg = rIdx % 2 === 0 ? (box.rowColor1 || '#ffffff') : (box.rowColor2 || '#f8fafc');
+          const rowBg = (rowNumber - 1) % 2 === 0 ? (box.rowColor1 || '#ffffff') : (box.rowColor2 || '#f8fafc');
+
+          // For screen display, show empty rows but mark them for print hiding
+          if (isEmpty && !isPrintMode) {
+            return (
+              <div key={rIdx} className="empty-row no-print" style={{ display: 'contents' }}>
+                <div style={{
+                  padding: '2px',
+                  fontSize: '0.6rem',
+                  color: '#cbd5e1',
+                  textAlign: 'right',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  minWidth: '15px',
+                  height: `${rowHeight}px`,
+                  borderBottom: '1px dotted #e2e8f0',
+                  background: rowBg
+                }}>
+                  {row.label || rowNumber}
+                </div>
+                <div style={{
+                  overflow: 'hidden',
+                  background: rowBg,
+                  padding: '2px',
+                  height: `${rowHeight}px`,
+                  borderRight: '1px solid #e2e8f0',
+                  borderBottom: '1px dotted #e2e8f0',
+                }}>
+                  <span style={{ color: '#cbd5e1', fontStyle: 'italic', fontSize: '0.6rem' }}>-</span>
+                </div>
+                <div style={{
+                  overflow: 'hidden',
+                  background: rowBg,
+                  padding: '2px',
+                  height: `${rowHeight}px`,
+                  borderBottom: '1px dotted #e2e8f0',
+                }}>
+                  <span style={{ color: '#cbd5e1', fontStyle: 'italic', fontSize: '0.6rem' }}>-</span>
+                </div>
+              </div>
+            );
+          }
 
           return (
             <div key={rIdx} style={{ display: 'contents' }}>
@@ -463,7 +595,7 @@ export default function SheetView({
                 borderBottom: '1px dotted #e2e8f0',
                 background: rowBg
               }}>
-                {row.label || rIdx + 1}
+                {row.label || rowNumber}
               </div>
               <div style={{
                 overflow: 'hidden',
@@ -929,14 +1061,65 @@ export default function SheetView({
     );
   };
 
-  // Render box content based on type
-  const renderBoxContent = (box, isPrintMode = false) => {
+  // Helper: Count filled (non-empty) rows in a box for sequential numbering
+  const countFilledRows = (box) => {
     if (box.type === 'grid') {
-      return renderGridBox(box, isPrintMode);
+      const cols = box.gridColumns || 4;
+      const rowsCount = box.gridRows || 5;
+      const totalSlots = cols * rowsCount;
+      const set = gamePlan?.sets?.find(s => s.id === box.setId);
+      const assignedPlayIds = set?.assignedPlayIds || box.assignedPlayIds || [];
+
+      let filledRows = 0;
+      for (let rowIdx = 0; rowIdx < rowsCount; rowIdx++) {
+        const rowStart = rowIdx * cols;
+        const rowEnd = rowStart + cols;
+        const hasContent = assignedPlayIds.slice(rowStart, rowEnd).some(id => {
+          if (!id) return false;
+          const play = plays.find(p => p.id === id);
+          return play && play.name && play.name.trim() !== '';
+        });
+        if (hasContent) filledRows++;
+      }
+      return filledRows;
+    }
+
+    if (box.type === 'script') {
+      const boxRows = box.rows || [];
+      return boxRows.filter(row => {
+        const playLeft = plays.find(p => p.id === row.content);
+        const playRight = plays.find(p => p.id === row.contentRight);
+        return playLeft || playRight;
+      }).length;
+    }
+
+    if (box.type === 'fzdnd') {
+      // Count rows that have at least one play
+      const rowCount = box.rowCount || 5;
+      let filledRows = 0;
+      // This is complex - simplified for now, just return row count
+      return rowCount;
+    }
+
+    if (box.type === 'matrix') {
+      const playTypes = box.playTypes || [];
+      return playTypes.length;
+    }
+
+    // Default
+    const playsInBox = getPlaysForSet(box.setId);
+    return playsInBox.length;
+  };
+
+  // Render box content based on type
+  // rowOffset: starting row number for sequential numbering across boxes
+  const renderBoxContent = (box, isPrintMode = false, rowOffset = 0) => {
+    if (box.type === 'grid') {
+      return renderGridBox(box, isPrintMode, rowOffset);
     }
 
     if (box.type === 'script' && box.rows && box.rows.length > 0) {
-      return renderScriptBox(box, isPrintMode);
+      return renderScriptBox(box, isPrintMode, rowOffset);
     }
 
     if (box.type === 'fzdnd') {
@@ -1213,9 +1396,9 @@ export default function SheetView({
       {/* Dynamic print orientation style */}
       <style dangerouslySetInnerHTML={{ __html: printOrientationStyle }} />
 
-      {/* Zoom Controls - only in edit mode */}
+      {/* Zoom Controls - only in edit mode, hidden in print */}
       {isEditing && (
-        <div style={{
+        <div className="zoom-controls no-print" style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -1275,7 +1458,7 @@ export default function SheetView({
       )}
 
       {/* Scrollable content area */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
+      <div className="sheet-scroll-container" style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
       {/* Print Pages for 4-page booklet format */}
       {is4Page && (
         <div className="print-only-4page">
@@ -1340,7 +1523,15 @@ export default function SheetView({
                         <div className="print-section-4">
                           <div className="print-section-header-4">{section.title}</div>
                           <div className="print-boxes-grid-4">
-                            {leftBoxes.map((box, bIdx) => (
+                            {(() => {
+                              // Calculate row offsets for sequential numbering
+                              const rowOffsets = [];
+                              let cumulative = 0;
+                              leftBoxes.forEach((box, idx) => {
+                                rowOffsets[idx] = cumulative;
+                                cumulative += countFilledRows(box);
+                              });
+                              return leftBoxes.map((box, bIdx) => (
                               <div key={bIdx} className="print-box-4" style={{
                                 gridColumn: `span ${Math.min(box.colSpan || 2, 4)}`,
                               }}>
@@ -1348,10 +1539,11 @@ export default function SheetView({
                                   {box.header}
                                 </div>
                                 <div className="print-box-content-4">
-                                  {renderBoxContent(box, true)}
+                                  {renderBoxContent(box, true, rowOffsets[bIdx])}
                                 </div>
                               </div>
-                            ))}
+                            ));
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -1366,7 +1558,16 @@ export default function SheetView({
                         <div className="print-section-4">
                           <div className="print-section-header-4">{section.title} (cont.)</div>
                           <div className="print-boxes-grid-4">
-                            {rightBoxes.map((box, bIdx) => (
+                            {(() => {
+                              // Calculate row offsets continuing from leftBoxes
+                              const leftBoxesTotal = leftBoxes.reduce((sum, box) => sum + countFilledRows(box), 0);
+                              const rowOffsets = [];
+                              let cumulative = leftBoxesTotal;
+                              rightBoxes.forEach((box, idx) => {
+                                rowOffsets[idx] = cumulative;
+                                cumulative += countFilledRows(box);
+                              });
+                              return rightBoxes.map((box, bIdx) => (
                               <div key={bIdx} className="print-box-4" style={{
                                 gridColumn: `span ${Math.min(box.colSpan || 2, 4)}`,
                               }}>
@@ -1374,10 +1575,11 @@ export default function SheetView({
                                   {box.header}
                                 </div>
                                 <div className="print-box-content-4">
-                                  {renderBoxContent(box, true)}
+                                  {renderBoxContent(box, true, rowOffsets[bIdx])}
                                 </div>
                               </div>
-                            ))}
+                            ));
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -1445,6 +1647,69 @@ export default function SheetView({
         // Use full width, maintain aspect ratio for height
         const aspectRatio = pageHeightIn / pageWidthIn;
 
+        // Helper to calculate displayed row count for a section
+        // This must match displayRows logic: max of actual box rows and configured section rows
+        const calculateSectionDisplayRows = (section) => {
+          const visibleBoxes = isEditing
+            ? (section.boxes || [])
+            : (section.boxes || []).filter(b => !b.hidden);
+
+          const sectionCols = Math.min(section.gridColumns || pageMaxCols, pageMaxCols);
+          const sectionConfiguredRows = section.gridRows || 12;
+
+          // If no boxes in edit mode, still show configured rows
+          if (visibleBoxes.length === 0) {
+            return isEditing ? sectionConfiguredRows : 0;
+          }
+
+          const getBoxRowSpan = (box) => {
+            if (box.type === 'grid') return (box.gridRows || 5) + 2;
+            if (box.type === 'script') return (box.rows?.length || 10) + 2;
+            if (box.type === 'fzdnd') return (box.gridRows || box.rowCount || 5) + 2;
+            if (box.type === 'matrix') return (box.playTypes?.length || 5) + 2;
+            return 5 + 2;
+          };
+
+          // Calculate max row needed by boxes
+          let maxBoxRow = 0;
+          const occupiedCells = new Set();
+
+          visibleBoxes.forEach((box) => {
+            const colSpan = Math.min(Number(box.colSpan) || 2, sectionCols);
+            const rowSpan = getBoxRowSpan(box);
+
+            if (box.locked && box.gridPosition) {
+              maxBoxRow = Math.max(maxBoxRow, box.gridPosition.row + rowSpan);
+            } else {
+              // Find first available row
+              let placed = false;
+              for (let r = 0; !placed; r++) {
+                for (let c = 0; c <= sectionCols - colSpan && !placed; c++) {
+                  let canPlace = true;
+                  for (let dr = 0; dr < rowSpan && canPlace; dr++) {
+                    for (let dc = 0; dc < colSpan && canPlace; dc++) {
+                      if (occupiedCells.has(`${r + dr},${c + dc}`)) canPlace = false;
+                    }
+                  }
+                  if (canPlace) {
+                    for (let dr = 0; dr < rowSpan; dr++) {
+                      for (let dc = 0; dc < colSpan; dc++) {
+                        occupiedCells.add(`${r + dr},${c + dc}`);
+                      }
+                    }
+                    maxBoxRow = Math.max(maxBoxRow, r + rowSpan);
+                    placed = true;
+                  }
+                }
+              }
+            }
+          });
+
+          // Return ONLY actual box rows for cumulative counting
+          // (NOT the configured section rows - those create empty space that shouldn't be counted)
+          return maxBoxRow;
+        };
+
         for (let pageNum = 1; pageNum <= numPages; pageNum++) {
           // Filter sections for this page (default to page 1 if not set)
           const pageSections = sections
@@ -1453,6 +1718,14 @@ export default function SheetView({
 
           // Skip empty pages when not editing
           if (pageSections.length === 0 && !isEditing) continue;
+
+          // Pre-calculate cumulative row offsets for each section on this page
+          const sectionRowOffsets = [];
+          let cumulativePageRows = 0;
+          pageSections.forEach(({ section }, idx) => {
+            sectionRowOffsets[idx] = cumulativePageRows;
+            cumulativePageRows += calculateSectionDisplayRows(section);
+          });
 
           pageContainers.push(
             <div
@@ -1474,16 +1747,14 @@ export default function SheetView({
                 transition: 'width 0.2s ease'
               }}
             >
-              {/* Page Header - editor only */}
+              {/* Page Header - editor only, hidden in print */}
               {isEditing && (() => {
-                // Calculate total rows used by all sections on this page
-                const totalRowsUsed = pageSections.reduce((sum, { section }) => {
-                  return sum + (section.gridRows || 12);
-                }, 0);
+                // Use the pre-calculated cumulative row count
+                const totalRowsUsed = cumulativePageRows;
                 const isOverLimit = totalRowsUsed > pageMaxRows;
 
                 return (
-                  <div style={{
+                  <div className="page-header-edit no-print" style={{
                     background: isOverLimit ? '#991b1b' : '#334155',
                     color: 'white',
                     padding: '4px 12px',
@@ -1511,7 +1782,9 @@ export default function SheetView({
                 flexDirection: 'column',
                 gap: '6px'
               }}>
-                {pageSections.map(({ section, originalIdx: sIdx }) => {
+                {pageSections.map(({ section, originalIdx: sIdx }, pageSectionIdx) => {
+                  // Get the cumulative row offset for this section
+                  const sectionRowOffset = sectionRowOffsets[pageSectionIdx] || 0;
                   // Show all boxes in edit mode
                   const visibleBoxes = isEditing
                     ? (section.boxes || [])
@@ -1629,8 +1902,8 @@ export default function SheetView({
                         flexDirection: 'column'
                       }}
                     >
-                      {/* Section Header */}
-                      <div style={{
+                      {/* Section Header - hidden in print */}
+                      <div className="section-header-edit no-print" style={{
                         background: '#f1f5f9',
                         padding: '0.5rem',
                         fontWeight: 'bold',
@@ -1741,7 +2014,7 @@ export default function SheetView({
                           ? Math.max(maxGridRow, sectionMaxRows) // Show at least section's configured rows
                           : maxGridRow; // Print preview shows only content
                         return (
-                      <div style={{
+                      <div className={`section-grid-content ${isEditing ? 'section-grid-editing' : ''}`} data-cols={sectionCols} style={{
                         display: 'grid',
                         gridTemplateColumns: isEditing
                           ? `20px repeat(${sectionCols}, 1fr)` // Row numbers + content columns (edit mode)
@@ -1753,10 +2026,13 @@ export default function SheetView({
                         padding: isEditing ? '4px' : '0',
                         flex: 1
                       }}>
-                        {/* Row numbers on the left (like spreadsheet) - only in edit mode */}
-                        {isEditing && displayRows > 0 && Array.from({ length: displayRows }, (_, rowIdx) => (
+                        {/* Row numbers on the left (like spreadsheet) - only in edit mode, hidden in print */}
+                        {/* Uses sectionRowOffset to continue numbering from previous sections */}
+                        {/* Only renders row numbers for ACTUAL box content (maxGridRow), not empty space */}
+                        {isEditing && maxGridRow > 0 && Array.from({ length: maxGridRow }, (_, rowIdx) => (
                           <div
                             key={`row-${rowIdx}`}
+                            className="row-numbers-column no-print"
                             style={{
                               gridColumn: '1',
                               gridRow: rowIdx + 1,
@@ -1770,13 +2046,23 @@ export default function SheetView({
                               userSelect: 'none'
                             }}
                           >
-                            {rowIdx + 1}
+                            {sectionRowOffset + rowIdx + 1}
                           </div>
                         ))}
-                        {visibleBoxes.map((box, bIdx) => {
+                        {/* Calculate cumulative row offsets for sequential numbering */}
+                        {(() => {
+                          // Pre-calculate row offsets for each box
+                          const rowOffsets = [];
+                          let cumulativeRows = 0;
+                          visibleBoxes.forEach((box, idx) => {
+                            rowOffsets[idx] = cumulativeRows;
+                            cumulativeRows += countFilledRows(box);
+                          });
+                          return visibleBoxes.map((box, bIdx) => {
                           const colSpan = Math.min(Number(box.colSpan) || 2, sectionCols);
                           const rowSpan = getBoxRowSpan(box);
                           const placement = boxPlacements[bIdx] || { row: 0, col: 0 };
+                          const rowOffset = rowOffsets[bIdx] || 0;
                           return (
                             <div
                               key={bIdx}
@@ -1811,6 +2097,10 @@ export default function SheetView({
                               }}
                               onClick={() => {
                                 if (!isEditing) onBoxClick(box, sIdx, bIdx);
+                              }}
+                              onDoubleClick={() => {
+                                // Allow double-click to open box even in edit mode
+                                onBoxClick(box, sIdx, bIdx);
                               }}
                             >
                               {/* Box Header - hidden for matrix boxes unless editing */}
@@ -1879,16 +2169,18 @@ export default function SheetView({
                               )}
                               {/* Box Content */}
                               <div className="box-content" style={{ fontSize: '0.7rem', flex: 1, overflow: 'hidden' }}>
-                                {renderBoxContent(box, false)}
+                                {renderBoxContent(box, false, rowOffset)}
                               </div>
                             </div>
                           );
-                        })}
+                        });
+                        })()}
 
-                        {/* Empty cell placeholders - clickable to add box OR drop targets for dragged boxes */}
+                        {/* Empty cell placeholders - clickable to add box OR drop targets for dragged boxes - hidden in print */}
                         {isEditing && emptyCells.map((cell, idx) => (
                           <div
                             key={`empty-${cell.row}-${cell.col}`}
+                            className="empty-cell-placeholder no-print"
                             style={{
                               gridColumn: `${cell.col + 2} / ${cell.col + 3}`, // +2 because col 1 is row numbers
                               gridRow: `${cell.row + 1} / ${cell.row + 2}`,
@@ -1944,9 +2236,10 @@ export default function SheetView({
                           </div>
                         ))}
 
-                        {/* Add Box Button at the end */}
+                        {/* Add Box Button at the end - hidden in print */}
                         {isEditing && (
                           <div
+                            className="add-box-btn no-print"
                             style={{
                               gridColumn: 'span 2',
                               minHeight: '60px',
@@ -1983,17 +2276,16 @@ export default function SheetView({
                   );
                 })}
 
-                {/* Rows remaining indicator and Add Section Button */}
+                {/* Rows remaining indicator and Add Section Button - hidden in print */}
                 {isEditing && (() => {
-                  const totalRowsUsed = pageSections.reduce((sum, { section }) => {
-                    return sum + (section.gridRows || 12);
-                  }, 0);
+                  // Use the pre-calculated cumulative row count
+                  const totalRowsUsed = cumulativePageRows;
                   const rowsRemaining = pageMaxRows - totalRowsUsed;
 
                   return (
                     <>
                       {/* Rows remaining indicator */}
-                      <div style={{
+                      <div className="rows-remaining no-print" style={{
                         padding: '8px 12px',
                         background: rowsRemaining < 0 ? '#fef2f2' : '#f0fdf4',
                         border: `1px solid ${rowsRemaining < 0 ? '#fecaca' : '#bbf7d0'}`,
@@ -2010,6 +2302,7 @@ export default function SheetView({
 
                       {/* Add Section Button */}
                       <button
+                        className="add-section-btn no-print"
                         style={{
                           border: '2px dashed #cbd5e1',
                           height: '60px',

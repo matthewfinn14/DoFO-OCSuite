@@ -3,7 +3,6 @@ import { useAuth } from '../context/AuthContext';
 import { useSchool } from '../context/SchoolContext';
 import {
   Shield,
-  Users,
   School,
   Clock,
   CheckCircle,
@@ -44,7 +43,6 @@ const generateJoinCode = () => {
 // Tab options
 const TABS = [
   { id: 'requests', label: 'Access Requests', icon: Clock },
-  { id: 'users', label: 'All Users', icon: Users },
   { id: 'schools', label: 'Schools', icon: School },
   { id: 'create', label: 'Create School', icon: Plus }
 ];
@@ -73,7 +71,6 @@ export default function Admin() {
 
   const [activeTab, setActiveTab] = useState('requests');
   const [accessRequests, setAccessRequests] = useState([]);
-  const [users, setUsers] = useState([]);
   const [schools, setSchools] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -108,11 +105,6 @@ export default function Admin() {
       const requestsSnap = await getDocs(collection(db, 'access_requests'));
       const requestsData = requestsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       setAccessRequests(requestsData);
-
-      // Load users
-      const usersSnap = await getDocs(collection(db, 'users'));
-      const usersData = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setUsers(usersData);
 
       // Load schools
       const schoolsSnap = await getDocs(collection(db, 'schools'));
@@ -224,7 +216,7 @@ export default function Admin() {
         depthChart: {},
         wristbands: {},
         gamePlans: {},
-        settings: {},
+        settings: { theme: 'light' },
         programLevels: [],
         culture: {},
         setupConfig: {}
@@ -323,19 +315,124 @@ export default function Admin() {
     });
   };
 
-  const deleteSchool = async (school) => {
-    if (!confirm(`Are you sure you want to DELETE "${school.name}"?\n\nThis will permanently remove all school data including plays, roster, and settings.\n\nThis cannot be undone.`)) return;
+  // Schedule school for deletion (30-day grace period)
+  const scheduleSchoolDeletion = async (school) => {
+    if (!confirm(`Schedule "${school.name}" for deletion?\n\nThe school will be permanently deleted in 30 days. Users will lose access immediately.`)) return;
 
     try {
-      // Delete associated mail documents
+      const deletionDate = new Date();
+      deletionDate.setDate(deletionDate.getDate() + 30);
+
+      await updateDoc(doc(db, 'schools', school.id), {
+        'subscription.status': 'pending_deletion',
+        'subscription.scheduledDeletionDate': deletionDate.toISOString(),
+        'subscription.scheduledBy': user?.email,
+        updatedAt: new Date().toISOString()
+      });
+
+      loadData();
+      alert(`${school.name} scheduled for deletion on ${deletionDate.toLocaleDateString()}`);
+    } catch (err) {
+      console.error('Error scheduling deletion:', err);
+      alert('Failed to schedule deletion: ' + (err.message || err.code || 'Unknown error'));
+    }
+  };
+
+  // Cancel scheduled deletion
+  const cancelScheduledDeletion = async (school) => {
+    try {
+      await updateDoc(doc(db, 'schools', school.id), {
+        'subscription.status': SUBSCRIPTION_STATUS.TRIAL,
+        'subscription.scheduledDeletionDate': null,
+        'subscription.scheduledBy': null,
+        updatedAt: new Date().toISOString()
+      });
+      loadData();
+    } catch (err) {
+      console.error('Error canceling deletion:', err);
+      alert('Failed to cancel: ' + (err.message || err.code || 'Unknown error'));
+    }
+  };
+
+  // Full cascade delete - removes school and ALL related data
+  const deleteSchool = async (school, immediate = false) => {
+    const message = immediate
+      ? `PERMANENTLY DELETE "${school.name}" and all related data?\n\nThis will:\n• Remove all plays, roster, and settings\n• Remove user memberships\n• Delete invites and mail records\n\nThis cannot be undone!`
+      : `Delete "${school.name}"?\n\nChoose OK for immediate deletion, or Cancel to schedule for 30 days instead.`;
+
+    if (!confirm(message)) {
+      if (!immediate) {
+        // Offer 30-day option
+        scheduleSchoolDeletion(school);
+      }
+      return;
+    }
+
+    try {
+      const schoolId = school.id;
+      const memberEmails = school.memberList || [];
+
+      // 1. Delete associated mail documents
       const mailQuery = query(collection(db, 'mail'), where('metadata.schoolName', '==', school.name));
       const mailSnap = await getDocs(mailQuery);
       const deleteMailPromises = mailSnap.docs.map(d => deleteDoc(doc(db, 'mail', d.id)));
       await Promise.all(deleteMailPromises);
+      console.log(`Deleted ${mailSnap.docs.length} mail documents`);
 
-      // Delete the school
-      await deleteDoc(doc(db, 'schools', school.id));
+      // 2. Delete invites for this school
+      const invitesQuery = query(collection(db, 'invites'), where('schoolId', '==', schoolId));
+      const invitesSnap = await getDocs(invitesQuery);
+      const deleteInvitePromises = invitesSnap.docs.map(d => deleteDoc(doc(db, 'invites', d.id)));
+      await Promise.all(deleteInvitePromises);
+      console.log(`Deleted ${invitesSnap.docs.length} invites`);
+
+      // 3. Update users who have this as activeSchoolId and delete their memberships
+      const usersSnap = await getDocs(collection(db, 'users'));
+      const userUpdatePromises = [];
+
+      for (const userDoc of usersSnap.docs) {
+        const userData = userDoc.data();
+
+        // Delete membership subcollection for this school
+        try {
+          const membershipRef = doc(db, 'users', userDoc.id, 'memberships', schoolId);
+          await deleteDoc(membershipRef);
+        } catch (e) {
+          // Membership may not exist, that's ok
+        }
+
+        // If this was their active school, clear it
+        if (userData.activeSchoolId === schoolId) {
+          userUpdatePromises.push(
+            updateDoc(doc(db, 'users', userDoc.id), {
+              activeSchoolId: null,
+              updatedAt: new Date().toISOString()
+            })
+          );
+        }
+      }
+      await Promise.all(userUpdatePromises);
+      console.log(`Updated ${userUpdatePromises.length} user documents`);
+
+      // 4. Update access requests linked to this school
+      const accessQuery = query(collection(db, 'access_requests'), where('schoolId', '==', schoolId));
+      const accessSnap = await getDocs(accessQuery);
+      const accessUpdatePromises = accessSnap.docs.map(d =>
+        updateDoc(doc(db, 'access_requests', d.id), {
+          schoolId: null,
+          schoolDeleted: true,
+          schoolDeletedAt: new Date().toISOString()
+        })
+      );
+      await Promise.all(accessUpdatePromises);
+      console.log(`Updated ${accessSnap.docs.length} access requests`);
+
+      // 5. Finally delete the school document
+      await deleteDoc(doc(db, 'schools', schoolId));
+      console.log(`Deleted school: ${school.name}`);
+
       loadData();
+      alert(`${school.name} and all related data have been deleted.`);
     } catch (err) {
       console.error('Error deleting school:', err);
       alert('Failed to delete school: ' + (err.message || err.code || 'Unknown error'));
@@ -400,7 +497,6 @@ export default function Admin() {
   const validRequests = accessRequests.filter(r => r.email && r.email.trim());
   const pendingRequests = validRequests.filter(r => r.status === 'pending');
   const filteredRequests = filterItems(validRequests, ['email', 'schoolName', 'role']);
-  const filteredUsers = filterItems(users, ['email', 'displayName']);
   const filteredSchools = filterItems(schools, ['name', 'mascot', 'schoolAdminEmail']);
 
   // Sort schools by creation date (newest first)
@@ -579,74 +675,6 @@ export default function Admin() {
             </div>
           )}
 
-          {/* Users Tab */}
-          {activeTab === 'users' && (
-            <div className={`rounded-lg border overflow-hidden ${
-              isLight ? 'bg-white border-gray-200' : 'bg-slate-900 border-slate-800'
-            }`}>
-              <table className="w-full">
-                <thead>
-                  <tr className={isLight ? 'bg-gray-50' : 'bg-slate-800'}>
-                    <th className={`px-4 py-3 text-left text-sm font-semibold ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>User</th>
-                    <th className={`px-4 py-3 text-left text-sm font-semibold ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Email</th>
-                    <th className={`px-4 py-3 text-left text-sm font-semibold ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Role</th>
-                    <th className={`px-4 py-3 text-left text-sm font-semibold ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Created</th>
-                    <th className={`px-4 py-3 text-left text-sm font-semibold ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Last Active</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.length === 0 ? (
-                    <tr>
-                      <td colSpan="5" className="px-4 py-12 text-center">
-                        <Users size={32} className={`mx-auto mb-2 ${isLight ? 'text-gray-400' : 'text-slate-600'}`} />
-                        <p className={isLight ? 'text-gray-500' : 'text-slate-500'}>No users found</p>
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredUsers.map((u, idx) => (
-                      <tr
-                        key={u.id}
-                        className={idx % 2 === 0
-                          ? isLight ? 'bg-white' : 'bg-slate-900'
-                          : isLight ? 'bg-gray-50' : 'bg-slate-900/50'
-                        }
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sky-400 font-bold ${
-                              isLight ? 'bg-gray-100' : 'bg-slate-700'
-                            }`}>
-                              {u.displayName?.charAt(0) || u.email?.charAt(0) || '?'}
-                            </div>
-                            <span className={`font-medium ${isLight ? 'text-gray-900' : 'text-white'}`}>
-                              {u.displayName || u.email?.split('@')[0] || 'Unknown'}
-                            </span>
-                          </div>
-                        </td>
-                        <td className={`px-4 py-3 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>{u.email}</td>
-                        <td className="px-4 py-3">
-                          {u.isAdmin && (
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              isLight ? 'bg-red-100 text-red-700' : 'bg-red-500/20 text-red-400'
-                            }`}>
-                              Admin
-                            </span>
-                          )}
-                        </td>
-                        <td className={`px-4 py-3 text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
-                          {formatDate(u.createdAt)}
-                        </td>
-                        <td className={`px-4 py-3 text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
-                          {formatDate(u.lastActive)}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-
           {/* Schools Tab */}
           {activeTab === 'schools' && (
             <div className="space-y-3">
@@ -736,6 +764,30 @@ export default function Admin() {
                               <span className={isLight ? 'text-gray-700' : 'text-slate-300'}>{school.createdBy || 'Unknown'}</span>
                             </div>
                           </div>
+
+                          {/* Pending Deletion Warning */}
+                          {school.subscription?.status === 'pending_deletion' && (
+                            <div className={`mb-4 p-3 rounded-lg flex items-center gap-3 ${
+                              isLight ? 'bg-red-50 border border-red-200' : 'bg-red-500/10 border border-red-500/30'
+                            }`}>
+                              <AlertTriangle className={isLight ? 'text-red-600' : 'text-red-400'} size={20} />
+                              <div>
+                                <span className={`font-medium ${isLight ? 'text-red-700' : 'text-red-400'}`}>
+                                  Scheduled for deletion
+                                </span>
+                                <span className={`ml-2 ${isLight ? 'text-red-600' : 'text-red-300'}`}>
+                                  {school.subscription.scheduledDeletionDate
+                                    ? formatDate(school.subscription.scheduledDeletionDate)
+                                    : 'Date not set'}
+                                </span>
+                                {school.subscription.scheduledBy && (
+                                  <span className={`block text-sm ${isLight ? 'text-red-500' : 'text-red-400/70'}`}>
+                                    by {school.subscription.scheduledBy}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
 
                           {/* Join Code */}
                           <div className={`mb-4 p-3 rounded-lg flex items-center justify-between ${
@@ -852,15 +904,50 @@ export default function Admin() {
                               </button>
                             )}
 
-                            <button
-                              onClick={(e) => { e.stopPropagation(); deleteSchool(school); }}
-                              className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm ${
-                                isLight ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                              }`}
-                            >
-                              <Trash2 size={14} />
-                              Delete
-                            </button>
+                            {/* Delete options based on status */}
+                            {school.subscription?.status === 'pending_deletion' ? (
+                              <>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); cancelScheduledDeletion(school); }}
+                                  className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm ${
+                                    isLight ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                                  }`}
+                                >
+                                  <X size={14} />
+                                  Cancel Deletion
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); deleteSchool(school, true); }}
+                                  className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm ${
+                                    isLight ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                                  }`}
+                                >
+                                  <Trash2 size={14} />
+                                  Delete Now
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); scheduleSchoolDeletion(school); }}
+                                  className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm ${
+                                    isLight ? 'bg-orange-100 text-orange-700 hover:bg-orange-200' : 'bg-orange-500/20 text-orange-400 hover:bg-orange-500/30'
+                                  }`}
+                                >
+                                  <Clock size={14} />
+                                  Delete in 30 Days
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); deleteSchool(school, true); }}
+                                  className={`flex items-center gap-1 px-3 py-2 rounded-lg text-sm ${
+                                    isLight ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                                  }`}
+                                >
+                                  <Trash2 size={14} />
+                                  Delete Now
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
                       )}

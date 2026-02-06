@@ -174,7 +174,7 @@ export default function SchoolOnboardingWizard() {
           offensePositions: offensePositions,
           defensePositions: defensePositions,
           activeYear: new Date().getFullYear().toString(),
-          theme: 'dark',
+          theme: 'light',
           initialized: true,
           createdAt: new Date().toISOString(),
           createdBy: user.uid

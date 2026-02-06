@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
 import { PlayCard, PlayEditor } from '../components/playbook';
 import { usePlayDetailsModal } from '../components/PlayDetailsModal';
@@ -20,7 +20,8 @@ import {
   Layers,
   X,
   Check,
-  Users
+  Users,
+  Upload
 } from 'lucide-react';
 
 // Modal for assigning plays to sub-level playbooks
@@ -773,12 +774,23 @@ export default function Playbook() {
               : "Try adjusting your search or filters."}
           </p>
           {phasePlays.length === 0 && (
-            <button
-              onClick={openNewPlayEditor}
-              className="px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600"
-            >
-              Add Your First {getPhaseLabel('play')}
-            </button>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <button
+                onClick={openNewPlayEditor}
+                className="flex items-center gap-2 px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600"
+              >
+                <Plus size={18} />
+                Add Your First {getPhaseLabel('play')}
+              </button>
+              <span className="text-slate-600">or</span>
+              <Link
+                to="/offseason/self-scout"
+                className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
+              >
+                <Upload size={18} />
+                Import from Hudl
+              </Link>
+            </div>
           )}
         </div>
       ) : viewMode === 'grid' ? (

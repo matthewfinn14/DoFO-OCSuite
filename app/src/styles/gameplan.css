@@ -827,8 +827,10 @@
    ============================================ */
 
 @media print {
-  /* Hide non-print elements */
+  /* Hide non-print elements - edit controls, headers, buttons */
   .hide-on-print,
+  .no-print,
+  .screen-only,
   .fzdnd-toggle-cell,
   .fzdnd-collapsed-row,
   .matrix-add-input,
@@ -837,7 +839,16 @@
   select,
   .print-section-header-4,
   .section-header,
-  .call-sheet-section > div:first-child {
+  .page-header-edit,
+  .section-header-edit,
+  .zoom-controls,
+  .add-section-btn,
+  .rows-remaining,
+  .row-numbers-column,
+  .empty-cell-placeholder,
+  .add-box-btn,
+  .empty-row,
+  .empty-row * {
     display: none !important;
   }
 
@@ -1117,16 +1128,58 @@
     padding: 0 !important;
   }
 
-  /* Page container - no margin for print */
+  /* Page container - no margin for print, allow content to flow naturally */
   .page-container {
     margin: 0 !important;
     margin-bottom: 0 !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Page content area - minimize padding */
+  .page-container > div:nth-child(2),
+  .page-container > div:last-child {
+    padding: 2px !important;
+    gap: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Sections should flow without extra margins */
+  .call-sheet-section {
+    margin: 0 !important;
+    margin-bottom: 2px !important;
+  }
+
+  /* Scroll container - remove padding/overflow for print */
+  .sheet-scroll-container {
+    padding: 0 !important;
+    overflow: visible !important;
   }
 
   /* Section content - minimal gap for boxes */
   .call-sheet-section > div:last-child {
     gap: 1px !important;
     padding: 0 !important;
+  }
+
+  /* Fix grid layout for print in edit mode */
+  .section-grid-editing {
+    /* The first column (20px for row numbers) should collapse since row numbers are hidden */
+    grid-template-columns: 0 repeat(5, 1fr) !important;
+    column-gap: 1px !important;
+    padding: 0 !important;
+  }
+
+  /* Alternative: Let the layout flow naturally with auto sizing */
+  .section-grid-content {
+    grid-auto-rows: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Remove fixed heights that cause overflow */
+  .section-grid-content > div,
+  .section-grid-content div[style*="height"] {
+    min-height: auto !important;
+    height: auto !important;
   }
 
   /* Page content area - no vertical gap between sections */
@@ -1327,6 +1380,250 @@
   }
 
   .print-only {
+    display: none !important;
+  }
+}
+
+/* ============================================
+   SPREADSHEET VIEW STYLES
+   ============================================ */
+
+.spreadsheet-page {
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.spreadsheet-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 2px solid #1e293b;
+  background: #f8fafc;
+}
+
+.spreadsheet-grid {
+  display: grid;
+  gap: 0;
+  padding: 4px;
+  background: #fafafa;
+}
+
+.spreadsheet-header-cell {
+  background: #3b82f6;
+  color: white;
+  font-weight: bold;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: move;
+  border-radius: 2px;
+  user-select: none;
+  text-transform: uppercase;
+}
+
+.spreadsheet-header-cell:hover {
+  filter: brightness(1.1);
+}
+
+.spreadsheet-content-cell {
+  background: #ffffff;
+  border-bottom: 1px dotted #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  padding: 1px 4px;
+  font-size: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.1s;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.spreadsheet-content-cell:nth-child(odd) {
+  background: #f8fafc;
+}
+
+.spreadsheet-content-cell.drag-over {
+  background: #dbeafe;
+  border: 2px dashed #3b82f6;
+}
+
+.spreadsheet-content-cell.targeting {
+  cursor: crosshair;
+}
+
+.spreadsheet-empty-cell {
+  background: #fafafa;
+  border-bottom: 1px dotted #f1f5f9;
+  border-right: 1px dotted #f1f5f9;
+  transition: background 0.1s;
+}
+
+.spreadsheet-empty-cell.drag-over {
+  background: #dbeafe;
+}
+
+.spreadsheet-play-number {
+  color: #94a3b8;
+  font-weight: bold;
+  min-width: 14px;
+}
+
+/* Print styles for spreadsheet mode */
+@media print {
+  /* Reset everything to white background */
+  html, body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Force all dark backgrounds to white */
+  .bg-slate-950,
+  .bg-slate-900,
+  .bg-slate-800,
+  .bg-slate-700,
+  [class*="bg-slate-9"],
+  [class*="bg-slate-8"],
+  [class*="bg-slate-7"] {
+    background: white !important;
+  }
+
+  /* Hide sidebar, navigation, toolbar, etc. */
+  nav,
+  aside,
+  header:not(.spreadsheet-page-header),
+  .sidebar,
+  .playbank-sidebar,
+  .play-bank-sidebar,
+  [class*="sidebar"],
+  [class*="Sidebar"],
+  .toolbar,
+  .no-print,
+  .hide-on-print,
+  .screen-only {
+    display: none !important;
+  }
+
+  /* Make flex containers expand properly */
+  .flex,
+  .flex-1,
+  .flex-col {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* GamePlan page specific - the content wrapper */
+  .flex-1.overflow-hidden {
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  /* SpreadsheetView container */
+  .spreadsheet-view-container {
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: white !important;
+  }
+
+  /* Spreadsheet page container */
+  .spreadsheet-page {
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 8px !important;
+    width: 100% !important;
+    height: auto !important;
+    page-break-after: always;
+    page-break-inside: avoid;
+    background: white !important;
+  }
+
+  .spreadsheet-page:last-child {
+    page-break-after: auto;
+  }
+
+  /* Page header for print */
+  .spreadsheet-page-header {
+    border-bottom: 1px solid #333 !important;
+    padding: 8px !important;
+    background: white !important;
+    margin-bottom: 8px !important;
+  }
+
+  .spreadsheet-page-header img {
+    max-height: 30px !important;
+  }
+
+  /* Grid fills the page */
+  .spreadsheet-grid {
+    padding: 0 !important;
+    width: 100% !important;
+    background: white !important;
+  }
+
+  /* Header cells - preserve colors */
+  .spreadsheet-header-cell {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+    font-size: 7pt !important;
+    padding: 2px 4px !important;
+  }
+
+  /* Content cells */
+  .spreadsheet-content-cell {
+    font-size: 6pt !important;
+    line-height: 1.1 !important;
+    min-height: 10px !important;
+    padding: 1px 2px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+    background: white !important;
+  }
+
+  /* Empty cells */
+  .spreadsheet-empty-cell {
+    background: white !important;
+    border-color: #ddd !important;
+  }
+
+  /* Row numbers column - hide in print */
+  .spreadsheet-row-numbers {
+    display: none !important;
+  }
+
+  /* Column header row */
+  .spreadsheet-column-header {
+    font-size: 6pt !important;
+    padding: 2px !important;
+    background: #f5f5f5 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Hide edit-only elements */
+  .spreadsheet-page-settings,
+  .spreadsheet-toolbar,
+  .assign-headers-btn,
+  .spreadsheet-mode-indicator,
+  button,
+  select,
+  input {
     display: none !important;
   }
 }

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { doc, onSnapshot, updateDoc, collection } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from './AuthContext';
@@ -129,6 +129,12 @@ export function SchoolProvider({ children }) {
   // Settings
   const [settings, setSettings] = useState({});
   const [activeYear, setActiveYear] = useState(new Date().getFullYear().toString());
+
+  // Archived seasons (historical data)
+  const [archivedSeasons, setArchivedSeasons] = useState({});
+
+  // Currently viewing year (may differ from activeYear when viewing history)
+  const [viewingYear, setViewingYear] = useState(null);
 
   // Current week context
   const [currentWeekId, setCurrentWeekId] = useState(null);
@@ -331,6 +337,7 @@ export function SchoolProvider({ children }) {
           setWristbands(data.wristbands || {});
           setGamePlans(data.gamePlans || {});
           setSettings(data.settings || {});
+          setArchivedSeasons(data.archivedSeasons || {});
           setProgramLevels(data.programLevels || []);
           setGlobalWeekTemplates(data.globalWeekTemplates || []);
           setVisibleFeatures(data.visibleFeatures || { gameWeek: { enabled: true, items: { schemeSetup: true, playbook: true } } });
@@ -424,6 +431,7 @@ export function SchoolProvider({ children }) {
           setGamePlans(data.gamePlans || {});
           setSettings(data.settings || {});
           setActiveYear(data.settings?.activeYear || new Date().getFullYear().toString());
+          setArchivedSeasons(data.archivedSeasons || {});
           setProgramLevels(data.programLevels || []);
           setGlobalWeekTemplates(data.weekTemplates || []);
           setVisibleFeatures(data.visibleFeatures || { gameWeek: { enabled: true, items: { schemeSetup: true, playbook: true } } });
@@ -913,6 +921,250 @@ export function SchoolProvider({ children }) {
    */
   const activeLevel = programLevels.find(l => l.id === activeLevelId) || null;
 
+  /**
+   * Check if currently viewing an archived (historical) season
+   */
+  const isViewingArchive = viewingYear && viewingYear !== activeYear;
+
+  /**
+   * Get list of all available seasons (current + archived)
+   */
+  const availableSeasons = useMemo(() => {
+    const seasons = [{ year: activeYear, isCurrent: true, label: `${activeYear} (Current)` }];
+    Object.keys(archivedSeasons).forEach(year => {
+      if (year !== activeYear) {
+        seasons.push({
+          year,
+          isCurrent: false,
+          label: year,
+          archivedAt: archivedSeasons[year]?.archivedAt
+        });
+      }
+    });
+    return seasons.sort((a, b) => parseInt(b.year) - parseInt(a.year));
+  }, [activeYear, archivedSeasons]);
+
+  /**
+   * Switch to viewing a different season
+   */
+  const switchToSeason = useCallback((year) => {
+    if (year === activeYear) {
+      // Switch back to current season
+      setViewingYear(null);
+    } else if (archivedSeasons[year]) {
+      // Switch to archived season
+      setViewingYear(year);
+    }
+  }, [activeYear, archivedSeasons]);
+
+  /**
+   * Get data for the currently viewed season (current or archived)
+   */
+  const getViewedSeasonData = useCallback(() => {
+    if (!viewingYear || viewingYear === activeYear) {
+      // Return current season data
+      return { plays, roster, weeks, gamePlans, depthCharts, wristbands, culture, setupConfig, meetingNotes };
+    }
+    // Return archived season data
+    const archived = archivedSeasons[viewingYear];
+    if (!archived) return null;
+    return archived;
+  }, [viewingYear, activeYear, plays, roster, weeks, gamePlans, depthCharts, wristbands, culture, setupConfig, meetingNotes, archivedSeasons]);
+
+  /**
+   * Import templates from an archived season into current season
+   */
+  const importTemplatesFromSeason = useCallback(async (sourceYear, templateTypes = ['practice', 'gameplan', 'pregame']) => {
+    const sourceData = archivedSeasons[sourceYear];
+    if (!sourceData?.setupConfig) {
+      throw new Error(`No archived data found for ${sourceYear}`);
+    }
+
+    const updates = {};
+
+    if (templateTypes.includes('practice') && sourceData.setupConfig.practiceTemplates?.length) {
+      const existingIds = new Set((setupConfig?.practiceTemplates || []).map(t => t.id));
+      const newTemplates = sourceData.setupConfig.practiceTemplates
+        .filter(t => !existingIds.has(t.id))
+        .map(t => ({ ...t, importedFrom: sourceYear, importedAt: new Date().toISOString() }));
+      updates['setupConfig.practiceTemplates'] = [...(setupConfig?.practiceTemplates || []), ...newTemplates];
+    }
+
+    if (templateTypes.includes('gameplan') && sourceData.setupConfig.gameplanTemplates?.length) {
+      const existingIds = new Set((setupConfig?.gameplanTemplates || []).map(t => t.id));
+      const newTemplates = sourceData.setupConfig.gameplanTemplates
+        .filter(t => !existingIds.has(t.id))
+        .map(t => ({ ...t, importedFrom: sourceYear, importedAt: new Date().toISOString() }));
+      updates['setupConfig.gameplanTemplates'] = [...(setupConfig?.gameplanTemplates || []), ...newTemplates];
+    }
+
+    if (templateTypes.includes('pregame') && sourceData.setupConfig.pregameTemplates?.length) {
+      const existingIds = new Set((setupConfig?.pregameTemplates || []).map(t => t.id));
+      const newTemplates = sourceData.setupConfig.pregameTemplates
+        .filter(t => !existingIds.has(t.id))
+        .map(t => ({ ...t, importedFrom: sourceYear, importedAt: new Date().toISOString() }));
+      updates['setupConfig.pregameTemplates'] = [...(setupConfig?.pregameTemplates || []), ...newTemplates];
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await updateSchool(updates);
+    }
+
+    return updates;
+  }, [archivedSeasons, setupConfig, updateSchool]);
+
+  /**
+   * Start a new season - archive current data and transition to new year
+   */
+  const startNewSeason = useCallback(async ({ newYear, importOptions, rosterAction, seniorYear }) => {
+    console.log('Starting new season:', newYear, importOptions, rosterAction);
+
+    // Step 1: Archive current season data FIRST
+    const currentSeasonArchive = {
+      plays: plays,
+      roster: roster,
+      weeks: weeks,
+      gamePlans: gamePlans,
+      depthCharts: depthCharts,
+      wristbands: wristbands,
+      culture: culture,
+      setupConfig: setupConfig,
+      meetingNotes: meetingNotes,
+      practiceGrades: practiceGrades,
+      gameGrades: gameGrades,
+      archivedAt: new Date().toISOString()
+    };
+
+    // Build the new season data
+    const newSeasonData = {
+      // Archive current season
+      [`archivedSeasons.${activeYear}`]: currentSeasonArchive,
+
+      // Update the active year
+      'settings.activeYear': newYear,
+
+      // Reset weekly data
+      weeks: [],
+      gamePlans: {},
+      meetingNotes: {},
+      practiceGrades: [],
+      gameGrades: [],
+    };
+
+    // Handle playbook
+    if (!importOptions.playbook) {
+      newSeasonData.plays = {};
+    }
+
+    // Handle setup config
+    if (importOptions.setupConfig) {
+      // Keep setupConfig as-is, but optionally clear templates if not importing
+      if (!importOptions.templates) {
+        newSeasonData['setupConfig.practiceTemplates'] = [];
+        newSeasonData['setupConfig.gameplanTemplates'] = [];
+        newSeasonData['setupConfig.pregameTemplates'] = [];
+      }
+    } else {
+      // Reset setupConfig to defaults but keep templates if requested
+      const templatesBackup = importOptions.templates ? {
+        practiceTemplates: setupConfig?.practiceTemplates || [],
+        gameplanTemplates: setupConfig?.gameplanTemplates || [],
+        pregameTemplates: setupConfig?.pregameTemplates || [],
+      } : {};
+
+      newSeasonData.setupConfig = {
+        ...templatesBackup,
+        seasonPhases: setupConfig?.seasonPhases || []
+      };
+    }
+
+    // Handle culture
+    if (!importOptions.culture) {
+      newSeasonData.culture = {
+        seasonMotto: '',
+        teamMission: '',
+        teamVision: '',
+        teamNonNegotiables: '',
+        offensePhilosophy: '',
+        defensePhilosophy: '',
+        specialTeamsPhilosophy: '',
+        coachesExpectations: '',
+        standards: {},
+        goals: {},
+        positionBigThree: {},
+        positionBigThreeAssignments: {},
+        customBigThreeGroups: []
+      };
+    }
+
+    // Handle roster
+    if (importOptions.roster) {
+      if (rosterAction === 'archive-seniors') {
+        // Archive players matching senior year
+        const updatedRoster = roster.map(player => {
+          const playerYear = (player.year || player.grade || '').toUpperCase();
+          const isSenior = playerYear === seniorYear.toUpperCase();
+          if (isSenior) {
+            return { ...player, archived: true, archivedAt: new Date().toISOString(), archivedReason: 'graduated' };
+          }
+          return player;
+        });
+        newSeasonData.roster = updatedRoster;
+      } else if (rosterAction === 'archive-all') {
+        // Archive all players
+        const updatedRoster = roster.map(player => ({
+          ...player,
+          archived: true,
+          archivedAt: new Date().toISOString(),
+          archivedReason: 'new_season'
+        }));
+        newSeasonData.roster = updatedRoster;
+      }
+      // 'keep-all' - don't modify roster
+    } else {
+      // Not importing roster - start fresh
+      newSeasonData.roster = [];
+    }
+
+    // Handle wristband configs
+    if (!importOptions.wristbandConfigs) {
+      newSeasonData.wristbands = {};
+    }
+
+    // Handle depth charts
+    if (!importOptions.depthCharts) {
+      newSeasonData.depthCharts = {};
+    }
+
+    // Save all changes
+    await updateSchool(newSeasonData);
+
+    // Update local state
+    setArchivedSeasons(prev => ({ ...prev, [activeYear]: currentSeasonArchive }));
+    setActiveYear(newYear);
+    setViewingYear(null);
+    setWeeks([]);
+    setGamePlans({});
+    setMeetingNotes({});
+    setPracticeGrades([]);
+    setGameGrades([]);
+
+    if (newSeasonData.roster) {
+      setRoster(newSeasonData.roster);
+    }
+    if (newSeasonData.plays) {
+      setPlays({});
+    }
+    if (newSeasonData.wristbands) {
+      setWristbands({});
+    }
+    if (newSeasonData.depthCharts) {
+      setDepthCharts({});
+    }
+
+    console.log('New season started:', newYear);
+  }, [activeYear, roster, plays, weeks, gamePlans, depthCharts, wristbands, culture, setupConfig, meetingNotes, practiceGrades, gameGrades, updateSchool]);
+
   const value = {
     // Data
     school,
@@ -939,6 +1191,12 @@ export function SchoolProvider({ children }) {
     meetingNotes,
     practiceGrades,
     gameGrades,
+
+    // Season history
+    archivedSeasons,
+    viewingYear,
+    isViewingArchive,
+    availableSeasons,
 
     // State
     loading,
@@ -969,6 +1227,10 @@ export function SchoolProvider({ children }) {
     saveGameGradeSession,
     setCurrentWeekId,
     setActiveLevelId,
+    startNewSeason,
+    switchToSeason,
+    getViewedSeasonData,
+    importTemplatesFromSeason,
   };
 
   return (

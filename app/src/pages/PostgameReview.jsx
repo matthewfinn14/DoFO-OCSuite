@@ -80,7 +80,10 @@ function CoachHelperBox({ isLight, onDismiss, showByDefault = true }) {
                 Import Your Game Data
               </h4>
               <p className={`ml-8 ${isLight ? 'text-sky-700' : 'text-sky-300'}`}>
-                Export your game from Hudl as an Excel file, then import it here. The system will automatically try to match plays to your playbook.
+                <strong>Before exporting from Hudl:</strong> Tag your game film first so play data is complete. Then export as Excel (.xlsx).
+              </p>
+              <p className={`ml-8 mt-1 ${isLight ? 'text-sky-700' : 'text-sky-300'}`}>
+                <strong>During import:</strong> You'll map columns to your play call format (Formation, Backfield, Play Name, R/L, and any custom columns you use).
               </p>
             </div>
             <div>
@@ -2807,7 +2810,7 @@ export default function PostgameReview() {
               Import Game Data
             </h2>
             <p className="mb-6 max-w-md mx-auto">
-              Export your game data from Hudl as an Excel file (.xlsx), then import it here to start your postgame review.
+              Tag your game in Hudl first, then export as an Excel file (.xlsx) and import it here. You'll map columns to match your play call format.
             </p>
 
             <input
@@ -2838,10 +2841,11 @@ export default function PostgameReview() {
                 How to export from Hudl
               </h3>
               <ol className={`text-xs space-y-1 list-decimal list-inside ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
-                <li>Open your game in Hudl</li>
+                <li><strong>Tag your game</strong> in Hudl first (formations, plays, etc.)</li>
                 <li>Go to Reports {">"} Play Data</li>
                 <li>Select "Excel" export format</li>
                 <li>Import the downloaded file here</li>
+                <li>Map columns to your play call format (Formation, Backfield, Play, R/L, custom columns)</li>
               </ol>
             </div>
           </div>

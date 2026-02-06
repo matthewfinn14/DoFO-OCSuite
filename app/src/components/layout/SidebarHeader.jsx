@@ -1,11 +1,11 @@
 import { useMemo, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Layers, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Layers, Calendar, History, Eye } from 'lucide-react';
 import { useSchool } from '../../context/SchoolContext';
 import { useAuth } from '../../context/AuthContext';
 import SchoolSwitcher from './SchoolSwitcher';
 
 export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'dark' }) {
-  const { school, settings, activeYear, globalWeekTemplates, weeks, currentWeekId, setCurrentWeekId, setupConfig, programLevels, activeLevelId, setActiveLevelId } = useSchool();
+  const { school, settings, activeYear, globalWeekTemplates, weeks, currentWeekId, setCurrentWeekId, setupConfig, programLevels, activeLevelId, setActiveLevelId, availableSeasons, viewingYear, isViewingArchive, switchToSeason } = useSchool();
   const { user, isHeadCoach, isTeamAdmin, isSiteAdmin } = useAuth();
 
   // Get program levels from setupConfig (they're stored there when edited in Setup)
@@ -16,7 +16,8 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
     { id: 'offseason', name: 'Offseason', color: 'slate', order: 0, isOffseason: true, numWeeks: 0 },
     { id: 'summer', name: 'Summer', color: 'amber', order: 1, numWeeks: 6 },
     { id: 'preseason', name: 'Preseason', color: 'purple', order: 2, numWeeks: 4 },
-    { id: 'season', name: 'Regular Season', color: 'emerald', order: 3, numWeeks: 10 }
+    { id: 'season', name: 'Regular Season', color: 'emerald', order: 3, numWeeks: 10 },
+    { id: 'season-review', name: 'Season Review', color: 'rose', order: 4, isSeasonReview: true, numWeeks: 0 }
   ];
 
   const seasonPhases = setupConfig?.seasonPhases?.length > 0 ? setupConfig.seasonPhases : DEFAULT_PHASES;
@@ -26,8 +27,14 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
     // If we have stored weeks in Firebase, use those directly
     if (weeks.length > 0) {
       // Enhance weeks with phase info if missing
-      return weeks.map(week => {
+      const enhancedWeeks = weeks.map(week => {
         const phase = seasonPhases.find(p => p.id === week.phaseId);
+        // Determine if this is a season review week
+        const isSeasonReview = week.isSeasonReview ||
+          week.id === 'season-review' ||
+          week.phaseId === 'season-review' ||
+          week.name === 'Season Review' ||
+          phase?.isSeasonReview;
         // Determine if this is an offseason week
         const isOffseason = week.isOffseason ||
           week.id === 'offseason' ||
@@ -38,9 +45,52 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
           ...week,
           phaseName: week.phaseName || phase?.name || 'Unknown',
           phaseColor: week.phaseColor || phase?.color || 'slate',
+          isSeasonReview,
           isOffseason
         };
       });
+
+      // Ensure Offseason and Season Review items exist
+      const hasOffseason = enhancedWeeks.some(w => w.id === 'offseason' || w.isOffseason);
+      const hasSeasonReview = enhancedWeeks.some(w => w.id === 'season-review' || w.isSeasonReview);
+
+      const result = [...enhancedWeeks];
+
+      // Offseason goes at the beginning
+      if (!hasOffseason) {
+        const offseasonPhase = seasonPhases.find(p => p.isOffseason || p.id === 'offseason');
+        if (offseasonPhase) {
+          result.unshift({
+            id: 'offseason',
+            phaseId: 'offseason',
+            phaseName: 'Offseason',
+            phaseColor: offseasonPhase.color || 'slate',
+            weekNum: 0,
+            name: 'Offseason',
+            isOffseason: true,
+            date: null
+          });
+        }
+      }
+
+      // Season Review goes at the end (after regular season)
+      if (!hasSeasonReview) {
+        const reviewPhase = seasonPhases.find(p => p.isSeasonReview || p.id === 'season-review');
+        if (reviewPhase) {
+          result.push({
+            id: 'season-review',
+            phaseId: 'season-review',
+            phaseName: 'Season Review',
+            phaseColor: reviewPhase.color || 'rose',
+            weekNum: 0,
+            name: 'Season Review',
+            isSeasonReview: true,
+            date: null
+          });
+        }
+      }
+
+      return result;
     }
 
     // Fallback: Generate weeks from season phases (for backwards compatibility)
@@ -48,9 +98,22 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
     seasonPhases
       .sort((a, b) => (a.order || 0) - (b.order || 0))
       .forEach(phase => {
+        const isSeasonReview = phase.isSeasonReview || phase.id === 'season-review' || phase.name?.toLowerCase() === 'season review';
         const isOffseason = phase.isOffseason || phase.id === 'offseason' || phase.name?.toLowerCase() === 'offseason';
 
-        if (isOffseason) {
+        if (isSeasonReview) {
+          // Season Review is a single item, not multiple weeks
+          generated.push({
+            id: 'season-review',
+            phaseId: phase.id,
+            phaseName: phase.name,
+            phaseColor: phase.color,
+            weekNum: 0,
+            name: 'Season Review',
+            isSeasonReview: true,
+            date: null
+          });
+        } else if (isOffseason) {
           // Offseason is a single item, not multiple weeks
           generated.push({
             id: 'offseason',
@@ -214,7 +277,35 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
               <h2 className={`text-sm font-bold leading-tight ${isLight ? 'text-gray-900' : 'text-white'}`}>
                 {school.name}
               </h2>
-              <span className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>{activeYear || new Date().getFullYear()}</span>
+              {/* Season Selector */}
+              {availableSeasons?.length > 1 ? (
+                <div className="relative inline-flex items-center gap-1">
+                  <select
+                    value={viewingYear || activeYear}
+                    onChange={(e) => switchToSeason(e.target.value)}
+                    className={`text-xs appearance-none cursor-pointer pr-4 bg-transparent border-none focus:outline-none ${
+                      isViewingArchive
+                        ? 'text-amber-500 font-medium'
+                        : isLight ? 'text-gray-500' : 'text-slate-400'
+                    }`}
+                  >
+                    {availableSeasons.map(s => (
+                      <option key={s.year} value={s.year}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                  {isViewingArchive ? (
+                    <Eye size={10} className="text-amber-500" />
+                  ) : (
+                    <History size={10} className={isLight ? 'text-gray-400' : 'text-slate-500'} />
+                  )}
+                </div>
+              ) : (
+                <span className={`text-xs ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                  {activeYear || new Date().getFullYear()}
+                </span>
+              )}
             </div>
           )}
 
@@ -222,6 +313,26 @@ export default function SidebarHeader({ collapsed, onToggleCollapse, theme = 'da
           <div className="mb-2">
             <SchoolSwitcher />
           </div>
+
+          {/* Archived Season Banner */}
+          {isViewingArchive && (
+            <div className={`mb-2 px-2 py-1.5 rounded text-xs flex items-center gap-2 ${
+              isLight
+                ? 'bg-amber-100 border border-amber-300 text-amber-800'
+                : 'bg-amber-500/20 border border-amber-500/30 text-amber-400'
+            }`}>
+              <Eye size={12} />
+              <div>
+                <div className="font-medium">Viewing {viewingYear}</div>
+                <button
+                  onClick={() => switchToSeason(activeYear)}
+                  className="text-[10px] underline opacity-80 hover:opacity-100"
+                >
+                  Return to {activeYear}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Program Level & Week Selectors - Compact */}
           <div className="space-y-2 mt-2">

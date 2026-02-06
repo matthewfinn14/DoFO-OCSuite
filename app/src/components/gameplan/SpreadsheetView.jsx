@@ -21,8 +21,6 @@ function FitText({ text, abbreviations, baseFontSize = 0.6, minFontSize = 0.35, 
       return;
     }
 
-    let currentSize = baseFontSize;
-
     const fitText = () => {
       if (!containerRef.current || !textRef.current) return;
 
@@ -31,10 +29,11 @@ function FitText({ text, abbreviations, baseFontSize = 0.6, minFontSize = 0.35, 
       const containerWidth = container.clientWidth;
       if (containerWidth <= 0) return;
 
+      // Reset to base size first
       textEl.style.fontSize = `${baseFontSize}rem`;
       let textWidth = textEl.scrollWidth;
 
-      currentSize = baseFontSize;
+      let currentSize = baseFontSize;
       while (textWidth > containerWidth && currentSize > minFontSize) {
         currentSize -= 0.025;
         textEl.style.fontSize = `${currentSize}rem`;
@@ -44,8 +43,21 @@ function FitText({ text, abbreviations, baseFontSize = 0.6, minFontSize = 0.35, 
       setFontSize(currentSize);
     };
 
-    const frameId = requestAnimationFrame(fitText);
-    return () => cancelAnimationFrame(frameId);
+    // Initial fit with slight delay to ensure layout is complete
+    const timeoutId = setTimeout(() => {
+      requestAnimationFrame(fitText);
+    }, 10);
+
+    // Also observe container size changes
+    const resizeObserver = new ResizeObserver(() => {
+      requestAnimationFrame(fitText);
+    });
+    resizeObserver.observe(containerRef.current);
+
+    return () => {
+      clearTimeout(timeoutId);
+      resizeObserver.disconnect();
+    };
   }, [displayText, baseFontSize, minFontSize]);
 
   return (
@@ -55,6 +67,9 @@ function FitText({ text, abbreviations, baseFontSize = 0.6, minFontSize = 0.35, 
         ...style,
         overflow: 'hidden',
         width: '100%',
+        minWidth: 0,
+        flex: 1,
+        maxWidth: '100%',
       }}
     >
       <span
@@ -64,7 +79,10 @@ function FitText({ text, abbreviations, baseFontSize = 0.6, minFontSize = 0.35, 
           fontWeight: '500',
           lineHeight: '1.2',
           whiteSpace: 'nowrap',
-          display: 'inline-block',
+          display: 'block',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          maxWidth: '100%',
         }}
       >
         {displayText}
@@ -574,7 +592,7 @@ export default function SpreadsheetView({
     const page = spreadsheetData.pages[pageIdx];
     if (!page) return;
 
-    const { isScript = false, rowCount, numbering = 'none' } = options;
+    const { isScript = false, rowCount, numbering = 'none', boxColumns = 1 } = options;
     const colSpan = assignHeaderConfig.colSpan;
 
     // Validate position
@@ -596,6 +614,7 @@ export default function SpreadsheetView({
       rowStart: validRowStart,
       rowCount: rowCount || null, // Store the user-defined row count (null = extend to next header or page bottom)
       numbering: numbering || 'none', // Numbering style: none, numeric, alpha, roman, pointed
+      boxColumns: boxColumns || 1, // Number of content columns inside the box (for longer play names)
       color: item.color || '#3b82f6',
       situationId: item.id,
       categoryType,
@@ -773,14 +792,16 @@ export default function SpreadsheetView({
         key={pageIdx}
         className="page-container spreadsheet-page"
         style={{
+          '--page-width': `${pageWidth}px`,
+          '--page-aspect-ratio': `${paperAspectRatio}`,
           background: 'white',
           border: '1px solid #cbd5e1',
           borderRadius: '8px',
           overflow: 'hidden',
           marginBottom: '1rem',
           boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-          width: `${pageWidth}px`,
-          aspectRatio: `${paperAspectRatio}`
+          width: 'var(--page-width)',
+          aspectRatio: 'var(--page-aspect-ratio)'
         }}
       >
         {/* Page Header */}
@@ -842,7 +863,10 @@ export default function SpreadsheetView({
 
         {/* Grid Content */}
         <div
+          className="spreadsheet-grid"
           style={{
+            '--grid-columns': columns,
+            '--grid-rows': rows,
             display: 'grid',
             gridTemplateColumns: `${rowNumberColumnWidth}px repeat(${columns}, 1fr)`,
             gridTemplateRows: `${columnHeaderRowHeight}px repeat(${rows}, ${cellHeight}px)`,
@@ -853,8 +877,8 @@ export default function SpreadsheetView({
             border: '1px solid #94a3b8'
           }}
         >
-          {/* Corner cell */}
-          <div style={{
+          {/* Corner cell - hide in print */}
+          <div className="no-print" style={{
             gridColumn: 1,
             gridRow: 1,
             background: '#f1f5f9',
@@ -862,10 +886,11 @@ export default function SpreadsheetView({
             borderRight: '1px solid #94a3b8'
           }} />
 
-          {/* Column headers */}
+          {/* Column headers - hide in print */}
           {Array.from({ length: columns }, (_, colIdx) => (
             <div
               key={`col-header-${colIdx}`}
+              className="no-print"
               style={{
                 gridColumn: colIdx + 2,
                 gridRow: 1,
@@ -892,6 +917,7 @@ export default function SpreadsheetView({
               <React.Fragment key={`row-${rowNum}`}>
                 {/* Row number */}
                 <div
+                  className="spreadsheet-row-number no-print"
                   style={{
                     gridColumn: 1,
                     gridRow: rowNum + 1,
@@ -1040,18 +1066,30 @@ export default function SpreadsheetView({
                 const headerColor = header.color || '#3b82f6';
                 const sectionBgBase = contentRowIdx % 2 === 0 ? `${headerColor}08` : `${headerColor}12`;
                 // Different visual for play drops vs new header drops
+                // For multi-column sections, don't highlight the whole row for priority - use border instead
                 let sectionBg = sectionBgBase;
                 if (isDragOverNewHeader) {
                   sectionBg = '#bbf7d0'; // Green for new header drop
                 } else if (isDragOverPlay) {
                   sectionBg = '#dbeafe'; // Blue for play drop
-                } else if (play?.priority) {
+                }
+                // Priority indicator - only highlight single-column sections, use border for multi-column
+                const isPriority = play?.priority;
+                const priorityBorder = isPriority && sectionColSpan > 1 ? '3px solid #f59e0b' : 'none';
+                if (isPriority && sectionColSpan === 1) {
                   sectionBg = '#fef08a';
                 }
 
                 // Section boundary indicators
                 const isLastContentRow = rowNum === headerBounds.rowEnd;
                 const isLastColumn = headerBounds.colEnd >= columns;
+
+                // Calculate column divider positions for multi-column sections
+                const colDividerStyle = sectionColSpan > 1 ? {
+                  backgroundImage: `linear-gradient(to right, ${sectionBg} calc(100% - 1px), #cbd5e1 calc(100% - 1px))`,
+                  backgroundSize: `${100 / sectionColSpan}% 100%`,
+                  backgroundRepeat: 'repeat-x'
+                } : {};
 
                 return (
                   <div
@@ -1060,7 +1098,8 @@ export default function SpreadsheetView({
                     style={{
                       gridColumn: sectionColSpan > 1 ? `${headerBounds.colStart + 1} / span ${sectionColSpan}` : colNum + 1,
                       gridRow: rowNum + 1,
-                      background: sectionBg,
+                      backgroundColor: sectionBg,
+                      ...colDividerStyle,
                       borderTop: contentRowIdx === 0 ? 'none' : undefined,
                       borderBottom: isLastContentRow ? `3px solid ${headerColor}` : '1px solid #e2e8f0',
                       borderRight: isLastColumn ? `3px solid ${headerColor}` : `3px solid ${headerColor}`,
@@ -1070,14 +1109,18 @@ export default function SpreadsheetView({
                       display: 'flex',
                       alignItems: 'center',
                       gap: '4px',
+                      overflow: 'hidden',
+                      minWidth: 0,
                       transition: 'background 0.1s, border-top 0.1s',
                       cursor: isTargeting ? 'crosshair' : (draggedNewHeader ? 'copy' : 'default'),
                       // Show thick top border when new header would be placed here
-                      borderTop: isDragOverNewHeader ? '3px solid #22c55e' : (contentRowIdx === 0 ? 'none' : undefined)
+                      borderTop: isDragOverNewHeader ? '3px solid #22c55e' : (contentRowIdx === 0 ? 'none' : undefined),
+                      // Priority indicator for multi-column sections - use inset shadow on left
+                      boxShadow: isPriority && sectionColSpan > 1 ? 'inset 4px 0 0 #f59e0b' : undefined
                     }}
                     onDragOver={(e) => {
                       e.preventDefault();
-                      e.dataTransfer.dropEffect = draggedNewHeader ? 'copy' : 'move';
+                      e.dataTransfer.dropEffect = 'copy';
                     }}
                     onDragEnter={(e) => {
                       e.preventDefault();
@@ -1102,7 +1145,7 @@ export default function SpreadsheetView({
                           headerBounds.colStart, // Align with section's column start
                           draggedNewHeader.item,
                           draggedNewHeader.categoryType,
-                          { isScript: draggedNewHeader.isScript, rowCount: draggedNewHeader.rowCount, numbering: draggedNewHeader.numbering }
+                          { isScript: draggedNewHeader.isScript, rowCount: draggedNewHeader.rowCount, numbering: draggedNewHeader.numbering, boxColumns: draggedNewHeader.boxColumns }
                         );
                         setDraggedNewHeader(null);
                       }
@@ -1136,7 +1179,7 @@ export default function SpreadsheetView({
                           headerBounds.colStart, // Align with section's column start
                           draggedNewHeader.item,
                           draggedNewHeader.categoryType,
-                          { isScript: draggedNewHeader.isScript, rowCount: draggedNewHeader.rowCount, numbering: draggedNewHeader.numbering }
+                          { isScript: draggedNewHeader.isScript, rowCount: draggedNewHeader.rowCount, numbering: draggedNewHeader.numbering, boxColumns: draggedNewHeader.boxColumns }
                         );
                         setDraggedNewHeader(null);
                         return;
@@ -1243,7 +1286,7 @@ export default function SpreadsheetView({
                         colNum,
                         draggedNewHeader.item,
                         draggedNewHeader.categoryType,
-                        { isScript: draggedNewHeader.isScript, rowCount: draggedNewHeader.rowCount, numbering: draggedNewHeader.numbering }
+                        { isScript: draggedNewHeader.isScript, rowCount: draggedNewHeader.rowCount, numbering: draggedNewHeader.numbering, boxColumns: draggedNewHeader.boxColumns }
                       );
                       setDraggedNewHeader(null);
                     }
@@ -1288,7 +1331,7 @@ export default function SpreadsheetView({
                         colNum,
                         draggedNewHeader.item,
                         draggedNewHeader.categoryType,
-                        { isScript: draggedNewHeader.isScript, rowCount: draggedNewHeader.rowCount, numbering: draggedNewHeader.numbering }
+                        { isScript: draggedNewHeader.isScript, rowCount: draggedNewHeader.rowCount, numbering: draggedNewHeader.numbering, boxColumns: draggedNewHeader.boxColumns }
                       );
                       setDraggedNewHeader(null);
                     }
@@ -1313,24 +1356,66 @@ export default function SpreadsheetView({
     : (isLandscape ? 'landscape' : 'portrait');
 
   return (
-    <div className="h-full flex flex-col spreadsheet-view" style={{ background: '#1e293b' }}>
+    <div className="h-full flex flex-col spreadsheet-view spreadsheet-view-screen">
       {/* Dynamic print styles for page orientation */}
       <style>
         {`
+          .spreadsheet-view-screen {
+            background: #1e293b;
+          }
+
           @media print {
             @page {
               size: ${printPageSize};
               margin: 0.25in;
             }
 
-            .spreadsheet-view {
-              background: white !important;
+            /* CRITICAL: Reset everything for print */
+            * {
+              overflow: visible !important;
             }
 
+            /* Hide no-print elements */
+            .no-print {
+              display: none !important;
+            }
+
+            /* Make all containers block with white bg */
+            .spreadsheet-view,
+            .spreadsheet-view-screen,
+            .spreadsheet-main-area,
+            .spreadsheet-scroll-area,
+            .spreadsheet-pages-wrapper,
+            .spreadsheet-zoom-wrapper {
+              display: block !important;
+              position: static !important;
+              width: 100% !important;
+              height: auto !important;
+              min-height: 0 !important;
+              overflow: visible !important;
+              background: white !important;
+              background-color: white !important;
+              padding: 0 !important;
+              margin: 0 !important;
+              transform: none !important;
+            }
+
+            /* Force spreadsheet page to fill width */
             .spreadsheet-page {
+              display: block !important;
+              position: static !important;
+              width: 100% !important;
+              height: auto !important;
+              aspect-ratio: auto !important;
+              overflow: visible !important;
+              background: white !important;
+              border: none !important;
+              border-radius: 0 !important;
+              box-shadow: none !important;
+              margin: 0 !important;
+              padding: 8px !important;
               page-break-inside: avoid;
               break-inside: avoid;
-              margin-bottom: 0 !important;
             }
 
             .spreadsheet-page + .spreadsheet-page {
@@ -1338,19 +1423,79 @@ export default function SpreadsheetView({
               break-before: page;
             }
 
-            .no-print,
-            .spreadsheet-empty-cell {
-              display: none !important;
+            /* Grid fills width */
+            .spreadsheet-grid {
+              width: 100% !important;
             }
 
+            /* Preserve header colors */
             .spreadsheet-header-cell {
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
+              color-adjust: exact !important;
             }
 
+            /* Content cells */
             .spreadsheet-content-cell {
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
+              color-adjust: exact !important;
+              background: white !important;
+            }
+
+            /* Page header */
+            .print-compact-header {
+              background: #f5f5f5 !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              padding: 4px 8px !important;
+              height: auto !important;
+            }
+
+            /* HIDE row numbers and column headers in print */
+            .no-print,
+            .spreadsheet-row-number {
+              display: none !important;
+              width: 0 !important;
+              min-width: 0 !important;
+              padding: 0 !important;
+              margin: 0 !important;
+              border: none !important;
+            }
+
+            /* Adjust grid for print - collapse first column/row */
+            .spreadsheet-grid {
+              font-size: 6pt !important;
+              padding: 0 !important;
+              border: none !important;
+              /* Collapse row number column (first col) and header row (first row) */
+              grid-template-columns: 0 repeat(var(--grid-columns), 1fr) !important;
+              grid-template-rows: 0 repeat(var(--grid-rows), minmax(8pt, auto)) !important;
+            }
+
+            .spreadsheet-header-cell {
+              padding: 2px 4px !important;
+              font-size: 7pt !important;
+              min-height: 0 !important;
+              height: auto !important;
+            }
+
+            .spreadsheet-content-cell,
+            .spreadsheet-empty-cell {
+              padding: 1px 2px !important;
+              font-size: 6pt !important;
+              min-height: 0 !important;
+              height: 12px !important;
+              line-height: 1 !important;
+            }
+
+            /* Compact page info text */
+            .print-compact-header div {
+              font-size: 8pt !important;
+            }
+
+            .print-compact-header img {
+              height: 20px !important;
             }
           }
         `}
@@ -1423,13 +1568,13 @@ export default function SpreadsheetView({
       </div>
 
       {/* Main Content Area - Spreadsheet */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden spreadsheet-main-area">
         {/* Scrollable Spreadsheet Content */}
         <div
-          className="flex-1 overflow-auto"
+          className="flex-1 overflow-auto spreadsheet-scroll-area"
           style={{ background: '#334155' }}
         >
-          <div
+          <div className="spreadsheet-pages-wrapper"
             style={{
               display: 'flex',
               flexDirection: 'column',
@@ -1439,6 +1584,7 @@ export default function SpreadsheetView({
             }}
           >
             <div
+              className="spreadsheet-zoom-wrapper"
               style={{
                 transform: `scale(${zoomLevel / 100})`,
                 transformOrigin: 'top center',
@@ -1734,6 +1880,42 @@ export default function SpreadsheetView({
                 </div>
               </div>
 
+              {/* Box Columns (internal content columns) */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Box Columns <span className="text-slate-500 font-normal">(for longer play names)</span>
+                </label>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setPendingHeaderConfig(prev => ({
+                      ...prev,
+                      boxColumns: Math.max(1, (prev.boxColumns || 1) - 1)
+                    }))}
+                    disabled={(pendingHeaderConfig.boxColumns || 1) <= 1}
+                    className="w-10 h-10 rounded-lg bg-slate-700 text-white font-bold hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    −
+                  </button>
+                  <span className="text-2xl font-bold text-white w-12 text-center">
+                    {pendingHeaderConfig.boxColumns || 1}
+                  </span>
+                  <button
+                    onClick={() => setPendingHeaderConfig(prev => ({
+                      ...prev,
+                      boxColumns: Math.min(4, (prev.boxColumns || 1) + 1)
+                    }))}
+                    disabled={(pendingHeaderConfig.boxColumns || 1) >= 4}
+                    className="w-10 h-10 rounded-lg bg-slate-700 text-white font-bold hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    +
+                  </button>
+                  <span className="text-sm text-slate-400 ml-2">content columns</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Use more columns if play names are long. Span controls sheet width.
+                </p>
+              </div>
+
               {/* Numbering Style */}
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -1785,7 +1967,8 @@ export default function SpreadsheetView({
                     categoryType: pendingHeaderConfig.categoryType,
                     isScript: pendingHeaderConfig.isScript,
                     rowCount: pendingHeaderConfig.rowCount,
-                    numbering: pendingHeaderConfig.numbering || 'none'
+                    numbering: pendingHeaderConfig.numbering || 'none',
+                    boxColumns: pendingHeaderConfig.boxColumns || 1
                   });
                   setPendingHeaderConfig(null);
                 }}

@@ -46,7 +46,7 @@ import {
 } from 'lucide-react';
 import PlayDiagramEditor from '../components/diagrams/PlayDiagramEditor';
 import DiagramPreview from '../components/diagrams/DiagramPreview';
-import { SystemSetupWizard } from '../components/wizard';
+import { SystemSetupWizard, NewSeasonWizard } from '../components/wizard';
 
 // Collapsible Help Section component
 function HelpSection({ title, children, defaultOpen = false, isLight = false }) {
@@ -610,7 +610,7 @@ const PHASES = [
 ];
 
 export default function Setup() {
-  const { school, staff, setupConfig, updateSetupConfig, weeks, activeYear, updateWeeks, playsArray, settings } = useSchool();
+  const { school, staff, setupConfig, updateSetupConfig, weeks, activeYear, updateWeeks, playsArray, settings, roster, plays, culture, startNewSeason, archivedSeasons, importTemplatesFromSeason } = useSchool();
   const { isHeadCoach, isTeamAdmin, isSiteAdmin } = useAuth();
 
   // Theme detection
@@ -670,6 +670,9 @@ export default function Setup() {
 
   // System Setup Wizard state
   const [showSetupWizard, setShowSetupWizard] = useState(false);
+
+  // New Season Wizard state
+  const [showNewSeasonWizard, setShowNewSeasonWizard] = useState(false);
 
   // Default position groups
   const DEFAULT_POSITION_GROUPS = {
@@ -1214,6 +1217,19 @@ export default function Setup() {
           </div>
         </div>
         <div className="flex items-center gap-4">
+          {/* New Season button */}
+          <button
+            onClick={() => setShowNewSeasonWizard(true)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+              isLight
+                ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-200'
+                : 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30'
+            }`}
+          >
+            <Calendar size={18} />
+            New Season
+          </button>
+
           {/* Setup Wizard button (Offense only) */}
           {phase === 'OFFENSE' && (
             <button
@@ -1882,6 +1898,21 @@ export default function Setup() {
           isLight={isLight}
         />
       )}
+
+      {/* New Season Wizard Modal */}
+      <NewSeasonWizard
+        isOpen={showNewSeasonWizard}
+        onClose={() => setShowNewSeasonWizard(false)}
+        currentYear={activeYear}
+        roster={roster}
+        plays={plays}
+        setupConfig={setupConfig}
+        culture={culture}
+        settings={settings}
+        archivedSeasons={archivedSeasons}
+        onStartNewSeason={startNewSeason}
+        onImportTemplates={importTemplatesFromSeason}
+      />
     </div>
   );
 }
@@ -10398,11 +10429,16 @@ const DEFAULT_PHASES = [
   { id: 'offseason', name: 'Offseason', color: 'slate', order: 0, numWeeks: 0, isOffseason: true },
   { id: 'summer', name: 'Summer', color: 'amber', order: 1, numWeeks: 6, startDate: '' },
   { id: 'preseason', name: 'Preseason', color: 'purple', order: 2, numWeeks: 4, startDate: '' },
-  { id: 'season', name: 'Regular Season', color: 'emerald', order: 3, numWeeks: 10, startDate: '' }
+  { id: 'season', name: 'Regular Season', color: 'emerald', order: 3, numWeeks: 10, startDate: '' },
+  { id: 'season-review', name: 'Season Review', color: 'rose', order: 4, numWeeks: 0, isSeasonReview: true }
 ];
 
 // Default week names for each phase (customizable templates)
 const DEFAULT_WEEK_CONFIGS = {
+  'season-review': {
+    // Season Review is a single special entry for post-season analysis
+    weeks: [{ name: 'Season Review', isSeasonReview: true }]
+  },
   offseason: {
     // Offseason is a single special entry, not multiple weeks
     weeks: [{ name: 'Offseason', isOffseason: true }]

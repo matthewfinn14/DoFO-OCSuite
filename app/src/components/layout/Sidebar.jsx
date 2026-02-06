@@ -32,7 +32,11 @@ import {
   BarChart3,
   ClipboardCheck,
   Star,
-  Trophy
+  Trophy,
+  SearchCheck,
+  NotebookPen,
+  UserCheck,
+  FlaskConical
 } from 'lucide-react';
 
 // Enhanced collapsible category component
@@ -133,6 +137,16 @@ export default function Sidebar() {
   const seasonPhases = setupConfig?.seasonPhases || [];
   const currentPhase = currentWeek?.phaseId ? seasonPhases.find(p => p.id === currentWeek.phaseId) : null;
 
+  // Check for Season Review phase
+  const isSeasonReviewWeek = currentWeekId === 'season-review' ||
+    currentWeek?.isSeasonReview ||
+    currentWeek?.name === 'Season Review' ||
+    currentWeek?.name?.toLowerCase() === 'season review' ||
+    currentWeek?.phaseId === 'season-review' ||
+    currentPhase?.isSeasonReview ||
+    currentPhase?.id === 'season-review';
+
+  // Check for Offseason phase
   const isOffseasonWeek = currentWeekId === 'offseason' ||
     currentWeek?.isOffseason ||
     currentWeek?.name === 'Offseason' ||
@@ -191,38 +205,76 @@ export default function Sidebar() {
       <nav className="flex-1 overflow-y-auto px-2 py-1">
         {!collapsed && (
           <>
-            {/* Offseason Tools - shown when offseason is selected */}
-            {currentWeekId && isOffseasonWeek && (
+            {/* Season Review Tools - shown when season-review is selected */}
+            {currentWeekId && isSeasonReviewWeek && (
               <>
                 <div className="mb-1">
                   <span className={`px-2 text-[0.65rem] uppercase tracking-wide ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
-                    Offseason Tools
+                    Season Review
                   </span>
                 </div>
 
                 <div className="space-y-0.5">
                   <WeeklyToolItem
-                    to={`/offseason/swot`}
+                    to={`/review/self-scout`}
+                    icon={SearchCheck}
+                    label="Self-Scout / QC"
+                    isLight={isLight}
+                  />
+                  <WeeklyToolItem
+                    to={`/review/reports`}
+                    icon={FileBarChart}
+                    label="Season Report"
+                    isLight={isLight}
+                  />
+                  <WeeklyToolItem
+                    to={`/review/swot`}
                     icon={BarChart3}
                     label="SWOT Analysis"
                     isLight={isLight}
                   />
                   <WeeklyToolItem
-                    to={`/offseason/goals`}
+                    to={`/review/goals`}
                     icon={Target}
                     label="Program Goals"
                     isLight={isLight}
                   />
                   <WeeklyToolItem
+                    to={`/review/player-grades`}
+                    icon={Star}
+                    label="Player Grading"
+                    isLight={isLight}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Offseason Tools - shown when offseason is selected */}
+            {currentWeekId && isOffseasonWeek && (
+              <>
+                <div className="mb-1">
+                  <span className={`px-2 text-[0.65rem] uppercase tracking-wide ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
+                    Offseason Planning
+                  </span>
+                </div>
+
+                <div className="space-y-0.5">
+                  <WeeklyToolItem
                     to={`/offseason/schemes`}
-                    icon={Lightbulb}
-                    label="Scheme Development"
+                    icon={FlaskConical}
+                    label="Scheme Research"
                     isLight={isLight}
                   />
                   <WeeklyToolItem
                     to={`/offseason/recruiting`}
                     icon={UserPlus}
-                    label="Recruiting Plan"
+                    label="Recruiting / Retention"
+                    isLight={isLight}
+                  />
+                  <WeeklyToolItem
+                    to={`/offseason/clinic-notes`}
+                    icon={NotebookPen}
+                    label="Clinic Notes"
                     isLight={isLight}
                   />
                   <WeeklyToolItem

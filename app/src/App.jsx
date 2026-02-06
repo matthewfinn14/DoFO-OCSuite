@@ -28,11 +28,17 @@ import {
   InstallManager,
   Pregame,
   NotFound,
-  // Offseason pages
+  // Season Review pages
+  OffseasonSelfScout,
   OffseasonReports,
   OffseasonSwot,
-  OffseasonMeetings,
-  OffseasonResearch,
+  ProgramGoals,
+  PlayerGrading,
+  // Offseason planning pages
+  SchemeResearch,
+  RecruitingRetention,
+  ClinicNotes,
+  AnnualCalendar,
   // Week-specific pages
   CoachesNotes,
   PracticePlans,
@@ -124,11 +130,24 @@ function AppRoutes() {
         <Route path="/preseason" element={<Preseason />} />
         <Route path="/season" element={<Season />} />
 
-        {/* Offseason sub-routes */}
+        {/* Season Review routes */}
+        <Route path="/review/self-scout" element={<OffseasonSelfScout />} />
+        <Route path="/review/reports" element={<OffseasonReports />} />
+        <Route path="/review/swot" element={<OffseasonSwot />} />
+        <Route path="/review/goals" element={<ProgramGoals />} />
+        <Route path="/review/player-grades" element={<PlayerGrading />} />
+
+        {/* Offseason planning routes */}
+        <Route path="/offseason/schemes" element={<SchemeResearch />} />
+        <Route path="/offseason/recruiting" element={<RecruitingRetention />} />
+        <Route path="/offseason/clinic-notes" element={<ClinicNotes />} />
+        <Route path="/offseason/calendar" element={<AnnualCalendar />} />
+
+        {/* Legacy routes for backwards compatibility */}
+        <Route path="/offseason/self-scout" element={<OffseasonSelfScout />} />
         <Route path="/offseason/reports" element={<OffseasonReports />} />
         <Route path="/offseason/swot" element={<OffseasonSwot />} />
-        <Route path="/offseason/meetings" element={<OffseasonMeetings />} />
-        <Route path="/offseason/research" element={<OffseasonResearch />} />
+        <Route path="/offseason/goals" element={<ProgramGoals />} />
 
         {/* Week-specific routes (new URL structure) */}
         <Route path="/:year/:phase/:week/practice" element={<PracticePlans />} />

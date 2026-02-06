@@ -13,8 +13,6 @@ import {
   Grid3X3,
   Layers,
   Printer,
-  Lock,
-  Unlock,
   Book,
   Settings,
   X,
@@ -756,21 +754,34 @@ export default function GamePlan() {
   const handleSpreadsheetHeaderClick = useCallback(({ pageIdx, header }) => {
     // Open the box editor modal for this spreadsheet section
     // We'll create a "virtual box" object that the BoxEditorModal can work with
+    const spreadsheetCols = header.colSpan || 2; // How wide on the spreadsheet
+    const boxCols = header.boxColumns || 1; // Internal content columns (for longer play names)
+    const rows = header.rowCount || 20;
+
+    // Generate column headings based on boxColumns (internal layout)
+    const gridHeadings = boxCols === 1
+      ? ['PLAY']
+      : Array(boxCols).fill('').map((_, i) => i === 0 ? 'PLAY' : `COL ${i + 1}`);
+
     setEditingBox({
       box: {
         header: header.name,
         setId: `spreadsheet_${header.id}`,
         type: 'grid',
         color: header.color,
-        colSpan: header.colSpan || 2, // Pass the header's actual colSpan
-        // For spreadsheet sections, we use a simple list-style grid
-        gridColumns: 1,
-        gridRows: 20, // Will be dynamic based on section bounds
-        gridHeadings: ['PLAY'],
+        colSpan: spreadsheetCols, // Spreadsheet width
+        // Use boxColumns for internal grid layout
+        gridColumns: boxCols,
+        gridRows: rows,
+        gridHeadings,
         cornerLabel: '#',
         isSpreadsheetHeader: true,
         headerId: header.id,
-        pageIdx
+        pageIdx,
+        // Store original header data for saving
+        rowCount: rows,
+        boxColumns: boxCols,
+        numbering: header.numbering
       },
       sectionIdx: pageIdx,
       boxIdx: 0
@@ -1542,36 +1553,19 @@ export default function GamePlan() {
               </button>
             </div>
 
-            {/* Lock Toggle */}
-            <button
-              onClick={() => setIsLocked(!isLocked)}
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${isLocked
-                ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50'
-                : isLight
-                  ? 'bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200' // Light mode unlocked
-                  : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'     // Dark mode unlocked
-                }`}
-              title={isLocked ? 'Unlock editing' : 'Lock editing'}
-            >
-              {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
-              <span className="text-sm">{isLocked ? 'Locked' : 'Unlocked'}</span>
-            </button>
-
             {/* Edit Layout Button */}
-            {!isLocked && (
-              <button
-                onClick={() => setIsSheetEditing(!isSheetEditing)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${isSheetEditing
-                  ? 'bg-blue-500 text-white'
-                  : isLight
-                    ? 'bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200'
-                    : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
-                  }`}
-              >
-                <Settings size={16} />
-                <span className="text-sm">{isSheetEditing ? 'Done Editing' : 'Edit Layout'}</span>
-              </button>
-            )}
+            <button
+              onClick={() => setIsSheetEditing(!isSheetEditing)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${isSheetEditing
+                ? 'bg-blue-500 text-white'
+                : isLight
+                  ? 'bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200'
+                  : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
+                }`}
+            >
+              <Settings size={16} />
+              <span className="text-sm">{isSheetEditing ? 'Done Editing' : 'Edit Layout'}</span>
+            </button>
 
             {/* Undo Button - show when editing or has history */}
             {(isSheetEditing || layoutHistory.length > 0) && (
@@ -1814,7 +1808,12 @@ export default function GamePlan() {
                     ...h,
                     name: cleanUpdates.header || h.name,
                     color: cleanUpdates.color || h.color,
-                    colSpan: cleanUpdates.colSpan !== undefined ? cleanUpdates.colSpan : h.colSpan
+                    colSpan: cleanUpdates.colSpan !== undefined ? cleanUpdates.colSpan : h.colSpan,
+                    // Save boxColumns from gridColumns (modal uses gridColumns internally)
+                    boxColumns: cleanUpdates.gridColumns !== undefined ? cleanUpdates.gridColumns : h.boxColumns,
+                    // Save rowCount from gridRows (modal uses gridRows internally)
+                    rowCount: cleanUpdates.gridRows !== undefined ? cleanUpdates.gridRows : h.rowCount,
+                    numbering: cleanUpdates.numbering !== undefined ? cleanUpdates.numbering : h.numbering
                   } : h
                 )
               };

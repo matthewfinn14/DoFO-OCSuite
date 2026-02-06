@@ -18,11 +18,18 @@ export { default as Pregame } from './Pregame';
 export { default as NotFound } from './NotFound';
 export { default as ComingSoon } from './ComingSoon';
 
-// Offseason pages
+// Season Review pages
+export { default as OffseasonSelfScout } from './OffseasonSelfScout';
 export { default as OffseasonReports } from './OffseasonReports';
 export { default as OffseasonSwot } from './OffseasonSwot';
-export { default as OffseasonMeetings } from './OffseasonMeetings';
-export { default as OffseasonResearch } from './OffseasonResearch';
+export { default as ProgramGoals } from './ProgramGoals';
+export { default as PlayerGrading } from './PlayerGrading';
+
+// Offseason Planning pages
+export { default as SchemeResearch } from './SchemeResearch';
+export { default as RecruitingRetention } from './RecruitingRetention';
+export { default as ClinicNotes } from './ClinicNotes';
+export { default as AnnualCalendar } from './AnnualCalendar';
 
 // Week-specific pages
 export { default as CoachesNotes } from './CoachesNotes';

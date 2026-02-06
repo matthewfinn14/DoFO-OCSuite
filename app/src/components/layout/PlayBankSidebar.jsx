@@ -828,6 +828,31 @@ export default function PlayBankSidebar({
           </div>
         )}
 
+        {/* Plays/Headers Toggle at TOP when headersMode enabled */}
+        {headersMode && (
+          <div className="flex border-b border-slate-600">
+            <div
+              onClick={() => setActiveTab('install')}
+              className={`flex-1 text-center py-2.5 px-1 text-xs font-semibold cursor-pointer transition-colors ${activeTab === 'install'
+                ? 'text-white bg-slate-700 border-b-2 border-white'
+                : 'text-slate-400 bg-slate-800 border-b-2 border-transparent hover:bg-slate-700'
+                }`}
+            >
+              Plays
+            </div>
+            <div
+              onClick={() => setActiveTab('headers')}
+              className={`flex-1 text-center py-2.5 px-1 text-xs font-semibold cursor-pointer transition-colors ${activeTab === 'headers'
+                ? 'text-blue-400 bg-slate-700 border-b-2 border-blue-400'
+                : 'text-slate-400 bg-slate-800 border-b-2 border-transparent hover:bg-slate-700'
+                }`}
+            >
+              <LayoutTemplate size={14} className="inline mr-1" />
+              Headers
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2.5 bg-slate-800 border-b border-slate-600">
           <div className="flex items-center gap-2">
@@ -915,33 +940,10 @@ export default function PlayBankSidebar({
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="flex border-b border-slate-200">
-          {/* Headers/Plays Toggle when headersMode enabled */}
-          {headersMode ? (
-            <>
-              <div
-                onClick={() => setActiveTab('headers')}
-                className={`flex-1 text-center py-2 px-1 text-xs font-semibold cursor-pointer transition-colors ${activeTab === 'headers'
-                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                  : 'text-slate-500 border-b-2 border-transparent bg-slate-50 hover:bg-slate-100'
-                  }`}
-              >
-                <LayoutTemplate size={14} className="inline mr-1" />
-                Headers
-              </div>
-              <div
-                onClick={() => setActiveTab('install')}
-                className={`flex-1 text-center py-2 px-1 text-xs font-semibold cursor-pointer transition-colors ${activeTab === 'install'
-                  ? 'text-slate-900 border-b-2 border-slate-900 bg-white'
-                  : 'text-slate-500 border-b-2 border-transparent bg-slate-50 hover:bg-slate-100'
-                  }`}
-              >
-                Plays
-              </div>
-            </>
-          ) : (
-            [
+        {/* Tabs - show Install/Game Plan/Full Playbook when on Plays side (not when on Headers tab) */}
+        {activeTab !== 'headers' && (
+          <div className="flex border-b border-slate-200">
+            {[
               { key: 'install', label: 'Install' },
               { key: 'gameplan', label: 'Game Plan' },
               { key: 'usage', label: 'Full Playbook' }
@@ -956,9 +958,9 @@ export default function PlayBankSidebar({
               >
                 {tab.label}
               </div>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Combined Search + Quick Add */}
         <div className="p-2 bg-slate-50 border-b border-slate-200">

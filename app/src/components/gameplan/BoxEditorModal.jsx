@@ -32,7 +32,12 @@ export default function BoxEditorModal({
   const [activeTab, setActiveTab] = useState('editor'); // 'settings', 'editor'
   const [draggedQuickListIdx, setDraggedQuickListIdx] = useState(null);
   const [dragOverQuickListIdx, setDragOverQuickListIdx] = useState(null);
+  const [isQuickListDropTarget, setIsQuickListDropTarget] = useState(false);
   const [showRightHash, setShowRightHash] = useState(false); // R columns collapsed by default
+  const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
+
+  // Track original box state for comparison
+  const originalBoxRef = useRef(JSON.stringify(box));
 
   // Quick Add Request Handling
   const lastProcessedQuickAddRef = useRef(0);
@@ -119,6 +124,34 @@ export default function BoxEditorModal({
     onSave(localBox);
   };
 
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = useCallback(() => {
+    const currentState = JSON.stringify(localBox);
+    return currentState !== originalBoxRef.current;
+  }, [localBox]);
+
+  // Handle close with unsaved changes check
+  const handleClose = useCallback(() => {
+    if (hasUnsavedChanges()) {
+      setShowUnsavedChangesDialog(true);
+    } else {
+      onClose();
+    }
+  }, [hasUnsavedChanges, onClose]);
+
+  // Handle discard and close
+  const handleDiscardAndClose = useCallback(() => {
+    setShowUnsavedChangesDialog(false);
+    onClose();
+  }, [onClose]);
+
+  // Handle save and close
+  const handleSaveAndClose = useCallback(() => {
+    setShowUnsavedChangesDialog(false);
+    onSave(localBox);
+    onClose();
+  }, [onSave, localBox, onClose]);
+
   const updateField = (field, value) => {
     setLocalBox(prev => ({ ...prev, [field]: value }));
   };
@@ -173,6 +206,38 @@ export default function BoxEditorModal({
   const handleQuickListDragEnd = () => {
     setDraggedQuickListIdx(null);
     setDragOverQuickListIdx(null);
+  };
+
+  // Handle drop on Quick List container (from grid cells)
+  const handleQuickListContainerDragOver = (e) => {
+    e.preventDefault();
+    const gridCellData = e.dataTransfer.types.includes('application/grid-cell');
+    if (gridCellData && !isLocked) {
+      setIsQuickListDropTarget(true);
+    }
+  };
+
+  const handleQuickListContainerDragLeave = (e) => {
+    // Only reset if we're actually leaving the container
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setIsQuickListDropTarget(false);
+    }
+  };
+
+  const handleQuickListContainerDrop = (e) => {
+    e.preventDefault();
+    setIsQuickListDropTarget(false);
+
+    const gridCellData = e.dataTransfer.getData('application/grid-cell');
+    if (gridCellData && !isLocked) {
+      try {
+        const { fromCellIdx } = JSON.parse(gridCellData);
+        // Remove the play from the grid cell - it stays in Quick List
+        handleRemoveFromGridCell(fromCellIdx);
+      } catch (err) {
+        console.error('Error parsing grid cell data:', err);
+      }
+    }
   };
 
   // Move play in Quick List
@@ -236,41 +301,81 @@ export default function BoxEditorModal({
   const handleAssignToGridCell = (playId, cellIdx) => {
     if (isLocked) return;
 
+    const isSpreadsheet = box.isSpreadsheetHeader;
+
     // Update local state
     setLocalBox(prev => {
       const next = { ...prev };
       const cols = next.gridColumns || 4;
       const rowsCount = next.gridRows || 5;
-      const totalSlots = cols * rowsCount;
       const newAssigned = [...(next.assignedPlayIds || [])];
 
-      while (newAssigned.length < totalSlots) {
-        newAssigned.push('GAP');
+      if (isSpreadsheet) {
+        // For spreadsheet: store by row index
+        const rowIdx = Math.floor(cellIdx / cols);
+        while (newAssigned.length <= rowIdx) {
+          newAssigned.push(null);
+        }
+        newAssigned[rowIdx] = playId;
+      } else {
+        // Standard grid: store by flat cell index
+        const totalSlots = cols * rowsCount;
+        while (newAssigned.length < totalSlots) {
+          newAssigned.push('GAP');
+        }
+        newAssigned[cellIdx] = playId;
       }
-      newAssigned[cellIdx] = playId;
       next.assignedPlayIds = newAssigned;
       return next;
     });
 
-    onAssignPlayToCell(box.setId, cellIdx, null, playId);
+    // For spreadsheet headers, pass row index to the handler
+    if (isSpreadsheet) {
+      const cols = localBox.gridColumns || 1;
+      const rowIdx = Math.floor(cellIdx / cols);
+      onAssignPlayToCell(box.setId, rowIdx, null, playId);
+    } else {
+      onAssignPlayToCell(box.setId, cellIdx, null, playId);
+    }
   };
 
   // Remove play from grid cell
   const handleRemoveFromGridCell = (cellIdx) => {
     if (isLocked) return;
 
+    const isSpreadsheet = box.isSpreadsheetHeader;
+
     // Update local state
     setLocalBox(prev => {
       const next = { ...prev };
+      const cols = next.gridColumns || 4;
       const newAssigned = [...(next.assignedPlayIds || [])];
-      if (newAssigned[cellIdx]) {
-        newAssigned[cellIdx] = 'GAP';
-        next.assignedPlayIds = newAssigned;
+
+      if (isSpreadsheet) {
+        // For spreadsheet: clear by row index
+        const rowIdx = Math.floor(cellIdx / cols);
+        if (newAssigned[rowIdx]) {
+          newAssigned[rowIdx] = null;
+          next.assignedPlayIds = newAssigned;
+        }
+      } else {
+        // Standard grid: clear by flat cell index
+        if (newAssigned[cellIdx]) {
+          newAssigned[cellIdx] = 'GAP';
+          next.assignedPlayIds = newAssigned;
+        }
       }
       return next;
     });
 
-    onRemovePlayFromCell(box.setId, cellIdx, null);
+    // For spreadsheet headers, pass row index to the handler
+    if (isSpreadsheet) {
+      const cols = localBox.gridColumns || 1;
+      const rowIdx = Math.floor(cellIdx / cols);
+      onRemovePlayFromCell(box.setId, rowIdx, null);
+    } else {
+      onRemovePlayFromCell(box.setId, cellIdx, null);
+    }
   };
 
   // Get grid cell plays
@@ -283,7 +388,7 @@ export default function BoxEditorModal({
     let assignedPlayIds = localBox.assignedPlayIds || [];
 
     // Also check gamePlan sets IF localBox is fresh/empty but backend has assignments
-    // Note: We use assignedPlayIds for GRID placement. 
+    // Note: We use assignedPlayIds for GRID placement.
     // Do NOT use playIds (pool) for grid placement.
     if (box.setId && (!assignedPlayIds || assignedPlayIds.length === 0)) {
       let setData = null;
@@ -296,13 +401,38 @@ export default function BoxEditorModal({
     }
 
     const gridPlays = [];
+
+    // For spreadsheet headers, plays are stored by row index (one per row)
+    // Map them to the first column of each row in the multi-column display
+    const isSpreadsheet = box.isSpreadsheetHeader;
+
     for (let i = 0; i < totalSlots; i++) {
-      const playId = assignedPlayIds[i];
-      if (playId && playId !== 'GAP') {
-        const play = plays.find(p => p.id === playId);
-        gridPlays.push(play || null);
+      if (isSpreadsheet) {
+        // For spreadsheet: only first column of each row has a play
+        const rowIdx = Math.floor(i / cols);
+        const colIdx = i % cols;
+        if (colIdx === 0) {
+          // First column - get play from row index
+          const playId = assignedPlayIds[rowIdx];
+          if (playId && playId !== 'GAP') {
+            const play = plays.find(p => p.id === playId);
+            gridPlays.push(play || null);
+          } else {
+            gridPlays.push(null);
+          }
+        } else {
+          // Other columns are empty for spreadsheet mode
+          gridPlays.push(null);
+        }
       } else {
-        gridPlays.push(null);
+        // Standard grid: flat index mapping
+        const playId = assignedPlayIds[i];
+        if (playId && playId !== 'GAP') {
+          const play = plays.find(p => p.id === playId);
+          gridPlays.push(play || null);
+        } else {
+          gridPlays.push(null);
+        }
       }
     }
     return gridPlays;
@@ -414,11 +544,19 @@ export default function BoxEditorModal({
         </div>
 
         {/* Quick List Items */}
-        <div style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '8px'
-        }}>
+        <div
+          onDragOver={handleQuickListContainerDragOver}
+          onDragLeave={handleQuickListContainerDragLeave}
+          onDrop={handleQuickListContainerDrop}
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '8px',
+            background: isQuickListDropTarget ? '#dbeafe' : 'transparent',
+            border: isQuickListDropTarget ? '2px dashed #3b82f6' : '2px solid transparent',
+            borderRadius: '4px',
+            transition: 'background 0.15s, border-color 0.15s'
+          }}>
           {quickListPlays.length === 0 ? (
             <div style={{
               padding: '24px',
@@ -960,6 +1098,22 @@ export default function BoxEditorModal({
                       e.preventDefault();
                       e.currentTarget.style.background = play?.priority ? '#fef9c3' : 'white';
 
+                      // Check if this is a move from another grid cell
+                      const gridCellData = e.dataTransfer.getData('application/grid-cell');
+                      if (gridCellData && !isLocked) {
+                        try {
+                          const { playId, fromCellIdx } = JSON.parse(gridCellData);
+                          if (fromCellIdx !== cellIdx) {
+                            // Move play from one cell to another
+                            handleRemoveFromGridCell(fromCellIdx);
+                            handleAssignToGridCell(playId, cellIdx);
+                          }
+                          return;
+                        } catch (err) {
+                          console.error('Error parsing grid cell data:', err);
+                        }
+                      }
+
                       let playId = e.dataTransfer.getData('text/plain');
 
                       // Check for Sidebar Play Drop
@@ -982,13 +1136,28 @@ export default function BoxEditorModal({
                     }}
                   >
                     {play ? (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        flex: 1,
-                        overflow: 'hidden'
-                      }}>
+                      <div
+                        draggable={!isLocked}
+                        onDragStart={(e) => {
+                          if (isLocked) return;
+                          e.dataTransfer.setData('text/plain', play.id);
+                          e.dataTransfer.setData('application/grid-cell', JSON.stringify({ playId: play.id, fromCellIdx: cellIdx }));
+                          e.dataTransfer.effectAllowed = 'move';
+                          e.currentTarget.style.opacity = '0.5';
+                        }}
+                        onDragEnd={(e) => {
+                          e.currentTarget.style.opacity = '1';
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          flex: 1,
+                          overflow: 'hidden',
+                          cursor: isLocked ? 'default' : 'grab'
+                        }}
+                      >
+                        <GripVertical size={12} style={{ color: '#94a3b8', flexShrink: 0, cursor: 'grab' }} />
                         <span style={{
                           fontWeight: '500',
                           color: '#1e293b',
@@ -2706,7 +2875,85 @@ export default function BoxEditorModal({
   };
 
   return (
-    <div className="box-editor-overlay" onClick={onClose}>
+    <div className="box-editor-overlay" onClick={handleClose}>
+      {/* Unsaved Changes Confirmation Dialog */}
+      {showUnsavedChangesDialog && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10001
+          }}
+        >
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '24px',
+            maxWidth: '400px',
+            boxShadow: '0 25px 50px rgba(0,0,0,0.25)'
+          }}>
+            <h3 style={{ margin: '0 0 12px 0', color: '#1e293b', fontSize: '1.1rem' }}>
+              Unsaved Changes
+            </h3>
+            <p style={{ margin: '0 0 20px 0', color: '#64748b', fontSize: '0.9rem' }}>
+              You have unsaved changes. What would you like to do?
+            </p>
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowUnsavedChangesDialog(false)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  border: '1px solid #e2e8f0',
+                  background: 'white',
+                  color: '#64748b',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                Keep Editing
+              </button>
+              <button
+                onClick={handleDiscardAndClose}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  border: '1px solid #ef4444',
+                  background: 'white',
+                  color: '#ef4444',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                Discard
+              </button>
+              <button
+                onClick={handleSaveAndClose}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: '#3b82f6',
+                  color: 'white',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                Save & Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div
         className="box-editor-modal"
         onClick={e => e.stopPropagation()}
@@ -3069,7 +3316,7 @@ export default function BoxEditorModal({
             )}
 
             <button
-              onClick={onClose}
+              onClick={handleClose}
               style={{
                 background: 'none',
                 border: 'none',
@@ -3158,7 +3405,7 @@ export default function BoxEditorModal({
           gap: '8px'
         }}>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             style={{
               padding: '8px 16px',
               borderRadius: '6px',
