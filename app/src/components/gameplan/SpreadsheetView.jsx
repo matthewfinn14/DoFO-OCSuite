@@ -1758,32 +1758,28 @@ export default function SpreadsheetView({
               transform: none !important;
             }
 
-            /* Force spreadsheet page to fill width */
+            /* Force spreadsheet page to fit on one printed page */
             .spreadsheet-page {
               display: block !important;
               position: static !important;
               width: 100% !important;
-              height: auto !important;
+              height: 9.5in !important;
+              max-height: 9.5in !important;
               aspect-ratio: auto !important;
-              overflow: visible !important;
+              overflow: hidden !important;
               background: white !important;
               border: none !important;
               border-radius: 0 !important;
               box-shadow: none !important;
               margin: 0 !important;
-              padding: 8px !important;
-              page-break-inside: avoid;
-              break-inside: avoid;
+              padding: 4px !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             }
 
             .spreadsheet-page + .spreadsheet-page {
               page-break-before: always;
               break-before: page;
-            }
-
-            /* Grid fills width */
-            .spreadsheet-grid {
-              width: 100% !important;
             }
 
             /* Preserve header colors */
@@ -1821,58 +1817,65 @@ export default function SpreadsheetView({
               border: none !important;
             }
 
-            /* Adjust grid for print - collapse first column/row, FIXED row heights */
+            /* ===== SPREADSHEET GRID PRINT STYLES ===== */
+
+            /* Grid container - constrain to page, hide row numbers column */
             .spreadsheet-grid {
               font-size: 6pt !important;
               padding: 0 !important;
               border: 1px solid #94a3b8 !important;
-              /* Collapse row number column (first col) and header row (first row) */
+              max-height: 9in !important;
+              page-break-inside: avoid !important;
+              /* Hide row number column (first col = 0) and header row (first row = 0) */
               grid-template-columns: 0 repeat(var(--grid-columns), 1fr) !important;
-              /* FIXED row heights - calculate based on available space (~880px / rows) */
-              grid-template-rows: 0 repeat(var(--grid-rows), calc(880px / var(--grid-rows))) !important;
+              /* Fixed 17px per row (fits ~50 rows in 850px) */
+              grid-template-rows: 0 repeat(var(--grid-rows), 17px) !important;
             }
 
+            /* All grid cells - fixed height, borders, overflow hidden */
+            .spreadsheet-grid > div:not(.no-print) {
+              height: 17px !important;
+              max-height: 17px !important;
+              min-height: 17px !important;
+              overflow: hidden !important;
+              border-bottom: 1px solid #e2e8f0 !important;
+              border-right: 1px solid #e2e8f0 !important;
+              box-sizing: border-box !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+
+            /* Header cells */
             .spreadsheet-header-cell {
               padding: 0 4px !important;
               font-size: 7pt !important;
-              min-height: 0 !important;
-              overflow: hidden !important;
+              height: 17px !important;
             }
 
+            /* Content and empty cells */
             .spreadsheet-content-cell,
             .spreadsheet-empty-cell {
               padding: 0 2px !important;
               font-size: 6pt !important;
-              min-height: 0 !important;
-              overflow: hidden !important;
-              line-height: 1.1 !important;
-              border-bottom: 1px solid #e2e8f0 !important;
-              border-right: 1px solid #e2e8f0 !important;
+              line-height: 17px !important;
+              height: 17px !important;
             }
 
-            /* Ensure all grid children have visible borders */
-            .spreadsheet-grid > div {
-              border-bottom: 1px solid #e2e8f0 !important;
-            }
-
-            /* Text fitting - scale down and truncate to fit */
-            .spreadsheet-content-cell,
-            .spreadsheet-content-cell span,
-            .spreadsheet-content-cell div,
-            .spreadsheet-content-cell > div > div {
+            /* Text truncation */
+            .spreadsheet-content-cell *,
+            .spreadsheet-header-cell * {
               overflow: hidden !important;
               white-space: nowrap !important;
               text-overflow: ellipsis !important;
               max-width: 100% !important;
+              display: block !important;
             }
 
-            /* Force grid to maintain structure */
-            .spreadsheet-grid {
-              overflow: visible !important;
-            }
-
-            .spreadsheet-grid > div:not(.no-print) {
-              overflow: hidden !important;
+            /* Preserve alternating row colors */
+            .spreadsheet-content-cell[style*="background"],
+            .spreadsheet-empty-cell[style*="background"] {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
             }
 
             /* Compact print header */
@@ -1886,7 +1889,7 @@ export default function SpreadsheetView({
               height: 20px !important;
             }
 
-            /* Page info subtitle is hidden via no-print class */
+            /* Page info subtitle hidden via no-print class */
           }
         `}
       </style>
