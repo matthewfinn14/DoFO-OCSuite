@@ -834,13 +834,16 @@ export default function SpreadsheetView({
       const headerBounds = bounds[header.id];
       if (headerBounds) {
         const contentRows = headerBounds.contentRows;
+        const boxColumns = header.boxColumns || 1;
+        // Total slots = rows × columns within the box
+        const totalSlots = contentRows * boxColumns;
         const playCount = sectionPlays.filter(p => p).length;
         const lastPlayIdx = sectionPlays.findLastIndex(p => p);
-        if (lastPlayIdx >= contentRows) {
+        if (lastPlayIdx >= totalSlots) {
           headerOverflow[header.id] = {
-            visible: contentRows,
+            visible: totalSlots,
             total: lastPlayIdx + 1,
-            hidden: lastPlayIdx + 1 - contentRows
+            hidden: lastPlayIdx + 1 - totalSlots
           };
         }
       }
@@ -1333,46 +1336,30 @@ export default function SpreadsheetView({
 
                 // ===== REGULAR (NON-MATRIX) CONTENT =====
                 const sectionPlays = headerPlays[header.id] || [];
-                const play = sectionPlays[contentRowIdx];
+                const boxColumns = header.boxColumns || 1;
+
+                // With boxColumns, each grid row shows multiple plays
+                // Row 0 shows plays[0..boxColumns-1], Row 1 shows plays[boxColumns..2*boxColumns-1], etc.
+                const rowStartIdx = contentRowIdx * boxColumns;
+                const rowPlays = [];
+                for (let c = 0; c < boxColumns; c++) {
+                  rowPlays.push(sectionPlays[rowStartIdx + c] || null);
+                }
 
                 // Get the numbering style for this header (uses row index, not play count)
                 const numberingStyle = header.numbering || 'none';
                 const cellNumber = formatCellNumber(contentRowIdx, numberingStyle);
 
                 const isTargeting = isTargetingMode;
-                const isDragOverPlay = dragOverCell?.pageIdx === pageIdx &&
-                                  dragOverCell?.headerId === header.id &&
-                                  dragOverCell?.rowIdx === contentRowIdx;
                 const isDragOverNewHeader = dragOverCell?.pageIdx === pageIdx &&
                                   dragOverCell?.row === rowNum &&
                                   dragOverCell?.isNewHeader;
 
                 // Create a light tint of the header color for the section background
                 const sectionBgBase = contentRowIdx % 2 === 0 ? `${headerColor}08` : `${headerColor}12`;
-                // Different visual for play drops vs new header drops
-                // For multi-column sections, don't highlight the whole row for priority - use border instead
-                let sectionBg = sectionBgBase;
-                if (isDragOverNewHeader) {
-                  sectionBg = '#bbf7d0'; // Green for new header drop
-                } else if (isDragOverPlay) {
-                  sectionBg = '#dbeafe'; // Blue for play drop
-                }
-                // Priority indicator - only highlight single-column sections, use border for multi-column
-                const isPriority = play?.priority;
-                const priorityBorder = isPriority && sectionColSpan > 1 ? '3px solid #f59e0b' : 'none';
-                if (isPriority && sectionColSpan === 1) {
-                  sectionBg = '#fef08a';
-                }
 
                 // Section boundary indicators
                 const isLastColumn = headerBounds.colEnd >= columns;
-
-                // Calculate column divider positions for multi-column sections
-                const colDividerStyle = sectionColSpan > 1 ? {
-                  backgroundImage: `linear-gradient(to right, ${sectionBg} calc(100% - 1px), #cbd5e1 calc(100% - 1px))`,
-                  backgroundSize: `${100 / sectionColSpan}% 100%`,
-                  backgroundRepeat: 'repeat-x'
-                } : {};
 
                 return (
                   <div
@@ -1381,25 +1368,20 @@ export default function SpreadsheetView({
                     style={{
                       gridColumn: sectionColSpan > 1 ? `${headerBounds.colStart + 1} / span ${sectionColSpan}` : colNum + 1,
                       gridRow: rowNum + 1,
-                      backgroundColor: sectionBg,
-                      ...colDividerStyle,
-                      borderTop: contentRowIdx === 0 ? 'none' : undefined,
+                      backgroundColor: isDragOverNewHeader ? '#bbf7d0' : sectionBgBase,
+                      borderTop: isDragOverNewHeader ? '3px solid #22c55e' : (contentRowIdx === 0 ? 'none' : undefined),
                       borderBottom: isLastContentRow ? `3px solid ${headerColor}` : '1px solid #e2e8f0',
                       borderRight: isLastColumn ? `3px solid ${headerColor}` : `3px solid ${headerColor}`,
                       borderLeft: `3px solid ${headerColor}`,
-                      padding: '1px 4px',
+                      padding: '0',
                       fontSize: '0.65rem',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
+                      display: 'grid',
+                      gridTemplateColumns: cellNumber ? `auto repeat(${boxColumns}, 1fr)` : `repeat(${boxColumns}, 1fr)`,
+                      alignItems: 'stretch',
                       overflow: 'hidden',
                       minWidth: 0,
                       transition: 'background 0.1s, border-top 0.1s',
-                      cursor: isTargeting ? 'crosshair' : (draggedNewHeader ? 'copy' : 'default'),
-                      // Show thick top border when new header would be placed here
-                      borderTop: isDragOverNewHeader ? '3px solid #22c55e' : (contentRowIdx === 0 ? 'none' : undefined),
-                      // Priority indicator for multi-column sections - use inset shadow on left
-                      boxShadow: isPriority && sectionColSpan > 1 ? 'inset 4px 0 0 #f59e0b' : undefined
+                      cursor: isTargeting ? 'crosshair' : (draggedNewHeader ? 'copy' : 'default')
                     }}
                     onDragOver={(e) => {
                       e.preventDefault();
@@ -1407,11 +1389,8 @@ export default function SpreadsheetView({
                     }}
                     onDragEnter={(e) => {
                       e.preventDefault();
-                      // Track drag over for both play drops and new header drops
                       if (draggedNewHeader) {
                         setDragOverCell({ pageIdx, row: rowNum, col: colNum, isNewHeader: true });
-                      } else {
-                        setDragOverCell({ pageIdx, headerId: header.id, rowIdx: contentRowIdx });
                       }
                     }}
                     onDragLeave={(e) => {
@@ -1425,7 +1404,7 @@ export default function SpreadsheetView({
                         handleDropNewHeader(
                           pageIdx,
                           rowNum,
-                          headerBounds.colStart, // Align with section's column start
+                          headerBounds.colStart,
                           draggedNewHeader.item,
                           draggedNewHeader.categoryType,
                           { isScript: draggedNewHeader.isScript, isMatrix: draggedNewHeader.isMatrix, rowCount: draggedNewHeader.rowCount, numbering: draggedNewHeader.numbering, boxColumns: draggedNewHeader.boxColumns, playTypes: draggedNewHeader.playTypes, hashGroups: draggedNewHeader.hashGroups }
@@ -1434,7 +1413,6 @@ export default function SpreadsheetView({
                       }
                     }}
                     onDoubleClick={() => {
-                      // Double-click opens box modal in editing mode
                       if (isEditing && onHeaderClick) {
                         onHeaderClick({ pageIdx, header });
                       }
@@ -1449,53 +1427,95 @@ export default function SpreadsheetView({
                         setDragOverCell(null);
                       }
                     }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      setDragOverCell(null);
-
-                      // Check if dropping a new header from sidebar
-                      if (draggedNewHeader) {
-                        // Drop a new header at this row position (creates new section, splits existing)
-                        handleDropNewHeader(
-                          pageIdx,
-                          rowNum,
-                          headerBounds.colStart, // Align with section's column start
-                          draggedNewHeader.item,
-                          draggedNewHeader.categoryType,
-                          { isScript: draggedNewHeader.isScript, isMatrix: draggedNewHeader.isMatrix, rowCount: draggedNewHeader.rowCount, numbering: draggedNewHeader.numbering, boxColumns: draggedNewHeader.boxColumns, playTypes: draggedNewHeader.playTypes, hashGroups: draggedNewHeader.hashGroups }
-                        );
-                        setDraggedNewHeader(null);
-                        return;
-                      }
-
-                      // Handle play drops
-                      const playData = e.dataTransfer.getData('application/react-dnd');
-                      if (playData && onAddPlayToSection) {
-                        try {
-                          const { playId } = JSON.parse(playData);
-                          if (playId) {
-                            onAddPlayToSection(header.id, contentRowIdx, playId);
-                          }
-                        } catch (err) {
-                          console.error('Error parsing drop data:', err);
-                        }
-                      }
-                    }}
                   >
-                    {/* Show cell number if numbering is enabled */}
+                    {/* Show cell number if numbering is enabled - spans first cell */}
                     {cellNumber && (
-                      <span className="spreadsheet-play-number" style={{ color: '#94a3b8', fontWeight: 'bold', minWidth: '18px', flexShrink: 0 }}>
+                      <span className="spreadsheet-play-number" style={{
+                        color: '#94a3b8',
+                        fontWeight: 'bold',
+                        minWidth: '18px',
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        paddingLeft: '4px'
+                      }}>
                         {cellNumber}
                       </span>
                     )}
-                    {play && (
-                      <FitText
-                        text={getPlayDisplayName(play)}
-                        abbreviations={abbreviations}
-                        baseFontSize={0.6}
-                        minFontSize={0.35}
-                      />
-                    )}
+                    {/* Render boxColumns cells for plays */}
+                    {rowPlays.map((play, colIdx) => {
+                      const slotIdx = rowStartIdx + colIdx;
+                      const isDragOverSlot = dragOverCell?.pageIdx === pageIdx &&
+                                            dragOverCell?.headerId === header.id &&
+                                            dragOverCell?.rowIdx === slotIdx;
+                      const isPriority = play?.priority;
+
+                      let cellBg = 'transparent';
+                      if (isDragOverSlot) {
+                        cellBg = '#dbeafe';
+                      } else if (isPriority) {
+                        cellBg = '#fef08a';
+                      }
+
+                      return (
+                        <div
+                          key={colIdx}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            padding: '1px 4px',
+                            borderLeft: colIdx > 0 ? '1px solid #cbd5e1' : 'none',
+                            backgroundColor: cellBg,
+                            overflow: 'hidden',
+                            minWidth: 0
+                          }}
+                          onDragEnter={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (!draggedNewHeader) {
+                              setDragOverCell({ pageIdx, headerId: header.id, rowIdx: slotIdx });
+                            }
+                          }}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                          }}
+                          onDragLeave={(e) => {
+                            if (!e.currentTarget.contains(e.relatedTarget)) {
+                              setDragOverCell(null);
+                            }
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setDragOverCell(null);
+
+                            if (draggedNewHeader) return;
+
+                            const playData = e.dataTransfer.getData('application/react-dnd');
+                            if (playData && onAddPlayToSection) {
+                              try {
+                                const { playId } = JSON.parse(playData);
+                                if (playId) {
+                                  onAddPlayToSection(header.id, slotIdx, playId);
+                                }
+                              } catch (err) {
+                                console.error('Error parsing drop data:', err);
+                              }
+                            }
+                          }}
+                        >
+                          {play && (
+                            <FitText
+                              text={getPlayDisplayName(play)}
+                              abbreviations={abbreviations}
+                              baseFontSize={0.6}
+                              minFontSize={0.35}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               }
