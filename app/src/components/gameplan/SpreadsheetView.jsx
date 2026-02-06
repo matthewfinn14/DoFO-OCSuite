@@ -214,11 +214,12 @@ export default function SpreadsheetView({
       let rowEnd;
 
       // For matrix headers, calculate rowCount based on play types
-      // Matrix needs: 1 row for hash group headers + 1 row per play type
+      // Matrix needs: 1 row for column headers + 1 row per play type
       if (header.isMatrix) {
         const playTypesCount = (header.playTypes || []).length || 4;
-        // rowEnd = header row + 1 (hash headers) + play types count
-        rowEnd = Math.min(rowStart + 1 + playTypesCount, rows);
+        // Total rows = 1 (column headers) + playTypesCount
+        // rowEnd is inclusive, so: rowEnd = rowStart + (1 + playTypesCount) - 1 = rowStart + playTypesCount
+        rowEnd = Math.min(rowStart + playTypesCount, rows);
       } else if (header.rowCount) {
         // rowCount = number of play rows (content rows), header is row 0
         // So total rows = rowStart (header) + rowCount (content)
@@ -1166,7 +1167,7 @@ export default function SpreadsheetView({
                           gridColumn: `${headerBounds.colStart + 1} / span ${sectionColSpan}`,
                           gridRow: rowNum + 1,
                           display: 'grid',
-                          gridTemplateColumns: `80px repeat(${allHashCols.length}, 1fr)`,
+                          gridTemplateColumns: `60px repeat(${allHashCols.length}, 1fr)`,
                           background: headerColor,
                           border: `3px solid ${headerColor}`,
                           borderBottom: '1px solid rgba(255,255,255,0.3)',
