@@ -143,6 +143,10 @@ export default function SpreadsheetView({
     colSpan: 2
   });
 
+  // Pending header configuration (shown when clicking a header button)
+  const [pendingHeaderConfig, setPendingHeaderConfig] = useState(null);
+  // { item, categoryType, isScript, colSpan: 2, rowCount: 10 }
+
   // Local state for page settings inputs (allows clearing while typing)
   const [pageSettingsInput, setPageSettingsInput] = useState({ columns: '', rows: '' });
 
@@ -153,6 +157,22 @@ export default function SpreadsheetView({
     color: '#3b82f6',
     situationId: null
   });
+
+  // Handle Escape key to cancel placement mode
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        if (draggedNewHeader) {
+          setDraggedNewHeader(null);
+        }
+        if (pendingHeaderConfig) {
+          setPendingHeaderConfig(null);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [draggedNewHeader, pendingHeaderConfig]);
 
   // Calculate section bounds for each header on a page
   const calculateSectionBounds = useCallback((page) => {
@@ -1018,6 +1038,30 @@ export default function SpreadsheetView({
                         setDragOverCell(null);
                       }
                     }}
+                    onClick={() => {
+                      // Click to place header when in placement mode (splits section)
+                      if (draggedNewHeader) {
+                        handleDropNewHeader(
+                          pageIdx,
+                          rowNum,
+                          headerBounds.colStart, // Align with section's column start
+                          draggedNewHeader.item,
+                          draggedNewHeader.categoryType,
+                          { isScript: draggedNewHeader.isScript }
+                        );
+                        setDraggedNewHeader(null);
+                      }
+                    }}
+                    onMouseEnter={() => {
+                      if (draggedNewHeader) {
+                        setDragOverCell({ pageIdx, row: rowNum, col: colNum, isNewHeader: true });
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (draggedNewHeader && !e.currentTarget.contains(e.relatedTarget)) {
+                        setDragOverCell(null);
+                      }
+                    }}
                     onDrop={(e) => {
                       e.preventDefault();
                       setDragOverCell(null);
@@ -1103,6 +1147,18 @@ export default function SpreadsheetView({
                 isValidDrop = !hasOverlap;
               }
 
+              // Check if in placement mode (header selected, waiting for click to place)
+              const isPlacementMode = !!draggedNewHeader;
+
+              // Calculate background color
+              let cellBg = '#ffffff';
+              if (isHovering) {
+                cellBg = isValidDrop ? '#bbf7d0' : '#fecaca';
+              } else if (isPlacementMode) {
+                // Subtle highlight to show clickable cells in placement mode
+                cellBg = '#f0fdf4';
+              }
+
               return (
                 <div
                   key={cellKey}
@@ -1110,13 +1166,35 @@ export default function SpreadsheetView({
                   style={{
                     gridColumn: colNum + 1,
                     gridRow: rowNum + 1,
-                    background: isHovering
-                      ? (isValidDrop ? '#bbf7d0' : '#fecaca')  // Green if valid, red if invalid
-                      : '#ffffff',
+                    background: cellBg,
                     borderBottom: '1px solid #e2e8f0',
                     borderRight: colNum < columns ? '1px solid #e2e8f0' : 'none',
                     transition: 'background 0.1s',
-                    cursor: isDragging ? (isValidDrop ? 'copy' : 'not-allowed') : 'default'
+                    cursor: isDragging ? (isValidDrop ? 'copy' : 'not-allowed') : (isPlacementMode ? 'crosshair' : 'default')
+                  }}
+                  onClick={() => {
+                    // Click to place header when in placement mode
+                    if (draggedNewHeader) {
+                      handleDropNewHeader(
+                        pageIdx,
+                        rowNum,
+                        colNum,
+                        draggedNewHeader.item,
+                        draggedNewHeader.categoryType,
+                        { isScript: draggedNewHeader.isScript }
+                      );
+                      setDraggedNewHeader(null);
+                    }
+                  }}
+                  onMouseEnter={() => {
+                    if (isPlacementMode) {
+                      setDragOverCell({ pageIdx, row: rowNum, col: colNum });
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (isPlacementMode && !e.currentTarget.contains(e.relatedTarget)) {
+                      setDragOverCell(null);
+                    }
                   }}
                   onDragOver={(e) => {
                     if (isDragging) {
@@ -1215,6 +1293,32 @@ export default function SpreadsheetView({
           }
         `}
       </style>
+
+      {/* Placement Mode Banner */}
+      {draggedNewHeader && (
+        <div
+          className="no-print"
+          style={{
+            background: draggedNewHeader.item.color || '#3b82f6',
+            color: 'white',
+            padding: '8px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '12px',
+            fontSize: '0.875rem',
+            fontWeight: '500'
+          }}
+        >
+          <span>📍 Click on the grid to place "{draggedNewHeader.item.name}" ({assignHeaderConfig.colSpan} columns)</span>
+          <button
+            onClick={() => setDraggedNewHeader(null)}
+            className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded text-sm"
+          >
+            Cancel (Esc)
+          </button>
+        </div>
+      )}
 
       {/* Toolbar */}
       <div
@@ -1335,29 +1439,17 @@ export default function SpreadsheetView({
                       {template.items.map(item => (
                         <button
                           key={item.id}
-                          draggable
-                          onClick={() => handleAssignSingleHeader(
-                            item,
-                            template.id,
-                            { isScript: template.isScript }
-                          )}
-                          onDragStart={(e) => {
-                            setDraggedNewHeader({
+                          onClick={() => {
+                            // Show config modal to set columns and rows before placing
+                            setPendingHeaderConfig({
                               item,
                               categoryType: template.id,
-                              isScript: template.isScript
+                              isScript: template.isScript,
+                              colSpan: 2,
+                              rowCount: 10
                             });
-                            e.dataTransfer.effectAllowed = 'copy';
-                            // Create a drag image
-                            const dragEl = e.currentTarget.cloneNode(true);
-                            dragEl.style.position = 'absolute';
-                            dragEl.style.top = '-1000px';
-                            document.body.appendChild(dragEl);
-                            e.dataTransfer.setDragImage(dragEl, 0, 0);
-                            setTimeout(() => document.body.removeChild(dragEl), 0);
                           }}
-                          onDragEnd={() => setDraggedNewHeader(null)}
-                          className="px-2 py-1 rounded text-xs font-medium transition-all hover:scale-105 hover:shadow-md cursor-grab active:cursor-grabbing"
+                          className="px-2 py-1 rounded text-xs font-medium transition-all hover:scale-105 hover:shadow-md cursor-pointer"
                           style={{
                             backgroundColor: item.color || template.color,
                             color: 'white'
@@ -1598,6 +1690,141 @@ export default function SpreadsheetView({
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500"
               >
                 Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Header Configuration Modal - shown when clicking a header button */}
+      {pendingHeaderConfig && (
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"
+          onClick={() => setPendingHeaderConfig(null)}
+        >
+          <div
+            className="bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm mx-4 border border-slate-700"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 py-4 border-b border-slate-700">
+              <h3 className="text-lg font-bold text-white">Configure Header</h3>
+              <p className="text-sm text-slate-400 mt-1">{pendingHeaderConfig.item.name}</p>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Column Span */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Column Span
+                </label>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setPendingHeaderConfig(prev => ({
+                      ...prev,
+                      colSpan: Math.max(1, prev.colSpan - 1)
+                    }))}
+                    disabled={pendingHeaderConfig.colSpan <= 1}
+                    className="w-10 h-10 rounded-lg bg-slate-700 text-white font-bold hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    −
+                  </button>
+                  <span className="text-2xl font-bold text-white w-12 text-center">
+                    {pendingHeaderConfig.colSpan}
+                  </span>
+                  <button
+                    onClick={() => setPendingHeaderConfig(prev => ({
+                      ...prev,
+                      colSpan: Math.min(8, prev.colSpan + 1)
+                    }))}
+                    disabled={pendingHeaderConfig.colSpan >= 8}
+                    className="w-10 h-10 rounded-lg bg-slate-700 text-white font-bold hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    +
+                  </button>
+                  <span className="text-sm text-slate-400 ml-2">columns wide</span>
+                </div>
+              </div>
+
+              {/* Row Count */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Rows Needed
+                </label>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setPendingHeaderConfig(prev => ({
+                      ...prev,
+                      rowCount: Math.max(1, prev.rowCount - 5)
+                    }))}
+                    disabled={pendingHeaderConfig.rowCount <= 1}
+                    className="w-10 h-10 rounded-lg bg-slate-700 text-white font-bold hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    −5
+                  </button>
+                  <button
+                    onClick={() => setPendingHeaderConfig(prev => ({
+                      ...prev,
+                      rowCount: Math.max(1, prev.rowCount - 1)
+                    }))}
+                    disabled={pendingHeaderConfig.rowCount <= 1}
+                    className="w-8 h-10 rounded-lg bg-slate-700 text-white font-bold hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    −
+                  </button>
+                  <span className="text-2xl font-bold text-white w-12 text-center">
+                    {pendingHeaderConfig.rowCount}
+                  </span>
+                  <button
+                    onClick={() => setPendingHeaderConfig(prev => ({
+                      ...prev,
+                      rowCount: Math.min(50, prev.rowCount + 1)
+                    }))}
+                    disabled={pendingHeaderConfig.rowCount >= 50}
+                    className="w-8 h-10 rounded-lg bg-slate-700 text-white font-bold hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    +
+                  </button>
+                  <button
+                    onClick={() => setPendingHeaderConfig(prev => ({
+                      ...prev,
+                      rowCount: Math.min(50, prev.rowCount + 5)
+                    }))}
+                    disabled={pendingHeaderConfig.rowCount >= 50}
+                    className="w-10 h-10 rounded-lg bg-slate-700 text-white font-bold hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    +5
+                  </button>
+                  <span className="text-sm text-slate-400 ml-2">rows</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-slate-700 flex justify-end gap-3">
+              <button
+                onClick={() => setPendingHeaderConfig(null)}
+                className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  // Set up for placement - user will click on grid to place
+                  setAssignHeaderConfig(prev => ({
+                    ...prev,
+                    colSpan: pendingHeaderConfig.colSpan
+                  }));
+                  setDraggedNewHeader({
+                    item: pendingHeaderConfig.item,
+                    categoryType: pendingHeaderConfig.categoryType,
+                    isScript: pendingHeaderConfig.isScript,
+                    rowCount: pendingHeaderConfig.rowCount
+                  });
+                  setPendingHeaderConfig(null);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 font-medium"
+                style={{ backgroundColor: pendingHeaderConfig.item.color }}
+              >
+                Place on Grid
               </button>
             </div>
           </div>
