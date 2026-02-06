@@ -372,8 +372,9 @@ export default function PlayEditor({
         name: fullPlayCall,
         formation: '', // Formation is now part of name
         formationTag: play.formationTag || '',
-        playCategory: play.playCategory || '',
-        bucketId: play.bucketId || '',
+        playCategory: play.playCategory || '', // Legacy field
+        bucketId: play.bucketId || play.playCategory || '', // Bucket - prefer bucketId, fallback to playCategory
+        conceptFamily: play.conceptFamily || '', // Concept group
         tag1: play.tag1 || '',
         tag2: play.tag2 || '',
         tags: play.tags || [],
@@ -419,8 +420,9 @@ export default function PlayEditor({
         name: '',
         formation: '',
         formationTag: '',
-        playCategory: '',
-        bucketId: '',
+        playCategory: '', // Legacy field
+        bucketId: '', // Bucket
+        conceptFamily: '', // Concept group
         tag1: '',
         tag2: '',
         tags: [],
@@ -482,11 +484,15 @@ export default function PlayEditor({
     return Array.from(formSet).sort();
   }, [formations]);
 
-  // Filter buckets by selected category
-  const filteredBuckets = useMemo(() => {
-    if (!formData.playCategory) return playBuckets;
-    return playBuckets.filter(b => b.categoryId === formData.playCategory);
-  }, [playBuckets, formData.playCategory]);
+  // Get the selected bucket and its concept families
+  const selectedBucket = useMemo(() => {
+    return playBuckets.find(b => b.id === formData.bucketId);
+  }, [playBuckets, formData.bucketId]);
+
+  // Get concept families for the selected bucket
+  const bucketConceptFamilies = useMemo(() => {
+    return selectedBucket?.families || [];
+  }, [selectedBucket]);
 
   // Filter available plays for complementary selection (same phase, exclude current play)
   const complementaryPlayOptions = useMemo(() => {
@@ -572,20 +578,20 @@ export default function PlayEditor({
       id: `bucket-${Date.now()}`,
       label: name.trim(),
       phase: formData.phase || 'OFFENSE',
-      color: '#3b82f6'
+      color: '#3b82f6',
+      families: []
     };
 
     const existing = setupConfig?.playBuckets || [];
     await updateSetupConfig({ playBuckets: [...existing, newBucket] });
 
     // Auto-select the new bucket
-    setFormData(prev => ({ ...prev, playCategory: newBucket.id, bucketId: '' }));
+    setFormData(prev => ({ ...prev, bucketId: newBucket.id, conceptFamily: '' }));
   };
 
-  // Add new concept group from dropdown
+  // Add new concept group/family to the selected bucket
   const handleAddNewConceptGroup = async () => {
-    const currentBucketId = selectedBucketId || formData.playCategory;
-    if (!currentBucketId) {
+    if (!formData.bucketId) {
       alert('Please select a bucket first');
       return;
     }
@@ -593,19 +599,22 @@ export default function PlayEditor({
     const name = prompt('New concept group name:');
     if (!name?.trim()) return;
 
-    const newGroup = {
-      id: `concept-${Date.now()}`,
-      label: name.trim(),
-      name: name.trim(),
-      categoryId: currentBucketId,
-      phase: formData.phase || 'OFFENSE'
-    };
+    // Add the new family to the bucket's families array
+    const existingBuckets = setupConfig?.playBuckets || [];
+    const updatedBuckets = existingBuckets.map(bucket => {
+      if (bucket.id === formData.bucketId) {
+        const families = bucket.families || [];
+        if (!families.includes(name.trim())) {
+          return { ...bucket, families: [...families, name.trim()] };
+        }
+      }
+      return bucket;
+    });
 
-    const existing = setupConfig?.conceptGroups || [];
-    await updateSetupConfig({ conceptGroups: [...existing, newGroup] });
+    await updateSetupConfig({ playBuckets: updatedBuckets });
 
-    // Auto-select the new group
-    setFormData(prev => ({ ...prev, bucketId: newGroup.id }));
+    // Auto-select the new family
+    setFormData(prev => ({ ...prev, conceptFamily: name.trim() }));
   };
 
   // Add new read type from dropdown
@@ -780,12 +789,13 @@ export default function PlayEditor({
                       </label>
                       <select
                         id="play-editor-bucket"
-                        value={formData.playCategory}
+                        value={formData.bucketId}
                         onChange={e => {
                           if (e.target.value === '__add_new__') {
                             handleAddNewBucket();
                           } else {
-                            setFormData(prev => ({ ...prev, playCategory: e.target.value, bucketId: '' }));
+                            // Set bucketId and clear conceptFamily when bucket changes
+                            setFormData(prev => ({ ...prev, bucketId: e.target.value, conceptFamily: '' }));
                           }
                         }}
                         className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
@@ -805,19 +815,20 @@ export default function PlayEditor({
                       </label>
                       <select
                         id="play-editor-concept-group"
-                        value={formData.bucketId}
+                        value={formData.conceptFamily}
                         onChange={e => {
                           if (e.target.value === '__add_new__') {
                             handleAddNewConceptGroup();
                           } else {
-                            setFormData(prev => ({ ...prev, bucketId: e.target.value }));
+                            setFormData(prev => ({ ...prev, conceptFamily: e.target.value }));
                           }
                         }}
-                        className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm"
+                        disabled={!formData.bucketId}
+                        className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-white text-sm disabled:opacity-50"
                       >
-                        <option value="">Select Group</option>
-                        {filteredBuckets.map(bucket => (
-                          <option key={bucket.id} value={bucket.id}>{bucket.label}</option>
+                        <option value="">{!formData.bucketId ? 'Select bucket first' : 'Select Group...'}</option>
+                        {bucketConceptFamilies.map(family => (
+                          <option key={family} value={family}>{family}</option>
                         ))}
                         <option value="__add_new__" className="text-sky-400">+ Add New Concept Group...</option>
                       </select>
