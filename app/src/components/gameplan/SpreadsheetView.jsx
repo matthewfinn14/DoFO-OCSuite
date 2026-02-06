@@ -146,42 +146,40 @@ export default function SpreadsheetView({
   const isLandscape = pageOrientation === 'landscape';
   const rowHeight = isLandscape ? 12 : 13;
 
+  // ============================================================
+  // PRINT CONFIGURATION CONSTANTS
+  // ============================================================
+  const PRINT_ROW_HEIGHT = 24; // Fixed row height in pixels (configurable)
+  const PRINT_HEADER_HEIGHT = 36; // Sheet title header height
+  const PRINT_PAGE_PADDING = 16; // Top + bottom padding combined
+  const PRINT_DPI = 96; // Standard screen DPI
+
   /**
-   * HELPER C: Compute print dimensions
-   * Returns stable values for printable area and row heights
+   * Compute print pagination dimensions
+   * Returns rowsPerPage for explicit page breaks
    */
-  const computePrintDimensions = useCallback((rowCount) => {
-    // Letter paper dimensions in inches (landscape)
+  const computePrintPagination = useCallback((totalRows) => {
+    // Letter paper dimensions
     const pageWidthIn = isLandscape ? 11 : 8.5;
     const pageHeightIn = isLandscape ? 8.5 : 11;
-
-    // Margins (0.25in on each side)
     const marginIn = 0.25;
 
-    // Header height (Week 1 title bar) - approximately 0.4in
-    const headerHeightIn = 0.4;
+    // Available height in pixels
+    const pageHeightPx = (pageHeightIn - marginIn * 2) * PRINT_DPI;
+    const availableHeightPx = pageHeightPx - PRINT_HEADER_HEIGHT - PRINT_PAGE_PADDING;
 
-    // Available printable dimensions
-    const printableWidthIn = pageWidthIn - (marginIn * 2);
-    const printableHeightIn = pageHeightIn - (marginIn * 2) - headerHeightIn;
+    // Calculate rows that fit per page
+    const rowsPerPage = Math.floor(availableHeightPx / PRINT_ROW_HEIGHT);
 
-    // Convert to pixels at 96 DPI (standard screen/print DPI)
-    const dpi = 96;
-    const printableWidthPx = Math.floor(printableWidthIn * dpi);
-    const printableHeightPx = Math.floor(printableHeightIn * dpi);
-
-    // Calculate stable row height - single value for ALL rows
-    // Subtract 1px per row for borders
-    const totalBorderHeight = rowCount;
-    const availableForRows = printableHeightPx - totalBorderHeight;
-    const rowHeightPx = Math.floor(availableForRows / rowCount);
+    // Calculate number of pages needed
+    const pageCount = Math.ceil(totalRows / rowsPerPage);
 
     return {
-      printableWidthPx,
-      printableHeightPx,
-      rowCount,
-      rowHeightPx,
-      totalGridHeight: (rowHeightPx * rowCount) + totalBorderHeight
+      rowsPerPage,
+      pageCount,
+      rowHeight: PRINT_ROW_HEIGHT,
+      pageHeightPx,
+      availableHeightPx
     };
   }, [isLandscape]);
 
@@ -1777,243 +1775,337 @@ export default function SpreadsheetView({
     ? '17in 11in'  // Tabloid/Ledger landscape (two portrait pages side-by-side)
     : (isLandscape ? 'landscape' : 'portrait');
 
+  // ============================================================
+  // DEDICATED PRINT DOM - Static tables with explicit pagination
+  // ============================================================
+  const renderPrintDOM = () => {
+    return spreadsheetData.pages.map((page, pageIdx) => {
+      const { columns, rows, headers } = page;
+      const pagination = computePrintPagination(rows);
+
+      // Calculate column width (equal distribution)
+      const colWidth = `${100 / columns}%`;
+
+      // Build section bounds (same logic as edit view)
+      const bounds = calculateSectionBounds(page);
+
+      // Build cell data matrix: [row][col] = { header, contentRowIdx, type }
+      const cellMatrix = [];
+      for (let r = 1; r <= rows; r++) {
+        cellMatrix[r] = [];
+        for (let c = 1; c <= columns; c++) {
+          cellMatrix[r][c] = { type: 'empty', header: null };
+        }
+      }
+
+      // Fill cell matrix with header/content data
+      (headers || []).forEach(header => {
+        const hb = bounds[header.id];
+        if (!hb) return;
+
+        // Header row
+        for (let c = header.colStart; c <= hb.colEnd; c++) {
+          if (cellMatrix[header.rowStart]) {
+            cellMatrix[header.rowStart][c] = {
+              type: c === header.colStart ? 'header' : 'header-span',
+              header,
+              colSpan: c === header.colStart ? header.colSpan : 0
+            };
+          }
+        }
+
+        // Content rows
+        for (let r = header.rowStart + 1; r <= hb.rowEnd; r++) {
+          for (let c = header.colStart; c <= hb.colEnd; c++) {
+            if (cellMatrix[r]) {
+              cellMatrix[r][c] = {
+                type: c === header.colStart ? 'content' : 'content-span',
+                header,
+                contentRowIdx: r - header.rowStart - 1,
+                colSpan: c === header.colStart ? header.colSpan : 0
+              };
+            }
+          }
+        }
+      });
+
+      // Get plays for a header
+      const getHeaderPlays = (headerId) => {
+        const set = gamePlan?.sets?.find(s => s.id === `spreadsheet_${headerId}`);
+        if (!set) return [];
+        return (set.assignedPlayIds || []).map(id => plays.find(p => p.id === id)).filter(Boolean);
+      };
+
+      // Render a single print page (subset of rows)
+      const renderPrintPage = (startRow, endRow, printPageNum, isLastPage) => {
+        return (
+          <div
+            key={`print-page-${pageIdx}-${printPageNum}`}
+            className="print-page"
+            style={{
+              width: '100%',
+              pageBreakAfter: isLastPage ? 'auto' : 'always',
+              breakAfter: isLastPage ? 'auto' : 'page'
+            }}
+          >
+            {/* Sheet Header - "Week 1 vs. Opponent" */}
+            <div
+              className="print-sheet-header"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '4px 8px',
+                borderBottom: '2px solid #1e293b',
+                background: '#f8fafc',
+                height: `${PRINT_HEADER_HEIGHT}px`,
+                boxSizing: 'border-box'
+              }}
+            >
+              {teamLogo && (
+                <img src={teamLogo} alt="Team" style={{ height: '24px', width: 'auto' }} />
+              )}
+              <div style={{ fontWeight: 'bold', fontSize: '12pt', color: '#0f172a' }}>
+                {weekTitle} {opponentTitle}
+              </div>
+              {pagination.pageCount > 1 && (
+                <span style={{ marginLeft: 'auto', fontSize: '9pt', color: '#64748b' }}>
+                  Page {printPageNum} of {pagination.pageCount}
+                </span>
+              )}
+            </div>
+
+            {/* Static Table Grid */}
+            <table
+              className="print-grid-table"
+              style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                tableLayout: 'fixed',
+                border: '1px solid #64748b'
+              }}
+            >
+              <colgroup>
+                {Array.from({ length: columns }, (_, i) => (
+                  <col key={i} style={{ width: colWidth }} />
+                ))}
+              </colgroup>
+              <tbody>
+                {Array.from({ length: endRow - startRow + 1 }, (_, rowOffset) => {
+                  const rowNum = startRow + rowOffset;
+                  const rowCells = cellMatrix[rowNum] || [];
+
+                  return (
+                    <tr key={rowNum} style={{ height: `${PRINT_ROW_HEIGHT}px` }}>
+                      {Array.from({ length: columns }, (_, colIdx) => {
+                        const colNum = colIdx + 1;
+                        const cell = rowCells[colNum] || { type: 'empty' };
+
+                        // Skip spanned cells
+                        if (cell.type === 'header-span' || cell.type === 'content-span') {
+                          return null;
+                        }
+
+                        const colSpan = cell.colSpan || 1;
+                        const headerColor = cell.header?.color || '#3b82f6';
+
+                        // Header cell
+                        if (cell.type === 'header') {
+                          const headerPlays = getHeaderPlays(cell.header.id);
+                          const playCount = headerPlays.length;
+
+                          return (
+                            <td
+                              key={colNum}
+                              colSpan={colSpan}
+                              style={{
+                                height: `${PRINT_ROW_HEIGHT}px`,
+                                background: headerColor,
+                                color: '#fff',
+                                fontWeight: 'bold',
+                                fontSize: '8pt',
+                                textTransform: 'uppercase',
+                                padding: '0 4px',
+                                border: `2px solid ${headerColor}`,
+                                borderBottom: 'none',
+                                overflow: 'hidden',
+                                whiteSpace: 'nowrap',
+                                verticalAlign: 'middle',
+                                WebkitPrintColorAdjust: 'exact',
+                                printColorAdjust: 'exact'
+                              }}
+                            >
+                              {cell.header.name}
+                              {playCount > 0 && (
+                                <span style={{
+                                  marginLeft: '6px',
+                                  fontSize: '7pt',
+                                  background: 'rgba(255,255,255,0.25)',
+                                  padding: '1px 4px',
+                                  borderRadius: '3px'
+                                }}>
+                                  {playCount}
+                                </span>
+                              )}
+                            </td>
+                          );
+                        }
+
+                        // Content cell
+                        if (cell.type === 'content') {
+                          const headerPlays = getHeaderPlays(cell.header.id);
+                          const boxColumns = cell.header.boxColumns || 1;
+                          const playIdx = cell.contentRowIdx * boxColumns;
+                          const play = headerPlays[playIdx];
+                          const hb = bounds[cell.header.id];
+                          const isLastRow = rowNum === hb?.rowEnd;
+
+                          // Alternating row background
+                          const rowBg = cell.contentRowIdx % 2 === 0 ? '#ffffff' : '#f8fafc';
+
+                          return (
+                            <td
+                              key={colNum}
+                              colSpan={colSpan}
+                              style={{
+                                height: `${PRINT_ROW_HEIGHT}px`,
+                                background: rowBg,
+                                fontSize: '7pt',
+                                padding: '0 4px',
+                                borderLeft: `2px solid ${headerColor}`,
+                                borderRight: `2px solid ${headerColor}`,
+                                borderBottom: isLastRow ? `2px solid ${headerColor}` : '1px solid #e2e8f0',
+                                overflow: 'hidden',
+                                whiteSpace: 'nowrap',
+                                textOverflow: 'ellipsis',
+                                verticalAlign: 'middle',
+                                WebkitPrintColorAdjust: 'exact',
+                                printColorAdjust: 'exact'
+                              }}
+                            >
+                              {play && (
+                                <span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {cell.header.numbering === 'numeric' && `${cell.contentRowIdx + 1}. `}
+                                  {getPlayDisplayName ? getPlayDisplayName(play) : play.name}
+                                </span>
+                              )}
+                            </td>
+                          );
+                        }
+
+                        // Empty cell
+                        return (
+                          <td
+                            key={colNum}
+                            style={{
+                              height: `${PRINT_ROW_HEIGHT}px`,
+                              background: '#ffffff',
+                              borderBottom: '1px solid #e2e8f0',
+                              borderRight: colNum < columns ? '1px solid #e2e8f0' : 'none',
+                              padding: 0,
+                              verticalAlign: 'middle'
+                            }}
+                          />
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+      };
+
+      // Generate paginated pages
+      const printPages = [];
+      const totalRows = rows;
+      const { rowsPerPage, pageCount } = pagination;
+
+      for (let p = 0; p < pageCount; p++) {
+        const startRow = p * rowsPerPage + 1;
+        const endRow = Math.min((p + 1) * rowsPerPage, totalRows);
+        const isLastPage = p === pageCount - 1;
+
+        printPages.push(renderPrintPage(startRow, endRow, p + 1, isLastPage));
+      }
+
+      return (
+        <div key={`print-sheet-${pageIdx}`} className="print-sheet">
+          {printPages}
+        </div>
+      );
+    });
+  };
+
+  // ============================================================
+  // RENDER: Always render both DOMs, CSS controls visibility
+  // - Edit DOM: visible on screen, hidden on print
+  // - Print DOM: hidden on screen, visible on print
+  // This ensures print DOM is ready when print dialog opens
+  // ============================================================
+
   return (
+    <>
+      {/* PRINT DOM - Hidden on screen, visible when printing */}
+      <div className="print-only-container">
+        <style>{`
+          /* Print-only container: hidden on screen, visible in print */
+          @media screen {
+            .print-only-container {
+              display: none !important;
+              visibility: hidden !important;
+              height: 0 !important;
+              overflow: hidden !important;
+            }
+          }
+          @media print {
+            @page {
+              size: ${printPageSize};
+              margin: 0.25in;
+            }
+            .print-only-container {
+              display: block !important;
+              visibility: visible !important;
+              width: 100% !important;
+              background: white !important;
+            }
+            .print-page {
+              width: 100%;
+              background: white;
+            }
+            .print-sheet-header {
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .print-grid-table {
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .print-grid-table td {
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+          }
+        `}</style>
+        {renderPrintDOM()}
+      </div>
+
+      {/* EDIT DOM - Visible on screen, hidden when printing */}
     <div className="h-full flex flex-col spreadsheet-view spreadsheet-view-screen">
-      {/* Dynamic print styles for page orientation */}
+      {/* Dynamic styles - Edit view only (print uses dedicated DOM) */}
       <style>
         {`
           .spreadsheet-view-screen {
             background: #1e293b;
           }
 
-          /*
-           * ============================================================
-           * PRINT STYLESHEET - Game Plan / Call Sheet
-           * ============================================================
-           *
-           * DESIGN GOALS:
-           * 1. Match on-screen edit view layout exactly
-           * 2. Uniform row heights across entire grid
-           * 3. Single page per sheet section (no orphan fragments)
-           * 4. Deterministic output in Chrome print preview
-           *
-           * IMPLEMENTATION NOTES:
-           * - Uses table-layout: fixed for predictable column widths
-           * - Explicit px heights on ALL rows (no auto/flex)
-           * - border-collapse: collapse for clean grid lines
-           * - print-color-adjust: exact for background colors
-           * - break-inside: avoid prevents mid-block splits
-           * ============================================================
-           */
-
+          /* Hide edit DOM during print - dedicated print DOM is used instead */
           @media print {
-            /* A) PAGE SETUP - Define paper size and margins */
-            @page {
-              size: ${printPageSize};
-              margin: 0.25in;
-            }
-
-            /* B) GLOBAL PRINT RESETS */
-            /* Hide all interactive/UI elements */
-            .no-print,
-            .spreadsheet-row-number,
-            .page-info-subtitle {
+            .spreadsheet-view-screen {
               display: none !important;
-              width: 0 !important;
-              height: 0 !important;
-              overflow: hidden !important;
-              visibility: hidden !important;
-            }
-
-            /* Reset all containers to static flow */
-            .spreadsheet-view,
-            .spreadsheet-view-screen,
-            .spreadsheet-main-area,
-            .spreadsheet-scroll-area,
-            .spreadsheet-pages-wrapper,
-            .spreadsheet-zoom-wrapper {
-              display: block !important;
-              position: static !important;
-              width: 100% !important;
-              height: auto !important;
-              min-height: 0 !important;
-              max-height: none !important;
-              overflow: visible !important;
-              background: white !important;
-              padding: 0 !important;
-              margin: 0 !important;
-              transform: none !important;  /* CRITICAL: No scaling transforms */
-              -webkit-transform: none !important;
-            }
-
-            /* C) PAGE CONTAINER - One printed page per .spreadsheet-page */
-            .spreadsheet-page {
-              display: block !important;
-              position: relative !important;
-              width: 100% !important;
-              height: auto !important;
-              overflow: visible !important;
-              background: white !important;
-              border: none !important;
-              border-radius: 0 !important;
-              box-shadow: none !important;
-              margin: 0 !important;
-              padding: 0 !important;
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
-            }
-
-            /* Force page break between sheets */
-            .spreadsheet-page + .spreadsheet-page {
-              page-break-before: always !important;
-              break-before: page !important;
-            }
-
-            /* D) SHEET TITLE HEADER - "Week 1 vs. Opponent" */
-            .print-compact-header {
-              display: block !important;
-              width: 100% !important;
-              padding: 4px 8px !important;
-              margin: 0 0 2px 0 !important;
-              background: #f8fafc !important;
-              border-bottom: 1px solid #334155 !important;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
-
-            .print-compact-header img {
-              height: 20px !important;
-              width: auto !important;
-            }
-
-            /* E) GRID CONTAINER - The main spreadsheet grid */
-            .spreadsheet-grid {
-              display: grid !important;
-              width: 100% !important;
-              /* Fixed height based on row count - ensures uniform rows */
-              /* For 50 rows: 50 * 15px = 750px ≈ 7.8in */
-              height: calc(var(--grid-rows) * 15px) !important;
-              max-height: calc(var(--grid-rows) * 15px) !important;
-              padding: 0 !important;
-              margin: 0 !important;
-              border: 1px solid #64748b !important;
-              border-collapse: collapse !important;
-              box-sizing: border-box !important;
-
-              /* CRITICAL: Hide row number column and column header row */
-              /* First column = 0, remaining columns = equal width */
-              grid-template-columns: 0 repeat(var(--grid-columns), 1fr) !important;
-              /* First row = 0 (hidden), remaining rows = fixed 15px each */
-              grid-template-rows: 0 repeat(var(--grid-rows), 15px) !important;
-
-              /* Prevent page breaks within grid */
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
-
-              /* Ensure no flex behavior interferes */
-              flex: none !important;
-            }
-
-            /* F) ALL GRID CELLS - Uniform height and borders */
-            .spreadsheet-grid > div {
-              height: 15px !important;
-              min-height: 15px !important;
-              max-height: 15px !important;
-              overflow: hidden !important;
-              box-sizing: border-box !important;
-              border-bottom: 1px solid #e2e8f0 !important;
-              border-right: 1px solid #e2e8f0 !important;
-              padding: 0 2px !important;
-              font-size: 6pt !important;
-              line-height: 14px !important;
-              vertical-align: middle !important;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
-
-            /* G) HEADER CELLS - Section titles (1ST SERIES, CONVERT MEDIUM, etc.) */
-            .spreadsheet-header-cell {
-              height: 15px !important;
-              padding: 0 4px !important;
-              font-size: 7pt !important;
-              font-weight: bold !important;
-              text-transform: uppercase !important;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
-
-            /* H) CONTENT CELLS - Play names */
-            .spreadsheet-content-cell {
-              height: 15px !important;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-            }
-
-            /* I) EMPTY CELLS - Maintain grid structure */
-            .spreadsheet-empty-cell {
-              height: 15px !important;
-              background: white !important;
-            }
-
-            /* J) TEXT HANDLING - Truncate with ellipsis, no wrap */
-            .spreadsheet-content-cell *,
-            .spreadsheet-header-cell *,
-            .spreadsheet-content-cell span,
-            .spreadsheet-header-cell span {
-              display: block !important;
-              overflow: hidden !important;
-              white-space: nowrap !important;
-              text-overflow: ellipsis !important;
-              max-width: 100% !important;
-              line-height: 14px !important;
-            }
-
-            /* K) ALTERNATING ROW COLORS - Preserve zebra striping */
-            .spreadsheet-content-cell[style*="background"],
-            .spreadsheet-empty-cell[style*="background"],
-            div[style*="background-color"] {
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-              color-adjust: exact !important;
-            }
-
-            /* L) MATRIX CELLS - Formation matrices */
-            .spreadsheet-matrix-header-row,
-            .spreadsheet-matrix-play-type-row {
-              height: 15px !important;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
             }
           }
-
-          /*
-           * EXPLANATION OF KEY RULES:
-           *
-           * grid-template-rows: 0 repeat(N, 15px)
-           *   - First value (0) hides the column header row
-           *   - 15px is the FIXED height for every content row
-           *   - This prevents browser from auto-sizing rows
-           *
-           * grid-template-columns: 0 repeat(N, 1fr)
-           *   - First value (0) hides the row number gutter
-           *   - 1fr distributes remaining width equally
-           *
-           * -webkit-print-color-adjust: exact
-           *   - Forces Chrome to print background colors
-           *   - Required for header colors and zebra striping
-           *
-           * page-break-inside: avoid / break-inside: avoid
-           *   - Prevents splitting a sheet across pages
-           *   - Each .spreadsheet-page stays on its own printed page
-           *
-           * transform: none
-           *   - Removes any zoom scaling from edit view
-           *   - Prevents aspect ratio distortion in print
-           *
-           * height: 15px (fixed, not auto/flex/1fr)
-           *   - Guarantees uniform row heights
-           *   - Works for 20, 40, 50+ rows identically
-           */
         `}
       </style>
 
@@ -2617,5 +2709,6 @@ export default function SpreadsheetView({
       )}
 
     </div>
+    </>
   );
 }
