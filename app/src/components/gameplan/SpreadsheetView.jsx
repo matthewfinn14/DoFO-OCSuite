@@ -242,12 +242,16 @@ export default function SpreadsheetView({
         }
       }
 
+      // For matrix headers, content starts at rowStart (no separate header row)
+      // For regular headers, content starts one row below the header
+      const contentRowStart = header.isMatrix ? rowStart : rowStart + 1;
+
       bounds[header.id] = {
         colStart,
         colEnd,
-        rowStart: rowStart + 1, // Content starts below header
+        rowStart: contentRowStart,
         rowEnd,
-        contentRows: rowEnd - rowStart, // Number of rows for content
+        contentRows: rowEnd - rowStart + (header.isMatrix ? 1 : 0), // Number of rows for content
         isMatrix: header.isMatrix || false
       };
     });
@@ -805,9 +809,11 @@ export default function SpreadsheetView({
       const headerBounds = bounds[header.id];
       if (!headerBounds) return;
 
-      // Mark header row cells
-      for (let c = header.colStart; c <= header.colStart + header.colSpan - 1; c++) {
-        cellOccupancy[`${header.rowStart}-${c}`] = { type: 'header', header, isFirst: c === header.colStart };
+      // Mark header row cells (skip for matrix headers - they don't have a separate header row)
+      if (!header.isMatrix) {
+        for (let c = header.colStart; c <= header.colStart + header.colSpan - 1; c++) {
+          cellOccupancy[`${header.rowStart}-${c}`] = { type: 'header', header, isFirst: c === header.colStart };
+        }
       }
 
       // Mark content area cells
@@ -1013,6 +1019,12 @@ export default function SpreadsheetView({
               // Header cell
               if (occupancy?.type === 'header' && occupancy.isFirst) {
                 const header = occupancy.header;
+
+                // Skip rendering separate header row for matrix headers - the column headers row serves as the header
+                if (header.isMatrix) {
+                  return null;
+                }
+
                 const overflow = headerOverflow[header.id];
                 // For matrix headers, count plays across all cells; for regular headers, count from array
                 const playCount = header.isMatrix
@@ -1142,8 +1154,10 @@ export default function SpreadsheetView({
                     hashCol: colId // Use full col ID directly
                   })));
 
-                  // First content row = hash group column headers
+                  // First content row = matrix header row with formation name + hash group columns
+                  // This serves as the main header for the matrix (no separate header row above)
                   if (contentRowIdx === 0) {
+                    const matrixPlayCount = countMatrixPlays(header);
                     return (
                       <div
                         key={cellKey}
@@ -1152,13 +1166,24 @@ export default function SpreadsheetView({
                           gridColumn: `${headerBounds.colStart + 1} / span ${sectionColSpan}`,
                           gridRow: rowNum + 1,
                           display: 'grid',
-                          gridTemplateColumns: `60px repeat(${allHashCols.length}, 1fr)`,
-                          background: '#334155',
-                          borderLeft: `3px solid ${headerColor}`,
-                          borderRight: `3px solid ${headerColor}`,
-                          borderBottom: '1px solid #475569'
+                          gridTemplateColumns: `80px repeat(${allHashCols.length}, 1fr)`,
+                          background: headerColor,
+                          border: `3px solid ${headerColor}`,
+                          borderBottom: '1px solid rgba(255,255,255,0.3)',
+                          cursor: isEditing ? 'move' : 'pointer'
                         }}
+                        draggable={isEditing}
+                        onDragStart={(e) => {
+                          if (!isEditing) return;
+                          setDraggedHeader({ pageIdx, header });
+                          e.dataTransfer.effectAllowed = 'move';
+                        }}
+                        onDragEnd={() => setDraggedHeader(null)}
                         onClick={() => {
+                          if (isTargetingMode && onTargetingClick) {
+                            onTargetingClick({ pageIdx, header });
+                            return;
+                          }
                           if (!isEditing && onHeaderClick) {
                             onHeaderClick({ pageIdx, header });
                           }
@@ -1169,18 +1194,46 @@ export default function SpreadsheetView({
                           }
                         }}
                       >
+                        {/* Formation/Header Name Cell */}
                         <div style={{
-                          padding: '2px 4px',
-                          fontSize: '0.55rem',
-                          fontWeight: '600',
+                          padding: '2px 6px',
+                          fontSize: '0.65rem',
+                          fontWeight: '700',
                           color: 'white',
-                          textAlign: 'center',
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center'
+                          justifyContent: 'space-between',
+                          gap: '4px',
+                          textTransform: 'uppercase',
+                          borderRight: '1px solid rgba(255,255,255,0.3)'
                         }}>
-                          TYPE
+                          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Grid3X3 size={12} />
+                            {header.name}
+                            {matrixPlayCount > 0 && (
+                              <span style={{
+                                fontSize: '0.5rem',
+                                background: 'rgba(255,255,255,0.25)',
+                                padding: '1px 4px',
+                                borderRadius: '3px'
+                              }}>
+                                {matrixPlayCount}
+                              </span>
+                            )}
+                          </span>
+                          {isEditing && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteHeader(pageIdx, header.id);
+                              }}
+                              className="p-0.5 hover:bg-white/20 rounded"
+                            >
+                              <Trash2 size={10} />
+                            </button>
+                          )}
                         </div>
+                        {/* Hash Group Column Headers */}
                         {allHashCols.map((hc, hcIdx) => (
                           <div
                             key={hc.hashCol}
@@ -1190,7 +1243,7 @@ export default function SpreadsheetView({
                               fontWeight: '600',
                               color: 'white',
                               textAlign: 'center',
-                              borderLeft: hcIdx > 0 && hc.col === 'L' ? '2px solid #1e293b' : '1px solid #475569',
+                              borderLeft: hcIdx > 0 && hc.col === 'L' ? '2px solid rgba(255,255,255,0.4)' : '1px solid rgba(255,255,255,0.2)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center'
