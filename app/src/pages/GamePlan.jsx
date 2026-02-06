@@ -5,6 +5,7 @@ import { usePlayBank } from '../context/PlayBankContext';
 import { getWristbandDisplay } from '../utils/wristband';
 import { getPlayCall } from '../utils/playDisplay';
 import SheetView from '../components/gameplan/SheetView';
+import SpreadsheetView from '../components/gameplan/SpreadsheetView';
 import BoxEditorModal from '../components/gameplan/BoxEditorModal';
 import {
   List,
@@ -26,7 +27,9 @@ import {
   CheckSquare,
   Package,
   Undo2,
-  Users
+  Users,
+  LayoutGrid,
+  Table2
 } from 'lucide-react';
 import '../styles/gameplan.css';
 
@@ -218,6 +221,22 @@ const DEFAULT_LAYOUTS = {
       { id: '2min', title: '2:00 Offense', color: '#dc2626', textColor: 'black', columns: ['Personnel', 'Timeouts', 'Max Protect', 'First Downs', 'Think Plays'] },
       { id: '2pt', title: 'Two Point Plays', color: 'black', textColor: 'white', columns: [' ', ' '] }
     ]
+  },
+  // Spreadsheet mode layout configuration
+  SPREADSHEET: {
+    pages: [
+      {
+        pageNum: 1,
+        columns: 8,
+        rows: 40,
+        headers: [
+          { id: 'h1', name: 'RUN GAME', colStart: 1, colSpan: 2, rowStart: 1, color: '#3b82f6', situationId: null },
+          { id: 'h2', name: 'PASS GAME', colStart: 3, colSpan: 2, rowStart: 1, color: '#22c55e', situationId: null },
+          { id: 'h3', name: 'RPO', colStart: 5, colSpan: 2, rowStart: 1, color: '#f59e0b', situationId: null },
+          { id: 'h4', name: 'SCREENS', colStart: 7, colSpan: 2, rowStart: 1, color: '#8b5cf6', situationId: null }
+        ]
+      }
+    ]
   }
 };
 
@@ -249,7 +268,15 @@ export default function GamePlan() {
   const [isSheetEditing, setIsSheetEditing] = useState(false);
   const [pageFormat, setPageFormat] = useState('2-page'); // '2-page' or '4-page'
   const [pageOrientation, setPageOrientation] = useState('portrait'); // 'portrait' or 'landscape'
+  const [layoutMode, setLayoutMode] = useState('modular'); // 'modular' or 'spreadsheet'
   const [editingBox, setEditingBox] = useState(null);
+
+  // Auto-set landscape orientation for spreadsheet mode
+  useEffect(() => {
+    if (layoutMode === 'spreadsheet') {
+      setPageOrientation('landscape');
+    }
+  }, [layoutMode]);
 
   // Drag state for Sheet view
   const [draggedCell, setDraggedCell] = useState(null);
@@ -520,6 +547,32 @@ export default function GamePlan() {
     // For grid boxes, cellIdx is the linear index
     // For script boxes, cellIdx is the row index and column is 'left' or 'right'
 
+    // Handle spreadsheet headers - they store plays in gamePlan.sets
+    if (setId.startsWith('spreadsheet_')) {
+      let newSets = [...(gamePlan.sets || [])];
+      let setIndex = newSets.findIndex(s => s.id === setId);
+
+      if (setIndex === -1) {
+        const newSet = { id: setId, playIds: [], assignedPlayIds: [] };
+        while (newSet.assignedPlayIds.length <= cellIdx) {
+          newSet.assignedPlayIds.push(null);
+        }
+        newSet.assignedPlayIds[cellIdx] = playId;
+        newSets.push(newSet);
+      } else {
+        const existingSet = { ...newSets[setIndex] };
+        const assignedPlayIds = [...(existingSet.assignedPlayIds || [])];
+        while (assignedPlayIds.length <= cellIdx) {
+          assignedPlayIds.push(null);
+        }
+        assignedPlayIds[cellIdx] = playId;
+        existingSet.assignedPlayIds = assignedPlayIds;
+        newSets[setIndex] = existingSet;
+      }
+      handleUpdateGamePlan({ ...gamePlan, sets: newSets });
+      return;
+    }
+
     // Update the layout box directly
     const newLayouts = { ...gamePlanLayouts };
     let boxFound = false;
@@ -561,11 +614,29 @@ export default function GamePlan() {
     if (boxFound) {
       handleUpdateLayouts(newLayouts);
     }
-  }, [gamePlanLayouts, handleUpdateLayouts, isLocked]);
+  }, [gamePlanLayouts, gamePlan, handleUpdateLayouts, handleUpdateGamePlan, isLocked]);
 
   // Remove play from a specific cell
   const handleRemovePlayFromCell = useCallback((setId, cellIdx, column) => {
     if (isLocked) return;
+
+    // Handle spreadsheet headers - they store plays in gamePlan.sets
+    if (setId.startsWith('spreadsheet_')) {
+      let newSets = [...(gamePlan.sets || [])];
+      let setIndex = newSets.findIndex(s => s.id === setId);
+
+      if (setIndex !== -1) {
+        const existingSet = { ...newSets[setIndex] };
+        const assignedPlayIds = [...(existingSet.assignedPlayIds || [])];
+        if (assignedPlayIds[cellIdx]) {
+          assignedPlayIds[cellIdx] = null;
+          existingSet.assignedPlayIds = assignedPlayIds;
+          newSets[setIndex] = existingSet;
+          handleUpdateGamePlan({ ...gamePlan, sets: newSets });
+        }
+      }
+      return;
+    }
 
     const newLayouts = { ...gamePlanLayouts };
     let boxFound = false;
@@ -602,7 +673,7 @@ export default function GamePlan() {
     if (boxFound) {
       handleUpdateLayouts(newLayouts);
     }
-  }, [gamePlanLayouts, handleUpdateLayouts, isLocked]);
+  }, [gamePlanLayouts, gamePlan, handleUpdateLayouts, handleUpdateGamePlan, isLocked]);
 
   // Handle FZDnD Box drop (for FZDnD boxes in SheetView)
   // Set ID pattern: {boxSetId}_{downDistanceId}
@@ -678,6 +749,75 @@ export default function GamePlan() {
       existingSet.playIds = (existingSet.playIds || []).filter(id => id !== playId);
       newSets[setIndex] = existingSet;
       handleUpdateGamePlan({ ...gamePlan, sets: newSets });
+    }
+  }, [gamePlan, handleUpdateGamePlan, isLocked]);
+
+  // Spreadsheet mode handlers
+  const handleSpreadsheetHeaderClick = useCallback(({ pageIdx, header }) => {
+    // Open the box editor modal for this spreadsheet section
+    // We'll create a "virtual box" object that the BoxEditorModal can work with
+    setEditingBox({
+      box: {
+        header: header.name,
+        setId: `spreadsheet_${header.id}`,
+        type: 'grid',
+        color: header.color,
+        colSpan: header.colSpan || 2, // Pass the header's actual colSpan
+        // For spreadsheet sections, we use a simple list-style grid
+        gridColumns: 1,
+        gridRows: 20, // Will be dynamic based on section bounds
+        gridHeadings: ['PLAY'],
+        cornerLabel: '#',
+        isSpreadsheetHeader: true,
+        headerId: header.id,
+        pageIdx
+      },
+      sectionIdx: pageIdx,
+      boxIdx: 0
+    });
+  }, []);
+
+  const handleSpreadsheetAddPlay = useCallback((headerId, rowIdx, playId) => {
+    if (isLocked) return;
+    const setId = `spreadsheet_${headerId}`;
+    let newSets = [...(gamePlan.sets || [])];
+    let setIndex = newSets.findIndex(s => s.id === setId);
+
+    if (setIndex === -1) {
+      const newSet = { id: setId, playIds: [], assignedPlayIds: [] };
+      while (newSet.assignedPlayIds.length <= rowIdx) {
+        newSet.assignedPlayIds.push(null);
+      }
+      newSet.assignedPlayIds[rowIdx] = playId;
+      newSets.push(newSet);
+    } else {
+      const existingSet = { ...newSets[setIndex] };
+      const assignedPlayIds = [...(existingSet.assignedPlayIds || [])];
+      while (assignedPlayIds.length <= rowIdx) {
+        assignedPlayIds.push(null);
+      }
+      assignedPlayIds[rowIdx] = playId;
+      existingSet.assignedPlayIds = assignedPlayIds;
+      newSets[setIndex] = existingSet;
+    }
+    handleUpdateGamePlan({ ...gamePlan, sets: newSets });
+  }, [gamePlan, handleUpdateGamePlan, isLocked]);
+
+  const handleSpreadsheetRemovePlay = useCallback((headerId, rowIdx) => {
+    if (isLocked) return;
+    const setId = `spreadsheet_${headerId}`;
+    let newSets = [...(gamePlan.sets || [])];
+    let setIndex = newSets.findIndex(s => s.id === setId);
+
+    if (setIndex !== -1) {
+      const existingSet = { ...newSets[setIndex] };
+      const assignedPlayIds = [...(existingSet.assignedPlayIds || [])];
+      if (assignedPlayIds[rowIdx]) {
+        assignedPlayIds[rowIdx] = null;
+        existingSet.assignedPlayIds = assignedPlayIds;
+        newSets[setIndex] = existingSet;
+        handleUpdateGamePlan({ ...gamePlan, sets: newSets });
+      }
     }
   }, [gamePlan, handleUpdateGamePlan, isLocked]);
 
@@ -1370,6 +1510,38 @@ export default function GamePlan() {
               <span className="text-sm">{isTargetingBox ? 'Select Target Box...' : 'Batch Add'}</span>
             </button>
 
+            {/* Layout Mode Toggle */}
+            <div className={`flex items-center rounded-lg border ${isLight ? 'border-slate-200' : 'border-slate-700'}`}>
+              <button
+                onClick={() => setLayoutMode('modular')}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-l-lg transition-colors ${
+                  layoutMode === 'modular'
+                    ? 'bg-blue-500 text-white'
+                    : isLight
+                      ? 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                      : 'bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+                title="Modular layout - drag boxes onto a grid"
+              >
+                <LayoutGrid size={16} />
+                <span className="text-sm">Modular</span>
+              </button>
+              <button
+                onClick={() => setLayoutMode('spreadsheet')}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-r-lg transition-colors ${
+                  layoutMode === 'spreadsheet'
+                    ? 'bg-blue-500 text-white'
+                    : isLight
+                      ? 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                      : 'bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+                title="Spreadsheet layout - define a grid with section headers"
+              >
+                <Table2 size={16} />
+                <span className="text-sm">Spreadsheet</span>
+              </button>
+            </div>
+
             {/* Lock Toggle */}
             <button
               onClick={() => setIsLocked(!isLocked)}
@@ -1472,7 +1644,8 @@ export default function GamePlan() {
 
       {/* Content */}
       <div className="flex-1 overflow-hidden bg-slate-950">
-        <SheetView
+        {layoutMode === 'modular' ? (
+          <SheetView
             layouts={gamePlanLayouts}
             gamePlan={gamePlan}
             plays={playsArray}
@@ -1511,6 +1684,27 @@ export default function GamePlan() {
             onMatrixBoxAdd={handleMatrixBoxAdd}
             onMatrixBoxRemove={handleMatrixBoxRemove}
           />
+        ) : (
+          <SpreadsheetView
+            layouts={gamePlanLayouts}
+            gamePlan={gamePlan}
+            plays={playsArray}
+            currentWeek={currentWeek}
+            teamLogo={teamLogo}
+            isLocked={isLocked}
+            isEditing={isSheetEditing}
+            pageFormat={pageFormat}
+            pageOrientation={pageOrientation}
+            onUpdateLayouts={handleUpdateLayouts}
+            onHeaderClick={handleSpreadsheetHeaderClick}
+            onAddPlayToSection={handleSpreadsheetAddPlay}
+            onRemovePlayFromSection={handleSpreadsheetRemovePlay}
+            getPlayDisplayName={getPlayDisplayName}
+            setupConfig={setupConfig}
+            isTargetingMode={targetingMode || isTargetingBox}
+            targetingPlayCount={targetingMode ? targetingPlays.length : pendingBatchPlays.length}
+          />
+        )}
       </div>
 
       {/* Placement Choice Modal */}
@@ -1604,7 +1798,33 @@ export default function GamePlan() {
             const cleanUpdates = Object.fromEntries(
               Object.entries(updates).filter(([_, v]) => v !== undefined)
             );
-            handleUpdateSheetBox(editingBox.sectionIdx, editingBox.boxIdx, cleanUpdates);
+
+            // Handle spreadsheet headers differently - update the header in SPREADSHEET layout
+            if (editingBox.box.isSpreadsheetHeader) {
+              const headerId = editingBox.box.headerId;
+              const pageIdx = editingBox.box.pageIdx;
+              const newLayouts = { ...gamePlanLayouts };
+              const spreadsheet = { ...newLayouts.SPREADSHEET };
+              const pages = [...spreadsheet.pages];
+
+              pages[pageIdx] = {
+                ...pages[pageIdx],
+                headers: pages[pageIdx].headers.map(h =>
+                  h.id === headerId ? {
+                    ...h,
+                    name: cleanUpdates.header || h.name,
+                    color: cleanUpdates.color || h.color,
+                    colSpan: cleanUpdates.colSpan !== undefined ? cleanUpdates.colSpan : h.colSpan
+                  } : h
+                )
+              };
+
+              spreadsheet.pages = pages;
+              newLayouts.SPREADSHEET = spreadsheet;
+              handleUpdateLayouts(newLayouts);
+            } else {
+              handleUpdateSheetBox(editingBox.sectionIdx, editingBox.boxIdx, cleanUpdates);
+            }
             setEditingBox(null);
           }}
           onDelete={handleDeleteSheetBox}

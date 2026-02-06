@@ -2725,18 +2725,146 @@ export default function BoxEditorModal({
           borderBottom: '1px solid #e2e8f0',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: 'center',
+          gap: '16px'
         }}>
-          <div>
-            <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#1e293b' }}>
-              Edit: {box.header}
-            </h3>
-            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-              {box.type === 'grid' ? 'Grid Box' : box.type === 'script' ? 'Script Box' : box.type === 'fzdnd' ? 'FZDnD Zone Box' : box.type === 'matrix' ? 'Matrix Box' : 'List Box'}
-            </span>
+          {/* Left side: Title, Type, Color */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+            {/* Editable Title */}
+            <input
+              type="text"
+              value={localBox.header || ''}
+              onChange={(e) => updateField('header', e.target.value)}
+              disabled={isLocked}
+              placeholder="Box title..."
+              style={{
+                fontSize: '1.1rem',
+                fontWeight: '600',
+                color: '#1e293b',
+                border: '1px solid transparent',
+                borderRadius: '4px',
+                padding: '4px 8px',
+                background: 'transparent',
+                minWidth: '120px',
+                maxWidth: '200px',
+                transition: 'border-color 0.15s, background 0.15s'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#e2e8f0';
+                e.target.style.background = '#fff';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = 'transparent';
+                e.target.style.background = 'transparent';
+              }}
+            />
+
+            {/* Divider */}
+            <div style={{ width: '1px', height: '24px', background: '#e2e8f0' }} />
+
+            {/* Box Type */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.7rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>Type:</span>
+              <select
+                value={localBox.type || 'grid'}
+                onChange={(e) => {
+                  const newType = e.target.value;
+                  updateField('type', newType);
+                  // Set sensible defaults for new types
+                  if (newType === 'fzdnd' && !localBox.zoneId) {
+                    const firstZone = setupConfig?.fieldZones?.[0];
+                    if (firstZone) {
+                      updateField('zoneId', firstZone.id);
+                      updateField('header', firstZone.name);
+                      updateField('color', firstZone.color || '#dc2626');
+                    }
+                  }
+                  if (newType === 'matrix' && !localBox.formationId) {
+                    updateField('playTypes', [
+                      { id: 'strong_run', label: 'STRONG RUN' },
+                      { id: 'weak_run', label: 'WEAK RUN' },
+                      { id: 'quick_game', label: 'QUICK GAME' },
+                      { id: 'drop_back', label: 'DROPBACK' }
+                    ]);
+                    updateField('hashGroups', [
+                      { id: 'FB', label: 'BASE', cols: ['FB_L', 'FB_R'] },
+                      { id: 'CU', label: 'CONVERT', cols: ['CU_L', 'CU_R'] }
+                    ]);
+                  }
+                }}
+                disabled={isLocked}
+                style={{
+                  padding: '4px 8px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '4px',
+                  fontSize: '0.75rem',
+                  background: '#fff',
+                  cursor: isLocked ? 'not-allowed' : 'pointer',
+                  color: '#334155'
+                }}
+              >
+                <option value="grid">Grid</option>
+                <option value="script">Script</option>
+                <option value="fzdnd">FZDnD</option>
+                <option value="matrix">Matrix</option>
+                <option value="list">List</option>
+              </select>
+            </div>
+
+            {/* Header Color */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Color:</span>
+              <input
+                type="color"
+                value={localBox.color || '#3b82f6'}
+                onChange={(e) => updateField('color', e.target.value)}
+                disabled={isLocked}
+                title="Header color"
+                style={{
+                  width: '28px',
+                  height: '24px',
+                  padding: '2px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '4px',
+                  cursor: isLocked ? 'not-allowed' : 'pointer'
+                }}
+              />
+            </div>
+
+            {/* Column Span */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Span:</span>
+              <button
+                onClick={() => updateField('colSpan', Math.max(1, (localBox.colSpan || 3) - 1))}
+                disabled={isLocked || (localBox.colSpan || 3) <= 1}
+                style={{
+                  width: '20px', height: '20px', borderRadius: '4px',
+                  border: '1px solid #e2e8f0', background: 'white',
+                  cursor: isLocked || (localBox.colSpan || 3) <= 1 ? 'not-allowed' : 'pointer',
+                  opacity: isLocked || (localBox.colSpan || 3) <= 1 ? 0.5 : 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '0.8rem', fontWeight: '600', color: '#64748b'
+                }}
+              >−</button>
+              <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#1e293b', minWidth: '14px', textAlign: 'center' }}>
+                {localBox.colSpan || 3}
+              </span>
+              <button
+                onClick={() => updateField('colSpan', Math.min(7, (localBox.colSpan || 3) + 1))}
+                disabled={isLocked || (localBox.colSpan || 3) >= 7}
+                style={{
+                  width: '20px', height: '20px', borderRadius: '4px',
+                  border: '1px solid #e2e8f0', background: 'white',
+                  cursor: isLocked || (localBox.colSpan || 3) >= 7 ? 'not-allowed' : 'pointer',
+                  opacity: isLocked || (localBox.colSpan || 3) >= 7 ? 0.5 : 1,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '0.8rem', fontWeight: '600', color: '#64748b'
+                }}
+              >+</button>
+            </div>
           </div>
 
-          {/* Quick Size Controls */}
+          {/* Right side: Size Controls + Actions */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             {/* Grid Controls */}
             {localBox.type === 'grid' && (
