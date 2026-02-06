@@ -308,35 +308,20 @@ export default function BoxEditorModal({
       const next = { ...prev };
       const cols = next.gridColumns || 4;
       const rowsCount = next.gridRows || 5;
+      const totalSlots = cols * rowsCount;
       const newAssigned = [...(next.assignedPlayIds || [])];
 
-      if (isSpreadsheet) {
-        // For spreadsheet: store by row index
-        const rowIdx = Math.floor(cellIdx / cols);
-        while (newAssigned.length <= rowIdx) {
-          newAssigned.push(null);
-        }
-        newAssigned[rowIdx] = playId;
-      } else {
-        // Standard grid: store by flat cell index
-        const totalSlots = cols * rowsCount;
-        while (newAssigned.length < totalSlots) {
-          newAssigned.push('GAP');
-        }
-        newAssigned[cellIdx] = playId;
+      // Both spreadsheet and standard grids now use flat cell index
+      while (newAssigned.length < totalSlots) {
+        newAssigned.push(isSpreadsheet ? null : 'GAP');
       }
+      newAssigned[cellIdx] = playId;
       next.assignedPlayIds = newAssigned;
       return next;
     });
 
-    // For spreadsheet headers, pass row index to the handler
-    if (isSpreadsheet) {
-      const cols = localBox.gridColumns || 1;
-      const rowIdx = Math.floor(cellIdx / cols);
-      onAssignPlayToCell(box.setId, rowIdx, null, playId);
-    } else {
-      onAssignPlayToCell(box.setId, cellIdx, null, playId);
-    }
+    // Pass flat cell index to the handler for all box types
+    onAssignPlayToCell(box.setId, cellIdx, null, playId);
   };
 
   // Remove play from grid cell
@@ -348,34 +333,18 @@ export default function BoxEditorModal({
     // Update local state
     setLocalBox(prev => {
       const next = { ...prev };
-      const cols = next.gridColumns || 4;
       const newAssigned = [...(next.assignedPlayIds || [])];
 
-      if (isSpreadsheet) {
-        // For spreadsheet: clear by row index
-        const rowIdx = Math.floor(cellIdx / cols);
-        if (newAssigned[rowIdx]) {
-          newAssigned[rowIdx] = null;
-          next.assignedPlayIds = newAssigned;
-        }
-      } else {
-        // Standard grid: clear by flat cell index
-        if (newAssigned[cellIdx]) {
-          newAssigned[cellIdx] = 'GAP';
-          next.assignedPlayIds = newAssigned;
-        }
+      // Both spreadsheet and standard grids use flat cell index
+      if (newAssigned[cellIdx]) {
+        newAssigned[cellIdx] = isSpreadsheet ? null : 'GAP';
+        next.assignedPlayIds = newAssigned;
       }
       return next;
     });
 
-    // For spreadsheet headers, pass row index to the handler
-    if (isSpreadsheet) {
-      const cols = localBox.gridColumns || 1;
-      const rowIdx = Math.floor(cellIdx / cols);
-      onRemovePlayFromCell(box.setId, rowIdx, null);
-    } else {
-      onRemovePlayFromCell(box.setId, cellIdx, null);
-    }
+    // Pass flat cell index to the handler for all box types
+    onRemovePlayFromCell(box.setId, cellIdx, null);
   };
 
   // Get grid cell plays
