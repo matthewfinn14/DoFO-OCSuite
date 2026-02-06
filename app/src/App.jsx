@@ -45,6 +45,7 @@ import {
   QualityControl,
   PracticeReview,
   PostgameReview,
+  WeeklyWorkflow,
   // Sub-level pages
   SubLevelView,
   SubLevelSchedule,
@@ -176,6 +177,8 @@ function AppRoutes() {
         <Route path="/week/:weekId/quality-control" element={<QualityControl />} />
         <Route path="/week/:weekId/practice-review" element={<PracticeReview />} />
         <Route path="/week/:weekId/postgame-review" element={<PostgameReview />} />
+        <Route path="/week/:weekId/workflow" element={<WeeklyWorkflow />} />
+        <Route path="/weekly-workflow" element={<WeeklyWorkflow />} />
 
         {/* Legacy weekly tools (non-week-specific) */}
         <Route path="/game-plan" element={<GamePlan />} />

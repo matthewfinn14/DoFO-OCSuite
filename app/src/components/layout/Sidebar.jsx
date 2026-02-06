@@ -297,72 +297,41 @@ export default function Sidebar() {
                 </div>
 
                 <div className="space-y-0.5">
-                  <WeeklyToolItem
-                    to={`/week/${currentWeekId}/notes`}
-                    icon={FileText}
-                    label="Meeting Notes"
-                    isLight={isLight}
-                  />
-                  <WeeklyToolItem
-                    to={`/week/${currentWeekId}/depth-charts`}
-                    icon={Users}
-                    label="Depth Chart"
-                    isLight={isLight}
-                  />
-                  <WeeklyToolItem
-                    to={`/week/${currentWeekId}/install`}
-                    icon={Layers}
-                    label="Install Manager"
-                    isLight={isLight}
-                  />
-                  <WeeklyToolItem
-                    to={`/week/${currentWeekId}/practice`}
-                    icon={Megaphone}
-                    label="Practice Planner"
-                    isLight={isLight}
-                  />
-                  <WeeklyToolItem
-                    to={`/week/${currentWeekId}/practice?view=script`}
-                    icon={FileText}
-                    label="Practice Scripts"
-                    isLight={isLight}
-                  />
-                  <WeeklyToolItem
-                    to={`/week/${currentWeekId}/practice-review`}
-                    icon={Star}
-                    label="Practice Review"
-                    isLight={isLight}
-                  />
-                  <WeeklyToolItem
-                    to={`/week/${currentWeekId}/wristband`}
-                    icon={Watch}
-                    label="Wristband Builder"
-                    isLight={isLight}
-                  />
-                  <WeeklyToolItem
-                    to={`/week/${currentWeekId}/game-plan`}
-                    icon={Clipboard}
-                    label="Game Plan/Call Sheet"
-                    isLight={isLight}
-                  />
-                  <WeeklyToolItem
-                    to={`/week/${currentWeekId}/pregame`}
-                    icon={Clock}
-                    label="Pre-Game Timeline"
-                    isLight={isLight}
-                  />
-                  <WeeklyToolItem
-                    to={`/week/${currentWeekId}/postgame-review`}
-                    icon={Trophy}
-                    label="Postgame Review"
-                    isLight={isLight}
-                  />
-                  <WeeklyToolItem
-                    to={`/week/${currentWeekId}/quality-control`}
-                    icon={ClipboardCheck}
-                    label="X&O Quality Control"
-                    isLight={isLight}
-                  />
+                  {/* Helper to check if tool is visible */}
+                  {(() => {
+                    const visibleTools = setupConfig?.visibleWeeklyTools || {};
+                    const isVisible = (toolId, defaultVisible = true) => {
+                      if (visibleTools[toolId] !== undefined) return visibleTools[toolId];
+                      return defaultVisible;
+                    };
+
+                    const tools = [
+                      { id: 'workflow', to: `/week/${currentWeekId}/workflow`, icon: Target, label: 'Weekly Workflow', defaultVisible: true },
+                      { id: 'notes', to: `/week/${currentWeekId}/notes`, icon: FileText, label: 'Meeting Notes', defaultVisible: true },
+                      { id: 'depth-charts', to: `/week/${currentWeekId}/depth-charts`, icon: Users, label: 'Depth Chart', defaultVisible: true },
+                      { id: 'install', to: `/week/${currentWeekId}/install`, icon: Layers, label: 'Install Manager', defaultVisible: true },
+                      { id: 'practice', to: `/week/${currentWeekId}/practice`, icon: Megaphone, label: 'Practice Planner', defaultVisible: true },
+                      { id: 'practice-scripts', to: `/week/${currentWeekId}/practice?view=script`, icon: FileText, label: 'Practice Scripts', defaultVisible: true },
+                      { id: 'practice-review', to: `/week/${currentWeekId}/practice-review`, icon: Star, label: 'Practice Review', defaultVisible: true },
+                      { id: 'wristband', to: `/week/${currentWeekId}/wristband`, icon: Watch, label: 'Wristband Builder', defaultVisible: true },
+                      { id: 'game-plan', to: `/week/${currentWeekId}/game-plan`, icon: Clipboard, label: 'Game Plan/Call Sheet', defaultVisible: true },
+                      { id: 'pregame', to: `/week/${currentWeekId}/pregame`, icon: Clock, label: 'Pre-Game Timeline', defaultVisible: true },
+                      { id: 'postgame-review', to: `/week/${currentWeekId}/postgame-review`, icon: Trophy, label: 'Postgame Review', defaultVisible: true },
+                      { id: 'quality-control', to: `/week/${currentWeekId}/quality-control`, icon: ClipboardCheck, label: 'X&O Quality Control', defaultVisible: false },
+                    ];
+
+                    return tools
+                      .filter(tool => isVisible(tool.id, tool.defaultVisible))
+                      .map(tool => (
+                        <WeeklyToolItem
+                          key={tool.id}
+                          to={tool.to}
+                          icon={tool.icon}
+                          label={tool.label}
+                          isLight={isLight}
+                        />
+                      ));
+                  })()}
                 </div>
               </>
             )}

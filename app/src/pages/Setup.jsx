@@ -1151,6 +1151,7 @@ export default function Setup() {
     tabs.push({ divider: true });
     tabs.push({ id: 'wristband-abbreviations', label: 'Parse & Abbreviate', icon: Watch });
     tabs.push({ id: 'glossary', label: 'Glossary', icon: BookOpen });
+    tabs.push({ id: 'weekly-tools', label: 'Weekly Tools', icon: Calendar });
 
     return tabs;
   };
@@ -1887,6 +1888,14 @@ export default function Setup() {
                     syntax={localConfig.syntax || {}}
                     glossaryDefinitions={localConfig.glossaryDefinitions || {}}
                     onUpdate={updateLocal}
+                  />
+                );
+              case 'weekly-tools':
+                return (
+                  <WeeklyToolsVisibilityTab
+                    visibleTools={localConfig.visibleWeeklyTools}
+                    onUpdate={updateLocal}
+                    isLight={isLight}
                   />
                 );
               default:
@@ -7059,6 +7068,169 @@ function GlossaryDefinitionsTab({ phase, termLibrary, syntax, glossaryDefinition
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// Weekly Tools Visibility Tab Component
+const WEEKLY_TOOLS_CONFIG = [
+  { id: 'workflow', label: 'Weekly Workflow', description: 'Guided walkthrough of weekly process', defaultVisible: true },
+  { id: 'notes', label: 'Meeting Notes', description: 'Coaches meeting notes and reminders', defaultVisible: true },
+  { id: 'depth-charts', label: 'Depth Chart', description: 'Position depth and personnel', defaultVisible: true },
+  { id: 'install', label: 'Install Manager', description: 'Weekly play installation tracking', defaultVisible: true },
+  { id: 'practice', label: 'Practice Planner', description: 'Daily practice structure and periods', defaultVisible: true },
+  { id: 'practice-scripts', label: 'Practice Scripts', description: 'Detailed scripts for each period', defaultVisible: true },
+  { id: 'practice-review', label: 'Practice Review', description: 'Post-practice notes and grades', defaultVisible: true },
+  { id: 'wristband', label: 'Wristband Builder', description: 'Player wristband cards', defaultVisible: true },
+  { id: 'game-plan', label: 'Game Plan/Call Sheet', description: 'Situational call sheet organization', defaultVisible: true },
+  { id: 'pregame', label: 'Pre-Game Timeline', description: 'Game day schedule and checklist', defaultVisible: true },
+  { id: 'postgame-review', label: 'Postgame Review', description: 'Game film review and notes', defaultVisible: true },
+  { id: 'quality-control', label: 'X&O Quality Control', description: 'Detailed play analysis and tracking', defaultVisible: false },
+];
+
+function WeeklyToolsVisibilityTab({ visibleTools = {}, onUpdate, isLight = false }) {
+  // Get visibility status for a tool (defaults to tool's defaultVisible setting)
+  const isToolVisible = (toolId) => {
+    if (visibleTools[toolId] !== undefined) {
+      return visibleTools[toolId];
+    }
+    const tool = WEEKLY_TOOLS_CONFIG.find(t => t.id === toolId);
+    return tool?.defaultVisible ?? true;
+  };
+
+  const toggleTool = (toolId) => {
+    const currentVisible = isToolVisible(toolId);
+    onUpdate('visibleWeeklyTools', {
+      ...visibleTools,
+      [toolId]: !currentVisible
+    });
+  };
+
+  const showAll = () => {
+    const allVisible = {};
+    WEEKLY_TOOLS_CONFIG.forEach(tool => {
+      allVisible[tool.id] = true;
+    });
+    onUpdate('visibleWeeklyTools', allVisible);
+  };
+
+  const hideAll = () => {
+    const allHidden = {};
+    WEEKLY_TOOLS_CONFIG.forEach(tool => {
+      allHidden[tool.id] = false;
+    });
+    onUpdate('visibleWeeklyTools', allHidden);
+  };
+
+  const resetDefaults = () => {
+    onUpdate('visibleWeeklyTools', {});
+  };
+
+  const visibleCount = WEEKLY_TOOLS_CONFIG.filter(t => isToolVisible(t.id)).length;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className={`text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+            Weekly Tools Visibility
+          </h3>
+          <p className={`text-sm mt-1 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+            Choose which tools appear in the sidebar for weekly game prep. Hide tools you don't use to keep your view focused.
+          </p>
+        </div>
+        <div className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+          {visibleCount} of {WEEKLY_TOOLS_CONFIG.length} visible
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="flex gap-2">
+        <button
+          onClick={showAll}
+          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+            isLight
+              ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+          }`}
+        >
+          Show All
+        </button>
+        <button
+          onClick={hideAll}
+          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+            isLight
+              ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+          }`}
+        >
+          Hide All
+        </button>
+        <button
+          onClick={resetDefaults}
+          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+            isLight
+              ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+          }`}
+        >
+          Reset to Defaults
+        </button>
+      </div>
+
+      {/* Tools List */}
+      <div className={`rounded-lg border divide-y ${
+        isLight
+          ? 'bg-white border-gray-200 divide-gray-200'
+          : 'bg-slate-800/50 border-slate-700 divide-slate-700'
+      }`}>
+        {WEEKLY_TOOLS_CONFIG.map((tool) => {
+          const visible = isToolVisible(tool.id);
+          return (
+            <div
+              key={tool.id}
+              className={`flex items-center justify-between p-4 ${
+                isLight ? 'hover:bg-gray-50' : 'hover:bg-slate-700/30'
+              } transition-colors`}
+            >
+              <div className="flex-1">
+                <div className={`font-medium ${isLight ? 'text-gray-900' : 'text-white'}`}>
+                  {tool.label}
+                </div>
+                <div className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+                  {tool.description}
+                </div>
+              </div>
+              <button
+                onClick={() => toggleTool(tool.id)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  visible
+                    ? 'bg-sky-500'
+                    : isLight ? 'bg-gray-300' : 'bg-slate-600'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    visible ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Info Note */}
+      <div className={`flex items-start gap-3 p-4 rounded-lg ${
+        isLight ? 'bg-amber-50 border border-amber-200' : 'bg-amber-500/10 border border-amber-500/20'
+      }`}>
+        <Info size={18} className="text-amber-500 mt-0.5 flex-shrink-0" />
+        <div className={`text-sm ${isLight ? 'text-amber-800' : 'text-amber-200'}`}>
+          Hidden tools are still accessible via direct URL - this setting only affects sidebar visibility.
+          Changes apply immediately to all staff members.
+        </div>
+      </div>
     </div>
   );
 }

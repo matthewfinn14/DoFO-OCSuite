@@ -37,6 +37,7 @@ export { default as PracticePlans } from './PracticePlans';
 export { default as QualityControl } from './QualityControl';
 export { default as PracticeReview } from './PracticeReview';
 export { default as PostgameReview } from './PostgameReview';
+export { default as WeeklyWorkflow } from './WeeklyWorkflow';
 
 // Sub-level pages
 export { default as SubLevelView } from './SubLevelView';
