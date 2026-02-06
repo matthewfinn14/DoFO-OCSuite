@@ -158,7 +158,7 @@ export default function GamePlanPrint({
           <PageHeader pageNum={pageIndex + 1} />
           <div className={`gameplan-page-content ${fontSizeClass}`}>
             {viewType === 'spreadsheet' ? (
-              <SpreadsheetView spreadsheetData={spreadsheetData} playMap={playMap} sections={sections} pageIndex={pageIndex} totalPages={totalPages} />
+              <SpreadsheetView spreadsheetData={spreadsheetData} playMap={playMap} sections={sections} pageIndex={pageIndex} totalPages={totalPages} weekData={currentWeek} />
             ) : viewType === 'fzdnd' ? (
               <FZDnDView gamePlan={gamePlan} playMap={playMap} sections={sections} pageIndex={pageIndex} totalPages={totalPages} />
             ) : viewType === 'matrix' ? (
@@ -449,85 +449,224 @@ function MatrixView({ gamePlan, playMap, sections, pageIndex = 0, totalPages = 1
   );
 }
 
-// Spreadsheet View - Renders the SPREADSHEET layout headers with their plays
-function SpreadsheetView({ spreadsheetData, playMap, sections, pageIndex = 0, totalPages = 1 }) {
+// Spreadsheet View - Renders the SPREADSHEET layout matching the editor grid
+function SpreadsheetView({ spreadsheetData, playMap, sections, pageIndex = 0, totalPages = 1, weekData }) {
   const { headers, sets } = spreadsheetData;
 
-  // Filter headers if sections specified
-  const filteredHeaders = sections
-    ? headers.filter(h => sections.includes(h.setId) || sections.includes(h.name) || sections.includes(h.headerId))
-    : headers;
-
-  if (filteredHeaders.length === 0 && pageIndex === 0) {
+  if (headers.length === 0 && pageIndex === 0) {
     return <div className="text-gray-500 text-center py-8">No spreadsheet data available</div>;
   }
 
-  // Split headers across pages
-  const headersPerPage = Math.ceil(filteredHeaders.length / totalPages);
-  const startIdx = pageIndex * headersPerPage;
-  const endIdx = Math.min(startIdx + headersPerPage, filteredHeaders.length);
-  const pageHeaders = filteredHeaders.slice(startIdx, endIdx);
+  // Get the full spreadsheet layout from the raw data
+  // headers from getSpreadsheetBoxes may not have full layout info, so we need the raw layout
+  const rawHeaders = weekData?.gamePlanLayouts?.SPREADSHEET?.pages?.[pageIndex]?.headers || [];
+  const pageConfig = weekData?.gamePlanLayouts?.SPREADSHEET?.pages?.[pageIndex] || { columns: 8, rows: 50 };
+  const { columns: gridCols, rows: gridRows } = pageConfig;
+
+  // Filter headers for this page
+  const pageHeaders = rawHeaders.length > 0 ? rawHeaders : headers.filter(h => {
+    // If no raw headers, use headers from spreadsheetData and assume single page
+    return pageIndex === 0;
+  });
 
   if (pageHeaders.length === 0) {
-    return <div className="text-gray-400 text-center py-4 text-sm">Page {pageIndex + 1} - No additional sections</div>;
+    return <div className="text-gray-400 text-center py-4 text-sm">Page {pageIndex + 1} - No sections on this page</div>;
   }
 
-  // Group headers by row for grid layout (use colStart to determine grid position)
-  const maxCols = 8;
+  // Calculate bounds for each header (same logic as SpreadsheetView.jsx)
+  const calculateBounds = (headers, rows) => {
+    const bounds = {};
+    const sortedHeaders = [...headers].sort((a, b) => {
+      if (a.rowStart !== b.rowStart) return a.rowStart - b.rowStart;
+      return a.colStart - b.colStart;
+    });
+
+    sortedHeaders.forEach(header => {
+      const colStart = header.colStart;
+      const colEnd = colStart + header.colSpan - 1;
+      const rowStart = header.rowStart;
+      let rowEnd;
+
+      if (header.isMatrix) {
+        const playTypesCount = (header.playTypes || []).length || 4;
+        rowEnd = Math.min(rowStart + playTypesCount, rows);
+      } else if (header.rowCount) {
+        rowEnd = Math.min(rowStart + header.rowCount, rows);
+      } else {
+        rowEnd = rows;
+        for (const other of sortedHeaders) {
+          if (other.id === header.id) continue;
+          if (other.rowStart <= rowStart) continue;
+          const otherColStart = other.colStart;
+          const otherColEnd = otherColStart + other.colSpan - 1;
+          const hasOverlap = colStart <= otherColEnd && colEnd >= otherColStart;
+          if (hasOverlap && other.rowStart < rowEnd) {
+            rowEnd = other.rowStart - 1;
+          }
+        }
+      }
+
+      const contentRowStart = header.isMatrix ? rowStart : rowStart + 1;
+      bounds[header.id] = {
+        colStart, colEnd, rowStart: contentRowStart, rowEnd,
+        contentRows: rowEnd - rowStart + (header.isMatrix ? 1 : 0),
+        isMatrix: header.isMatrix || false
+      };
+    });
+    return bounds;
+  };
+
+  const bounds = calculateBounds(pageHeaders, gridRows);
+
+  // Find max row used
+  let maxRowUsed = 1;
+  pageHeaders.forEach(h => {
+    const b = bounds[h.id];
+    if (b && b.rowEnd > maxRowUsed) maxRowUsed = b.rowEnd;
+  });
+
+  // Get plays for a header
+  const getPlaysForHeader = (headerId) => {
+    const setId = `spreadsheet_${headerId}`;
+    const set = sets.find(s => s.id === setId);
+    if (!set) return [];
+    const playIds = set.playIds || set.assignedPlayIds || [];
+    return playIds.map(id => playMap[id]).filter(Boolean);
+  };
+
+  // Cell size for print
+  const cellHeight = `${Math.min(18, Math.floor(600 / maxRowUsed))}px`;
 
   return (
-    <div className="space-y-3">
-      <div className="spreadsheet-grid grid gap-2" style={{ gridTemplateColumns: `repeat(${maxCols}, 1fr)` }}>
-        {pageHeaders.map((header, idx) => {
-          // Find plays for this header
-          const set = sets.find(s => s.id === header.setId);
-          const playIds = set?.playIds || set?.assignedPlayIds || [];
+    <div className="spreadsheet-print-grid" style={{
+      display: 'grid',
+      gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
+      gridTemplateRows: `repeat(${maxRowUsed}, ${cellHeight})`,
+      gap: '0',
+      fontSize: '7pt',
+      lineHeight: '1.2'
+    }}>
+      {pageHeaders.map(header => {
+        const headerBounds = bounds[header.id];
+        if (!headerBounds) return null;
+
+        const plays = getPlaysForHeader(header.id);
+        const boxColumns = header.boxColumns || 1;
+        const contentRows = headerBounds.contentRows - (header.isMatrix ? 0 : 0);
+
+        // For matrix headers
+        if (header.isMatrix) {
+          const playTypes = header.playTypes || [];
+          const hashGroups = header.hashGroups || [];
+          const allHashCols = hashGroups.flatMap(hg => (hg.cols || [`${hg.id}_L`, `${hg.id}_R`]).map(colId => ({
+            groupId: hg.id, label: hg.label, col: colId.endsWith('_L') ? 'L' : 'R', hashCol: colId
+          })));
 
           return (
             <div
-              key={header.setId || idx}
-              className="spreadsheet-box border border-gray-300 rounded overflow-hidden"
+              key={header.id}
               style={{
-                gridColumn: `span ${Math.min(header.colSpan || 2, maxCols)}`
+                gridColumn: `${header.colStart + 1} / span ${header.colSpan}`,
+                gridRow: `${header.rowStart + 1} / span ${headerBounds.contentRows}`,
+                border: `2px solid ${header.color || '#3b82f6'}`,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden'
               }}
             >
-              {/* Header */}
-              <div
-                className="spreadsheet-box-header px-2 py-1.5 text-xs font-bold"
-                style={{
-                  backgroundColor: header.color || '#3b82f6',
-                  color: 'white'
-                }}
-              >
-                {header.name}
-                {header.categoryType && (
-                  <span className="font-normal text-white/70 ml-1">({header.categoryType})</span>
-                )}
+              {/* Matrix header row */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: `50px repeat(${allHashCols.length}, 1fr)`,
+                background: header.color || '#3b82f6',
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '6pt'
+              }}>
+                <div style={{ padding: '1px 2px', borderRight: '1px solid rgba(255,255,255,0.3)' }}>FORMATION</div>
+                {allHashCols.map((hc, i) => (
+                  <div key={i} style={{ padding: '1px 2px', textAlign: 'center', borderLeft: i > 0 && hc.col === 'L' ? '1px solid rgba(255,255,255,0.5)' : 'none' }}>
+                    {hc.label} {hc.col}
+                  </div>
+                ))}
               </div>
-
-              {/* Plays */}
-              <div className="spreadsheet-box-content p-2 min-h-[60px]">
-                {playIds.length > 0 ? (
-                  playIds.map((playId, playIdx) => {
-                    const play = playMap[playId];
-                    if (!play) return null;
-                    const playCall = play.formation
-                      ? `${play.formation} ${play.name}`
-                      : play.name;
-                    return (
-                      <div key={playIdx} className="py-0.5 text-xs">
-                        {playCall}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="text-gray-400 text-xs italic">No plays</div>
-                )}
-              </div>
+              {/* Play type rows */}
+              {playTypes.map((pt, ptIdx) => (
+                <div key={pt.id} style={{
+                  display: 'grid',
+                  gridTemplateColumns: `50px repeat(${allHashCols.length}, 1fr)`,
+                  borderTop: '1px solid #e2e8f0',
+                  background: ptIdx % 2 === 0 ? '#fff' : '#f8fafc',
+                  flex: 1
+                }}>
+                  <div style={{ padding: '1px 2px', background: '#dbeafe', fontWeight: '600', fontSize: '6pt', borderRight: '1px solid #cbd5e1' }}>
+                    {pt.label}
+                  </div>
+                  {allHashCols.map((hc, hcIdx) => (
+                    <div key={hcIdx} style={{ padding: '1px', borderLeft: '1px solid #e2e8f0', fontSize: '5pt' }}>
+                      {/* Matrix cell plays would go here */}
+                    </div>
+                  ))}
+                </div>
+              ))}
             </div>
           );
-        })}
-      </div>
+        }
+
+        // Regular (non-matrix) header
+        return (
+          <div
+            key={header.id}
+            style={{
+              gridColumn: `${header.colStart + 1} / span ${header.colSpan}`,
+              gridRow: `${header.rowStart + 1} / span ${headerBounds.rowEnd - header.rowStart}`,
+              border: `2px solid ${header.color || '#3b82f6'}`,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Header */}
+            <div style={{
+              background: header.color || '#3b82f6',
+              color: 'white',
+              padding: '1px 4px',
+              fontWeight: 'bold',
+              fontSize: '7pt',
+              textTransform: 'uppercase'
+            }}>
+              {header.name}
+            </div>
+            {/* Content grid */}
+            <div style={{
+              flex: 1,
+              display: 'grid',
+              gridTemplateColumns: `repeat(${boxColumns}, 1fr)`,
+              gridAutoRows: cellHeight,
+              gap: '0'
+            }}>
+              {plays.map((play, idx) => {
+                if (!play) return <div key={idx} style={{ borderBottom: '1px solid #e2e8f0', borderRight: idx % boxColumns !== boxColumns - 1 ? '1px solid #e2e8f0' : 'none' }} />;
+                const playCall = play.formation ? `${play.formation} ${play.name}` : play.name;
+                const cellNum = header.numbering && header.numbering !== 'none' ? `${idx + 1}. ` : '';
+                return (
+                  <div key={idx} style={{
+                    padding: '0 2px',
+                    fontSize: '6pt',
+                    borderBottom: '1px solid #e2e8f0',
+                    borderRight: idx % boxColumns !== boxColumns - 1 ? '1px solid #e2e8f0' : 'none',
+                    overflow: 'hidden',
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis'
+                  }}>
+                    {cellNum}{playCall}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
