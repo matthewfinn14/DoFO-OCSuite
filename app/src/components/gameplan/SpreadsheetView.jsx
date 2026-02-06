@@ -761,22 +761,18 @@ export default function SpreadsheetView({
       ]
     });
 
-    // Formation Matrices - creates matrix-style sections with play types as rows and hash groups as columns
-    if (setupConfig?.formations?.length > 0) {
-      templates.push({
-        id: 'formation',
-        name: 'Formations',
-        description: 'Formation-based play matrices',
-        icon: Grid3X3,
-        color: '#06b6d4',
-        isMatrix: true,
-        items: setupConfig.formations.map(f => ({
-          id: f.id || f.name.toLowerCase().replace(/\s+/g, '_'),
-          name: f.name,
-          color: '#06b6d4'
-        }))
-      });
-    }
+    // Formation Matrix - generic matrix template (user configures play types/hash groups)
+    templates.push({
+      id: 'formation',
+      name: 'Formation Matrix',
+      description: 'Matrix with play types as rows and hash marks as columns',
+      icon: Grid3X3,
+      color: '#06b6d4',
+      isMatrix: true,
+      items: [
+        { id: 'formation_matrix', name: 'Formation Matrix', color: '#06b6d4' }
+      ]
+    });
 
     return templates;
   }, [setupConfig]);
