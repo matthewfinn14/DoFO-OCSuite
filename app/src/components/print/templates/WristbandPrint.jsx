@@ -104,9 +104,12 @@ export default function WristbandPrint({
   // For coach format, print 2 copies of each card per page
   const copiesPerPage = isCoachFormat ? 2 : 4;
 
-  // Generate cards to print (with duplicates for filling pages)
+  // Generate cards to print
+  // When multiple unique card types selected: 1 copy of each, laid out to share pages
+  // When single card type selected: fill page with copies (4 for player, 2 for coach)
   const cardsToPrint = useMemo(() => {
     const cards = [];
+    const multipleUniqueCards = cardSelection.length > 1;
 
     cardSelection.forEach(cardId => {
       const tab = CARD_TABS.find(t => t.id === cardId);
@@ -129,14 +132,10 @@ export default function WristbandPrint({
 
       // For WIZ cards, generate SKILL and/or OLINE versions based on wizType setting
       if (isWiz) {
-        // When "both" is selected, interleave SKILL and OLINE on same page
-        // Player format (4/page): 2 SKILL + 2 OLINE
-        // Coach format (2/page): 1 SKILL + 1 OLINE
         if (wizType === 'both') {
-          const copiesPerVariant = copiesPerPage / 2; // 2 for player, 1 for coach
+          // Add 1 SKILL and 1 OLINE when multiple cards selected, or fill page when single
+          const copiesPerVariant = multipleUniqueCards ? 1 : (copiesPerPage / 2);
 
-          // Interleave: SKILL, SKILL, OLINE, OLINE (for player)
-          // or: SKILL, OLINE (for coach)
           for (let i = 0; i < copiesPerVariant; i++) {
             cards.push({
               id: cardId,
@@ -158,9 +157,10 @@ export default function WristbandPrint({
             });
           }
         } else {
-          // Single variant (skill only or oline only) - fill page with same type
+          // Single variant (skill only or oline only)
           const variant = wizType === 'skill' ? 'skill' : 'oline';
-          for (let i = 0; i < copiesPerPage; i++) {
+          const copies = multipleUniqueCards ? 1 : copiesPerPage;
+          for (let i = 0; i < copies; i++) {
             cards.push({
               id: cardId,
               tab,
@@ -180,8 +180,9 @@ export default function WristbandPrint({
           slots
         };
 
-        // Add copies to fill the page
-        for (let i = 0; i < copiesPerPage; i++) {
+        // When multiple unique cards: 1 copy each; when single card: fill page
+        const copies = multipleUniqueCards ? 1 : copiesPerPage;
+        for (let i = 0; i < copies; i++) {
           cards.push({ ...cardData, copyIndex: i });
         }
       }
@@ -324,8 +325,9 @@ export default function WristbandPrint({
         .wristband-page {
           display: flex;
           flex-wrap: wrap;
-          justify-content: center;
+          justify-content: flex-start;
           align-content: flex-start;
+          align-items: flex-start;
           gap: 0.15in;
           width: 100%;
           box-sizing: border-box;
@@ -351,8 +353,9 @@ export default function WristbandPrint({
         .wristband-print-player .wristband-page {
           display: flex;
           flex-wrap: wrap;
-          justify-content: center;
+          justify-content: flex-start;
           align-content: flex-start;
+          align-items: flex-start;
           gap: 0.15in;
           height: auto;
           max-height: 8in;
@@ -370,10 +373,11 @@ export default function WristbandPrint({
 
         .wristband-print-coach .wristband-page {
           flex-direction: column;
-          align-items: center;
+          align-items: flex-start;
           justify-content: flex-start;
           gap: 0.3in;
-          height: 10.5in;
+          height: auto;
+          max-height: 10.5in;
           padding: 0.1in;
         }
 
