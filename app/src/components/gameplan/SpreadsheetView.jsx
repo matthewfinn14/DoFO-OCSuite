@@ -116,7 +116,8 @@ export default function SpreadsheetView({
   getPlayDisplayName,
   setupConfig,
   isTargetingMode = false,
-  targetingPlayCount = 0
+  targetingPlayCount = 0,
+  onTargetingClick = null  // Called when header clicked in targeting mode
 }) {
   const weekTitle = currentWeek?.name || `Week ${currentWeek?.weekNumber || ''}`;
   const opponentTitle = currentWeek?.opponent ? `vs. ${currentWeek.opponent}` : '';
@@ -1051,6 +1052,11 @@ export default function SpreadsheetView({
                     }}
                     onDragEnd={() => setDraggedHeader(null)}
                     onClick={() => {
+                      // In targeting mode, clicking a header should add plays to that section
+                      if (isTargetingMode && onTargetingClick) {
+                        onTargetingClick({ pageIdx, header });
+                        return;
+                      }
                       // Single click opens modal when NOT in editing mode
                       if (!isEditing && onHeaderClick) {
                         onHeaderClick({ pageIdx, header });

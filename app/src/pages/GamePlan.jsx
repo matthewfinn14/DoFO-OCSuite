@@ -823,6 +823,49 @@ export default function GamePlan() {
     });
   }, []);
 
+  // Handle targeting click on spreadsheet header (shows placement choice modal)
+  const handleSpreadsheetTargetingClick = useCallback(({ pageIdx, header }) => {
+    // Complete targeting mode and get plays
+    if (targetingMode && targetingPlays.length > 0) {
+      const playIdsToAdd = completeTargeting();
+      // Create a virtual box object from the header
+      setPendingPlacementBox({
+        header: header.name,
+        setId: `spreadsheet_${header.id}`,
+        isSpreadsheetHeader: true,
+        headerId: header.id,
+        pageIdx,
+        color: header.color,
+        boxColumns: header.boxColumns || 1,
+        isMatrix: header.isMatrix
+      });
+      setPendingPlacementPlays(playIdsToAdd);
+      setShowPlacementChoice(true);
+      return;
+    }
+
+    // Handle local targeting mode (from Batch Add button)
+    if (isTargetingBox && pendingBatchPlays.length > 0) {
+      setPendingPlacementBox({
+        header: header.name,
+        setId: `spreadsheet_${header.id}`,
+        isSpreadsheetHeader: true,
+        headerId: header.id,
+        pageIdx,
+        color: header.color,
+        boxColumns: header.boxColumns || 1,
+        isMatrix: header.isMatrix
+      });
+      setPendingPlacementPlays([...pendingBatchPlays]);
+      setShowPlacementChoice(true);
+
+      // Reset batch state
+      setIsTargetingBox(false);
+      setPendingBatchPlays([]);
+      cancelBatchSelect();
+    }
+  }, [targetingMode, targetingPlays, completeTargeting, isTargetingBox, pendingBatchPlays, cancelBatchSelect]);
+
   const handleSpreadsheetAddPlay = useCallback((headerId, rowIdxOrPlayTypeId, playId, hashCol) => {
     if (isLocked) return;
 
@@ -1303,7 +1346,66 @@ export default function GamePlan() {
   const batchAssignPlaysToBox = useCallback(async (boxId, newPlayIds) => {
     if (!currentWeek || !newPlayIds.length || !boxId) return;
 
-    // First find the layout box to determine type and capacity
+    // Check if this is a spreadsheet header (setId starts with "spreadsheet_")
+    if (boxId.startsWith('spreadsheet_')) {
+      // Find the spreadsheet header
+      const headerId = boxId.replace('spreadsheet_', '');
+      let spreadsheetHeader = null;
+
+      const spreadsheet = gamePlanLayouts?.SPREADSHEET;
+      if (spreadsheet?.pages) {
+        for (const page of spreadsheet.pages) {
+          const header = (page.headers || []).find(h => h.id === headerId);
+          if (header) {
+            spreadsheetHeader = header;
+            break;
+          }
+        }
+      }
+
+      if (!spreadsheetHeader) return;
+
+      // Get or create the set for this header
+      const updatedGamePlan = { ...gamePlan };
+      if (!updatedGamePlan.sets) updatedGamePlan.sets = [];
+
+      let updatedSet = updatedGamePlan.sets.find(s => s.id === boxId);
+      if (!updatedSet) {
+        updatedSet = {
+          id: boxId,
+          name: spreadsheetHeader.name,
+          playIds: [],
+          assignedPlayIds: []
+        };
+        updatedGamePlan.sets.push(updatedSet);
+      }
+
+      // Calculate capacity based on rowCount and boxColumns
+      const rowCount = spreadsheetHeader.rowCount || 20;
+      const boxColumns = spreadsheetHeader.boxColumns || 1;
+      const totalSlots = rowCount * boxColumns;
+
+      // Get current assigned plays
+      const currentAssigned = [...(updatedSet.assignedPlayIds || [])];
+      while (currentAssigned.length < totalSlots) {
+        currentAssigned.push(null);
+      }
+
+      // Fill empty slots with new plays
+      let playIdx = 0;
+      for (let i = 0; i < totalSlots && playIdx < newPlayIds.length; i++) {
+        if (!currentAssigned[i]) {
+          currentAssigned[i] = newPlayIds[playIdx];
+          playIdx++;
+        }
+      }
+
+      updatedSet.assignedPlayIds = currentAssigned;
+      await handleUpdateGamePlan(updatedGamePlan);
+      return;
+    }
+
+    // First find the layout box to determine type and capacity (modular callsheet)
     let layoutBox = null;
     let sectionIdx = -1;
     let boxIdx = -1;
@@ -1467,17 +1569,34 @@ export default function GamePlan() {
 
     // Find the layout box to get the header name
     let boxHeader = 'New Set';
-    Object.values(gamePlanLayouts).some(layout => {
-      return (layout.sections || []).some(section => {
-        return (section.boxes || []).some(box => {
-          if (box.setId === boxId) {
-            boxHeader = box.header || 'New Set';
-            return true;
+
+    // Check spreadsheet headers first
+    if (boxId.startsWith('spreadsheet_')) {
+      const headerId = boxId.replace('spreadsheet_', '');
+      const spreadsheet = gamePlanLayouts?.SPREADSHEET;
+      if (spreadsheet?.pages) {
+        for (const page of spreadsheet.pages) {
+          const header = (page.headers || []).find(h => h.id === headerId);
+          if (header) {
+            boxHeader = header.name || 'New Set';
+            break;
           }
-          return false;
+        }
+      }
+    } else {
+      // Check modular callsheet layouts
+      Object.values(gamePlanLayouts).some(layout => {
+        return (layout.sections || []).some(section => {
+          return (section.boxes || []).some(box => {
+            if (box.setId === boxId) {
+              boxHeader = box.header || 'New Set';
+              return true;
+            }
+            return false;
+          });
         });
       });
-    });
+    }
 
     if (!updatedSet) {
       // Create a new set entry for this box
@@ -1778,6 +1897,7 @@ export default function GamePlan() {
             setupConfig={setupConfig}
             isTargetingMode={targetingMode || isTargetingBox}
             targetingPlayCount={targetingMode ? targetingPlays.length : pendingBatchPlays.length}
+            onTargetingClick={handleSpreadsheetTargetingClick}
           />
         )}
       </div>
