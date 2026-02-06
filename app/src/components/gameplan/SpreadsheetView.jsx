@@ -1414,7 +1414,8 @@ export default function SpreadsheetView({
                                   dragOverCell?.isNewHeader;
 
                 // Create a light tint of the header color for the section background
-                const sectionBgBase = contentRowIdx % 2 === 0 ? `${headerColor}08` : `${headerColor}12`;
+                // Using higher opacity values (15=~8%, 28=~16%) so they show in print
+                const sectionBgBase = contentRowIdx % 2 === 0 ? `${headerColor}15` : `${headerColor}28`;
 
                 // Section boundary indicators
                 const isLastColumn = headerBounds.colEnd >= columns;
@@ -1844,27 +1845,45 @@ export default function SpreadsheetView({
               padding: 1px 4px !important;
             }
 
-            /* Content cells within sections */
+            /* Content cells within sections - preserve alternating row backgrounds */
             .spreadsheet-content-cell {
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
               font-size: 7pt !important;
               padding: 0 2px !important;
+            }
+
+            /* Nested divs in content cells also need color preservation */
+            .spreadsheet-content-cell > div,
+            .spreadsheet-content-cell * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
             }
 
             /* Matrix header and rows */
             .spreadsheet-matrix-header-row,
             .spreadsheet-matrix-play-type-row {
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
               font-size: 7pt !important;
+            }
+
+            /* Matrix cells need color preservation too */
+            .spreadsheet-matrix-play-type-row > div {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
             }
 
             /* Empty cells - light border */
             .spreadsheet-empty-cell {
               border: 1px solid #e2e8f0 !important;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
             }
 
             /* Play name text - shrink to fit */
