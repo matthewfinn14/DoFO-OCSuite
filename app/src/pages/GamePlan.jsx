@@ -2030,7 +2030,28 @@ export default function GamePlan() {
             }
             setEditingBox(null);
           }}
-          onDelete={handleDeleteSheetBox}
+          onDelete={(sectionIdx, boxIdx) => {
+            // Handle spreadsheet header deletion
+            if (editingBox.box.isSpreadsheetHeader) {
+              const headerId = editingBox.box.headerId;
+              const pageIdx = editingBox.box.pageIdx;
+              const newLayouts = { ...gamePlanLayouts };
+              const spreadsheet = { ...newLayouts.SPREADSHEET };
+              const pages = [...spreadsheet.pages];
+
+              pages[pageIdx] = {
+                ...pages[pageIdx],
+                headers: pages[pageIdx].headers.filter(h => h.id !== headerId)
+              };
+
+              spreadsheet.pages = pages;
+              newLayouts.SPREADSHEET = spreadsheet;
+              handleUpdateLayouts(newLayouts);
+            } else {
+              // Standard call sheet box deletion
+              handleDeleteSheetBox(sectionIdx, boxIdx);
+            }
+          }}
           onAddPlayToQuickList={handleAddPlayToQuickList}
           onRemovePlayFromQuickList={handleRemovePlayFromQuickList}
           onReorderQuickList={handleReorderQuickList}
