@@ -371,37 +371,14 @@ export default function BoxEditorModal({
 
     const gridPlays = [];
 
-    // For spreadsheet headers, plays are stored by row index (one per row)
-    // Map them to the first column of each row in the multi-column display
-    const isSpreadsheet = box.isSpreadsheetHeader;
-
+    // Both spreadsheet and standard grids use flat cell indexing
     for (let i = 0; i < totalSlots; i++) {
-      if (isSpreadsheet) {
-        // For spreadsheet: only first column of each row has a play
-        const rowIdx = Math.floor(i / cols);
-        const colIdx = i % cols;
-        if (colIdx === 0) {
-          // First column - get play from row index
-          const playId = assignedPlayIds[rowIdx];
-          if (playId && playId !== 'GAP') {
-            const play = plays.find(p => p.id === playId);
-            gridPlays.push(play || null);
-          } else {
-            gridPlays.push(null);
-          }
-        } else {
-          // Other columns are empty for spreadsheet mode
-          gridPlays.push(null);
-        }
+      const playId = assignedPlayIds[i];
+      if (playId && playId !== 'GAP') {
+        const play = plays.find(p => p.id === playId);
+        gridPlays.push(play || null);
       } else {
-        // Standard grid: flat index mapping
-        const playId = assignedPlayIds[i];
-        if (playId && playId !== 'GAP') {
-          const play = plays.find(p => p.id === playId);
-          gridPlays.push(play || null);
-        } else {
-          gridPlays.push(null);
-        }
+        gridPlays.push(null);
       }
     }
     return gridPlays;
