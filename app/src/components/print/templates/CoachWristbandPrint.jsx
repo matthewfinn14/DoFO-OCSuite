@@ -159,7 +159,8 @@ export default function CoachWristbandPrint({
         }
 
         .coach-card {
-          flex: 1;
+          height: 5.1in;
+          max-height: 5.1in;
           border: 2px solid black;
           display: flex;
           flex-direction: column;
