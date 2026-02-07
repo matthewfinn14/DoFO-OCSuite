@@ -633,24 +633,24 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
       return true; // Special teams render all positions
     };
 
-    // If we have a saved layout, use it instead of defaults
-    if (Object.keys(savedLayout).length > 0) {
-      Object.entries(savedLayout).forEach(([posId, coords]) => {
-        // Skip positions not in current setup config (for offense)
-        if (!shouldRenderPosition(posId)) return;
-
+    // For offense: iterate over all dynamic positions, use saved coords if available
+    if (isOffense && dynamicOffensePositions.length > 0) {
+      dynamicOffensePositions.forEach((pos) => {
+        const posId = pos.id;
+        const displayLabel = pos.label || posId;
         const numRows = chartRowCounts[posId] || depthLevels;
         const players = getPositionDepth(chartType, posId, numRows);
-        const percent = convertToPercent(coords.x, coords.y);
 
-        // Look up display label from dynamic positions
-        let displayLabel = posId;
-        if (isOffense) {
-          const posConfig = dynamicOffensePositions.find(p => p.id === posId);
-          displayLabel = posConfig?.label || posId;
-        } else if (isDefense) {
-          const posConfig = dynamicDefensePositions.find(p => p.id === posId);
-          displayLabel = posConfig?.label || posId;
+        // Use saved coords if available, otherwise use defaults
+        let coordX, coordY;
+        if (savedLayout[posId]) {
+          const percent = convertToPercent(savedLayout[posId].x, savedLayout[posId].y);
+          coordX = percent.x;
+          coordY = percent.y;
+        } else {
+          const defaultCoord = DEFAULT_OFFENSE_COORDS[posId] || { x: 50, y: 50 };
+          coordX = defaultCoord.x;
+          coordY = defaultCoord.y;
         }
 
         boxes.push(
@@ -661,47 +661,33 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
             players={players}
             style={{
               position: 'absolute',
-              left: `${percent.x}%`,
-              top: `${percent.y}%`,
-              transform: 'translate(-50%, 0)'
-            }}
-          />
-        );
-      });
-    } else if (isOffense && dynamicOffensePositions.length > 0) {
-      // For offense without saved layout, use dynamic positions with default coords
-      dynamicOffensePositions.forEach((pos) => {
-        const posId = pos.id;
-        const displayLabel = pos.label || posId;
-        const defaultCoord = DEFAULT_OFFENSE_COORDS[posId] || { x: 50, y: 50 };
-        const numRows = chartRowCounts[posId] || depthLevels;
-        const players = getPositionDepth(chartType, posId, numRows);
-
-        boxes.push(
-          <PositionBox
-            key={posId}
-            pos={posId}
-            label={displayLabel}
-            players={players}
-            style={{
-              position: 'absolute',
-              left: `${defaultCoord.x}%`,
-              top: `${defaultCoord.y}%`,
+              left: `${coordX}%`,
+              top: `${coordY}%`,
               transform: 'translate(-50%, 0)'
             }}
           />
         );
       });
     } else if (isDefense && dynamicDefensePositions.length > 0) {
-      // For defense without saved layout, use dynamic positions with default coords from DEFENSE_FORMATION
+      // For defense: iterate over all dynamic positions, use saved coords if available
       dynamicDefensePositions.forEach((pos) => {
         const posId = pos.id;
         const displayLabel = pos.label || posId;
-        // Get default coords from DEFENSE_FORMATION (which has arrays of coords)
-        const defenseCoords = DEFENSE_FORMATION[posId];
-        const defaultCoord = defenseCoords?.[0] || { x: 50, y: 50 };
         const numRows = chartRowCounts[posId] || depthLevels;
         const players = getPositionDepth(chartType, posId, numRows);
+
+        // Use saved coords if available, otherwise use defaults from DEFENSE_FORMATION
+        let coordX, coordY;
+        if (savedLayout[posId]) {
+          const percent = convertToPercent(savedLayout[posId].x, savedLayout[posId].y);
+          coordX = percent.x;
+          coordY = percent.y;
+        } else {
+          const defenseCoords = DEFENSE_FORMATION[posId];
+          const defaultCoord = defenseCoords?.[0] || { x: 50, y: 50 };
+          coordX = defaultCoord.x;
+          coordY = defaultCoord.y;
+        }
 
         boxes.push(
           <PositionBox
@@ -711,8 +697,8 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
             players={players}
             style={{
               position: 'absolute',
-              left: `${defaultCoord.x}%`,
-              top: `${defaultCoord.y}%`,
+              left: `${coordX}%`,
+              top: `${coordY}%`,
               transform: 'translate(-50%, 0)'
             }}
           />
