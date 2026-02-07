@@ -219,6 +219,76 @@ const DEFAULT_FORMATION_LAYOUTS = {
     { id: 'R3', label: 'R3', x: 728, y: 340 },
     { id: 'R4', label: 'R4', x: 808, y: 340 },
     { id: 'R5', label: 'R5', x: 888, y: 340 }
+  ],
+  kickoff_return: [
+    // Returners at top, front line at bottom
+    { id: 'KR1', label: 'KR1', x: 450, y: 60 },
+    { id: 'KR2', label: 'KR2', x: 606, y: 60 },
+    { id: 'FL1', label: 'FL1', x: 168, y: 340 },
+    { id: 'FL2', label: 'FL2', x: 288, y: 340 },
+    { id: 'FL3', label: 'FL3', x: 408, y: 340 },
+    { id: 'FL4', label: 'FL4', x: 528, y: 340 },
+    { id: 'FL5', label: 'FL5', x: 648, y: 340 },
+    { id: 'FR1', label: 'FR1', x: 768, y: 340 },
+    { id: 'FR2', label: 'FR2', x: 888, y: 340 },
+    { id: 'FR3', label: 'FR3', x: 348, y: 200 },
+    { id: 'FR4', label: 'FR4', x: 708, y: 200 }
+  ],
+  punt: [
+    // Punter at top, protection at bottom
+    { id: 'P', label: 'P', x: 528, y: 60 },
+    { id: 'PP', label: 'PP', x: 528, y: 180 },
+    { id: 'LS', label: 'LS', x: 528, y: 340 },
+    { id: 'PW1', label: 'Wing L', x: 348, y: 340 },
+    { id: 'PW2', label: 'Wing R', x: 708, y: 340 },
+    { id: 'PG1', label: 'Guard L', x: 428, y: 340 },
+    { id: 'PG2', label: 'Guard R', x: 628, y: 340 },
+    { id: 'PT1', label: 'Tackle L', x: 248, y: 340 },
+    { id: 'PT2', label: 'Tackle R', x: 808, y: 340 },
+    { id: 'PGN1', label: 'Gunner L', x: 100, y: 340 },
+    { id: 'PGN2', label: 'Gunner R', x: 956, y: 340 }
+  ],
+  punt_return: [
+    // Returner at top, blockers below
+    { id: 'PR', label: 'PR', x: 528, y: 60 },
+    { id: 'PRB1', label: 'Blocker 1', x: 168, y: 340 },
+    { id: 'PRB2', label: 'Blocker 2', x: 288, y: 340 },
+    { id: 'PRB3', label: 'Blocker 3', x: 408, y: 340 },
+    { id: 'PRB4', label: 'Blocker 4', x: 528, y: 340 },
+    { id: 'PRB5', label: 'Blocker 5', x: 648, y: 340 },
+    { id: 'PRB6', label: 'Blocker 6', x: 768, y: 340 },
+    { id: 'PRB7', label: 'Blocker 7', x: 888, y: 340 },
+    { id: 'PRB8', label: 'Blocker 8', x: 348, y: 200 },
+    { id: 'PRB9', label: 'Blocker 9', x: 528, y: 200 },
+    { id: 'PRB10', label: 'Blocker 10', x: 708, y: 200 }
+  ],
+  field_goal: [
+    // Kicker/Holder at top, line at bottom
+    { id: 'FGK', label: 'Kicker', x: 608, y: 120 },
+    { id: 'FGH', label: 'Holder', x: 528, y: 180 },
+    { id: 'FGLS', label: 'Long Snap', x: 528, y: 340 },
+    { id: 'FGL1', label: 'Guard L', x: 428, y: 340 },
+    { id: 'FGL2', label: 'Tackle L', x: 328, y: 340 },
+    { id: 'FGL3', label: 'Wing L', x: 228, y: 340 },
+    { id: 'FGR1', label: 'Guard R', x: 628, y: 340 },
+    { id: 'FGR2', label: 'Tackle R', x: 728, y: 340 },
+    { id: 'FGR3', label: 'Wing R', x: 828, y: 340 },
+    { id: 'FGU1', label: 'Upback L', x: 428, y: 260 },
+    { id: 'FGU2', label: 'Upback R', x: 628, y: 260 }
+  ],
+  pat: [
+    // Same as field goal
+    { id: 'PATK', label: 'Kicker', x: 608, y: 120 },
+    { id: 'PATH', label: 'Holder', x: 528, y: 180 },
+    { id: 'PATLS', label: 'Long Snap', x: 528, y: 340 },
+    { id: 'PATL1', label: 'Guard L', x: 428, y: 340 },
+    { id: 'PATL2', label: 'Tackle L', x: 328, y: 340 },
+    { id: 'PATL3', label: 'Wing L', x: 228, y: 340 },
+    { id: 'PATR1', label: 'Guard R', x: 628, y: 340 },
+    { id: 'PATR2', label: 'Tackle R', x: 728, y: 340 },
+    { id: 'PATR3', label: 'Wing R', x: 828, y: 340 },
+    { id: 'PATU1', label: 'Upback L', x: 428, y: 260 },
+    { id: 'PATU2', label: 'Upback R', x: 628, y: 260 }
   ]
 };
 
