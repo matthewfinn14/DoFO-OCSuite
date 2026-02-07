@@ -706,13 +706,12 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
       });
     } else {
       // Fall back to default formation layout (for special teams, etc.)
-      // But still check for saved layouts and use those coords when available
+      // Check for saved layouts first and use those exclusively when available
+      // (Don't mix with defaults - the editor position IDs may differ from default formation IDs)
 
-      // First, collect all position IDs from the saved layout that aren't in default formation
       const savedPositionIds = Object.keys(savedLayout);
-      const defaultPositionIds = new Set(Object.keys(defaultFormationLayout || {}));
 
-      // If we have a saved layout, prefer rendering from that
+      // If we have a saved layout, use ONLY that (no mixing with defaults)
       if (savedPositionIds.length > 0) {
         savedPositionIds.forEach(posId => {
           const coords = savedLayout[posId];
@@ -735,33 +734,6 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
             />
           );
         });
-
-        // Also add any default positions that aren't in the saved layout
-        if (defaultFormationLayout) {
-          Object.entries(defaultFormationLayout).forEach(([pos, positions]) => {
-            if (savedLayout[pos]) return; // Already rendered from saved layout
-
-            const numRows = chartRowCounts[pos] || depthLevels;
-            const players = getPositionDepth(chartType, pos, numRows);
-
-            positions.forEach((coord, idx) => {
-              boxes.push(
-                <PositionBox
-                  key={`${pos}-${idx}`}
-                  pos={pos}
-                  label={pos}
-                  players={players}
-                  style={{
-                    position: 'absolute',
-                    left: `${coord.x}%`,
-                    top: `${coord.y}%`,
-                    transform: 'translate(-50%, 0)'
-                  }}
-                />
-              );
-            });
-          });
-        }
       } else if (defaultFormationLayout) {
         // No saved layout, use default formation
         Object.entries(defaultFormationLayout).forEach(([pos, positions]) => {
