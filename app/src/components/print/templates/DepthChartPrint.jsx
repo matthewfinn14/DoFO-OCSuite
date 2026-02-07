@@ -216,10 +216,19 @@ const HANDS_TEAM_FORMATION = {
 
 // Map of formation pairs for the formation view
 // Note: Offense uses dynamic positions from setup config, not a static formation
+// Single-chart modes (offense-only, defense-only) use 'single' layout with only top half
 const FORMATION_PAIRS = {
   'offense-defense': {
     top: { formation: DEFENSE_FORMATION, chartType: 'defense', label: 'Defense' },
     bottom: { formation: null, chartType: 'offense', label: 'Offense' } // Uses dynamic positions
+  },
+  'offense-only': {
+    layout: 'single',
+    single: { formation: null, chartType: 'offense', label: 'Offense' } // Uses dynamic positions
+  },
+  'defense-only': {
+    layout: 'single',
+    single: { formation: DEFENSE_FORMATION, chartType: 'defense', label: 'Defense' }
   },
   'kickoff': {
     top: { formation: KICKOFF_FORMATION, chartType: 'kickoff', label: 'Kickoff Coverage' },
@@ -580,12 +589,13 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
   });
 
   // Render a single position box as a spreadsheet-style table
-  const PositionBox = ({ pos, players, style }) => (
+  // pos = position key (for data lookup), label = display name (what user sees)
+  const PositionBox = ({ pos, label, players, style }) => (
     <div className="formation-position-box" style={style}>
       <table className="formation-position-table">
         <thead>
           <tr>
-            <th colSpan={2}>{pos}</th>
+            <th colSpan={2}>{label || pos}</th>
           </tr>
         </thead>
         <tbody>
@@ -633,10 +643,21 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
         const players = getPositionDepth(chartType, posId, numRows);
         const percent = convertToPercent(coords.x, coords.y);
 
+        // Look up display label from dynamic positions
+        let displayLabel = posId;
+        if (isOffense) {
+          const posConfig = dynamicOffensePositions.find(p => p.id === posId);
+          displayLabel = posConfig?.label || posId;
+        } else if (isDefense) {
+          const posConfig = dynamicDefensePositions.find(p => p.id === posId);
+          displayLabel = posConfig?.label || posId;
+        }
+
         boxes.push(
           <PositionBox
             key={posId}
             pos={posId}
+            label={displayLabel}
             players={players}
             style={{
               position: 'absolute',
@@ -651,6 +672,7 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
       // For offense without saved layout, use dynamic positions with default coords
       dynamicOffensePositions.forEach((pos) => {
         const posId = pos.id;
+        const displayLabel = pos.label || posId;
         const defaultCoord = DEFAULT_OFFENSE_COORDS[posId] || { x: 50, y: 50 };
         const numRows = chartRowCounts[posId] || depthLevels;
         const players = getPositionDepth(chartType, posId, numRows);
@@ -659,6 +681,7 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
           <PositionBox
             key={posId}
             pos={posId}
+            label={displayLabel}
             players={players}
             style={{
               position: 'absolute',
@@ -673,6 +696,7 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
       // For defense without saved layout, use dynamic positions with default coords from DEFENSE_FORMATION
       dynamicDefensePositions.forEach((pos) => {
         const posId = pos.id;
+        const displayLabel = pos.label || posId;
         // Get default coords from DEFENSE_FORMATION (which has arrays of coords)
         const defenseCoords = DEFENSE_FORMATION[posId];
         const defaultCoord = defenseCoords?.[0] || { x: 50, y: 50 };
@@ -683,6 +707,7 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
           <PositionBox
             key={posId}
             pos={posId}
+            label={displayLabel}
             players={players}
             style={{
               position: 'absolute',
@@ -705,7 +730,8 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
           boxes.push(
             <PositionBox
               key={`${pos}-${idx}`}
-              pos={positions.length > 1 ? `${pos}` : pos}
+              pos={pos}
+              label={pos}
               players={players}
               style={{
                 position: 'absolute',
@@ -727,6 +753,40 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
     const pair = FORMATION_PAIRS[pairKey];
     if (!pair) return null;
 
+    // Single-chart layout (offense-only or defense-only)
+    if (pair.layout === 'single') {
+      return (
+        <div className={`formation-view-container formation-single ${!isFirstPage ? 'page-break-before' : ''}`}>
+          {/* Header */}
+          <div className="formation-header">
+            <div className="formation-header-left">
+              {settings?.teamLogo && (
+                <img src={settings.teamLogo} alt="Logo" className="formation-header-logo" />
+              )}
+              <div>
+                <div className="formation-header-title">
+                  {pair.single.label} Depth Chart
+                </div>
+                <div className="formation-header-subtitle">
+                  {currentWeek?.name} {currentWeek?.opponent && `vs ${currentWeek.opponent}`}
+                </div>
+              </div>
+            </div>
+            <div className="formation-header-subtitle">
+              {new Date().toLocaleDateString()}
+            </div>
+          </div>
+
+          {/* Full-height single formation */}
+          <div className="formation-full">
+            <div className="formation-half-label">{pair.single.label}</div>
+            {renderFormation(pair.single.formation, pair.single.chartType)}
+          </div>
+        </div>
+      );
+    }
+
+    // Paired layout (offense-defense, kickoff, punt, etc.)
     return (
       <div className={`formation-view-container ${!isFirstPage ? 'page-break-before' : ''}`}>
         {/* Header */}
@@ -794,6 +854,11 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
           font-family: Arial, sans-serif;
         }
 
+        .formation-view-container.formation-single {
+          /* For single-chart mode, add padding to center the formation vertically */
+          padding-top: 0.5in;
+        }
+
         .formation-view-container.page-break-before {
           page-break-before: always;
           break-before: page;
@@ -844,6 +909,17 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
 
         .formation-half-bottom {
           background: white;
+        }
+
+        .formation-full {
+          position: relative;
+          border: 1px solid #ccc;
+          overflow: hidden;
+          background: white;
+          /* Constrain height to match half-page view so positions don't spread too far */
+          height: 5.5in;
+          min-height: 5.5in;
+          max-height: 5.5in;
         }
 
         .formation-half-label {

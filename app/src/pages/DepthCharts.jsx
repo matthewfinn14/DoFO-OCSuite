@@ -16,7 +16,9 @@ import {
   ZoomOut,
   Minus,
   ChevronDown,
-  ExternalLink
+  ExternalLink,
+  AlignCenterHorizontal,
+  AlignHorizontalSpaceAround
 } from 'lucide-react';
 import { generateDepthChartPositions, generateDefensePositions, CANONICAL_OFFENSE_POSITIONS, CANONICAL_DEFENSE_POSITIONS } from '../utils/depthChartPositions';
 import DepthChartPrint from '../components/print/templates/DepthChartPrint';
@@ -220,8 +222,10 @@ const DEFAULT_FORMATION_LAYOUTS = {
   ]
 };
 
-// Snap grid size for formation view
-const SNAP_SIZE = 20;
+// Snap grid size for formation view (smaller for finer control)
+const SNAP_SIZE = 10;
+// Position box width for edge snapping
+const BOX_WIDTH = 110;
 
 // Formation View Component with drag-and-drop
 function FormationView({
@@ -313,35 +317,28 @@ function FormationView({
     );
   }, [roster, searchTerm]);
 
+  // Track click start position to distinguish click from drag
+  const [clickStart, setClickStart] = useState(null);
+
   // Handle mouse down on position
   const handleMouseDown = (e, pos) => {
     if (isLocked) return;
     if (e.target.tagName === 'SELECT' || e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
 
-    // Shift+click to toggle selection
-    if (e.shiftKey) {
-      setSelectedIds(prev => {
-        const newSet = new Set(prev);
-        if (newSet.has(pos.id)) {
-          newSet.delete(pos.id);
-        } else {
-          newSet.add(pos.id);
-        }
-        return newSet;
-      });
-      return;
-    }
-
     const rect = containerRef.current.getBoundingClientRect();
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
 
-    // If clicking on a selected item, drag all selected items
-    // If clicking on unselected item, clear selection and drag just that one
+    // Store click start position to detect click vs drag
+    setClickStart({ x: mouseX, y: mouseY, posId: pos.id, shiftKey: e.shiftKey });
+
+    // If clicking on a selected item, prepare to drag all selected items
+    // If clicking on unselected item, prepare to drag just that one
     let itemsToDrag = new Set();
     if (selectedIds.has(pos.id)) {
       itemsToDrag = new Set(selectedIds);
     } else {
       itemsToDrag = new Set([pos.id]);
-      setSelectedIds(new Set());
     }
 
     // Store starting positions of all items being dragged
@@ -355,8 +352,8 @@ function FormationView({
 
     setDraggingId(pos.id);
     setDragOffset({
-      x: (e.clientX - rect.left) / zoom - pos.x,
-      y: (e.clientY - rect.top) / zoom - pos.y
+      x: (mouseX - rect.left) / zoom - pos.x,
+      y: (mouseY - rect.top) / zoom - pos.y
     });
     setTempPosition({ x: pos.x, y: pos.y });
   };
@@ -381,16 +378,21 @@ function FormationView({
     const rawX = (e.clientX - rect.left) / zoom - dragOffset.x;
     const rawY = (e.clientY - rect.top) / zoom - dragOffset.y;
 
-    // Snap to grid
-    const snappedX = Math.round(rawX / SNAP_SIZE) * SNAP_SIZE;
-    const snappedY = Math.round(rawY / SNAP_SIZE) * SNAP_SIZE;
+    // Snap to grid first
+    let snappedX = Math.round(rawX / SNAP_SIZE) * SNAP_SIZE;
+    let snappedY = Math.round(rawY / SNAP_SIZE) * SNAP_SIZE;
+
+    // Then try edge snapping to nearby boxes (overrides grid snap if close)
+    const edgeSnapped = getEdgeSnappedPosition(snappedX, snappedY, draggingId);
+    snappedX = edgeSnapped.x;
+    snappedY = edgeSnapped.y;
 
     // Clamp to container bounds (1056 x 408 canvas)
     const clampedX = Math.max(60, Math.min(CANVAS_WIDTH - 60, snappedX));
     const clampedY = Math.max(20, Math.min(CANVAS_HEIGHT - 40, snappedY));
 
     setTempPosition({ x: clampedX, y: clampedY });
-  }, [draggingId, dragOffset, zoom, selectionBox]);
+  }, [draggingId, dragOffset, zoom, selectionBox, positions, dragStartPositions]);
 
   // Handle mouse up
   const handleMouseUp = useCallback(() => {
@@ -413,23 +415,41 @@ function FormationView({
       return;
     }
 
-    // Finish position drag
+    // Finish position drag or handle click selection
     if (draggingId && tempPosition && Object.keys(dragStartPositions).length > 0) {
-      // Calculate the delta from the dragged item
       const startPos = dragStartPositions[draggingId];
       if (startPos) {
         const deltaX = tempPosition.x - startPos.x;
         const deltaY = tempPosition.y - startPos.y;
+        const didMove = Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3;
 
-        // Build batch update for all items being dragged
-        const batchUpdate = {};
-        Object.entries(dragStartPositions).forEach(([id, pos]) => {
-          const newX = Math.max(60, Math.min(CANVAS_WIDTH - 60, pos.x + deltaX));
-          const newY = Math.max(20, Math.min(CANVAS_HEIGHT - 40, pos.y + deltaY));
-          batchUpdate[id] = { x: newX, y: newY };
-        });
-        // Apply all updates at once
-        onUpdateLayout(batchUpdate);
+        if (didMove) {
+          // It was a drag - apply position changes
+          const batchUpdate = {};
+          Object.entries(dragStartPositions).forEach(([id, pos]) => {
+            const newX = Math.max(60, Math.min(CANVAS_WIDTH - 60, pos.x + deltaX));
+            const newY = Math.max(20, Math.min(CANVAS_HEIGHT - 40, pos.y + deltaY));
+            batchUpdate[id] = { x: newX, y: newY };
+          });
+          onUpdateLayout(batchUpdate);
+        } else if (clickStart) {
+          // It was a click - handle selection
+          if (clickStart.shiftKey) {
+            // Shift+click toggles selection
+            setSelectedIds(prev => {
+              const newSet = new Set(prev);
+              if (newSet.has(clickStart.posId)) {
+                newSet.delete(clickStart.posId);
+              } else {
+                newSet.add(clickStart.posId);
+              }
+              return newSet;
+            });
+          } else {
+            // Regular click selects just this position
+            setSelectedIds(new Set([clickStart.posId]));
+          }
+        }
       }
     } else if (draggingId && tempPosition) {
       onUpdateLayout(draggingId, tempPosition.x, tempPosition.y);
@@ -437,7 +457,8 @@ function FormationView({
     setDraggingId(null);
     setDragStartPositions({});
     setTempPosition(null);
-  }, [draggingId, tempPosition, onUpdateLayout, selectionBox, positions]);
+    setClickStart(null);
+  }, [draggingId, tempPosition, onUpdateLayout, selectionBox, positions, clickStart]);
 
   // Add/remove window listeners for drag
   useEffect(() => {
@@ -480,6 +501,88 @@ function FormationView({
       newChart[posId][depth] = null;
     }
     onUpdateDepthChart(newChart);
+  };
+
+  // Center selected positions horizontally
+  const handleCenterHorizontal = () => {
+    if (selectedIds.size === 0) return;
+    const centerX = CANVAS_WIDTH / 2; // 528
+    const batchUpdate = {};
+    selectedIds.forEach(id => {
+      const pos = positions.find(p => p.id === id);
+      if (pos) {
+        batchUpdate[id] = { x: centerX, y: pos.y };
+      }
+    });
+    onUpdateLayout(batchUpdate);
+  };
+
+  // Distribute selected positions evenly horizontally
+  const handleDistributeHorizontal = () => {
+    if (selectedIds.size < 2) return;
+
+    // Get selected positions sorted by current x
+    const selected = positions
+      .filter(p => selectedIds.has(p.id))
+      .sort((a, b) => a.x - b.x);
+
+    if (selected.length < 2) return;
+
+    // Calculate spacing - leave margin from edges
+    const margin = 60 + BOX_WIDTH / 2; // Edge margin
+    const availableWidth = CANVAS_WIDTH - (margin * 2);
+    const spacing = availableWidth / (selected.length - 1);
+
+    const batchUpdate = {};
+    selected.forEach((pos, i) => {
+      batchUpdate[pos.id] = { x: margin + (i * spacing), y: pos.y };
+    });
+    onUpdateLayout(batchUpdate);
+  };
+
+  // Snap position to edges of nearby boxes
+  const getEdgeSnappedPosition = (x, y, draggingId) => {
+    const EDGE_SNAP_DISTANCE = 15;
+    let snappedX = x;
+    let snappedY = y;
+
+    // Check against all other positions
+    positions.forEach(pos => {
+      if (pos.id === draggingId) return;
+
+      // Skip positions being dragged as part of multi-select
+      if (dragStartPositions[pos.id]) return;
+
+      const otherX = pos.x;
+      const otherY = pos.y;
+
+      // Horizontal edge snapping (boxes side by side)
+      // Left edge of dragging box to right edge of other box
+      const leftEdgeToRight = x - BOX_WIDTH / 2;
+      const rightEdgeOfOther = otherX + BOX_WIDTH / 2;
+      if (Math.abs(leftEdgeToRight - rightEdgeOfOther) < EDGE_SNAP_DISTANCE) {
+        snappedX = rightEdgeOfOther + BOX_WIDTH / 2;
+      }
+
+      // Right edge of dragging box to left edge of other box
+      const rightEdgeToLeft = x + BOX_WIDTH / 2;
+      const leftEdgeOfOther = otherX - BOX_WIDTH / 2;
+      if (Math.abs(rightEdgeToLeft - leftEdgeOfOther) < EDGE_SNAP_DISTANCE) {
+        snappedX = leftEdgeOfOther - BOX_WIDTH / 2;
+      }
+
+      // Center-to-center horizontal alignment
+      if (Math.abs(x - otherX) < EDGE_SNAP_DISTANCE) {
+        snappedX = otherX;
+      }
+
+      // Vertical alignment (same row)
+      if (Math.abs(y - otherY) < EDGE_SNAP_DISTANCE) {
+        snappedY = otherY;
+      }
+    });
+
+    return { x: snappedX, y: snappedY };
   };
 
   // Reset layout to defaults
@@ -541,12 +644,40 @@ function FormationView({
                 <RotateCcw size={16} />
                 Reset Layout
               </button>
-              <span className={`text-xs ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
-                Drag to select • Shift+click to add
-              </span>
+              {/* Alignment tools - show when positions are selected */}
               {selectedIds.size > 0 && (
-                <span className={`text-xs px-2 py-1 rounded ${isLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-500/20 text-amber-400'}`}>
-                  {selectedIds.size} selected
+                <>
+                  <div className={`w-px h-6 ${isLight ? 'bg-slate-300' : 'bg-slate-600'}`} />
+                  <button
+                    onClick={handleCenterHorizontal}
+                    className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-sm ${
+                      isLight ? 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                    }`}
+                    title="Center selected positions horizontally"
+                  >
+                    <AlignCenterHorizontal size={14} />
+                    Center
+                  </button>
+                  {selectedIds.size >= 2 && (
+                    <button
+                      onClick={handleDistributeHorizontal}
+                      className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-sm ${
+                        isLight ? 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      }`}
+                      title="Distribute selected positions evenly"
+                    >
+                      <AlignHorizontalSpaceAround size={14} />
+                      Distribute
+                    </button>
+                  )}
+                  <span className={`text-xs px-2 py-1 rounded ${isLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-500/20 text-amber-400'}`}>
+                    {selectedIds.size} selected
+                  </span>
+                </>
+              )}
+              {selectedIds.size === 0 && (
+                <span className={`text-xs ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Drag to select • Shift+click to add
                 </span>
               )}
             </>
@@ -1204,6 +1335,8 @@ export default function DepthCharts() {
   const [activeChart, setActiveChart] = useState('offense');
   const [viewMode, setViewMode] = useState('formation'); // 'formation' or 'grid'
   const [showAdditional, setShowAdditional] = useState(false); // Toggle for additional positions
+  const [showPrintMenu, setShowPrintMenu] = useState(false); // Print options dropdown
+  const [printMode, setPrintMode] = useState('offense-defense'); // 'offense', 'defense', 'offense-defense', 'current'
 
   // Theme support
   const theme = settings?.theme || school?.settings?.theme || 'dark';
@@ -1343,11 +1476,25 @@ export default function DepthCharts() {
       <div className="hidden print:block">
         <DepthChartPrint
           weekId={currentWeekId}
-          chartTypes={[activeChart]}
+          chartTypes={
+            printMode === 'offense' ? ['offense'] :
+            printMode === 'defense' ? ['defense'] :
+            printMode === 'offense-defense' ? ['offense', 'defense'] :
+            [activeChart] // 'current' mode - prints active tab
+          }
           viewMode={viewMode === 'formation' ? 'formation' : 'full'}
           depthLevels={3}
           showBackups={true}
-          formationPairs={activeChart === 'offense' ? ['offense-defense'] : [`${activeChart}`]}
+          formationPairs={
+            printMode === 'offense' ? ['offense-only'] :
+            printMode === 'defense' ? ['defense-only'] :
+            printMode === 'offense-defense' ? ['offense-defense'] :
+            // For special teams, use their paired format
+            activeChart === 'kickoff' || activeChart === 'kickoff_return' ? ['kickoff'] :
+            activeChart === 'punt' || activeChart === 'punt_return' ? ['punt'] :
+            activeChart === 'field_goal' || activeChart === 'pat' ? ['field-goal'] :
+            [`${activeChart}`]
+          }
         />
       </div>
 
@@ -1417,17 +1564,71 @@ export default function DepthCharts() {
           )}
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => window.print()}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
-                isLight
-                  ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
-                  : 'bg-slate-800 text-white hover:bg-slate-700'
-              }`}
-            >
-              <Printer size={18} />
-              Print
-            </button>
+            {/* Print dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowPrintMenu(!showPrintMenu)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+                  isLight
+                    ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
+                    : 'bg-slate-800 text-white hover:bg-slate-700'
+                }`}
+              >
+                <Printer size={18} />
+                Print
+                <ChevronDown size={14} className={showPrintMenu ? 'rotate-180 transition-transform' : 'transition-transform'} />
+              </button>
+              {showPrintMenu && (
+                <>
+                  {/* Click outside to close */}
+                  <div className="fixed inset-0 z-40" onClick={() => setShowPrintMenu(false)} />
+                  <div className={`absolute right-0 top-full mt-2 w-56 rounded-lg shadow-lg z-50 py-2 ${
+                    isLight ? 'bg-white border border-slate-200' : 'bg-slate-800 border border-slate-700'
+                  }`}>
+                    <div className={`px-3 py-1.5 text-xs font-semibold uppercase ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Print Options
+                    </div>
+                    <button
+                      onClick={() => { setPrintMode('offense'); setShowPrintMenu(false); setTimeout(() => window.print(), 100); }}
+                      className={`w-full text-left px-3 py-2 text-sm ${
+                        isLight ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-slate-700 text-white'
+                      }`}
+                    >
+                      Offense Only
+                    </button>
+                    <button
+                      onClick={() => { setPrintMode('defense'); setShowPrintMenu(false); setTimeout(() => window.print(), 100); }}
+                      className={`w-full text-left px-3 py-2 text-sm ${
+                        isLight ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-slate-700 text-white'
+                      }`}
+                    >
+                      Defense Only
+                    </button>
+                    <button
+                      onClick={() => { setPrintMode('offense-defense'); setShowPrintMenu(false); setTimeout(() => window.print(), 100); }}
+                      className={`w-full text-left px-3 py-2 text-sm ${
+                        isLight ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-slate-700 text-white'
+                      }`}
+                    >
+                      Offense + Defense
+                    </button>
+                    {(activeChart !== 'offense' && activeChart !== 'defense') && (
+                      <>
+                        <div className={`my-1 border-t ${isLight ? 'border-slate-200' : 'border-slate-700'}`} />
+                        <button
+                          onClick={() => { setPrintMode('current'); setShowPrintMenu(false); setTimeout(() => window.print(), 100); }}
+                          className={`w-full text-left px-3 py-2 text-sm ${
+                            isLight ? 'hover:bg-slate-100 text-slate-700' : 'hover:bg-slate-700 text-white'
+                          }`}
+                        >
+                          Current: {DEPTH_CHART_TYPES.find(t => t.id === activeChart)?.label || activeChart}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
             <Link
               to="/print?template=depth_chart"
               className={`p-2 rounded-lg ${
