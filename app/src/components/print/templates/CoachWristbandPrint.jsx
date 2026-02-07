@@ -172,8 +172,8 @@ export default function CoachWristbandPrint({
           background: black;
           color: white;
           font-weight: bold;
-          font-size: 14pt;
-          padding: 4px 12px;
+          font-size: 12pt;
+          padding: 2px 10px;
           display: flex;
           justify-content: space-between;
           align-items: center;
@@ -191,8 +191,9 @@ export default function CoachWristbandPrint({
 
         .coach-slot-row {
           display: flex;
-          border-bottom: 1px solid #ccc;
+          border-bottom: 1px solid #ddd;
           border-right: 1px solid #ccc;
+          min-height: 0;
         }
 
         .coach-slot-row:nth-child(even) {
@@ -201,8 +202,8 @@ export default function CoachWristbandPrint({
 
         .coach-slot-num {
           font-weight: bold;
-          font-size: 11pt;
-          min-width: 36px;
+          font-size: 9pt;
+          min-width: 30px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -212,9 +213,9 @@ export default function CoachWristbandPrint({
 
         .coach-slot-play {
           flex: 1;
-          font-size: 10pt;
+          font-size: 8.5pt;
           font-weight: 600;
-          padding: 0 6px;
+          padding: 0 4px;
           display: flex;
           align-items: center;
           overflow: hidden;
