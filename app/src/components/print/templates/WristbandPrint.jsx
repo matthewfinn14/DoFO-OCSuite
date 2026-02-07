@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useSchool } from '../../../context/SchoolContext';
+import { getPlayCall } from '../../../utils/playDisplay';
 
 // Card tab definitions (same as WristbandBuilder)
 const CARD_TABS = [
@@ -732,9 +733,7 @@ function StandardLayout({ slots, getPlayForSlot, showSlotNumbers, showFormation,
             }
             const play = getPlayForSlot(slot);
             const playText = play
-              ? (showFormation && play.formation
-                ? `${play.formation} ${play.name}`
-                : play.name)
+              ? (showFormation ? getPlayCall(play) : play.name)
               : '';
 
             return [
@@ -780,10 +779,8 @@ function WizLayout({ slots, getPlayForSlot, showSlotNumbers, showFormation, wizV
                 // OLINE variant shows the OL blocking scheme
                 displayName = play.wizOlineRef?.name || '';
               } else {
-                // SKILL variant shows the play abbreviation or name
-                displayName = play.wizAbbreviation || (showFormation && play.formation
-                  ? `${play.formation} ${play.name}`
-                  : play.name);
+                // SKILL variant shows the play abbreviation or full play call
+                displayName = play.wizAbbreviation || (showFormation ? getPlayCall(play) : play.name);
               }
             }
 
