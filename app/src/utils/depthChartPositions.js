@@ -49,6 +49,54 @@ export const CANONICAL_OFFENSE_POSITIONS = [
   { key: 'RT', default: 'RT' }
 ];
 
+// Canonical defense positions - matches Setup.jsx DEFAULT_POSITIONS.DEFENSE exactly
+// Can be customized via Setup > Defense Setup > Name Positions
+export const CANONICAL_DEFENSE_POSITIONS = [
+  // D-Line
+  { key: 'DE', default: 'DE' },
+  { key: 'DT', default: 'DT' },
+  { key: 'NT', default: 'NT' },
+  // Linebackers
+  { key: 'OLB', default: 'OLB' },
+  { key: 'ILB', default: 'ILB' },
+  { key: 'MLB', default: 'MLB' },
+  // Secondary
+  { key: 'CB', default: 'CB' },
+  { key: 'FS', default: 'FS' },
+  { key: 'SS', default: 'SS' },
+  { key: 'NB', default: 'NB' },
+  { key: 'DB', default: 'DB' }
+];
+
+/**
+ * Generate defense depth chart positions from config or defaults
+ * @param {Object} defensePositionNames - Custom position names from setupConfig
+ * @param {Array} customDefensePositions - Custom positions added in setup
+ * @param {Array} hiddenDefensePositions - Positions hidden in setup
+ * @returns {Array<Object>} Array of position objects { id, label, depth }
+ */
+export function generateDefensePositions(defensePositionNames = {}, customDefensePositions = [], hiddenDefensePositions = []) {
+  // Start with canonical positions, filter out hidden ones
+  const activePositions = CANONICAL_DEFENSE_POSITIONS.filter(
+    p => !hiddenDefensePositions.includes(p.key)
+  );
+
+  // Add custom positions
+  const customPos = customDefensePositions.map(p => ({
+    key: p.key || p,
+    default: p.default || p.key || p
+  }));
+
+  const allPositions = [...activePositions, ...customPos];
+
+  // Convert to depth chart format
+  return allPositions.map(pos => ({
+    id: pos.key,
+    label: defensePositionNames[pos.key] || pos.default,
+    depth: 2
+  }));
+}
+
 /**
  * Get the effective base personnel for a given program level
  *

@@ -1,21 +1,10 @@
 import { useMemo } from 'react';
 import { useSchool } from '../../../context/SchoolContext';
-import { generateDepthChartPositions, CANONICAL_OFFENSE_POSITIONS } from '../../../utils/depthChartPositions';
+import { generateDepthChartPositions, generateDefensePositions, CANONICAL_OFFENSE_POSITIONS, CANONICAL_DEFENSE_POSITIONS } from '../../../utils/depthChartPositions';
 
 // Default position layouts for each chart type
+// Note: Offense positions come from dynamic setup config (dynamicOffenseLayout)
 const POSITION_LAYOUTS = {
-  offense: [
-    { pos: 'QB', label: 'Quarterback' },
-    { pos: 'RB', label: 'Running Back' },
-    { pos: 'FB', label: 'Fullback' },
-    { pos: 'WR', label: 'Wide Receiver' },
-    { pos: 'TE', label: 'Tight End' },
-    { pos: 'LT', label: 'Left Tackle' },
-    { pos: 'LG', label: 'Left Guard' },
-    { pos: 'C', label: 'Center' },
-    { pos: 'RG', label: 'Right Guard' },
-    { pos: 'RT', label: 'Right Tackle' }
-  ],
   defense: [
     { pos: 'DE', label: 'Defensive End' },
     { pos: 'DT', label: 'Defensive Tackle' },
@@ -85,6 +74,8 @@ const DEFENSE_FORMATION = {
   CB: [{ x: 5, y: 5 }, { x: 85, y: 5 }],       // Two corners, far left and right
   FS: [{ x: 35, y: 5 }],                        // Free safety
   SS: [{ x: 55, y: 5 }],                        // Strong safety
+  NB: [{ x: 25, y: 15 }],                       // Nickelback - slot defender
+  DB: [{ x: 65, y: 15 }],                       // Dime Back - extra DB
   // Linebackers (middle row)
   OLB: [{ x: 10, y: 28 }, { x: 80, y: 28 }],   // Outside linebackers
   MLB: [{ x: 45, y: 28 }],                      // Middle linebacker
@@ -95,22 +86,22 @@ const DEFENSE_FORMATION = {
   NT: [{ x: 45, y: 50 }],                       // Nose tackle
 };
 
-// Offense positions arranged looking UP at the defense
-const OFFENSE_FORMATION = {
+// Offense positions come from dynamic setup config - default coords for common position types
+const DEFAULT_OFFENSE_COORDS = {
   // O-Line (top row, closest to defense)
-  LT: [{ x: 20, y: 5 }],
-  LG: [{ x: 32, y: 5 }],
-  C: [{ x: 44, y: 5 }],
-  RG: [{ x: 56, y: 5 }],
-  RT: [{ x: 68, y: 5 }],
-  // Tight Ends (flanking line)
-  TE: [{ x: 8, y: 5 }, { x: 80, y: 5 }],
-  // Backfield
-  QB: [{ x: 44, y: 30 }],
-  RB: [{ x: 44, y: 50 }],
-  FB: [{ x: 30, y: 40 }],
-  // Receivers (wide)
-  WR: [{ x: 2, y: 20 }, { x: 88, y: 20 }],
+  LT: { x: 20, y: 5 },
+  LG: { x: 32, y: 5 },
+  C: { x: 44, y: 5 },
+  RG: { x: 56, y: 5 },
+  RT: { x: 68, y: 5 },
+  // Skill positions
+  QB: { x: 44, y: 30 },
+  X: { x: 2, y: 5 },
+  Y: { x: 80, y: 5 },
+  Z: { x: 88, y: 20 },
+  A: { x: 15, y: 20 },
+  B: { x: 44, y: 50 },
+  H: { x: 15, y: 35 },
 };
 
 // Kickoff team formation
@@ -224,10 +215,11 @@ const HANDS_TEAM_FORMATION = {
 };
 
 // Map of formation pairs for the formation view
+// Note: Offense uses dynamic positions from setup config, not a static formation
 const FORMATION_PAIRS = {
   'offense-defense': {
     top: { formation: DEFENSE_FORMATION, chartType: 'defense', label: 'Defense' },
-    bottom: { formation: OFFENSE_FORMATION, chartType: 'offense', label: 'Offense' }
+    bottom: { formation: null, chartType: 'offense', label: 'Offense' } // Uses dynamic positions
   },
   'kickoff': {
     top: { formation: KICKOFF_FORMATION, chartType: 'kickoff', label: 'Kickoff Coverage' },
@@ -268,6 +260,10 @@ export default function DepthChartPrint({
   const customPositions = setupConfig?.customPositions?.OFFENSE || [];
   const hiddenPositions = setupConfig?.hiddenPositions?.OFFENSE || [];
 
+  // Defense config - uses same positionNames object as offense for display labels
+  const customDefensePositions = setupConfig?.customPositions?.DEFENSE || [];
+  const hiddenDefensePositions = setupConfig?.hiddenPositions?.DEFENSE || [];
+
   // Use canonical offense positions from the shared utility
   // This ensures print view matches the core 11 positions from Setup.jsx
   const DEFAULT_OFFENSE_POSITIONS = CANONICAL_OFFENSE_POSITIONS;
@@ -283,14 +279,29 @@ export default function DepthChartPrint({
     return generateDepthChartPositions(levelId || activeLevelId, programLevels, personnelGroupings, positionNames, activePositions);
   }, [levelId, activeLevelId, programLevels, personnelGroupings, positionNames, activePositions]);
 
+  // Generate dynamic defense positions from config (or use canonical defaults)
+  // Uses same positionNames object for display labels
+  const defensePositions = useMemo(() => {
+    return generateDefensePositions(positionNames, customDefensePositions, hiddenDefensePositions);
+  }, [positionNames, customDefensePositions, hiddenDefensePositions]);
+
   // Convert dynamic positions to print format for offense
   const dynamicOffenseLayout = useMemo(() => {
-    if (!basePositions || basePositions.length === 0) return POSITION_LAYOUTS.offense;
+    if (!basePositions || basePositions.length === 0) return [];
     return basePositions.map(pos => ({
       pos: pos.id,
       label: pos.label
     }));
   }, [basePositions]);
+
+  // Convert dynamic positions to print format for defense
+  const dynamicDefenseLayout = useMemo(() => {
+    if (!defensePositions || defensePositions.length === 0) return POSITION_LAYOUTS.defense;
+    return defensePositions.map(pos => ({
+      pos: pos.id,
+      label: pos.label
+    }));
+  }, [defensePositions]);
 
   // Get current week
   const currentWeek = useMemo(() => {
@@ -311,10 +322,16 @@ export default function DepthChartPrint({
 
   // Get depth chart data
   const getDepthChartData = (chartType) => {
-    // Use dynamic positions for offense if available
-    const positions = chartType === 'offense' && dynamicOffenseLayout.length > 0
-      ? dynamicOffenseLayout
-      : (POSITION_LAYOUTS[chartType] || []);
+    // Offense and defense use dynamic positions from setup config
+    // Other chart types use POSITION_LAYOUTS
+    let positions;
+    if (chartType === 'offense') {
+      positions = dynamicOffenseLayout;
+    } else if (chartType === 'defense') {
+      positions = dynamicDefenseLayout;
+    } else {
+      positions = POSITION_LAYOUTS[chartType] || [];
+    }
     const chartData = depthCharts?.[selectedLevel]?.[chartType] || {};
 
     return positions.map(({ pos, label }) => {
@@ -355,6 +372,7 @@ export default function DepthChartPrint({
         playerMap={playerMap}
         formationPairs={formationPairs}
         dynamicOffensePositions={basePositions}
+        dynamicDefensePositions={defensePositions}
       />
     );
   }
@@ -519,7 +537,7 @@ const EDITOR_CANVAS_WIDTH = 1056;
 const EDITOR_CANVAS_HEIGHT = 408;
 
 // Formation view - renders formation pairs on landscape pages
-function FormationView({ depthLevels, currentWeek, settings, depthCharts, selectedLevel, playerMap, formationPairs = ['offense-defense'], dynamicOffensePositions = [] }) {
+function FormationView({ depthLevels, currentWeek, settings, depthCharts, selectedLevel, playerMap, formationPairs = ['offense-defense'], dynamicOffensePositions = [], dynamicDefensePositions = [] }) {
   // Get saved layout positions from week data
   const savedLayouts = currentWeek?.depthChartLayouts || {};
 
@@ -529,6 +547,11 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
   // Build set of valid offense position IDs from dynamic positions
   const validOffensePositionIds = new Set(
     dynamicOffensePositions.map(p => p.id)
+  );
+
+  // Build set of valid defense position IDs from dynamic positions
+  const validDefensePositionIds = new Set(
+    dynamicDefensePositions.map(p => p.id)
   );
 
   // Get depth data for a specific position - uses week-specific depth charts
@@ -585,12 +608,19 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
     const savedLayout = savedLayouts[chartType] || {};
     const chartRowCounts = savedRowCounts[chartType] || {};
 
-    // For offense, only render positions that exist in the current setup config
+    // For offense/defense, only render positions that exist in the current setup config
     const isOffense = chartType === 'offense';
+    const isDefense = chartType === 'defense';
     const shouldRenderPosition = (posId) => {
-      if (!isOffense) return true; // Non-offense charts render all positions
-      if (validOffensePositionIds.size === 0) return true; // No config, show all
-      return validOffensePositionIds.has(posId);
+      if (isOffense) {
+        if (validOffensePositionIds.size === 0) return true; // No config, show all
+        return validOffensePositionIds.has(posId);
+      }
+      if (isDefense) {
+        if (validDefensePositionIds.size === 0) return true; // No config, show all
+        return validDefensePositionIds.has(posId);
+      }
+      return true; // Special teams render all positions
     };
 
     // If we have a saved layout, use it instead of defaults
@@ -621,7 +651,31 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
       // For offense without saved layout, use dynamic positions with default coords
       dynamicOffensePositions.forEach((pos) => {
         const posId = pos.id;
-        const defaultCoord = OFFENSE_FORMATION[posId]?.[0] || { x: 50, y: 50 };
+        const defaultCoord = DEFAULT_OFFENSE_COORDS[posId] || { x: 50, y: 50 };
+        const numRows = chartRowCounts[posId] || depthLevels;
+        const players = getPositionDepth(chartType, posId, numRows);
+
+        boxes.push(
+          <PositionBox
+            key={posId}
+            pos={posId}
+            players={players}
+            style={{
+              position: 'absolute',
+              left: `${defaultCoord.x}%`,
+              top: `${defaultCoord.y}%`,
+              transform: 'translate(-50%, 0)'
+            }}
+          />
+        );
+      });
+    } else if (isDefense && dynamicDefensePositions.length > 0) {
+      // For defense without saved layout, use dynamic positions with default coords from DEFENSE_FORMATION
+      dynamicDefensePositions.forEach((pos) => {
+        const posId = pos.id;
+        // Get default coords from DEFENSE_FORMATION (which has arrays of coords)
+        const defenseCoords = DEFENSE_FORMATION[posId];
+        const defaultCoord = defenseCoords?.[0] || { x: 50, y: 50 };
         const numRows = chartRowCounts[posId] || depthLevels;
         const players = getPositionDepth(chartType, posId, numRows);
 
@@ -640,7 +694,7 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
         );
       });
     } else {
-      // Fall back to default formation layout (for defense, special teams, etc.)
+      // Fall back to default formation layout (for special teams, etc.)
       Object.entries(defaultFormationLayout).forEach(([pos, positions]) => {
         if (!shouldRenderPosition(pos)) return;
 

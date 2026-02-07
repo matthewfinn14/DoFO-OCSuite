@@ -18,7 +18,7 @@ import {
   ChevronDown,
   ExternalLink
 } from 'lucide-react';
-import { generateDepthChartPositions, CANONICAL_OFFENSE_POSITIONS } from '../utils/depthChartPositions';
+import { generateDepthChartPositions, generateDefensePositions, CANONICAL_OFFENSE_POSITIONS, CANONICAL_DEFENSE_POSITIONS } from '../utils/depthChartPositions';
 import DepthChartPrint from '../components/print/templates/DepthChartPrint';
 import '../styles/print-center.css';
 
@@ -38,34 +38,10 @@ const DEPTH_CHART_TYPES = [
   { id: 'pat', label: 'PAT' }
 ];
 
-// Default positions for grid view - matches Setup.jsx DEFAULT_POSITIONS.OFFENSE
+// Default positions for grid view - offense comes from dynamic setup config
+// Defense comes from generateDefensePositions utility
+// Special teams use hardcoded defaults below
 const DEFAULT_POSITIONS = {
-  offense: [
-    { id: 'QB', label: 'QB', depth: 3 },
-    { id: 'RB', label: 'RB', depth: 3 },
-    { id: 'X', label: 'X', depth: 3 },
-    { id: 'Y', label: 'Y', depth: 3 },
-    { id: 'Z', label: 'Z', depth: 3 },
-    { id: 'H', label: 'H', depth: 3 },
-    { id: 'LT', label: 'LT', depth: 3 },
-    { id: 'LG', label: 'LG', depth: 3 },
-    { id: 'C', label: 'C', depth: 3 },
-    { id: 'RG', label: 'RG', depth: 3 },
-    { id: 'RT', label: 'RT', depth: 3 }
-  ],
-  defense: [
-    { id: 'DE1', label: 'DE', depth: 2 },
-    { id: 'DT1', label: 'DT', depth: 2 },
-    { id: 'NT', label: 'NT', depth: 2 },
-    { id: 'DE2', label: 'DE', depth: 2 },
-    { id: 'OLB1', label: 'OLB', depth: 2 },
-    { id: 'MLB', label: 'MLB', depth: 2 },
-    { id: 'OLB2', label: 'OLB', depth: 2 },
-    { id: 'CB1', label: 'CB', depth: 2 },
-    { id: 'CB2', label: 'CB', depth: 2 },
-    { id: 'FS', label: 'FS', depth: 2 },
-    { id: 'SS', label: 'SS', depth: 2 }
-  ],
   kickoff: [
     { id: 'K', label: 'K', depth: 1 },
     { id: 'L1', label: 'L1', depth: 1 },
@@ -179,7 +155,20 @@ const DEFAULT_POSITION_COORDS = {
   WR2: { x: 920, y: 100 },
   WR3: { x: 200, y: 100 },
   // Slot positions
-  Slot: { x: 200, y: 100 }
+  Slot: { x: 200, y: 100 },
+  // Defense positions - flipped so LOS is at bottom (y=340)
+  // Defense faces offense when printed together
+  DE: { x: 320, y: 340 },
+  DT: { x: 448, y: 340 },
+  NT: { x: 528, y: 340 },
+  OLB: { x: 200, y: 240 },
+  ILB: { x: 440, y: 220 },
+  MLB: { x: 528, y: 220 },
+  CB: { x: 100, y: 140 },
+  FS: { x: 440, y: 60 },
+  SS: { x: 616, y: 60 },
+  NB: { x: 300, y: 140 },  // Nickelback - slot defender position
+  DB: { x: 756, y: 140 }   // Dime Back - extra DB position
 };
 
 // Default formation layouts (x, y coordinates for formation view)
@@ -262,11 +251,11 @@ function FormationView({
   const [selectionBox, setSelectionBox] = useState(null); // For drag-to-select: { startX, startY, currentX, currentY }
 
   // Get positions with layout coordinates
-  // For offense, use dynamic positions from personnel grouping
-  // For other chart types, use default layouts
+  // For offense and defense, use dynamic positions from setup config
+  // For other chart types (special teams), use default layouts
   const positions = useMemo(() => {
-    if (chartType === 'offense' && dynamicPositions && dynamicPositions.length > 0) {
-      // Use dynamic positions from personnel grouping
+    if ((chartType === 'offense' || chartType === 'defense') && dynamicPositions && dynamicPositions.length > 0) {
+      // Use dynamic positions from setup config
       // Assign coordinates from saved layout, or fall back to default coords for position type
       let slotCounter = 0; // For staggering positions without default coords
       return dynamicPositions.map((pos, index) => {
@@ -280,7 +269,7 @@ function FormationView({
           };
         }
         // Check if we have default coords for this position type
-        // Also check label in case position was renamed (e.g., WR renamed to A)
+        // Also check label in case position was renamed
         const defaultCoords = DEFAULT_POSITION_COORDS[pos.label] || DEFAULT_POSITION_COORDS[pos.positionType] || DEFAULT_POSITION_COORDS[pos.id];
         if (defaultCoords) {
           return {
@@ -300,8 +289,8 @@ function FormationView({
         };
       });
     }
-    // Non-offense chart types use default layouts
-    const defaultLayout = DEFAULT_FORMATION_LAYOUTS[chartType] || DEFAULT_FORMATION_LAYOUTS.offense;
+    // Special teams chart types use default layouts
+    const defaultLayout = DEFAULT_FORMATION_LAYOUTS[chartType] || [];
     return defaultLayout.map(pos => ({
       ...pos,
       x: layout?.[pos.id]?.x ?? pos.x,
@@ -499,11 +488,11 @@ function FormationView({
 
     const batchUpdate = {};
 
-    if (chartType === 'offense' && dynamicPositions && dynamicPositions.length > 0) {
+    if ((chartType === 'offense' || chartType === 'defense') && dynamicPositions && dynamicPositions.length > 0) {
       // Reset using dynamic positions and default coords
       let slotCounter = 0;
       dynamicPositions.forEach(pos => {
-        // Also check label in case position was renamed (e.g., WR renamed to A)
+        // Check label, positionType, then id for default coords
         const defaultCoords = DEFAULT_POSITION_COORDS[pos.label] || DEFAULT_POSITION_COORDS[pos.positionType] || DEFAULT_POSITION_COORDS[pos.id];
         if (defaultCoords) {
           batchUpdate[pos.id] = { x: defaultCoords.x, y: defaultCoords.y };
@@ -513,7 +502,7 @@ function FormationView({
         }
       });
     } else {
-      // Non-offense uses default layouts
+      // Special teams uses default layouts
       const defaultLayout = DEFAULT_FORMATION_LAYOUTS[chartType] || [];
       defaultLayout.forEach(pos => {
         batchUpdate[pos.id] = { x: pos.x, y: pos.y };
@@ -876,10 +865,10 @@ function GridView({
   const [activeDepthSlot, setActiveDepthSlot] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Use dynamic positions for offense if provided, otherwise fall back to defaults
-  const positions = chartType === 'offense' && dynamicPositions
+  // Use dynamic positions for offense or defense if provided, otherwise fall back to defaults
+  const positions = (chartType === 'offense' || chartType === 'defense') && dynamicPositions
     ? dynamicPositions
-    : (DEFAULT_POSITIONS[chartType] || DEFAULT_POSITIONS.offense);
+    : (DEFAULT_POSITIONS[chartType] || []);
 
   const getPlayer = (playerId) => roster.find(p => p.id === playerId);
 
@@ -1226,7 +1215,12 @@ export default function DepthCharts() {
   const customPositions = setupConfig?.customPositions?.OFFENSE || [];
   const hiddenPositions = setupConfig?.hiddenPositions?.OFFENSE || [];
 
-  // Compute active positions: defaults + custom - hidden
+  // Defense config - uses same positionNames object as offense, plus customPositions.DEFENSE, hiddenPositions.DEFENSE
+  // Position names are stored in a single positionNames object with keys like 'DE', 'DT', etc.
+  const customDefensePositions = setupConfig?.customPositions?.DEFENSE || [];
+  const hiddenDefensePositions = setupConfig?.hiddenPositions?.DEFENSE || [];
+
+  // Compute active offense positions: defaults + custom - hidden
   // Defaults come from CANONICAL_OFFENSE_POSITIONS (matches Setup.jsx DEFAULT_POSITIONS.OFFENSE)
   const activePositions = useMemo(() => {
     const defaults = DEFAULT_OFFENSE_POSITIONS.filter(p => !hiddenPositions.includes(p.key));
@@ -1237,6 +1231,12 @@ export default function DepthCharts() {
   const { basePositions, additionalPositions, basePersonnel } = useMemo(() => {
     return generateDepthChartPositions(activeLevelId, programLevels, personnelGroupings, positionNames, activePositions);
   }, [activeLevelId, programLevels, personnelGroupings, positionNames, activePositions]);
+
+  // Generate dynamic defense positions from config (or use canonical defaults)
+  // Uses same positionNames object for display labels
+  const defensePositions = useMemo(() => {
+    return generateDefensePositions(positionNames, customDefensePositions, hiddenDefensePositions);
+  }, [positionNames, customDefensePositions, hiddenDefensePositions]);
 
   // Get current week
   const currentWeek = weeks.find(w => w.id === currentWeekId);
@@ -1470,7 +1470,7 @@ export default function DepthCharts() {
           roster={roster}
           onUpdateDepthChart={handleUpdateDepthChart}
           isLight={isLight}
-          dynamicPositions={activeChart === 'offense' ? basePositions : null}
+          dynamicPositions={activeChart === 'offense' ? basePositions : activeChart === 'defense' ? defensePositions : null}
           additionalPositions={activeChart === 'offense' ? additionalPositions : []}
           showAdditional={showAdditional}
           onToggleAdditional={() => setShowAdditional(!showAdditional)}
@@ -1487,7 +1487,7 @@ export default function DepthCharts() {
           depthRowCounts={depthRowCounts}
           isLight={isLight}
           onUpdateDepthRowCounts={handleUpdateDepthRowCounts}
-          dynamicPositions={activeChart === 'offense' ? basePositions : null}
+          dynamicPositions={activeChart === 'offense' ? basePositions : activeChart === 'defense' ? defensePositions : null}
         />
       )}
       </div>
