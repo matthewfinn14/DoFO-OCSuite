@@ -50,6 +50,38 @@ const POSITION_LAYOUTS = {
   ]
 };
 
+// Position ID to human-readable label mapping for special teams
+// Matches the labels used in DepthCharts.jsx DEFAULT_FORMATION_LAYOUTS
+const SPECIAL_TEAMS_LABELS = {
+  // Kickoff
+  K: 'K', L1: 'L1', L2: 'L2', L3: 'L3', L4: 'L4', L5: 'L5',
+  R1: 'R1', R2: 'R2', R3: 'R3', R4: 'R4', R5: 'R5',
+  // Kickoff Return
+  KR1: 'KR1', KR2: 'KR2',
+  FL1: 'FL1', FL2: 'FL2', FL3: 'FL3', FL4: 'FL4', FL5: 'FL5',
+  FR1: 'FR1', FR2: 'FR2', FR3: 'FR3', FR4: 'FR4',
+  // Punt
+  P: 'Punter', LS: 'Long Snap', PP: 'Personal Protector',
+  PW1: 'Wing L', PW2: 'Wing R',
+  PG1: 'Guard L', PG2: 'Guard R',
+  PT1: 'Tackle L', PT2: 'Tackle R',
+  PGN1: 'Gunner L', PGN2: 'Gunner R',
+  // Punt Return
+  PR: 'PR',
+  PRB1: 'Blocker 1', PRB2: 'Blocker 2', PRB3: 'Blocker 3', PRB4: 'Blocker 4', PRB5: 'Blocker 5',
+  PRB6: 'Blocker 6', PRB7: 'Blocker 7', PRB8: 'Blocker 8', PRB9: 'Blocker 9', PRB10: 'Blocker 10',
+  // Field Goal
+  FGK: 'Kicker', FGH: 'Holder', FGLS: 'Long Snap',
+  FGL1: 'Guard L', FGL2: 'Tackle L', FGL3: 'Wing L',
+  FGR1: 'Guard R', FGR2: 'Tackle R', FGR3: 'Wing R',
+  FGU1: 'Upback L', FGU2: 'Upback R',
+  // PAT (same positions as FG but with PAT prefix)
+  PATK: 'Kicker', PATH: 'Holder', PATLS: 'Long Snap',
+  PATL1: 'Guard L', PATL2: 'Tackle L', PATL3: 'Wing L',
+  PATR1: 'Guard R', PATR2: 'Tackle R', PATR3: 'Wing R',
+  PATU1: 'Upback L', PATU2: 'Upback R',
+};
+
 const CHART_LABELS = {
   offense: 'Offense',
   defense: 'Defense',
@@ -718,12 +750,14 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
           const numRows = chartRowCounts[posId] || depthLevels;
           const players = getPositionDepth(chartType, posId, numRows);
           const percent = convertToPercent(coords.x, coords.y);
+          // Look up human-readable label, fall back to position ID
+          const displayLabel = SPECIAL_TEAMS_LABELS[posId] || posId;
 
           boxes.push(
             <PositionBox
               key={posId}
               pos={posId}
-              label={posId}
+              label={displayLabel}
               players={players}
               style={{
                 position: 'absolute',
@@ -741,13 +775,15 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
 
           const numRows = chartRowCounts[pos] || depthLevels;
           const players = getPositionDepth(chartType, pos, numRows);
+          // Look up human-readable label, fall back to position ID
+          const displayLabel = SPECIAL_TEAMS_LABELS[pos] || pos;
 
           positions.forEach((coord, idx) => {
             boxes.push(
               <PositionBox
                 key={`${pos}-${idx}`}
                 pos={pos}
-                label={pos}
+                label={displayLabel}
                 players={players}
                 style={{
                   position: 'absolute',
