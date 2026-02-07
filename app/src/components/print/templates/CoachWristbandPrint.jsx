@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useSchool } from '../../../context/SchoolContext';
+import { getPlayCall } from '../../../utils/playDisplay';
 
 // Card definitions - standard wristband cards
 const CARD_TABS = [
@@ -352,7 +353,7 @@ function StandardLayout({ card, getPlayForSlot }) {
           if (slot === undefined) return <div key={`empty-${rowIdx}-${colIdx}`} className="coach-slot-row" />;
 
           const play = getPlayForSlot(card.id, slot);
-          const playName = play?.name || '';
+          const playName = play ? getPlayCall(play) : '';
 
           return (
             <div
@@ -387,14 +388,14 @@ function WizLayout({ card, getPlayForSlot, wizType }) {
           {rowSlots.map(slot => {
             const play = getPlayForSlot(card.id, slot);
 
-            // For SKILL: show play name/abbreviation
+            // For SKILL: show play name/abbreviation with formation
             // For OLINE: show OL scheme name
             let displayName = '';
             if (play) {
               if (wizType === 'oline') {
                 displayName = play.wizOlineRef?.name || '';
               } else {
-                displayName = play.wizAbbreviation || play.name || '';
+                displayName = play.wizAbbreviation || getPlayCall(play);
               }
             }
 
