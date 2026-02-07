@@ -706,29 +706,88 @@ function FormationView({ depthLevels, currentWeek, settings, depthCharts, select
       });
     } else {
       // Fall back to default formation layout (for special teams, etc.)
-      Object.entries(defaultFormationLayout).forEach(([pos, positions]) => {
-        if (!shouldRenderPosition(pos)) return;
+      // But still check for saved layouts and use those coords when available
 
-        const numRows = chartRowCounts[pos] || depthLevels;
-        const players = getPositionDepth(chartType, pos, numRows);
+      // First, collect all position IDs from the saved layout that aren't in default formation
+      const savedPositionIds = Object.keys(savedLayout);
+      const defaultPositionIds = new Set(Object.keys(defaultFormationLayout || {}));
 
-        positions.forEach((coord, idx) => {
+      // If we have a saved layout, prefer rendering from that
+      if (savedPositionIds.length > 0) {
+        savedPositionIds.forEach(posId => {
+          const coords = savedLayout[posId];
+          const numRows = chartRowCounts[posId] || depthLevels;
+          const players = getPositionDepth(chartType, posId, numRows);
+          const percent = convertToPercent(coords.x, coords.y);
+
           boxes.push(
             <PositionBox
-              key={`${pos}-${idx}`}
-              pos={pos}
-              label={pos}
+              key={posId}
+              pos={posId}
+              label={posId}
               players={players}
               style={{
                 position: 'absolute',
-                left: `${coord.x}%`,
-                top: `${coord.y}%`,
+                left: `${percent.x}%`,
+                top: `${percent.y}%`,
                 transform: 'translate(-50%, 0)'
               }}
             />
           );
         });
-      });
+
+        // Also add any default positions that aren't in the saved layout
+        if (defaultFormationLayout) {
+          Object.entries(defaultFormationLayout).forEach(([pos, positions]) => {
+            if (savedLayout[pos]) return; // Already rendered from saved layout
+
+            const numRows = chartRowCounts[pos] || depthLevels;
+            const players = getPositionDepth(chartType, pos, numRows);
+
+            positions.forEach((coord, idx) => {
+              boxes.push(
+                <PositionBox
+                  key={`${pos}-${idx}`}
+                  pos={pos}
+                  label={pos}
+                  players={players}
+                  style={{
+                    position: 'absolute',
+                    left: `${coord.x}%`,
+                    top: `${coord.y}%`,
+                    transform: 'translate(-50%, 0)'
+                  }}
+                />
+              );
+            });
+          });
+        }
+      } else if (defaultFormationLayout) {
+        // No saved layout, use default formation
+        Object.entries(defaultFormationLayout).forEach(([pos, positions]) => {
+          if (!shouldRenderPosition(pos)) return;
+
+          const numRows = chartRowCounts[pos] || depthLevels;
+          const players = getPositionDepth(chartType, pos, numRows);
+
+          positions.forEach((coord, idx) => {
+            boxes.push(
+              <PositionBox
+                key={`${pos}-${idx}`}
+                pos={pos}
+                label={pos}
+                players={players}
+                style={{
+                  position: 'absolute',
+                  left: `${coord.x}%`,
+                  top: `${coord.y}%`,
+                  transform: 'translate(-50%, 0)'
+                }}
+              />
+            );
+          });
+        });
+      }
     }
 
     return boxes;
