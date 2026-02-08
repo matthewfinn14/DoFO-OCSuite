@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 
 export default function OffseasonReports() {
-  const { weeks, plays, addPlay, settings, activeYear } = useSchool();
+  const { weeks, playsArray, addPlay, settings, activeYear } = useSchool();
   const [selectedPlays, setSelectedPlays] = useState(new Set());
   const [importing, setImporting] = useState(false);
   const [importSuccess, setImportSuccess] = useState(null);
@@ -115,7 +115,7 @@ export default function OffseasonReports() {
     uniquePlays.sort((a, b) => b.count - a.count);
 
     // Check which plays already exist in playbook
-    const existingNames = new Set(plays.map(p => p.name?.toLowerCase()));
+    const existingNames = new Set(playsArray.map(p => p.name?.toLowerCase()));
     uniquePlays.forEach(p => {
       p.alreadyExists = existingNames.has(p.callString.toLowerCase());
     });
@@ -132,7 +132,7 @@ export default function OffseasonReports() {
       uniquePlays,
       allGamePlays
     };
-  }, [weeks, plays]);
+  }, [weeks, playsArray]);
 
   // Filter plays by type
   const filteredPlays = useMemo(() => {

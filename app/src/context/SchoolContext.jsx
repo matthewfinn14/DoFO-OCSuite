@@ -189,6 +189,9 @@ export function SchoolProvider({ children }) {
   const [practiceGrades, setPracticeGrades] = useState([]);
   const [gameGrades, setGameGrades] = useState([]);
 
+  // Season Analytics (Hudl import data)
+  const [seasonAnalytics, setSeasonAnalytics] = useState({});
+
   // Setup configuration data
   const [setupConfig, setSetupConfig] = useState({
     // Setup Mode: 'standard' (simple) or 'advanced' (bucket-specific syntax, signals, etc.)
@@ -394,6 +397,7 @@ export function SchoolProvider({ children }) {
           if (data.meetingNotes) setMeetingNotes(data.meetingNotes);
           if (data.practiceGrades) setPracticeGrades(data.practiceGrades);
           if (data.gameGrades) setGameGrades(data.gameGrades);
+          if (data.seasonAnalytics) setSeasonAnalytics(data.seasonAnalytics);
         } else {
           // Set default dev school
           setSchool({ id: 'dev-school-123', name: 'Development High School', mascot: 'Developers' });
@@ -487,6 +491,7 @@ export function SchoolProvider({ children }) {
           if (data.meetingNotes) setMeetingNotes(data.meetingNotes);
           if (data.practiceGrades) setPracticeGrades(data.practiceGrades);
           if (data.gameGrades) setGameGrades(data.gameGrades);
+          if (data.seasonAnalytics) setSeasonAnalytics(data.seasonAnalytics);
         }
         setLoading(false);
       },
@@ -623,6 +628,7 @@ export function SchoolProvider({ children }) {
         if (updates.meetingNotes) setMeetingNotes(updates.meetingNotes);
         if (updates.practiceGrades) setPracticeGrades(updates.practiceGrades);
         if (updates.gameGrades) setGameGrades(updates.gameGrades);
+        if (updates.seasonAnalytics) setSeasonAnalytics(updates.seasonAnalytics);
 
         setSaveStatus('saved');
         // Reset to idle after showing "saved" briefly
@@ -888,6 +894,123 @@ export function SchoolProvider({ children }) {
     }
     await updateGameGrades(newGrades);
   }, [gameGrades, updateGameGrades]);
+
+  /**
+   * Update season analytics data
+   */
+  const updateSeasonAnalytics = useCallback(async (newSeasonAnalytics) => {
+    await updateSchool({ seasonAnalytics: newSeasonAnalytics });
+  }, [updateSchool]);
+
+  /**
+   * Get season analytics for a specific year
+   */
+  const getSeasonAnalyticsForYear = useCallback((year) => {
+    return seasonAnalytics[year] || { games: [], importProfiles: [], settings: {} };
+  }, [seasonAnalytics]);
+
+  /**
+   * Add imported games to season analytics
+   */
+  const addImportedGames = useCallback(async (year, games, profileId = null) => {
+    const currentYearData = seasonAnalytics[year] || { games: [], importProfiles: [], settings: {} };
+    const existingGameIds = new Set(currentYearData.games.map(g => g.gameId));
+
+    // Filter out duplicate games
+    const newGames = games.filter(g => !existingGameIds.has(g.gameId));
+
+    if (newGames.length === 0) {
+      console.log('No new games to import');
+      return { added: 0, duplicates: games.length };
+    }
+
+    const updatedYearData = {
+      ...currentYearData,
+      games: [...currentYearData.games, ...newGames]
+    };
+
+    // Update profile last used if specified
+    if (profileId) {
+      updatedYearData.importProfiles = (updatedYearData.importProfiles || []).map(p =>
+        p.id === profileId ? { ...p, lastUsedAt: new Date().toISOString() } : p
+      );
+    }
+
+    const updatedSeasonAnalytics = {
+      ...seasonAnalytics,
+      [year]: updatedYearData
+    };
+
+    await updateSeasonAnalytics(updatedSeasonAnalytics);
+    return { added: newGames.length, duplicates: games.length - newGames.length };
+  }, [seasonAnalytics, updateSeasonAnalytics]);
+
+  /**
+   * Remove a game from season analytics
+   */
+  const removeImportedGame = useCallback(async (year, gameId) => {
+    const currentYearData = seasonAnalytics[year];
+    if (!currentYearData) return;
+
+    const updatedYearData = {
+      ...currentYearData,
+      games: currentYearData.games.filter(g => g.gameId !== gameId)
+    };
+
+    const updatedSeasonAnalytics = {
+      ...seasonAnalytics,
+      [year]: updatedYearData
+    };
+
+    await updateSeasonAnalytics(updatedSeasonAnalytics);
+  }, [seasonAnalytics, updateSeasonAnalytics]);
+
+  /**
+   * Save an import profile
+   */
+  const saveImportProfile = useCallback(async (year, profile) => {
+    const currentYearData = seasonAnalytics[year] || { games: [], importProfiles: [], settings: {} };
+    const existingIndex = currentYearData.importProfiles.findIndex(p => p.id === profile.id);
+
+    let updatedProfiles;
+    if (existingIndex >= 0) {
+      updatedProfiles = [...currentYearData.importProfiles];
+      updatedProfiles[existingIndex] = { ...profile, lastUsedAt: new Date().toISOString() };
+    } else {
+      updatedProfiles = [...currentYearData.importProfiles, profile];
+    }
+
+    const updatedYearData = {
+      ...currentYearData,
+      importProfiles: updatedProfiles
+    };
+
+    const updatedSeasonAnalytics = {
+      ...seasonAnalytics,
+      [year]: updatedYearData
+    };
+
+    await updateSeasonAnalytics(updatedSeasonAnalytics);
+  }, [seasonAnalytics, updateSeasonAnalytics]);
+
+  /**
+   * Update season analytics settings for a year
+   */
+  const updateSeasonAnalyticsSettings = useCallback(async (year, settings) => {
+    const currentYearData = seasonAnalytics[year] || { games: [], importProfiles: [], settings: {} };
+
+    const updatedYearData = {
+      ...currentYearData,
+      settings: { ...currentYearData.settings, ...settings }
+    };
+
+    const updatedSeasonAnalytics = {
+      ...seasonAnalytics,
+      [year]: updatedYearData
+    };
+
+    await updateSeasonAnalytics(updatedSeasonAnalytics);
+  }, [seasonAnalytics, updateSeasonAnalytics]);
 
   /**
    * Get current week object
@@ -1191,6 +1314,7 @@ export function SchoolProvider({ children }) {
     meetingNotes,
     practiceGrades,
     gameGrades,
+    seasonAnalytics,
 
     // Season history
     archivedSeasons,
@@ -1231,6 +1355,13 @@ export function SchoolProvider({ children }) {
     switchToSeason,
     getViewedSeasonData,
     importTemplatesFromSeason,
+    // Season Analytics
+    updateSeasonAnalytics,
+    getSeasonAnalyticsForYear,
+    addImportedGames,
+    removeImportedGame,
+    saveImportProfile,
+    updateSeasonAnalyticsSettings,
   };
 
   return (

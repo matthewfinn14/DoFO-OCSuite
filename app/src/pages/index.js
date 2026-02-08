@@ -49,3 +49,9 @@ export { default as SubLevelPractice } from './SubLevelPractice';
 export { default as AccountSettings } from './AccountSettings';
 export { default as Roadmap } from './Roadmap';
 export { default as Help } from './Help';
+
+// Season History
+export { default as SeasonHistory } from './SeasonHistory';
+
+// Season Review (Offensive Analytics)
+export { default as SeasonReview } from './SeasonReview';

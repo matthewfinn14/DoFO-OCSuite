@@ -1,8 +1,10 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useSchool } from '../context/SchoolContext';
+import { useAuth } from '../context/AuthContext';
 import { PlayCard, PlayEditor } from '../components/playbook';
 import { usePlayDetailsModal } from '../components/PlayDetailsModal';
+import { WhiteboardImportWizard } from '../components/whiteboard';
 import { getWristbandDisplay } from '../utils/wristband';
 import {
   Plus,
@@ -21,7 +23,8 @@ import {
   X,
   Check,
   Users,
-  Upload
+  Upload,
+  Camera
 } from 'lucide-react';
 
 // Modal for assigning plays to sub-level playbooks
@@ -192,13 +195,16 @@ const DEFAULT_TAG_CATEGORIES = {
 };
 
 export default function Playbook() {
-  const { playsArray, plays, updatePlays, addPlay, updatePlay, setupConfig } = useSchool();
+  const { playsArray, plays, updatePlays, addPlay, updatePlay, setupConfig, school } = useSchool();
   const { openPlayDetails } = usePlayDetailsModal();
   const location = useLocation();
   const navigate = useNavigate();
 
   // Get program levels for sub-level playbook assignment
   const programLevels = setupConfig?.programLevels || [];
+
+  // Whiteboard import wizard state
+  const [showWhiteboardWizard, setShowWhiteboardWizard] = useState(false);
 
   // UI State
   const [activePhase, setActivePhase] = useState('OFFENSE');
@@ -501,6 +507,15 @@ export default function Playbook() {
           )}
         </div>
         <div className="flex gap-3">
+          {activePhase === 'OFFENSE' && (
+            <button
+              onClick={() => setShowWhiteboardWizard(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 font-medium"
+            >
+              <Camera size={18} />
+              Import from Whiteboard
+            </button>
+          )}
           <button
             onClick={openNewPlayEditor}
             className="flex items-center gap-2 px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 font-medium"
@@ -848,6 +863,51 @@ export default function Playbook() {
           programLevels={programLevels}
           onAssign={handleAssignToLevels}
           onClose={() => setShowAssignLevelsModal(false)}
+        />
+      )}
+
+      {/* Whiteboard Import Wizard */}
+      {showWhiteboardWizard && (
+        <WhiteboardImportWizard
+          isOpen={showWhiteboardWizard}
+          onClose={() => setShowWhiteboardWizard(false)}
+          schoolId={school?.id}
+          positionColors={positionColors}
+          positionNames={positionNames}
+          onSave={async (elements) => {
+            // Create a new play with the imported diagram
+            const newPlay = {
+              name: 'Imported Play',
+              phase: 'OFFENSE',
+              wizSkillData: elements,
+              importedFromWhiteboard: true,
+              importedAt: new Date().toISOString()
+            };
+            const playId = await addPlay(newPlay);
+            // Open the editor with the new play
+            const createdPlay = { ...newPlay, id: playId };
+            setEditingPlay(createdPlay);
+            setEditorOpen(true);
+          }}
+          onOpenEditor={(elements) => {
+            // Create a new play and open the editor
+            const newPlay = {
+              name: 'Imported Play',
+              phase: 'OFFENSE',
+              wizSkillData: elements,
+              importedFromWhiteboard: true,
+              importedAt: new Date().toISOString()
+            };
+            // Open editor with unsaved play
+            setEditingPlay(null);
+            setEditorOpen(true);
+            // Store elements in editor initial state
+            // Note: The PlayEditor will receive the wizSkillData from the editingPlay prop
+            setTimeout(() => {
+              // Re-open with the play data after a tick
+              setEditingPlay({ ...newPlay, id: null });
+            }, 0);
+          }}
         />
       )}
     </div>

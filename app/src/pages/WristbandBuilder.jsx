@@ -16,7 +16,8 @@ import {
   CheckSquare,
   Library,
   ExternalLink,
-  Settings
+  Settings,
+  HelpCircle
 } from 'lucide-react';
 
 // Card tab definitions
@@ -126,6 +127,7 @@ export default function WristbandBuilder() {
   const [editingSkillPlay, setEditingSkillPlay] = useState(null);
   const [editingOLPlay, setEditingOLPlay] = useState(null);
   const [showOLLibraryForPlay, setShowOLLibraryForPlay] = useState(null);
+  const [showHelp, setShowHelp] = useState(false);
 
   // Use context's selectedPlayId for wristband assignment
   const selectedPlayId = contextSelectedPlayId;
@@ -641,7 +643,16 @@ export default function WristbandBuilder() {
               <Watch size={20} className="text-sky-400" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">Wristband Builder</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-bold text-white">Wristband Builder</h1>
+                <button
+                  onClick={() => setShowHelp(!showHelp)}
+                  className={`p-1 rounded transition-colors ${showHelp ? 'text-sky-400 bg-sky-500/20' : 'text-slate-500 hover:text-slate-300'}`}
+                  title="Help"
+                >
+                  <HelpCircle size={18} />
+                </button>
+              </div>
               <p className="text-slate-400 text-sm">{currentWeek.name}</p>
             </div>
           </div>
@@ -700,6 +711,46 @@ export default function WristbandBuilder() {
             </button>
           </div>
         </div>
+
+        {/* Help Panel */}
+        {showHelp && (
+          <div className="mb-4 p-4 bg-slate-800/80 rounded-xl border border-sky-500/30" style={{ borderLeft: '4px solid #0ea5e9' }}>
+            <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+              <HelpCircle size={18} className="text-sky-400" />
+              How to Use Wristband Builder
+            </h3>
+            <div className="space-y-3 text-sm text-slate-300">
+              <div>
+                <p className="font-medium text-white mb-1">Card Tabs (100s, 200s, etc.)</p>
+                <p>Each tab is a separate wristband card. Players can have multiple cards during a game (e.g., 100s card for base plays, 200s for red zone). Click a tab to view/edit that card. Right-click to disable a card for this week.</p>
+              </div>
+              <div>
+                <p className="font-medium text-white mb-1">Layout Types</p>
+                <ul className="list-disc list-inside space-y-1 text-slate-400">
+                  <li><span className="text-slate-300">Standard</span> - 48 slots in two columns, play names only</li>
+                  <li><span className="text-slate-300">WIZ</span> - 16 slots in a 4x4 grid with diagrams for SKILL and O-LINE cards</li>
+                  <li><span className="text-slate-300">Mini-Scripts</span> - Scripted sequence with tempo and dual plays per row</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-medium text-white mb-1">Adding Plays</p>
+                <ul className="list-disc list-inside space-y-1 text-slate-400">
+                  <li><span className="text-slate-300">Single Select</span> - Click a play in the PlayBank sidebar, then click an empty slot to assign it</li>
+                  <li><span className="text-slate-300">Batch Add</span> - Click "Batch Add" button, select multiple plays, then confirm to fill empty slots in order</li>
+                  <li><span className="text-slate-300">From Call Sheet</span> - Use the "Add to Wristband" option in your call sheet for quick transfer</li>
+                </ul>
+              </div>
+              <div>
+                <p className="font-medium text-white mb-1">WIZ Card Diagrams</p>
+                <p className="text-slate-400">For WIZ layout, each slot shows a play diagram. Click the diagram area to edit. SKILL cards show routes, OLINE cards show blocking assignments. Double-click the play name to set a custom abbreviation.</p>
+              </div>
+              <div>
+                <p className="font-medium text-white mb-1">Printing</p>
+                <p className="text-slate-400">Click "Print" to print the current card at actual wristband size. Set card color for easy identification during the game. The opponent name and iteration number help track game-day updates.</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Card Tabs - All cards shown, disabled ones are dimmed */}
         <div className="flex items-center gap-1 mb-4 bg-slate-900 p-1 rounded-lg border border-slate-800">

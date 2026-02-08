@@ -54,7 +54,11 @@ import {
   // Bottom nav pages
   AccountSettings,
   Roadmap,
-  Help
+  Help,
+  // Season History
+  SeasonHistory,
+  // Season Review (Offensive Analytics)
+  SeasonReview
 } from './pages';
 
 // Loading spinner component
@@ -132,6 +136,7 @@ function AppRoutes() {
         <Route path="/season" element={<Season />} />
 
         {/* Season Review routes */}
+        <Route path="/review/season" element={<SeasonReview />} />
         <Route path="/review/self-scout" element={<OffseasonSelfScout />} />
         <Route path="/review/reports" element={<OffseasonReports />} />
         <Route path="/review/swot" element={<OffseasonSwot />} />
@@ -199,6 +204,7 @@ function AppRoutes() {
         <Route path="/admin" element={<Admin />} />
         <Route path="/roadmap" element={<Roadmap />} />
         <Route path="/help" element={<Help />} />
+        <Route path="/seasons" element={<SeasonHistory />} />
 
         {/* 404 */}
         <Route path="*" element={<NotFound />} />

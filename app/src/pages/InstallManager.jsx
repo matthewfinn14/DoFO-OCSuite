@@ -33,7 +33,8 @@ import {
   Wand2,
   CheckCircle2,
   MessageSquarePlus,
-  ClipboardCheck
+  ClipboardCheck,
+  HelpCircle
 } from 'lucide-react';
 
 // Toggle Chip Component for Quick Assign panel
@@ -200,34 +201,54 @@ function InlineBoxChips({ boxes, activeBoxIds, onToggle }) {
   );
 }
 
-// Editable number input for target reps
-function RepInput({ value, onChange, disabled }) {
-  const [localValue, setLocalValue] = useState(value || '');
-
-  useEffect(() => {
-    setLocalValue(value || '');
-  }, [value]);
-
-  const handleBlur = () => {
-    const num = parseInt(localValue) || 0;
-    if (num !== value) {
-      onChange(num);
-    }
-  };
+// Quota control with +/- buttons
+function QuotaControl({ value, currentReps, onChange, disabled, isLight }) {
+  const target = value || 0;
+  const actual = currentReps || 0;
+  const isMet = target > 0 && actual >= target;
+  const isPartial = target > 0 && actual > 0 && actual < target;
+  const isUnmet = target > 0 && actual === 0;
 
   return (
-    <input
-      type="number"
-      min="0"
-      max="99"
-      value={localValue}
-      onChange={(e) => setLocalValue(e.target.value)}
-      onBlur={handleBlur}
-      onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
-      disabled={disabled}
-      className="w-12 px-1.5 py-0.5 text-center text-xs bg-slate-800 border border-slate-700 rounded
-                 text-white focus:outline-none focus:border-sky-500 disabled:opacity-50"
-    />
+    <div className="flex items-center justify-center gap-1">
+      <button
+        onClick={() => onChange(Math.max(0, target - 1))}
+        disabled={disabled || target <= 0}
+        className={`w-5 h-5 flex items-center justify-center rounded transition-colors ${
+          disabled || target <= 0
+            ? 'opacity-30 cursor-not-allowed'
+            : isLight
+            ? 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+            : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-white'
+        }`}
+      >
+        <Minus size={10} />
+      </button>
+      <div className={`min-w-[3rem] px-1.5 py-0.5 rounded text-xs font-medium text-center ${
+        isMet
+          ? isLight ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-500/20 text-emerald-400'
+          : isPartial
+          ? isLight ? 'bg-amber-100 text-amber-700' : 'bg-amber-500/20 text-amber-400'
+          : isUnmet
+          ? isLight ? 'bg-red-100 text-red-700' : 'bg-red-500/20 text-red-400'
+          : isLight ? 'bg-gray-100 text-gray-600' : 'bg-slate-700 text-slate-300'
+      }`}>
+        {actual}/{target}
+      </div>
+      <button
+        onClick={() => onChange(target + 1)}
+        disabled={disabled}
+        className={`w-5 h-5 flex items-center justify-center rounded transition-colors ${
+          disabled
+            ? 'opacity-30 cursor-not-allowed'
+            : isLight
+            ? 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+            : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-white'
+        }`}
+      >
+        <Plus size={10} />
+      </button>
+    </div>
   );
 }
 
@@ -502,6 +523,7 @@ export default function InstallManager() {
   const [quickAssignCollapsed, setQuickAssignCollapsed] = useState(true);
   const [sortColumn, setSortColumn] = useState('name');
   const [sortDirection, setSortDirection] = useState('asc');
+  const [showHelp, setShowHelp] = useState(false);
 
   // Wizard state
   const [wizardState, setWizardState] = useState({
@@ -721,13 +743,16 @@ export default function InstallManager() {
     );
   }, []);
 
-  // Add play to install
+  // Add play to install - auto-star and set default quota of 3
   const handleAddPlay = useCallback((playId) => {
     if (!currentWeek || installList.includes(playId)) return;
     const newList = [...installList, playId];
     const newNewIds = [...newInstallIds, playId]; // New plays are marked as new by default
-    updateWeek(weekId, { installList: newList, newInstallIds: newNewIds });
-  }, [currentWeek, installList, newInstallIds, weekId, updateWeek]);
+    const newTargets = { ...playRepTargets, [playId]: 3 }; // Default quota of 3 reps
+    updateWeek(weekId, { installList: newList, newInstallIds: newNewIds, playRepTargets: newTargets });
+    // Auto-star the play as priority
+    updatePlay(playId, { priority: true });
+  }, [currentWeek, installList, newInstallIds, playRepTargets, weekId, updateWeek, updatePlay]);
 
   // Remove play from install only (quick remove)
   const handleRemoveFromInstall = useCallback((playId) => {
@@ -1218,9 +1243,9 @@ export default function InstallManager() {
       <div className="flex items-center justify-center h-full">
         <div className="text-center max-w-md">
           <Layers size={64} className="text-emerald-400 mx-auto mb-4" />
-          <h1 className={`text-2xl font-bold mb-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>Install Manager</h1>
+          <h1 className={`text-2xl font-bold mb-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>Priority Plays</h1>
           <p className={`mb-6 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
-            Select a week from the sidebar to manage play installations.
+            Select a week from the sidebar to manage priority plays.
           </p>
           <Link
             to="/dashboard"
@@ -1244,12 +1269,27 @@ export default function InstallManager() {
       {/* Header */}
       <div className={`px-4 py-3 border-b ${isLight ? 'border-gray-200 bg-white' : 'border-slate-800 bg-slate-900/50'}`}>
         <div className="flex items-center justify-between mb-3">
-          <div>
-            <h1 className={`text-xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>Install Manager</h1>
-            <p className={`text-sm ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
-              {currentWeek.name || currentWeek.opponent || `Week ${currentWeek.weekNumber || ''}`}
-              {currentWeek.opponent && ` vs ${currentWeek.opponent}`}
-            </p>
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className={`text-xl font-bold ${isLight ? 'text-gray-900' : 'text-white'}`}>Priority Plays</h1>
+              <p className={`text-sm ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                {currentWeek.name || currentWeek.opponent || `Week ${currentWeek.weekNumber || ''}`}
+                {currentWeek.opponent && ` vs ${currentWeek.opponent}`}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowHelp(!showHelp)}
+              className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors ${
+                showHelp
+                  ? 'bg-sky-500 text-white'
+                  : isLight
+                    ? 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'
+                    : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-white'
+              }`}
+              title="What is Priority Plays?"
+            >
+              <HelpCircle size={16} />
+            </button>
           </div>
           <div className="flex items-center gap-2">
             {/* Assignment Wizard Button */}
@@ -1387,6 +1427,54 @@ export default function InstallManager() {
         </div>
       </div>
 
+      {/* Help Panel */}
+      {showHelp && (
+        <div className={`mx-4 mt-3 rounded-lg border p-4 ${isLight ? 'bg-sky-50 border-sky-200' : 'bg-sky-500/10 border-sky-500/30'}`}>
+          <div className="flex items-start justify-between mb-3">
+            <h3 className={`font-semibold ${isLight ? 'text-sky-900' : 'text-sky-300'}`}>
+              What is Priority Plays?
+            </h3>
+            <button
+              onClick={() => setShowHelp(false)}
+              className={`p-1 rounded ${isLight ? 'hover:bg-sky-100 text-sky-700' : 'hover:bg-sky-500/20 text-sky-400'}`}
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <div className={`space-y-3 text-sm ${isLight ? 'text-sky-800' : 'text-sky-200'}`}>
+            <p>
+              <strong>Priority Plays</strong> is where you track plays that need extra attention this week -
+              new installs, plays you want to emphasize, or anything that needs deliberate practice reps.
+            </p>
+            <div className={`p-3 rounded-lg ${isLight ? 'bg-white/70' : 'bg-slate-800/50'}`}>
+              <h4 className={`font-medium mb-2 ${isLight ? 'text-sky-900' : 'text-white'}`}>How it works:</h4>
+              <ul className={`text-xs space-y-1.5 ${isLight ? 'text-sky-700' : 'text-slate-300'}`}>
+                <li className="flex items-start gap-2">
+                  <Star size={12} className="text-amber-400 mt-0.5 flex-shrink-0" />
+                  <span>Plays added here are <strong>auto-starred</strong> and appear highlighted on your call sheet</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Target size={12} className="text-sky-400 mt-0.5 flex-shrink-0" />
+                  <span>Each play gets a <strong>default quota of 3 reps</strong> - adjust with +/- buttons</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Sparkles size={12} className="text-emerald-400 mt-0.5 flex-shrink-0" />
+                  <span>Mark plays as <strong>"New"</strong> to track fresh installs vs. priority carryovers</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <LayoutGrid size={12} className="text-orange-400 mt-0.5 flex-shrink-0" />
+                  <span>Check <strong>"Needs Diagram"</strong> for plays that need wristband artwork</span>
+                </li>
+              </ul>
+            </div>
+            <p className={`text-xs ${isLight ? 'text-sky-600' : 'text-sky-400'}`}>
+              <strong>Tip:</strong> Use Script QC in Practice Plans to verify you're hitting your rep quotas before practice.
+              To remove the star highlight from the call sheet, click the star icon on the play to unstar it.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Bulk Assign Panel */}
       <QuickAssignPanel
         selectedPlayIds={selectedPlayIds}
@@ -1456,30 +1544,33 @@ export default function InstallManager() {
                 <th
                   className="px-3 py-2 text-center cursor-pointer hover:text-white"
                   onClick={() => handleSort('reps')}
+                  title="Practice quota: current reps / target reps"
                 >
                   <span className="flex items-center justify-center gap-1">
                     <Target size={12} />
-                    Reps
+                    Quota
                     {sortColumn === 'reps' && (sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
                   </span>
                 </th>
                 <th
                   className="px-3 py-2 text-center cursor-pointer hover:text-white"
                   onClick={() => handleSort('history')}
+                  title="Total reps from previous weeks"
                 >
                   <span className="flex items-center justify-center gap-1">
                     <Clock size={12} />
-                    Hist
+                    History
                     {sortColumn === 'history' && (sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
                   </span>
                 </th>
                 <th
                   className="px-3 py-2 text-center cursor-pointer hover:text-white"
                   onClick={() => handleSort('wiz')}
-                  title="Needs Wristband Diagram"
+                  title="Check if this play needs a wristband diagram created"
                 >
                   <span className="flex items-center justify-center gap-1">
                     <LayoutGrid size={12} />
+                    Needs Diagram
                     {sortColumn === 'wiz' && (sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
                   </span>
                 </th>
@@ -1691,11 +1782,13 @@ export default function InstallManager() {
                       )}
                     </td>
 
-                    {/* Target Reps */}
+                    {/* Practice Quota */}
                     <td className="px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
-                      <RepInput
+                      <QuotaControl
                         value={targetReps}
+                        currentReps={currentWeekReps[play.id] || 0}
                         onChange={(val) => handleUpdateTargetReps(play.id, val)}
+                        isLight={isLight}
                       />
                     </td>
 

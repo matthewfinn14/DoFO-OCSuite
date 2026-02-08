@@ -26,17 +26,17 @@ const WEEKLY_TIMELINE = [
     description: 'Review Friday\'s game, identify what worked and what needs adjustment. Begin building next week\'s install.',
     tools: [
       { name: 'Postgame Review', icon: Trophy, path: 'postgame-review' },
-      { name: 'Install Manager', icon: Layers, path: 'install' }
+      { name: 'Priority Plays', icon: Layers, path: 'install' }
     ],
     color: 'bg-purple-500'
   },
   {
     day: 'Sunday',
     focus: 'Personnel & Game Plan',
-    description: 'Update depth charts based on Saturday\'s film. Finalize install list and begin building the call sheet for this week\'s opponent.',
+    description: 'Update depth charts based on Saturday\'s film. Finalize priority plays and begin building the call sheet for this week\'s opponent.',
     tools: [
       { name: 'Depth Chart', icon: Users, path: 'depth-charts' },
-      { name: 'Install Manager', icon: Layers, path: 'install' },
+      { name: 'Priority Plays', icon: Layers, path: 'install' },
       { name: 'Game Plan/Call Sheet', icon: Clipboard, path: 'game-plan' }
     ],
     color: 'bg-blue-500'
@@ -113,7 +113,7 @@ const WORKFLOW_OPTIONS = [
     steps: [
       'Build/adjust call sheet sections directly',
       'Practice scripts pull from call sheet for reps',
-      'Skip Install Manager - go straight to game plan',
+      'Skip Priority Plays - go straight to game plan',
       'Simpler workflow, fewer steps'
     ]
   },
@@ -122,7 +122,7 @@ const WORKFLOW_OPTIONS = [
     recommended: false,
     description: 'Maximum flexibility for evolving game plans',
     steps: [
-      'Use Install Manager early week for "what we need to rep"',
+      'Use Priority Plays early week for "what we need to rep"',
       'Transition mid-week to call sheet focus',
       'Install list = practice priority, Call sheet = game day calls',
       'Best of both worlds'
@@ -203,13 +203,13 @@ export default function WeeklyWorkflow() {
           tools that work together but don't force you into a rigid process.
         </p>
         <p className={`text-sm leading-relaxed mb-4 ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
-          The <strong className={isLight ? 'text-sky-600' : 'text-sky-400'}>Install Manager</strong> gives you a place to house plays
+          The <strong className={isLight ? 'text-sky-600' : 'text-sky-400'}>Priority Plays</strong> page gives you a place to house plays
           that are new or a priority for this week. As the week progresses, you may want to transition
           focus to the <strong className={isLight ? 'text-sky-600' : 'text-sky-400'}>Game Plan/Call Sheet</strong> - organizing plays
           by situation so you're ready to roll on Friday.
         </p>
         <p className={`text-sm leading-relaxed ${isLight ? 'text-gray-700' : 'text-slate-300'}`}>
-          It's also totally fine to skip the Install Manager and work directly in the Call Sheet -
+          It's also totally fine to skip Priority Plays and work directly in the Call Sheet -
           especially if you're not adding many new plays each week. <strong className={isLight ? 'text-gray-900' : 'text-white'}>Use what works for your staff.</strong>
         </p>
       </div>
@@ -358,7 +358,7 @@ export default function WeeklyWorkflow() {
                 className="flex items-center gap-2 px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-sm font-medium transition-colors"
               >
                 <Layers size={16} />
-                Install Manager
+                Priority Plays
               </Link>
               <Link
                 to={`/week/${activeWeekId}/game-plan`}

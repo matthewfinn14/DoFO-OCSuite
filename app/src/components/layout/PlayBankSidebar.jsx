@@ -483,6 +483,26 @@ export default function PlayBankSidebar({
     return usage;
   }, [currentWeek]);
 
+  // Calculate reps per box from script usage
+  const boxReps = useMemo(() => {
+    const reps = {};
+    gamePlanBoxesWithPlays.forEach(box => {
+      let totalReps = 0;
+      // Sum reps from quicklist plays
+      box.quicklistPlays.forEach(play => {
+        const usage = scriptUsageByPlay[play.id];
+        if (usage?.TOT) totalReps += usage.TOT;
+      });
+      // Sum reps from assigned plays
+      box.assignedPlays.forEach(play => {
+        const usage = scriptUsageByPlay[play.id];
+        if (usage?.TOT) totalReps += usage.TOT;
+      });
+      reps[box.setId] = totalReps;
+    });
+    return reps;
+  }, [gamePlanBoxesWithPlays, scriptUsageByPlay]);
+
   // Get play call chain syntax for current phase
   const currentSyntax = setupConfig?.syntax?.[playBankPhase] || [];
   const currentTermLibrary = setupConfig?.termLibrary?.[playBankPhase] || {};
@@ -938,7 +958,7 @@ export default function PlayBankSidebar({
               <div className="flex items-center gap-2">
                 <CheckSquare size={16} />
                 <span className="text-sm font-semibold">
-                  {internalBatchMode ? 'Select Plays to Install' : 'Select Plays'}
+                  {internalBatchMode ? 'Select Priority Plays' : 'Select Plays'}
                 </span>
               </div>
               <button
@@ -950,7 +970,7 @@ export default function PlayBankSidebar({
             </div>
             <p className="text-xs opacity-80 mt-1">
               {internalBatchMode
-                ? 'Click plays to select them, then click "Add to Install" below'
+                ? 'Click plays to select them, then click "Add" below'
                 : `Click plays to select them, then click "${batchSelectLabel}" below`
               }
             </p>
@@ -997,7 +1017,7 @@ export default function PlayBankSidebar({
         {activeTab !== 'headers' && (
           <div className="flex border-b border-slate-200 flex-shrink-0">
             {[
-              { key: 'install', label: 'Install' },
+              { key: 'install', label: 'Priority Plays' },
               { key: 'gameplan', label: 'Game Plan' },
               { key: 'usage', label: 'Full Playbook' }
             ].map(tab => (
@@ -1310,8 +1330,12 @@ export default function PlayBankSidebar({
                           <span className="flex-1 text-left text-sm font-medium text-slate-800 truncate">
                             {box.header}
                           </span>
-                          <span className="text-xs text-slate-500 flex-shrink-0">
-                            {box.totalPlays}
+                          <span className="text-xs flex-shrink-0 flex items-center gap-2">
+                            <span className={`font-semibold ${boxReps[box.setId] > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                              {boxReps[box.setId] || 0} reps
+                            </span>
+                            <span className="text-slate-400">|</span>
+                            <span className="text-slate-500">{box.totalPlays} plays</span>
                           </span>
                           {isExpanded ? (
                             <ChevronDown size={14} className="text-slate-400" />
@@ -1385,10 +1409,10 @@ export default function PlayBankSidebar({
                   </button>
                 </div>
               )}
-              {/* Install header with day columns */}
+              {/* Priority Plays header with day columns */}
               <div className="sticky top-0 bg-emerald-500 flex items-center">
                 <span className="flex-1 text-xs font-bold text-white uppercase pl-2 py-1">
-                  Week Install ({flatInstallPlays.length})
+                  Priority Plays ({flatInstallPlays.length})
                 </span>
                 <div className="flex items-center text-[7px] font-bold text-emerald-100 uppercase border-l border-emerald-400">
                   <span className="w-4 text-center py-1 border-r border-emerald-400">M</span>
@@ -1406,8 +1430,8 @@ export default function PlayBankSidebar({
               ) : (
                 <div className="py-8 text-center text-slate-400 text-sm">
                   {currentWeek
-                    ? (searchTerm ? `No installed plays matching "${searchTerm}"` : 'No plays installed for this week')
-                    : 'Select a week to view installed plays'
+                    ? (searchTerm ? `No priority plays matching "${searchTerm}"` : 'No priority plays for this week')
+                    : 'Select a week to view priority plays'
                   }
                 </div>
               )}

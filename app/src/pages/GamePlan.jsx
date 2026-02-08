@@ -18,7 +18,12 @@ import {
   Target,
   ExternalLink,
   CheckSquare,
-  Undo2
+  Undo2,
+  HelpCircle,
+  Star,
+  MousePointer,
+  Plus,
+  Trash2
 } from 'lucide-react';
 import '../styles/gameplan.css';
 
@@ -115,6 +120,7 @@ export default function GamePlan() {
   // View state
   const [isLocked, setIsLocked] = useState(false);
   const [isSheetEditing, setIsSheetEditing] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [pageFormat, setPageFormat] = useState('2-page'); // '2-page' or '4-page'
   const [pageOrientation, setPageOrientation] = useState('landscape'); // 'portrait' or 'landscape'
   const [editingBox, setEditingBox] = useState(null);
@@ -1053,12 +1059,27 @@ export default function GamePlan() {
       {/* Header - hidden when printing */}
       <div className={`p-4 border-b hide-on-print ${isLight ? 'bg-white border-slate-200' : 'border-slate-800 bg-slate-900/50'}`}>
         <div className="flex items-center justify-between mb-4">
-          <div>
-            <h1 className={`text-2xl font-bold mb-1 ${isLight ? 'text-slate-900' : 'text-white'}`}>Game Plan</h1>
-            <p className={`text-sm ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-              {currentWeek.name}
-              {currentWeek.opponent && ` vs. ${currentWeek.opponent}`}
-            </p>
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className={`text-2xl font-bold mb-1 ${isLight ? 'text-slate-900' : 'text-white'}`}>Game Plan</h1>
+              <p className={`text-sm ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                {currentWeek.name}
+                {currentWeek.opponent && ` vs. ${currentWeek.opponent}`}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowHelp(!showHelp)}
+              className={`w-7 h-7 flex items-center justify-center rounded-full transition-colors ${
+                showHelp
+                  ? 'bg-sky-500 text-white'
+                  : isLight
+                    ? 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'
+                    : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-white'
+              }`}
+              title="How to use the Call Sheet"
+            >
+              <HelpCircle size={16} />
+            </button>
           </div>
           <div className="flex items-center gap-3">
             {/* Batch Add Button */}
@@ -1170,6 +1191,69 @@ export default function GamePlan() {
         </div>
 
       </div>
+
+      {/* Help Panel */}
+      {showHelp && (
+        <div className={`mx-4 my-3 rounded-lg border p-4 ${isLight ? 'bg-sky-50 border-sky-200' : 'bg-sky-500/10 border-sky-500/30'}`}>
+          <div className="flex items-start justify-between mb-3">
+            <h3 className={`font-semibold ${isLight ? 'text-sky-900' : 'text-sky-300'}`}>
+              How to Use the Call Sheet
+            </h3>
+            <button
+              onClick={() => setShowHelp(false)}
+              className={`p-1 rounded ${isLight ? 'hover:bg-sky-100 text-sky-700' : 'hover:bg-sky-500/20 text-sky-400'}`}
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <div className={`space-y-3 text-sm ${isLight ? 'text-sky-800' : 'text-sky-200'}`}>
+            <p>
+              The <strong>Call Sheet</strong> organizes your plays by situation - field zones, down & distance,
+              and special situations. Build boxes for each situation you want on your game day sheet.
+            </p>
+            <div className="grid md:grid-cols-2 gap-3">
+              <div className={`p-3 rounded-lg ${isLight ? 'bg-white/70' : 'bg-slate-800/50'}`}>
+                <h4 className={`font-medium mb-2 ${isLight ? 'text-sky-900' : 'text-white'}`}>Building Your Sheet</h4>
+                <ul className={`text-xs space-y-1.5 ${isLight ? 'text-sky-700' : 'text-slate-300'}`}>
+                  <li className="flex items-start gap-2">
+                    <Settings size={12} className="text-blue-400 mt-0.5 flex-shrink-0" />
+                    <span>Click <strong>Edit Layout</strong> to add, resize, or reposition boxes</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Plus size={12} className="text-emerald-400 mt-0.5 flex-shrink-0" />
+                    <span>Click any box header to edit its name, color, and situation tag</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <MousePointer size={12} className="text-sky-400 mt-0.5 flex-shrink-0" />
+                    <span>Drag box edges to resize, drag headers to reposition</span>
+                  </li>
+                </ul>
+              </div>
+              <div className={`p-3 rounded-lg ${isLight ? 'bg-white/70' : 'bg-slate-800/50'}`}>
+                <h4 className={`font-medium mb-2 ${isLight ? 'text-sky-900' : 'text-white'}`}>Adding Plays</h4>
+                <ul className={`text-xs space-y-1.5 ${isLight ? 'text-sky-700' : 'text-slate-300'}`}>
+                  <li className="flex items-start gap-2">
+                    <Target size={12} className="text-violet-400 mt-0.5 flex-shrink-0" />
+                    <span>Click a box to open it, then search/add plays from your playbook</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckSquare size={12} className="text-sky-400 mt-0.5 flex-shrink-0" />
+                    <span>Use <strong>Batch Add</strong> to select multiple plays from the sidebar, then click a target box</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Star size={12} className="text-amber-400 mt-0.5 flex-shrink-0" />
+                    <span><strong>Starred plays</strong> (from Priority Plays) appear highlighted</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <p className={`text-xs ${isLight ? 'text-sky-600' : 'text-sky-400'}`}>
+              <strong>Tip:</strong> The same play can appear in multiple boxes. Use Script QC in Practice Plans to
+              ensure you're getting enough reps on each situation before game day.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-hidden bg-slate-950">

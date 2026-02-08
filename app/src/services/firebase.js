@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getFunctions } from 'firebase/functions';
 
 // Production Firebase config (dofo-ocsuite-prod)
 const firebaseConfig = {
@@ -26,5 +27,8 @@ export const db = getFirestore(app);
 
 // Storage
 export const storage = getStorage(app);
+
+// Cloud Functions
+export const functions = getFunctions(app, 'us-central1');
 
 export default app;

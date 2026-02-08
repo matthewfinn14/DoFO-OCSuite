@@ -7077,7 +7077,7 @@ const WEEKLY_TOOLS_CONFIG = [
   { id: 'workflow', label: 'Weekly Workflow', description: 'Guided walkthrough of weekly process', defaultVisible: true },
   { id: 'notes', label: 'Meeting Notes', description: 'Coaches meeting notes and reminders', defaultVisible: true },
   { id: 'depth-charts', label: 'Depth Chart', description: 'Position depth and personnel', defaultVisible: true },
-  { id: 'install', label: 'Install Manager', description: 'Weekly play installation tracking', defaultVisible: true },
+  { id: 'install', label: 'Priority Plays', description: 'Track new and priority plays for the week', defaultVisible: true },
   { id: 'practice', label: 'Practice Planner', description: 'Daily practice structure and periods', defaultVisible: true },
   { id: 'practice-scripts', label: 'Practice Scripts', description: 'Detailed scripts for each period', defaultVisible: true },
   { id: 'practice-review', label: 'Practice Review', description: 'Post-practice notes and grades', defaultVisible: true },

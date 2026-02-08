@@ -34,7 +34,7 @@ const PRODUCT_PHASES = [
       { icon: 'FileText', name: 'Practice Scripts', desc: 'Daily practice plans' },
       { icon: 'Grid3X3', name: 'Wristband Builder', desc: 'Print play cards' },
       { icon: 'Users', name: 'Depth Charts', desc: 'Manage rotations' },
-      { icon: 'Layers', name: 'Install Manager', desc: 'Weekly installs' },
+      { icon: 'Layers', name: 'Priority Plays', desc: 'Weekly priority plays' },
       { icon: 'Target', name: 'Program Alignment', desc: 'Mission & philosophy' },
       { icon: 'Settings', name: 'Formation Builder', desc: 'Visual diagrams' },
       { icon: 'Layers', name: 'Program Levels', desc: 'JV/Freshman management' }

@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { X, Save, Trash2, Upload, ChevronDown, ChevronRight, Edit3, Library, GripVertical, Handshake, Link2, MapPin, Hash, AlertTriangle, Eye, Layers, History, Calendar, ClipboardList, Trophy, Star, Film } from 'lucide-react';
+import { X, Save, Trash2, Upload, ChevronDown, ChevronRight, Edit3, Library, GripVertical, Handshake, Link2, MapPin, Hash, AlertTriangle, Eye, Layers, History, Calendar, ClipboardList, Trophy, Star, Film, Camera } from 'lucide-react';
 import { useSchool } from '../../context/SchoolContext';
 import PlayDiagramEditor from '../diagrams/PlayDiagramEditor';
 import DiagramPreview from '../diagrams/DiagramPreview';
+import { WhiteboardImportWizard } from '../whiteboard';
 
 // Complement types with labels and colors
 const COMPLEMENT_TYPES = [
@@ -23,7 +24,7 @@ export default function PlayEditor({
   phase = 'OFFENSE',
   availablePlays = []
 }) {
-  const { setupConfig, updateSetupConfig, weeks, settings } = useSchool();
+  const { setupConfig, updateSetupConfig, weeks, settings, school } = useSchool();
   const isLight = settings?.theme === 'light';
   const isEditing = !!play;
 
@@ -224,6 +225,7 @@ export default function PlayEditor({
   const [showSkillEditor, setShowSkillEditor] = useState(false);
   const [showOLEditor, setShowOLEditor] = useState(false);
   const [showOLLibrary, setShowOLLibrary] = useState(false);
+  const [showWhiteboardWizard, setShowWhiteboardWizard] = useState(false);
 
   // Template search state for WIZ SKILL
   const [skillTemplateSearch, setSkillTemplateSearch] = useState('');
@@ -1188,6 +1190,15 @@ export default function PlayEditor({
                       >
                         <Edit3 size={18} />
                         Draw Diagram
+                      </button>
+                      {/* Import from Whiteboard Photo */}
+                      <button
+                        type="button"
+                        onClick={() => setShowWhiteboardWizard(true)}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-400 hover:bg-slate-700 transition-colors text-sm"
+                      >
+                        <Camera size={14} />
+                        Import from Photo
                       </button>
                       {/* Start from Template Search */}
                       {playsWithSkillDiagrams.length > 0 && (
@@ -2287,6 +2298,27 @@ export default function PlayEditor({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Whiteboard Import Wizard */}
+      {showWhiteboardWizard && (
+        <WhiteboardImportWizard
+          isOpen={showWhiteboardWizard}
+          onClose={() => setShowWhiteboardWizard(false)}
+          schoolId={school?.id}
+          positionColors={positionColors}
+          positionNames={positionNames}
+          existingElements={formData.wizSkillData}
+          isLight={isLight}
+          onSave={(elements) => {
+            setFormData(prev => ({ ...prev, wizSkillData: elements }));
+          }}
+          onOpenEditor={(elements) => {
+            setFormData(prev => ({ ...prev, wizSkillData: elements }));
+            setShowWhiteboardWizard(false);
+            setShowSkillEditor(true);
+          }}
+        />
       )}
     </div>
   );

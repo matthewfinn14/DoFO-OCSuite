@@ -7,6 +7,7 @@ import { getPlayCall } from '../utils/playDisplay';
 import { getCurrentWeekReps, getAllRepsForWeek } from '../utils/repTracking';
 import { getSpreadsheetBoxes } from '../utils/gamePlanSections';
 import PracticePlanCoachView from '../components/print/templates/PracticePlanCoachView';
+import PracticeCoveragePanel from '../components/practice/PracticeCoveragePanel';
 import '../styles/print-center.css';
 import {
   ArrowLeft,
@@ -34,7 +35,8 @@ import {
   ExternalLink,
   HelpCircle,
   Check,
-  Star
+  Star,
+  ClipboardCheck
 } from 'lucide-react';
 
 // Days of the week
@@ -1765,12 +1767,14 @@ export default function PracticePlans() {
 
   // Local state
   const [selectedSegmentId, setSelectedSegmentId] = useState(null);
-  const [mode, setMode] = useState(viewParam === 'script' ? 'script' : 'plan'); // 'plan' or 'script'
+  const [mode, setMode] = useState(viewParam === 'script' ? 'script' : viewParam === 'qc' ? 'qc' : 'plan'); // 'plan', 'script', or 'qc'
 
   // Sync mode with URL parameter when it changes
   useEffect(() => {
     if (viewParam === 'script') {
       setMode('script');
+    } else if (viewParam === 'qc') {
+      setMode('qc');
     }
   }, [viewParam]);
 
@@ -2832,6 +2836,16 @@ export default function PracticePlans() {
                   >
                     Scripts
                   </button>
+                  <button
+                    onClick={() => setMode('qc')}
+                    className={`h-7 px-3 text-sm font-medium rounded-md transition-colors flex items-center gap-1 ${mode === 'qc'
+                      ? 'bg-emerald-600 text-white'
+                      : 'text-slate-400 hover:text-white'
+                      }`}
+                  >
+                    <ClipboardCheck size={14} />
+                    QC
+                  </button>
                 </div>
               </div>
 
@@ -3420,7 +3434,7 @@ export default function PracticePlans() {
               />
             </div>
           </div>
-        ) : (
+        ) : mode === 'script' ? (
           /* Script Mode - Full Script Tables */
           <div className="space-y-6">
             {currentPlan.segments.filter(s => s.hasScript).length === 0 ? (
@@ -3847,6 +3861,17 @@ export default function PracticePlans() {
                   );
                 })
             )}
+          </div>
+        ) : (
+          /* QC Mode - Practice Coverage Analysis */
+          <div className="max-w-6xl mx-auto">
+            <PracticeCoveragePanel
+              week={week}
+              plays={plays}
+              setupConfig={setupConfig}
+              onUpdateWeek={(updates) => updateWeek(weekId, updates)}
+              isLight={isLight}
+            />
           </div>
         )}
       </div>

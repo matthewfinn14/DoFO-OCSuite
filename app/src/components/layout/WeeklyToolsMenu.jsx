@@ -53,7 +53,7 @@ const SEASON_MENU = [
   { toolId: 'workflow', to: (weekId) => `/week/${weekId}/workflow`, icon: Route, label: 'Weekly Workflow', usesWeekId: true, defaultVisible: true },
   { toolId: 'notes', to: (weekId) => `/week/${weekId}/notes`, icon: FileText, label: 'Meeting Notes', usesWeekId: true, defaultVisible: true },
   { toolId: 'depth-charts', to: (weekId) => `/week/${weekId}/depth-charts`, icon: Users, label: 'Depth Chart', usesWeekId: true, defaultVisible: true },
-  { toolId: 'install', to: (weekId) => `/week/${weekId}/install`, icon: Layers, label: 'Install Manager', usesWeekId: true, defaultVisible: true },
+  { toolId: 'install', to: (weekId) => `/week/${weekId}/install`, icon: Layers, label: 'Priority Plays', usesWeekId: true, defaultVisible: true },
   { toolId: 'practice', to: (weekId) => `/week/${weekId}/practice`, icon: Megaphone, label: 'Practice Planner', usesWeekId: true, defaultVisible: true },
   { toolId: 'practice-scripts', to: (weekId) => `/week/${weekId}/practice?view=script`, icon: FileText, label: 'Practice Scripts', usesWeekId: true, defaultVisible: true },
   { toolId: 'practice-review', to: (weekId) => `/week/${weekId}/practice-review`, icon: Star, label: 'Practice Review', usesWeekId: true, defaultVisible: true },

@@ -181,7 +181,7 @@ export default function InstallAudit({
         <h3 className="text-lg font-medium text-slate-400 mb-2">No Installed Plays</h3>
         <p className="text-sm text-slate-500">
           No plays have been installed for the selected week(s).
-          Use the Install Manager to add plays.
+          Use Priority Plays to add plays.
         </p>
       </div>
     );
