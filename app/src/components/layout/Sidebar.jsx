@@ -36,8 +36,7 @@ import {
   SearchCheck,
   NotebookPen,
   UserCheck,
-  FlaskConical,
-  History
+  FlaskConical
 } from 'lucide-react';
 
 // Enhanced collapsible category component
@@ -194,9 +193,6 @@ export default function Sidebar() {
           )}
           {currentPermissions.dashboard.view && (
             <NavItem to="/templates" icon={LayoutTemplate} label="TEMPLATES" collapsed={collapsed} isLight={isLight} />
-          )}
-          {currentPermissions.dashboard.view && (
-            <NavItem to="/seasons" icon={History} label="SEASON HISTORY" collapsed={collapsed} isLight={isLight} />
           )}
         </div>
 

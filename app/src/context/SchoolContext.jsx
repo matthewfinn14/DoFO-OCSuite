@@ -1288,6 +1288,22 @@ export function SchoolProvider({ children }) {
     console.log('New season started:', newYear);
   }, [activeYear, roster, plays, weeks, gamePlans, depthCharts, wristbands, culture, setupConfig, meetingNotes, practiceGrades, gameGrades, updateSchool]);
 
+  // Change the active year (admin only - just updates the setting, no archiving)
+  const changeActiveYear = useCallback(async (newYear) => {
+    if (!newYear) return;
+
+    // Just update the settings.activeYear field
+    await updateSchool({
+      'settings.activeYear': newYear,
+    });
+
+    // Update local state
+    setActiveYear(newYear);
+    setViewingYear(null);
+
+    console.log('Active year changed to:', newYear);
+  }, [updateSchool]);
+
   const value = {
     // Data
     school,
@@ -1352,6 +1368,7 @@ export function SchoolProvider({ children }) {
     setCurrentWeekId,
     setActiveLevelId,
     startNewSeason,
+    changeActiveYear,
     switchToSeason,
     getViewedSeasonData,
     importTemplatesFromSeason,

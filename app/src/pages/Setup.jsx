@@ -42,11 +42,14 @@ import {
   Video,
   ChevronRight,
   Watch,
-  Sparkles
+  Sparkles,
+  Upload,
+  FileSpreadsheet
 } from 'lucide-react';
 import PlayDiagramEditor from '../components/diagrams/PlayDiagramEditor';
 import DiagramPreview from '../components/diagrams/DiagramPreview';
 import { SystemSetupWizard, NewSeasonWizard } from '../components/wizard';
+import HudlDataImportWizard from '../components/playbook/HudlDataImportWizard';
 
 // Collapsible Help Section component
 function HelpSection({ title, children, defaultOpen = false, isLight = false }) {
@@ -1124,6 +1127,11 @@ export default function Setup() {
     }
     tabs.push({ id: 'play-call-chain', label: 'Play Call Chain', icon: List });
 
+    // Initial import from Hudl (offense only)
+    if (isOffense) {
+      tabs.push({ id: 'import-last-season', label: 'Import Last Season', icon: Upload });
+    }
+
     // Add divider after stationary items
     tabs.push({ divider: true });
 
@@ -1593,6 +1601,14 @@ export default function Setup() {
               termLibrary={localConfig.termLibrary || {}}
               setupConfig={localConfig}
               onUpdate={updateLocal}
+            />
+          )}
+
+          {/* Import Last Season Tab (Offense only) */}
+          {activeTab === 'import-last-season' && !isPractice && !isProgram && phase === 'OFFENSE' && (
+            <ImportLastSeasonTab
+              existingPlays={playsArray}
+              isLight={isLight}
             />
           )}
 
@@ -6594,6 +6610,222 @@ function WristbandAbbreviationsSection({ phase, setupConfig, onUpdate, plays }) 
           </p>
         </div>
       )}
+    </div>
+  );
+}
+
+// Import Last Season Tab - Allows importing Hudl data to bootstrap playbook
+function ImportLastSeasonTab({ existingPlays = [], isLight = false }) {
+  const { plays, updatePlays } = useSchool();
+  const [showImportWizard, setShowImportWizard] = useState(false);
+  const [importedCount, setImportedCount] = useState(0);
+  const [importMode, setImportMode] = useState(null); // 'plays' or 'parse'
+
+  const handleImport = async (playsToImport, rawData, columnMapping) => {
+    if (!playsToImport || playsToImport.length === 0) return;
+
+    try {
+      // Build new plays object with existing plays + imported plays
+      const newPlays = { ...plays };
+      const now = new Date().toISOString();
+
+      playsToImport.forEach((play, idx) => {
+        const playId = `play_${Date.now()}_${idx}_${Math.random().toString(36).substr(2, 9)}`;
+        newPlays[playId] = {
+          id: playId,
+          name: play.name,
+          formation: play.formation || '',
+          backfield: play.backfield || '',
+          playDir: play.playDir || '',
+          motion: play.motion || '',
+          tag: play.tag || '',
+          playType: play.playType || 'run',
+          personnel: play.personnel || '',
+          phase: 'offense',
+          importedFromHudl: true,
+          importedAt: now,
+          usageCount: play.usageCount || 0,
+          createdAt: now
+        };
+      });
+
+      await updatePlays(newPlays);
+      setImportedCount(playsToImport.length);
+      setShowImportWizard(false);
+      setImportMode(null);
+    } catch (err) {
+      console.error('Import failed:', err);
+    }
+  };
+
+  const openImportWizard = (mode) => {
+    setImportMode(mode);
+    setShowImportWizard(true);
+  };
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h3 className={`text-lg font-semibold ${isLight ? 'text-gray-900' : 'text-white'}`}>
+            Import Last Season's Data
+          </h3>
+          <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+            Bootstrap your playbook by importing your play calls from last season's Hudl data
+          </p>
+        </div>
+      </div>
+
+      {/* Info Banner */}
+      <div className={`mb-6 p-4 rounded-lg border ${isLight ? 'bg-amber-50 border-amber-200' : 'bg-amber-500/10 border-amber-500/20'}`}>
+        <h4 className={`font-medium flex items-center gap-2 mb-2 ${isLight ? 'text-amber-800' : 'text-amber-400'}`}>
+          <Info size={18} />
+          New to DoFO? Start here!
+        </h4>
+        <p className={`text-sm ${isLight ? 'text-amber-700' : 'text-amber-300'}`}>
+          If you didn't use DoFO last season, you can import your play calls directly from Hudl.
+          Choose how you want to use the imported data below.
+        </p>
+      </div>
+
+      {/* Import Status */}
+      {importedCount > 0 && (
+        <div className={`mb-6 p-4 rounded-lg border ${isLight ? 'bg-green-50 border-green-200' : 'bg-green-500/10 border-green-500/20'}`}>
+          <div className={`flex items-center gap-2 ${isLight ? 'text-green-800' : 'text-green-400'}`}>
+            <Check size={18} />
+            <span className="font-medium">Successfully imported {importedCount} plays!</span>
+          </div>
+          <p className={`text-sm mt-1 ${isLight ? 'text-green-700' : 'text-green-300'}`}>
+            Your plays are now in the Master Playbook. You can review and organize them there.
+          </p>
+        </div>
+      )}
+
+      {/* Two Import Options */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {/* Option 1: Create Plays Directly */}
+        <div className={`p-6 rounded-xl border-2 ${isLight ? 'border-green-200 bg-green-50/50' : 'border-green-500/30 bg-green-500/5'}`}>
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${isLight ? 'bg-green-100' : 'bg-green-500/20'}`}>
+            <BookOpen size={24} className={isLight ? 'text-green-600' : 'text-green-400'} />
+          </div>
+          <h4 className={`text-lg font-semibold mb-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
+            Create Plays in Playbook
+          </h4>
+          <p className={`text-sm mb-4 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+            Import play calls directly into your Master Playbook. Each unique play call becomes a play entry you can edit, tag, and diagram.
+          </p>
+          <ul className={`text-xs space-y-1 mb-4 ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
+            <li>• Creates play entries from your terminology</li>
+            <li>• Select which plays to keep or skip</li>
+            <li>• Shows usage count from last season</li>
+          </ul>
+          <button
+            onClick={() => openImportWizard('plays')}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors"
+          >
+            <Upload size={18} />
+            Import to Playbook
+          </button>
+        </div>
+
+        {/* Option 2: Review in Parse & Abbreviate */}
+        <div className={`p-6 rounded-xl border-2 ${isLight ? 'border-purple-200 bg-purple-50/50' : 'border-purple-500/30 bg-purple-500/5'}`}>
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${isLight ? 'bg-purple-100' : 'bg-purple-500/20'}`}>
+            <Watch size={24} className={isLight ? 'text-purple-600' : 'text-purple-400'} />
+          </div>
+          <h4 className={`text-lg font-semibold mb-2 ${isLight ? 'text-gray-900' : 'text-white'}`}>
+            Review Terminology First
+          </h4>
+          <p className={`text-sm mb-4 ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+            Import plays, then go to Parse & Abbreviate to organize your terminology, set abbreviations, and categorize terms before using them.
+          </p>
+          <ul className={`text-xs space-y-1 mb-4 ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
+            <li>• Review all unique terms from your data</li>
+            <li>• Set wristband abbreviations</li>
+            <li>• Organize into categories</li>
+          </ul>
+          <button
+            onClick={() => openImportWizard('plays')}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-600 transition-colors"
+          >
+            <Upload size={18} />
+            Import & Review Terms
+          </button>
+        </div>
+      </div>
+
+      {/* How it works */}
+      <div className="mt-8">
+        <h4 className={`font-medium mb-4 ${isLight ? 'text-gray-900' : 'text-white'}`}>How it works</h4>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className={`p-4 rounded-lg ${isLight ? 'bg-gray-100' : 'bg-slate-800/50'}`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-3 ${isLight ? 'bg-sky-100 text-sky-600' : 'bg-sky-500/20 text-sky-400'}`}>
+              1
+            </div>
+            <h5 className={`font-medium mb-1 ${isLight ? 'text-gray-900' : 'text-white'}`}>Export from Hudl</h5>
+            <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+              Export any game as an Excel file (.xlsx)
+            </p>
+          </div>
+          <div className={`p-4 rounded-lg ${isLight ? 'bg-gray-100' : 'bg-slate-800/50'}`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-3 ${isLight ? 'bg-sky-100 text-sky-600' : 'bg-sky-500/20 text-sky-400'}`}>
+              2
+            </div>
+            <h5 className={`font-medium mb-1 ${isLight ? 'text-gray-900' : 'text-white'}`}>Map Columns</h5>
+            <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+              Tell us which columns have your data
+            </p>
+          </div>
+          <div className={`p-4 rounded-lg ${isLight ? 'bg-gray-100' : 'bg-slate-800/50'}`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-3 ${isLight ? 'bg-sky-100 text-sky-600' : 'bg-sky-500/20 text-sky-400'}`}>
+              3
+            </div>
+            <h5 className={`font-medium mb-1 ${isLight ? 'text-gray-900' : 'text-white'}`}>Select Plays</h5>
+            <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+              Choose which plays to keep or skip
+            </p>
+          </div>
+          <div className={`p-4 rounded-lg ${isLight ? 'bg-gray-100' : 'bg-slate-800/50'}`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-3 ${isLight ? 'bg-sky-100 text-sky-600' : 'bg-sky-500/20 text-sky-400'}`}>
+              4
+            </div>
+            <h5 className={`font-medium mb-1 ${isLight ? 'text-gray-900' : 'text-white'}`}>Import</h5>
+            <p className={`text-sm ${isLight ? 'text-gray-500' : 'text-slate-400'}`}>
+              Add to playbook or review terms
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Tips */}
+      <div className={`mt-8 p-4 rounded-lg ${isLight ? 'bg-sky-50 border border-sky-200' : 'bg-sky-500/10 border border-sky-500/20'}`}>
+        <h4 className={`font-medium mb-2 ${isLight ? 'text-sky-800' : 'text-sky-400'}`}>Pro Tips</h4>
+        <ul className={`text-sm space-y-1 ${isLight ? 'text-sky-700' : 'text-sky-300'}`}>
+          <li>• Make sure your Hudl game is fully tagged before exporting</li>
+          <li>• You can import from multiple games - duplicates will be detected automatically</li>
+          <li>• After importing, use Parse & Abbreviate to set up wristband shortcuts</li>
+          <li>• Plays show their usage count from last season, helping you prioritize</li>
+        </ul>
+      </div>
+
+      {/* Current Playbook Status */}
+      <div className={`mt-6 text-center text-sm ${isLight ? 'text-gray-500' : 'text-slate-500'}`}>
+        {existingPlays.length > 0
+          ? `You currently have ${existingPlays.length} plays in your playbook`
+          : 'Your playbook is empty - importing is a great way to get started!'}
+      </div>
+
+      {/* Import Wizard Modal */}
+      <HudlDataImportWizard
+        isOpen={showImportWizard}
+        onClose={() => {
+          setShowImportWizard(false);
+          setImportMode(null);
+        }}
+        onImport={handleImport}
+        existingPlays={existingPlays}
+        isLight={isLight}
+      />
     </div>
   );
 }

@@ -43,7 +43,7 @@ function autoDetectColumnMapping(headers) {
 }
 
 export default function OffseasonSelfScout() {
-  const { weeks, updateWeekData, settings, activeYear } = useSchool();
+  const { weeks, updateWeeks, settings, activeYear } = useSchool();
   const [numWeeks, setNumWeeks] = useState(10);
   const [gameFiles, setGameFiles] = useState([]); // Array of { weekNum, file, opponent, status, plays }
   const [importing, setImporting] = useState(false);
@@ -166,10 +166,13 @@ export default function OffseasonSelfScout() {
     setImporting(true);
 
     try {
+      // Collect all updates
+      let updatedWeeks = [...weeks];
+
       for (const game of readyGames) {
         // Find or create a week for this game
         const weekId = `season_week_${game.weekNum}`;
-        const existingWeek = weeks.find(w => w.id === weekId);
+        const existingWeekIndex = updatedWeeks.findIndex(w => w.id === weekId);
 
         // Create game review data
         const gameReview = {
@@ -184,15 +187,16 @@ export default function OffseasonSelfScout() {
         };
 
         // Update or create week
-        if (existingWeek) {
-          await updateWeekData(weekId, {
-            ...existingWeek,
+        if (existingWeekIndex !== -1) {
+          // Update existing week
+          updatedWeeks[existingWeekIndex] = {
+            ...updatedWeeks[existingWeekIndex],
             opponent: game.opponent,
             gameReview
-          });
+          };
         } else {
           // Create new week
-          await updateWeekData(weekId, {
+          updatedWeeks.push({
             id: weekId,
             name: `Week ${game.weekNum}`,
             phaseId: 'season',
@@ -205,13 +209,16 @@ export default function OffseasonSelfScout() {
         }
       }
 
+      // Save all updates at once
+      await updateWeeks(updatedWeeks);
+
       setImportComplete(true);
     } catch (err) {
       console.error('Import failed:', err);
     } finally {
       setImporting(false);
     }
-  }, [gameFiles, weeks, updateWeekData]);
+  }, [gameFiles, weeks, updateWeeks]);
 
   // Stats
   const stats = useMemo(() => {

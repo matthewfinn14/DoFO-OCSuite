@@ -3575,7 +3575,7 @@ export default function PracticePlans() {
 
                         {/* Quick List Sidebar - shows plays needing reps, sorted by need */}
                         {focusPlays.length > 0 && (
-                          <div className={`w-48 flex-shrink-0 border-r ${isLight ? 'border-gray-200 bg-gray-50' : 'border-slate-700 bg-slate-900/50'}`}>
+                          <div className={`w-64 flex-shrink-0 border-r ${isLight ? 'border-gray-200 bg-gray-50' : 'border-slate-700 bg-slate-900/50'}`}>
                             <div className={`px-3 py-2 text-xs font-semibold uppercase border-b ${isLight ? 'border-gray-200 text-gray-500' : 'border-slate-700 text-slate-400'}`}>
                               Suggested ({focusPlays.length})
                             </div>

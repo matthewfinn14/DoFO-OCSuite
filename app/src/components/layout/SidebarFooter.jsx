@@ -10,7 +10,8 @@ import {
   HelpCircle,
   LogOut,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Calendar
 } from 'lucide-react';
 
 // Footer navigation item
@@ -40,10 +41,20 @@ function FooterNavItem({ to, icon: Icon, label, collapsed, danger = false, isLig
 
 export default function SidebarFooter({ collapsed }) {
   const { user, logout, isSiteAdmin, isHeadCoach, isTeamAdmin } = useAuth();
-  const { settings } = useSchool();
+  const { settings, activeYear, changeActiveYear } = useSchool();
   const isLight = settings?.theme === 'light';
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [expanded, setExpanded] = useState(false);
+
+  // Check if user is an admin (team admin, head coach, or site admin)
+  const isAdmin = isTeamAdmin || isHeadCoach || isSiteAdmin;
+
+  // Generate year options (current year +/- 5 years)
+  const currentCalendarYear = new Date().getFullYear();
+  const yearOptions = [];
+  for (let y = currentCalendarYear - 5; y <= currentCalendarYear + 1; y++) {
+    yearOptions.push(y.toString());
+  }
 
   const handleLogout = async () => {
     await logout();
@@ -114,6 +125,31 @@ export default function SidebarFooter({ collapsed }) {
             collapsed={collapsed}
             isLight={isLight}
           />
+
+          {/* Admin-only Active Year Selector */}
+          {isAdmin && (
+            <div className={`mt-2 pt-2 border-t ${isLight ? 'border-gray-200' : 'border-slate-700/50'}`}>
+              <div className="flex items-center gap-2 px-3 py-1">
+                <Calendar size={14} className={isLight ? 'text-gray-500' : 'text-slate-400'} />
+                <span className={`text-xs ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>Active Year</span>
+              </div>
+              <select
+                value={activeYear || ''}
+                onChange={(e) => changeActiveYear(e.target.value)}
+                className={`w-full px-3 py-1.5 text-xs rounded cursor-pointer focus:outline-none focus:ring-1 focus:ring-sky-500 ${
+                  isLight
+                    ? 'bg-gray-100 border border-gray-300 text-gray-900'
+                    : 'bg-slate-800 border border-slate-600 text-white'
+                }`}
+              >
+                {yearOptions.map(year => (
+                  <option key={year} value={year}>
+                    {year}{year === activeYear ? ' (Current)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       )}
 
