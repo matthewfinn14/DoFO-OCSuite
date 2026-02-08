@@ -1622,6 +1622,9 @@ export default function Setup() {
             <OLSchemesTab
               passProtections={localConfig.passProtections || []}
               runBlocking={localConfig.runBlocking || []}
+              positionColors={localConfig.positionColors || {}}
+              positionNames={localConfig.positionNames || {}}
+              positionWizAbbreviations={localConfig.positionWizAbbreviations || {}}
               onUpdate={updateLocal}
             />
           )}
@@ -7236,7 +7239,7 @@ function WeeklyToolsVisibilityTab({ visibleTools = {}, onUpdate, isLight = false
 }
 
 // OL Schemes Tab Component
-function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
+function OLSchemesTab({ passProtections, runBlocking, positionColors, positionNames, positionWizAbbreviations, onUpdate }) {
   // State for diagram editor modal
   const [editingDiagram, setEditingDiagram] = useState(null); // { type: 'protection'|'scheme', index: number }
 
@@ -7372,9 +7375,9 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
                     elements={prot.diagramData}
                     width={160}
                     height={112}
-                    positionColors={localConfig.positionColors}
-                    positionNames={localConfig.positionNames}
-                    positionWizAbbreviations={localConfig.positionWizAbbreviations}
+                    positionColors={positionColors}
+                    positionNames={positionNames}
+                    positionWizAbbreviations={positionWizAbbreviations}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-slate-800 text-slate-500">
@@ -7467,9 +7470,9 @@ function OLSchemesTab({ passProtections, runBlocking, onUpdate }) {
                     elements={scheme.diagramData}
                     width={160}
                     height={112}
-                    positionColors={localConfig.positionColors}
-                    positionNames={localConfig.positionNames}
-                    positionWizAbbreviations={localConfig.positionWizAbbreviations}
+                    positionColors={positionColors}
+                    positionNames={positionNames}
+                    positionWizAbbreviations={positionWizAbbreviations}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-slate-800 text-slate-500">
