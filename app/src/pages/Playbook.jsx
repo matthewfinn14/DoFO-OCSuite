@@ -417,9 +417,60 @@ export default function Playbook() {
     if (editingPlay) {
       // Update existing play
       await updatePlay(editingPlay.id, playData);
+
+      // Handle mirror play updates
+      if (playData.hasMirror && playData.mirrorPlayCall) {
+        if (editingPlay.mirrorPlayId && plays[editingPlay.mirrorPlayId]) {
+          // Update existing mirror play's name and link back
+          await updatePlay(editingPlay.mirrorPlayId, {
+            ...plays[editingPlay.mirrorPlayId],
+            name: playData.mirrorPlayCall,
+            mirrorPlayCall: playData.name,
+          });
+        } else {
+          // Create new mirror play for existing play
+          const mirrorPlay = {
+            ...playData,
+            name: playData.mirrorPlayCall,
+            mirrorOf: editingPlay.id,
+            mirrorPlayCall: playData.name,
+            phase: activePhase,
+          };
+          delete mirrorPlay.mirrorPlayId; // Will be set after creation
+          const mirrorId = await addPlay(mirrorPlay);
+          // Link original to mirror
+          await updatePlay(editingPlay.id, { ...playData, mirrorPlayId: mirrorId });
+        }
+      } else if (!playData.hasMirror && editingPlay.mirrorPlayId) {
+        // Mirror was disabled - unlink (but don't delete the mirror play)
+        await updatePlay(editingPlay.id, { ...playData, mirrorPlayId: null });
+        if (plays[editingPlay.mirrorPlayId]) {
+          await updatePlay(editingPlay.mirrorPlayId, {
+            ...plays[editingPlay.mirrorPlayId],
+            mirrorOf: null,
+            hasMirror: false,
+            mirrorPlayCall: '',
+          });
+        }
+      }
     } else {
       // Add new play
-      await addPlay({ ...playData, phase: activePhase });
+      const newPlayId = await addPlay({ ...playData, phase: activePhase });
+
+      // Create mirror play if enabled
+      if (playData.hasMirror && playData.mirrorPlayCall) {
+        const mirrorPlay = {
+          ...playData,
+          name: playData.mirrorPlayCall,
+          mirrorOf: newPlayId,
+          mirrorPlayCall: playData.name,
+          phase: activePhase,
+        };
+        delete mirrorPlay.mirrorPlayId;
+        const mirrorId = await addPlay(mirrorPlay);
+        // Link original to mirror
+        await updatePlay(newPlayId, { mirrorPlayId: mirrorId });
+      }
     }
   };
 

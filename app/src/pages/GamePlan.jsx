@@ -97,6 +97,7 @@ const DEFAULT_LAYOUTS = {
 export default function GamePlan() {
   const { weekId } = useParams();
   const {
+    plays,
     playsArray,
     currentWeek,
     updateWeek,
@@ -156,6 +157,9 @@ export default function GamePlan() {
   const { startBatchSelect, cancelBatchSelect, quickAddRequest, batchAddEvent, clearBatchAddEvent, targetingMode, targetingPlays, completeTargeting } = usePlayBank();
   const [isTargetingBox, setIsTargetingBox] = useState(false);
   const [pendingBatchPlays, setPendingBatchPlays] = useState([]);
+
+  // Mirror play prompt state
+  const [pendingMirrorAdd, setPendingMirrorAdd] = useState(null); // { mirrorPlayId, headerId, playTypeId, oppositeHash, originalPlayName, mirrorPlayName }
 
   // Track last processed request to prevent duplicates/loops
   const lastProcessedQuickAddRef = useRef(0);
@@ -625,6 +629,26 @@ export default function GamePlan() {
         }
       }
       handleUpdateGamePlan({ ...gamePlan, sets: newSets });
+
+      // Check if play has a mirror - offer to add to opposite hash
+      const play = plays[playId];
+      if (play?.mirrorPlayId && plays[play.mirrorPlayId]) {
+        const mirrorPlay = plays[play.mirrorPlayId];
+        const oppositeHash = hashCol === 'left' ? 'right' : 'left';
+        const oppositeSetId = `spreadsheet_${headerId}_${playTypeId}_${oppositeHash}`;
+        const oppositeSet = newSets.find(s => s.id === oppositeSetId);
+        // Only prompt if mirror isn't already in opposite hash
+        if (!oppositeSet?.playIds?.includes(play.mirrorPlayId)) {
+          setPendingMirrorAdd({
+            mirrorPlayId: play.mirrorPlayId,
+            headerId,
+            playTypeId,
+            oppositeHash,
+            originalPlayName: play.name,
+            mirrorPlayName: mirrorPlay.name
+          });
+        }
+      }
       return;
     }
 
@@ -652,7 +676,29 @@ export default function GamePlan() {
       newSets[setIndex] = existingSet;
     }
     handleUpdateGamePlan({ ...gamePlan, sets: newSets });
-  }, [gamePlan, handleUpdateGamePlan, isLocked]);
+  }, [gamePlan, handleUpdateGamePlan, isLocked, plays]);
+
+  // Handle confirming mirror play add to opposite hash
+  const handleConfirmMirrorAdd = useCallback(() => {
+    if (!pendingMirrorAdd) return;
+
+    const { mirrorPlayId, headerId, playTypeId, oppositeHash } = pendingMirrorAdd;
+    const setId = `spreadsheet_${headerId}_${playTypeId}_${oppositeHash}`;
+    let newSets = [...(gamePlan.sets || [])];
+    let setIndex = newSets.findIndex(s => s.id === setId);
+
+    if (setIndex === -1) {
+      newSets.push({ id: setId, playIds: [mirrorPlayId] });
+    } else {
+      const existingSet = { ...newSets[setIndex] };
+      if (!existingSet.playIds?.includes(mirrorPlayId)) {
+        existingSet.playIds = [...(existingSet.playIds || []), mirrorPlayId];
+        newSets[setIndex] = existingSet;
+      }
+    }
+    handleUpdateGamePlan({ ...gamePlan, sets: newSets });
+    setPendingMirrorAdd(null);
+  }, [pendingMirrorAdd, gamePlan, handleUpdateGamePlan]);
 
   const handleSpreadsheetRemovePlay = useCallback((headerId, rowIdxOrPlayTypeId, hashCol, playId) => {
     if (isLocked) return;
@@ -1278,6 +1324,40 @@ export default function GamePlan() {
           onTargetingClick={handleSpreadsheetTargetingClick}
         />
       </div>
+
+      {/* Mirror Play Prompt Modal */}
+      {pendingMirrorAdd && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-slate-800 rounded-xl shadow-2xl w-full max-w-sm mx-4 border border-slate-700">
+            <div className="px-6 py-4 border-b border-slate-700">
+              <h3 className="text-lg font-bold text-white">Add Mirror Play?</h3>
+            </div>
+            <div className="p-6">
+              <p className="text-slate-300 mb-4">
+                <span className="font-medium text-white">{pendingMirrorAdd.originalPlayName}</span> has a mirror play.
+              </p>
+              <p className="text-slate-400 text-sm mb-6">
+                Add <span className="font-medium text-sky-400">{pendingMirrorAdd.mirrorPlayName}</span> to the{' '}
+                <span className="font-medium">{pendingMirrorAdd.oppositeHash}</span> hash?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setPendingMirrorAdd(null)}
+                  className="flex-1 px-4 py-2 bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-colors"
+                >
+                  No Thanks
+                </button>
+                <button
+                  onClick={handleConfirmMirrorAdd}
+                  className="flex-1 px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition-colors font-medium"
+                >
+                  Add Mirror
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Placement Choice Modal */}
       {showPlacementChoice && pendingPlacementBox && (

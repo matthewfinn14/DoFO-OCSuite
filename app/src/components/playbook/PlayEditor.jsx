@@ -305,6 +305,9 @@ export default function PlayEditor({
     levelPlaybooks: [],
     // Skill position assignments (route/responsibility for each position)
     skillAssignments: {},
+    // Mirror play call
+    hasMirror: false,
+    mirrorPlayCall: '',
   });
 
   // Extract skill positions from the WIZ Skill diagram (non-OL players in the diagram)
@@ -414,6 +417,9 @@ export default function PlayEditor({
         levelPlaybooks: play.levelPlaybooks || [],
         // Skill position assignments
         skillAssignments: play.skillAssignments || {},
+        // Mirror play call
+        hasMirror: play.hasMirror || false,
+        mirrorPlayCall: play.mirrorPlayCall || '',
       });
     } else {
       // Reset form for new play
@@ -457,6 +463,9 @@ export default function PlayEditor({
         setupPlayId: '',
         premiumLooks: '',
         targetProgressions: [],
+        // Mirror play call
+        hasMirror: false,
+        mirrorPlayCall: '',
       });
     }
   }, [play, phase]);
@@ -780,6 +789,34 @@ export default function PlayEditor({
                   className={`w-full px-3 py-3 border rounded-md text-lg font-medium ${isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-slate-800 border-slate-700 text-white placeholder-slate-500'}`}
                   autoFocus
                 />
+              </div>
+
+              {/* Mirror Play Call */}
+              <div className="flex items-start gap-3">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={formData.hasMirror}
+                    onChange={e => setFormData(prev => ({
+                      ...prev,
+                      hasMirror: e.target.checked,
+                      mirrorPlayCall: e.target.checked ? prev.mirrorPlayCall : ''
+                    }))}
+                    className="w-4 h-4 rounded border-slate-600 text-sky-500 focus:ring-sky-500 bg-slate-800"
+                  />
+                  <span className={`text-sm ${isLight ? 'text-gray-600' : 'text-slate-400'}`}>
+                    Has Mirror
+                  </span>
+                </label>
+                {formData.hasMirror && (
+                  <input
+                    type="text"
+                    value={formData.mirrorPlayCall}
+                    onChange={e => setFormData(prev => ({ ...prev, mirrorPlayCall: e.target.value }))}
+                    placeholder="Mirror play call (e.g., Trips Left 94 Mesh)"
+                    className={`flex-1 px-3 py-1.5 border rounded-md text-sm ${isLight ? 'bg-white border-gray-300 text-gray-900 placeholder-gray-400' : 'bg-slate-800 border-slate-700 text-white placeholder-slate-500'}`}
+                  />
+                )}
               </div>
 
               {/* Bucket & Concept Group */}
