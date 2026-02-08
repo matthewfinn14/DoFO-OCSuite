@@ -4,40 +4,64 @@ import { getPlayCall, abbreviatePlayCall } from '../../utils/playDisplay';
 import { usePlayBank } from '../../context/PlayBankContext';
 
 /**
- * FitText component - displays text that auto-shrinks to fit container
- * Applies abbreviations first, then reduces font size if needed
+ * FitText component - displays text that adapts to fit container
+ * Priority: 1) Full text if it fits, 2) Abbreviated text if it fits, 3) Shrink font
  */
 function FitText({ text, abbreviations, baseFontSize = 0.6, minFontSize = 0.35, style = {} }) {
   const containerRef = useRef(null);
-  const textRef = useRef(null);
+  const measureRef = useRef(null);
   const [fontSize, setFontSize] = useState(baseFontSize);
+  const [useAbbreviation, setUseAbbreviation] = useState(false);
 
-  // Apply abbreviations to text
-  const displayText = abbreviations ? abbreviatePlayCall(text, abbreviations) : text;
+  // Get both full and abbreviated versions
+  const fullText = text;
+  const abbreviatedText = abbreviations ? abbreviatePlayCall(text, abbreviations) : text;
+  const displayText = useAbbreviation ? abbreviatedText : fullText;
 
   useEffect(() => {
-    if (!containerRef.current || !textRef.current || !displayText) {
+    if (!containerRef.current || !measureRef.current || !text) {
       setFontSize(baseFontSize);
+      setUseAbbreviation(false);
       return;
     }
 
     const fitText = () => {
-      if (!containerRef.current || !textRef.current) return;
+      if (!containerRef.current || !measureRef.current) return;
 
       const container = containerRef.current;
-      const textEl = textRef.current;
+      const measureEl = measureRef.current;
       const containerWidth = container.clientWidth;
       if (containerWidth <= 0) return;
 
-      // Reset to base size first
-      textEl.style.fontSize = `${baseFontSize}rem`;
-      let textWidth = textEl.scrollWidth;
+      // Measure full text at base size
+      measureEl.style.fontSize = `${baseFontSize}rem`;
+      measureEl.textContent = fullText;
+      let fullTextWidth = measureEl.scrollWidth;
 
+      // If full text fits, use it
+      if (fullTextWidth <= containerWidth) {
+        setUseAbbreviation(false);
+        setFontSize(baseFontSize);
+        return;
+      }
+
+      // Full text doesn't fit - measure abbreviated text at base size
+      measureEl.textContent = abbreviatedText;
+      let abbrevTextWidth = measureEl.scrollWidth;
+
+      if (abbrevTextWidth <= containerWidth) {
+        setUseAbbreviation(true);
+        setFontSize(baseFontSize);
+        return;
+      }
+
+      // Abbreviated still doesn't fit - find smallest font that works
+      setUseAbbreviation(true);
       let currentSize = baseFontSize;
-      while (textWidth > containerWidth && currentSize > minFontSize) {
+      while (abbrevTextWidth > containerWidth && currentSize > minFontSize) {
         currentSize -= 0.025;
-        textEl.style.fontSize = `${currentSize}rem`;
-        textWidth = textEl.scrollWidth;
+        measureEl.style.fontSize = `${currentSize}rem`;
+        abbrevTextWidth = measureEl.scrollWidth;
       }
 
       setFontSize(currentSize);
@@ -58,7 +82,7 @@ function FitText({ text, abbreviations, baseFontSize = 0.6, minFontSize = 0.35, 
       clearTimeout(timeoutId);
       resizeObserver.disconnect();
     };
-  }, [displayText, baseFontSize, minFontSize]);
+  }, [text, fullText, abbreviatedText, baseFontSize, minFontSize]);
 
   return (
     <div
@@ -70,10 +94,23 @@ function FitText({ text, abbreviations, baseFontSize = 0.6, minFontSize = 0.35, 
         minWidth: 0,
         flex: 1,
         maxWidth: '100%',
+        position: 'relative',
       }}
     >
+      {/* Hidden element for measuring text width */}
       <span
-        ref={textRef}
+        ref={measureRef}
+        style={{
+          position: 'absolute',
+          visibility: 'hidden',
+          whiteSpace: 'nowrap',
+          fontWeight: '500',
+          lineHeight: '1.2',
+        }}
+        aria-hidden="true"
+      />
+      {/* Visible text */}
+      <span
         style={{
           fontSize: `${fontSize}rem`,
           fontWeight: '500',
@@ -1353,17 +1390,18 @@ export default function SpreadsheetView({
                             >
                               {cellPlays.map((p, i) => (
                                 <div key={i} style={{
-                                  fontSize: '0.5rem',
-                                  fontWeight: '500',
                                   color: '#1e293b',
                                   background: p.priority ? '#fef08a' : '#f1f5f9',
                                   padding: '1px 2px',
                                   borderRadius: '2px',
                                   overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap'
                                 }}>
-                                  {getPlayDisplayName ? getPlayDisplayName(p) : p.name}
+                                  <FitText
+                                    text={getPlayDisplayName ? getPlayDisplayName(p) : p.name}
+                                    abbreviations={abbreviations}
+                                    baseFontSize={0.5}
+                                    minFontSize={0.35}
+                                  />
                                 </div>
                               ))}
                               {cellPlays.length === 0 && (
