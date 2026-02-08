@@ -196,6 +196,7 @@ const DEFAULT_TAG_CATEGORIES = {
 
 export default function Playbook() {
   const { playsArray, plays, updatePlays, addPlay, updatePlay, setupConfig, school } = useSchool();
+  const { isSiteAdmin } = useAuth();
   const { openPlayDetails } = usePlayDetailsModal();
   const location = useLocation();
   const navigate = useNavigate();
@@ -507,7 +508,7 @@ export default function Playbook() {
           )}
         </div>
         <div className="flex gap-3">
-          {activePhase === 'OFFENSE' && (
+          {activePhase === 'OFFENSE' && isSiteAdmin && (
             <button
               onClick={() => setShowWhiteboardWizard(true)}
               className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 font-medium"
