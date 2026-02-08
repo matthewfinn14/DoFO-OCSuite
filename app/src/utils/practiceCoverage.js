@@ -111,30 +111,33 @@ export function getConceptCoverage(week, plays, playBuckets) {
   const conceptReps = {};
   const bucketTotalReps = {};
 
-  // Count reps by concept (conceptGroupId on play)
+  // Count reps by concept (conceptFamily on play - stored as string name)
   scriptRows.forEach(({ row }) => {
     if (!row.playId) return;
     const play = plays?.[row.playId];
     if (!play) return;
 
-    const conceptId = play.conceptGroupId || 'uncategorized';
+    // Use conceptFamily (string name) - this is how plays store their concept group
+    const conceptName = play.conceptFamily || 'uncategorized';
     const bucketId = play.bucketId || 'unknown';
 
-    conceptReps[conceptId] = (conceptReps[conceptId] || 0) + 1;
+    conceptReps[conceptName] = (conceptReps[conceptName] || 0) + 1;
     bucketTotalReps[bucketId] = (bucketTotalReps[bucketId] || 0) + 1;
   });
 
   // Build result array from bucket families
+  // Note: bucket.families is an array of strings (family names), not objects
   const results = [];
   (playBuckets || []).forEach(bucket => {
-    (bucket.families || []).forEach(family => {
-      const reps = conceptReps[family.id] || 0;
+    (bucket.families || []).forEach(familyName => {
+      // familyName is a string like "Inside Zone", not an object
+      const reps = conceptReps[familyName] || 0;
       const bucketTotal = bucketTotalReps[bucket.id] || 0;
       const percentageOfBucket = bucketTotal > 0 ? Math.round((reps / bucketTotal) * 100) : 0;
 
       results.push({
-        conceptId: family.id,
-        conceptName: family.label || family.name,
+        conceptId: `${bucket.id}_${familyName}`,
+        conceptName: familyName,
         parentBucketId: bucket.id,
         parentBucketLabel: bucket.label || bucket.name,
         parentBucketColor: bucket.color,
